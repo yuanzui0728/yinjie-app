@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
 import { MomentsService } from './moments.service';
 
 @Controller('moments')
@@ -10,6 +10,11 @@ export class MomentsController {
     return this.momentsService.getFeed();
   }
 
+  @Get(':id')
+  getPost(@Param('id') id: string) {
+    return this.momentsService.getPost(id);
+  }
+
   @Post('generate/:characterId')
   generateForCharacter(@Param('characterId') characterId: string) {
     return this.momentsService.generateMomentForCharacter(characterId);
@@ -18,5 +23,21 @@ export class MomentsController {
   @Post('generate-all')
   generateAll() {
     return this.momentsService.generateAllMoments();
+  }
+
+  @Post(':id/comment')
+  addComment(
+    @Param('id') postId: string,
+    @Body() body: { authorId: string; authorName: string; authorAvatar: string; text: string },
+  ) {
+    return this.momentsService.addComment(postId, body.authorId, body.authorName, body.authorAvatar, body.text, 'user');
+  }
+
+  @Post(':id/like')
+  toggleLike(
+    @Param('id') postId: string,
+    @Body() body: { authorId: string; authorName: string; authorAvatar: string },
+  ) {
+    return this.momentsService.toggleLike(postId, body.authorId, body.authorName, body.authorAvatar, 'user');
   }
 }

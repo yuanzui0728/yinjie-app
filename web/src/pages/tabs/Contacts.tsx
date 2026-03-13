@@ -31,6 +31,27 @@ export function Contacts() {
         </button>
       </div>
 
+      {/* New friends entry */}
+      <div
+        onClick={() => navigate('/friend-requests')}
+        style={{
+          display: 'flex', alignItems: 'center',
+          backgroundColor: Colors.bgWhite, padding: '12px 16px',
+          borderBottom: `0.5px solid ${Colors.border}`, cursor: 'pointer',
+        }}
+      >
+        <div style={{
+          width: 48, height: 48, borderRadius: 24,
+          backgroundColor: Colors.primary, display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+          fontSize: 22, marginRight: 12, flexShrink: 0,
+        }}>
+          👋
+        </div>
+        <span style={{ fontSize: 15, color: Colors.textPrimary, fontWeight: 500 }}>新的朋友</span>
+        <span style={{ marginLeft: 'auto', fontSize: 18, color: Colors.textLight }}>›</span>
+      </div>
+
       {/* List */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {loading && (

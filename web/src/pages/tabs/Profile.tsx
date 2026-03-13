@@ -44,25 +44,6 @@ export function Profile() {
           </div>
         </div>
 
-        {/* Menu items */}
-        {[
-          { icon: '📦', label: '导入角色', action: () => navigate('/import') },
-        ].map((item, i) => (
-          <div
-            key={i}
-            onClick={item.action}
-            style={{
-              display: 'flex', alignItems: 'center',
-              backgroundColor: Colors.bgWhite, padding: '14px 16px',
-              borderBottom: `0.5px solid ${Colors.border}`, cursor: 'pointer',
-            }}
-          >
-            <span style={{ fontSize: 20, marginRight: 12 }}>{item.icon}</span>
-            <span style={{ flex: 1, fontSize: 15, color: Colors.textPrimary }}>{item.label}</span>
-            <span style={{ fontSize: 18, color: Colors.textLight }}>›</span>
-          </div>
-        ))}
-
         {/* Logout */}
         <div style={{ padding: '24px 16px' }}>
           <button

@@ -11,6 +11,18 @@ export class UserEntity {
   @Column()
   passwordHash: string;
 
+  @Column({ default: false })
+  onboardingCompleted: boolean;
+
+  @Column({ nullable: true })
+  locationLat?: number;
+
+  @Column({ nullable: true })
+  locationLng?: number;
+
+  @Column({ nullable: true })
+  locationName?: string;
+
   @CreateDateColumn()
   createdAt: Date;
 }

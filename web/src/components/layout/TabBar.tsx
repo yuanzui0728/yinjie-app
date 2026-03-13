@@ -6,6 +6,7 @@ import { Colors } from '../../theme/colors';
 const TABS = [
   { path: '/tabs/chat', icon: '💬', label: '消息' },
   { path: '/tabs/moments', icon: '🌐', label: '朋友圈' },
+  { path: '/tabs/discover', icon: '🎬', label: '发现' },
   { path: '/tabs/contacts', icon: '👥', label: '通讯录' },
   { path: '/tabs/profile', icon: '👤', label: '我' },
 ];

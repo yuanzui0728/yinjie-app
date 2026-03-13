@@ -56,13 +56,32 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   addMessage: (conversationId, message) => {
     set((state) => {
       const existing = state.messages[conversationId] ?? [];
+      // 去重：如果已有相同 id 则跳过；如果是后端返回的用户消息，替换掉本地乐观消息
+      const isUserMsg = message.senderType === 'user';
+      const alreadyExists = existing.some((m) => m.id === message.id);
+      if (alreadyExists) return state;
+
+      let updated: Message[];
+      if (isUserMsg) {
+        // 替换掉最后一条 local- 开头的乐观消息
+        const localIdx = [...existing].reverse().findIndex((m) => m.id.startsWith('local-'));
+        if (localIdx !== -1) {
+          const realIdx = existing.length - 1 - localIdx;
+          updated = [...existing.slice(0, realIdx), message, ...existing.slice(realIdx + 1)];
+        } else {
+          updated = [...existing, message];
+        }
+      } else {
+        updated = [...existing, message];
+      }
+
       const updatedConvs = state.conversations.map((c) =>
         c.id === conversationId
           ? { ...c, lastMessage: message, updatedAt: message.createdAt }
           : c
       );
       return {
-        messages: { ...state.messages, [conversationId]: [...existing, message] },
+        messages: { ...state.messages, [conversationId]: updated },
         conversations: updatedConvs,
       };
     });

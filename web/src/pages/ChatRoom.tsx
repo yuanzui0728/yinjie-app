@@ -17,7 +17,7 @@ export function ChatRoom() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const { conversations, messages, addMessage, markAsRead, fetchMessages } = useChatStore();
+  const { conversations, messages, addMessage, markAsRead, fetchMessages, fetchConversations, isLoading } = useChatStore();
   const getById = useCharacterStore((s) => s.getById);
   const { userId } = useAuthStore();
 
@@ -27,6 +27,12 @@ export function ChatRoom() {
   useEffect(() => {
     if (id) fetchMessages(id);
   }, [id]);
+
+  useEffect(() => {
+    if (!conversation && userId && !isLoading) {
+      fetchConversations(userId);
+    }
+  }, [conversation, userId, isLoading]);
 
   useEffect(() => {
     if (!id) return;
@@ -61,13 +67,28 @@ export function ChatRoom() {
     if (!text || !id || !conversation || !userId) return;
     setInputText('');
 
+    // 本地立即插入用户消息，模拟微信体验
+    const optimisticMsg: Message = {
+      id: `local-${Date.now()}`,
+      conversationId: id,
+      senderType: 'user',
+      senderId: userId,
+      senderName: '我',
+      senderAvatar: '',
+      type: 'text',
+      text,
+      createdAt: new Date(),
+      isRead: true,
+    };
+    addMessage(id, optimisticMsg);
+
     socketService.sendMessage({
       conversationId: id,
       characterId: conversation.participants[0],
       text,
       userId,
     });
-  }, [inputText, id, conversation, userId]);
+  }, [inputText, id, conversation, userId, addMessage]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -76,7 +97,16 @@ export function ChatRoom() {
     }
   };
 
-  if (!conversation) return null;
+  if (!conversation) {
+    return (
+      <div style={{
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100dvh', backgroundColor: Colors.bgChat,
+      }}>
+        <span style={{ color: Colors.textSecondary, fontSize: 14 }}>加载中...</span>
+      </div>
+    );
+  }
 
   const isGroup = conversation.type === 'group';
   const mainChar = !isGroup ? getById(conversation.participants[0]) : null;
@@ -94,7 +124,7 @@ export function ChatRoom() {
         borderBottom: `0.5px solid ${Colors.navBorder}`, flexShrink: 0,
       }}>
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/tabs/chat')}
           style={{ padding: 8, background: 'none', border: 'none', cursor: 'pointer' }}
         >
           <span style={{ fontSize: 28, color: Colors.textPrimary, lineHeight: '30px' }}>‹</span>

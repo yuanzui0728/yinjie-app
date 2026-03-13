@@ -20,7 +20,7 @@ export function Login() {
     setLoading(true);
     try {
       const res = isRegister ? await api.register(u, p) : await api.login(u, p);
-      login(res.token, res.userId, res.username);
+      login(res.token, res.userId, res.username, res.onboardingCompleted);
       navigate('/tabs/chat', { replace: true });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '操作失败，请重试');

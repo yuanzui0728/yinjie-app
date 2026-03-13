@@ -5,19 +5,25 @@ import { TabBar } from './components/layout/TabBar';
 import { useAuthStore } from './store/authStore';
 import { Splash } from './pages/Splash';
 import { Login } from './pages/Login';
+import { Onboarding } from './pages/Onboarding';
 import { ChatList } from './pages/tabs/ChatList';
 import { Moments } from './pages/tabs/Moments';
 import { Contacts } from './pages/tabs/Contacts';
 import { Profile } from './pages/tabs/Profile';
+import { Discover } from './pages/tabs/Discover';
 import { ChatRoom } from './pages/ChatRoom';
 import { CharacterDetail } from './pages/CharacterDetail';
 import { CreateCharacter } from './pages/CreateCharacter';
-import { Import } from './pages/Import';
+import { FriendRequests } from './pages/FriendRequests';
 
 function RequireAuth() {
   const token = useAuthStore((s) => s.token);
+  const onboardingCompleted = useAuthStore((s) => s.onboardingCompleted);
   const location = useLocation();
-  if (!token) return <Navigate to="/login" state={{ from: location }} replace />;
+  if (!token) return <Navigate to="/onboarding" state={{ from: location }} replace />;
+  if (!onboardingCompleted && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
+  }
   return <Outlet />;
 }
 
@@ -39,18 +45,20 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Splash />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/onboarding" element={<Onboarding />} />
 
           <Route element={<RequireAuth />}>
             <Route element={<TabLayout />}>
               <Route path="/tabs/chat" element={<ChatList />} />
               <Route path="/tabs/moments" element={<Moments />} />
               <Route path="/tabs/contacts" element={<Contacts />} />
+              <Route path="/tabs/discover" element={<Discover />} />
               <Route path="/tabs/profile" element={<Profile />} />
             </Route>
             <Route path="/chat/:id" element={<ChatRoom />} />
             <Route path="/character/new" element={<CreateCharacter />} />
             <Route path="/character/:id" element={<CharacterDetail />} />
-            <Route path="/import" element={<Import />} />
+            <Route path="/friend-requests" element={<FriendRequests />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
