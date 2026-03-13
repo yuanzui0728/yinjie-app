@@ -1,0 +1,25 @@
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+
+@Entity('friendships')
+export class FriendshipEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
+  @Column()
+  userId: string;
+
+  @Column()
+  characterId: string;
+
+  @Column({ default: 0 })
+  intimacyLevel: number; // 0-100
+
+  @Column({ default: 'friend' })
+  status: string; // 'friend' | 'close' | 'best'
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @Column({ nullable: true })
+  lastInteractedAt?: Date;
+}

@@ -35,4 +35,35 @@ export class CharacterEntity {
 
   @Column('simple-json')
   profile: PersonalityProfile;
+
+  // Activity scheduling
+  @Column({ default: 'normal' })
+  activityFrequency: string; // 'high' | 'normal' | 'low'
+
+  @Column({ default: 1 })
+  momentsFrequency: number; // posts per day
+
+  @Column({ default: 1 })
+  feedFrequency: number; // feed posts per week
+
+  @Column({ nullable: true })
+  activeHoursStart?: number; // 0-23
+
+  @Column({ nullable: true })
+  activeHoursEnd?: number; // 0-23
+
+  // Scene triggers for friend requests
+  @Column('simple-json', { nullable: true })
+  triggerScenes?: string[]; // e.g. ['coffee_shop', 'gym', 'library']
+
+  // Intimacy & relationship
+  @Column({ default: 0 })
+  intimacyLevel: number; // 0-100
+
+  @Column({ nullable: true })
+  lastActiveAt?: Date;
+
+  // AI relationship network
+  @Column('simple-json', { nullable: true })
+  aiRelationships?: { characterId: string; relationshipType: string; strength: number }[];
 }

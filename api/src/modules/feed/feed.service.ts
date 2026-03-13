@@ -1,0 +1,105 @@
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { FeedPostEntity } from './feed-post.entity';
+import { FeedCommentEntity } from './feed-comment.entity';
+import { UserFeedInteractionEntity } from '../analytics/user-feed-interaction.entity';
+import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
+import { CharactersService } from '../characters/characters.service';
+
+@Injectable()
+export class FeedService {
+  private readonly logger = new Logger(FeedService.name);
+
+  constructor(
+    @InjectRepository(FeedPostEntity)
+    private postRepo: Repository<FeedPostEntity>,
+    @InjectRepository(FeedCommentEntity)
+    private commentRepo: Repository<FeedCommentEntity>,
+    @InjectRepository(UserFeedInteractionEntity)
+    private interactionRepo: Repository<UserFeedInteractionEntity>,
+    private readonly ai: AiOrchestratorService,
+    private readonly characters: CharactersService,
+  ) {}
+
+  async getFeed(page = 1, limit = 20): Promise<{ posts: FeedPostEntity[]; total: number }> {
+    const [posts, total] = await this.postRepo.findAndCount({
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+    return { posts, total };
+  }
+
+  async getPostWithComments(postId: string) {
+    const post = await this.postRepo.findOneBy({ id: postId });
+    if (!post) return null;
+    const comments = await this.commentRepo.find({
+      where: { postId },
+      order: { createdAt: 'ASC' },
+    });
+    return { ...post, comments };
+  }
+
+  async createPost(authorId: string, authorName: string, authorAvatar: string, text: string, authorType = 'user'): Promise<FeedPostEntity> {
+    const post = this.postRepo.create({ authorId, authorName, authorAvatar, authorType, text });
+    const saved = await this.postRepo.save(post);
+    // Schedule AI reactions
+    if (authorType === 'user') {
+      this.scheduleAiReactions(saved);
+    }
+    return saved;
+  }
+
+  async addComment(postId: string, authorId: string, authorName: string, authorAvatar: string, text: string, authorType = 'user'): Promise<FeedCommentEntity> {
+    const comment = this.commentRepo.create({ postId, authorId, authorName, authorAvatar, authorType, text });
+    const saved = await this.commentRepo.save(comment);
+    await this.postRepo.increment({ id: postId }, 'commentCount', 1);
+    return saved;
+  }
+
+  async likePost(postId: string, userId: string): Promise<void> {
+    const existing = await this.interactionRepo.findOneBy({ postId, userId, type: 'like' });
+    if (existing) return;
+    const interaction = this.interactionRepo.create({ postId, userId, type: 'like' });
+    await this.interactionRepo.save(interaction);
+    await this.postRepo.increment({ id: postId }, 'likeCount', 1);
+  }
+
+  async generateFeedPostForCharacter(characterId: string): Promise<FeedPostEntity | null> {
+    const char = await this.characters.findById(characterId);
+    const profile = await this.characters.getProfile(characterId);
+    if (!char || !profile) return null;
+
+    try {
+      const text = await this.ai.generateMoment({ profile, currentTime: new Date() });
+      if (!text) return null;
+      return this.createPost(char.id, char.name, char.avatar, text, 'character');
+    } catch (err) {
+      this.logger.error(`Failed to generate feed post for ${characterId}`, err);
+      return null;
+    }
+  }
+
+  private async scheduleAiReactions(post: FeedPostEntity) {
+    const chars = await this.characters.findAll();
+    chars.forEach((char, i) => {
+      if (Math.random() > 0.3) return;
+      const delay = (i + 1) * 20000 + Math.random() * 30000;
+      setTimeout(async () => {
+        const profile = await this.characters.getProfile(char.id);
+        if (!profile) return;
+        try {
+          const reply = await this.ai.generateReply({
+            profile,
+            conversationHistory: [],
+            userMessage: `你在视频号看到一条内容："${post.text}"，用一句话自然地评论，不超过25字。`,
+          });
+          await this.addComment(post.id, char.id, char.name, char.avatar, reply.text, 'character');
+        } catch {
+          // ignore
+        }
+      }, delay);
+    });
+  }
+}

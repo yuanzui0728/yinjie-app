@@ -7,12 +7,18 @@ export function Splash() {
   const navigate = useNavigate();
   const token = useAuthStore((s) => s.token);
 
+  const onboardingCompleted = useAuthStore((s) => s.onboardingCompleted);
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigate(token ? '/tabs/chat' : '/login', { replace: true });
+      if (token && onboardingCompleted) {
+        navigate('/tabs/chat', { replace: true });
+      } else {
+        navigate('/onboarding', { replace: true });
+      }
     }, 1200);
     return () => clearTimeout(timer);
-  }, [token, navigate]);
+  }, [token, onboardingCompleted, navigate]);
 
   return (
     <div style={{

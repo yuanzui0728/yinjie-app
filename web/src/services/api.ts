@@ -20,15 +20,23 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export const api = {
   register: (username: string, password: string) =>
-    request<{ token: string; userId: string; username: string }>('/auth/register', {
+    request<{ token: string; userId: string; username: string; onboardingCompleted: boolean }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     }),
   login: (username: string, password: string) =>
-    request<{ token: string; userId: string; username: string }>('/auth/login', {
+    request<{ token: string; userId: string; username: string; onboardingCompleted: boolean }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ username, password }),
     }),
+  // Onboarding: create user with just a name
+  initUser: (username: string) =>
+    request<{ token: string; userId: string; username: string; onboardingCompleted: boolean }>('/auth/init', {
+      method: 'POST',
+      body: JSON.stringify({ username }),
+    }),
+  completeOnboarding: (userId: string) =>
+    request<{ success: boolean }>(`/auth/users/${userId}/onboarding-complete`, { method: 'PATCH' }),
 
   getCharacters: () => request<unknown[]>('/characters'),
   getCharacter: (id: string) => request<unknown>(`/characters/${id}`),
@@ -48,10 +56,49 @@ export const api = {
     }),
 
   getMoments: () => request<unknown[]>('/moments'),
+  addMomentComment: (postId: string, authorId: string, authorName: string, authorAvatar: string, text: string) =>
+    request<unknown>(`/moments/${postId}/comment`, {
+      method: 'POST',
+      body: JSON.stringify({ authorId, authorName, authorAvatar, text }),
+    }),
+  toggleMomentLike: (postId: string, authorId: string, authorName: string, authorAvatar: string) =>
+    request<{ liked: boolean }>(`/moments/${postId}/like`, {
+      method: 'POST',
+      body: JSON.stringify({ authorId, authorName, authorAvatar }),
+    }),
   generateMoment: (characterId: string) =>
     request<unknown>(`/moments/generate/${characterId}`, { method: 'POST' }),
   generateAllMoments: () =>
     request<unknown[]>('/moments/generate-all', { method: 'POST' }),
+
+  // Feed (视频号)
+  getFeed: (page = 1) => request<{ posts: unknown[]; total: number }>(`/feed?page=${page}`),
+  createFeedPost: (authorId: string, authorName: string, authorAvatar: string, text: string) =>
+    request<unknown>('/feed', {
+      method: 'POST',
+      body: JSON.stringify({ authorId, authorName, authorAvatar, text }),
+    }),
+  addFeedComment: (postId: string, authorId: string, authorName: string, authorAvatar: string, text: string) =>
+    request<unknown>(`/feed/${postId}/comment`, {
+      method: 'POST',
+      body: JSON.stringify({ authorId, authorName, authorAvatar, text }),
+    }),
+  likeFeedPost: (postId: string, userId: string) =>
+    request<void>(`/feed/${postId}/like`, { method: 'POST', body: JSON.stringify({ userId }) }),
+
+  // Social
+  getFriendRequests: (userId: string) => request<unknown[]>(`/social/friend-requests?userId=${userId}`),
+  acceptFriendRequest: (requestId: string, userId: string) =>
+    request<unknown>(`/social/friend-requests/${requestId}/accept`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    }),
+  declineFriendRequest: (requestId: string, userId: string) =>
+    request<unknown>(`/social/friend-requests/${requestId}/decline`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    }),
+  getFriends: (userId: string) => request<unknown[]>(`/social/friends?userId=${userId}`),
 
   startImport: (personName: string, fileContent: string) =>
     request<{ jobId: string }>('/import/start', {
@@ -63,3 +110,4 @@ export const api = {
       `/import/status/${jobId}`,
     ),
 };
+

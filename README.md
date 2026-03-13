@@ -1,21 +1,22 @@
 # 隐界 APP
 
-一个基于 AI 的角色陪伴应用，支持多角色对话、朋友圈动态、角色管理等功能。
+一个基于 AI 的沉浸式角色陪伴应用。用户通过叙事式 Onboarding 进入平行世界，与 AI 角色建立真实的社交关系——聊天、朋友圈、视频号、好友申请，AI 有自己的作息和主动行为。
 
 ## 技术栈
 
-- **后端**: NestJS + TypeORM + SQLite + Socket.IO
-- **前端**: React + Vite + TypeScript
-- **管理后台**: React + Ant Design
-- **AI 服务**: DeepSeek / OpenAI 兼容接口
+| 服务 | 技术 | 端口 |
+|------|------|------|
+| 后端 | NestJS + TypeORM + SQLite + Socket.IO | 3000 |
+| **前端 ★** | React + Vite H5 | 5174 |
+| 管理后台 | React + Vite + Ant Design | 5173 |
 
 ## 项目结构
 
 ```
 隐界APP/
-├── api/          # NestJS 后端服务（端口 3000）
-├── web/          # H5 前端（端口 5174）
-├── admin/        # 管理后台（端口 5173）
+├── api/          # NestJS 后端（14个模块，21个实体）
+├── web/          # H5 前端（主线开发）
+├── admin/        # 管理后台
 └── docs/         # 技术文档
 ```
 
@@ -24,116 +25,146 @@
 ### 1. 环境要求
 
 - Node.js >= 18
-- npm >= 9
 
 ### 2. 安装依赖
 
 ```bash
-# 后端
 cd api && npm install
-
-# 前端
 cd web && npm install
-
-# 管理后台
 cd admin && npm install
 ```
 
 ### 3. 配置环境变量
 
-复制 `api/.env.example` 为 `api/.env`，填入你的配置：
+在 `api/` 目录创建 `.env`：
 
 ```env
 DEEPSEEK_API_KEY=sk-xxx
-OPENAI_BASE_URL=https://n1n.ai/v1
+OPENAI_BASE_URL=https://api.deepseek.com/v1
 JWT_SECRET=your-secret-key
 ```
 
-### 4. 启动服务
+### 4. 启动
 
-**方式一：使用启动脚本（Windows）**
+**Windows 一键启动（单窗口）：**
 
-```bash
-start.bat
+```bat
+start.bat   # 启动所有服务，日志写入 logs/
+stop.bat    # 停止所有服务
 ```
 
-**方式二：手动启动**
+所有服务在后台运行，日志分别写入 `logs/api.log`、`logs/web.log`、`logs/admin.log`，只占用一个终端窗口。
+
+**手动启动（三个终端）：**
 
 ```bash
-# 后端
+# 终端 1 — 后端
 cd api && npm run start:dev
 
-# 前端
+# 终端 2 — H5 前端
 cd web && npm run dev
 
-# 管理后台
+# 终端 3 — 管理后台（可选）
 cd admin && npm run dev
 ```
 
-### 5. 访问应用
+### 5. 访问
 
-- 前端：http://localhost:5174
-- 管理后台：http://localhost:5173
-- 后端 API：http://localhost:3000/api
+| 地址 | 说明 |
+|------|------|
+| http://localhost:5174 | H5 前端（主入口） |
+| http://localhost:5173 | 管理后台 |
+| http://localhost:3000/api | 后端 API |
+
+---
 
 ## 功能特性
 
 ### 用户端（web/）
 
-- 用户注册/登录
-- 多角色对话（支持 WebSocket 实时通信）
-- 会话列表与历史记录
-- 角色详情与创建
-- 朋友圈动态
-- 数据导入
+- **Onboarding** — 5幕叙事式入场，输入名字即可进入，无需注册密码
+- **聊天** — 单聊 + 自动升级群聊，WebSocket 实时通信，AI 记忆压缩
+- **朋友圈** — AI 自主发帖，延迟评论/点赞，用户可评论互动
+- **发现（视频号）** — 公共信息流，AI 发布内容，用户可发布/评论/点赞
+- **通讯录** — 角色列表 + 好友申请入口
+- **好友申请** — AI 根据场景触发主动加好友，每日过期
+- **数据导入** — 上传 .txt 聊天记录，AI 提取人格生成角色
 
 ### 管理后台（admin/）
 
 - 角色管理（增删改查）
-- AI 模型切换（DeepSeek / OpenAI）
-- 角色特征配置（性格、专长、领域）
+- AI 模型切换（DeepSeek / OpenAI 兼容）
+- 角色特征配置
 
-## 核心模块
+---
 
-### 后端模块
+## 后端模块
 
-- `auth` - 用户认证（JWT）
-- `characters` - 角色管理
-- `chat` - 聊天服务（WebSocket + REST）
-- `ai` - AI 调用编排（支持多模型）
-- `config` - 系统配置
-- `moments` - 朋友圈动态
-- `import` - 数据导入
+| 模块 | 说明 |
+|------|------|
+| `auth` | 用户认证（JWT），支持 Onboarding 无密码初始化 |
+| `characters` | 角色管理，10个种子角色 |
+| `chat` | 聊天服务（WebSocket + REST），群聊实体 |
+| `ai` | AI 调用编排，Prompt 构建 |
+| `moments` | 朋友圈（MomentPost / Comment / Like） |
+| `feed` | 视频号信息流（FeedPost / Comment） |
+| `social` | 好友系统（Friendship / FriendRequest / AIRelationship） |
+| `world` | WorldContext 快照（时间/季节/节日） |
+| `scheduler` | 定时任务（AI 发帖、状态更新、申请过期） |
+| `events` | EventEmitter2 事件总线 |
+| `config` | 系统配置（AI 模型切换） |
+| `import` | 聊天记录导入与人格提取 |
+| `narrative` | 剧情弧追踪（NarrativeArc） |
+| `analytics` | 行为日志（AIBehaviorLog / UserFeedInteraction） |
 
-### 数据库实体
+## 数据库实体（21个）
 
-- UserEntity - 用户表
-- CharacterEntity - 角色表
-- ConversationEntity - 会话表
-- MessageEntity - 消息表
-- SystemConfigEntity - 系统配置表
-- MomentEntity - 动态表
+**核心**：User · Character · Conversation · Message · SystemConfig
 
-## API 文档
+**朋友圈**：MomentPost · MomentComment · MomentLike
 
-详见 [docs/API接口文档.md](docs/API接口文档.md)
+**社交**：Friendship · FriendRequest · AIRelationship
 
-主要接口：
+**群聊**：Group · GroupMember · GroupMessage
 
-- `POST /api/auth/register` - 用户注册
-- `POST /api/auth/login` - 用户登录
-- `GET /api/characters` - 获取角色列表
-- `POST /api/conversations` - 创建/获取会话
-- `GET /api/conversations/:id/messages` - 获取消息历史
-- `WebSocket /chat` - 实时聊天
+**视频号**：FeedPost · FeedComment · UserFeedInteraction
+
+**世界**：WorldContext · NarrativeArc · AIBehaviorLog
+
+> 数据库使用 SQLite + TypeORM `synchronize: true`，启动时自动建表，无需手动迁移。
+
+## 主要 API
+
+```
+POST /api/auth/init                    # Onboarding 无密码创建用户
+POST /api/auth/register                # 传统注册
+POST /api/auth/login                   # 登录
+PATCH /api/auth/users/:id/onboarding-complete
+
+GET  /api/characters                   # 角色列表
+GET  /api/conversations?userId=        # 会话列表
+GET  /api/conversations/:id/messages   # 消息历史
+WebSocket /chat                        # 实时聊天
+
+GET  /api/moments                      # 朋友圈 Feed
+POST /api/moments/:id/comment          # 评论
+POST /api/moments/:id/like             # 点赞
+
+GET  /api/feed                         # 视频号信息流
+POST /api/feed                         # 发布内容
+POST /api/feed/:id/comment
+
+GET  /api/social/friend-requests?userId=   # 好友申请列表
+POST /api/social/friend-requests/:id/accept
+POST /api/social/friend-requests/:id/decline
+POST /api/social/trigger-scene             # 触发场景加好友
+
+GET  /api/world/context                # 当前世界快照
+```
 
 ## 开发规范
 
 详见 [CLAUDE.md](CLAUDE.md)
-
-- 不生成测试文件
-- 代码简洁，避免过度工程化
-- 结构变更需更新文档
 
 ## 许可证
 
