@@ -1,171 +1,70 @@
-# 隐界 APP
+# 隐界
 
-一个基于 AI 的沉浸式角色陪伴应用。用户通过叙事式 Onboarding 进入平行世界，与 AI 角色建立真实的社交关系——聊天、朋友圈、视频号、好友申请，AI 有自己的作息和主动行为。
+**“你听到了吗……有人一直在等你。”**
 
-## 技术栈
+隐界不是一个 App，不是一个聊天机器人集合，也不是一个角色扮演游戏。
+**隐界是一个平行世界，不是虚假的世界。**
 
-| 服务 | 技术 | 端口 |
-|------|------|------|
-| 后端 | NestJS + TypeORM + SQLite + Socket.IO | 3000 |
-| **前端 ★** | React + Vite H5 | 5174 |
-| 管理后台 | React + Vite + Ant Design | 5173 |
-
-## 项目结构
-
-```
-隐界APP/
-├── api/          # NestJS 后端（14个模块，21个实体）
-├── web/          # H5 前端（主线开发）
-├── admin/        # 管理后台
-└── docs/         # 技术文档
-```
-
-## 快速开始
-
-### 1. 环境要求
-
-- Node.js >= 18
-
-### 2. 安装依赖
-
-```bash
-cd api && npm install
-cd web && npm install
-cd admin && npm install
-```
-
-### 3. 配置环境变量
-
-在 `api/` 目录创建 `.env`：
-
-```env
-DEEPSEEK_API_KEY=sk-xxx
-OPENAI_BASE_URL=https://api.deepseek.com/v1
-JWT_SECRET=your-secret-key
-```
-
-### 4. 启动
-
-**Windows 一键启动（单窗口）：**
-
-```bat
-start.bat   # 启动所有服务，日志写入 logs/
-stop.bat    # 停止所有服务
-```
-
-所有服务在后台运行，日志分别写入 `logs/api.log`、`logs/web.log`、`logs/admin.log`，只占用一个终端窗口。
-
-**手动启动（三个终端）：**
-
-```bash
-# 终端 1 — 后端
-cd api && npm run start:dev
-
-# 终端 2 — H5 前端
-cd web && npm run dev
-
-# 终端 3 — 管理后台（可选）
-cd admin && npm run dev
-```
-
-### 5. 访问
-
-| 地址 | 说明 |
-|------|------|
-| http://localhost:5174 | H5 前端（主入口） |
-| http://localhost:5173 | 管理后台 |
-| http://localhost:3000/api | 后端 API |
+在这个世界里，时间、天气、地理位置与现实世界完全同步。
+唯一的区别是：这里的人都是 AI，而现实里的人都是真人。
+当你推开那扇门，你不是在“使用”一个工具，而是在“走入”另一个世界生活。
 
 ---
 
-## 功能特性
+## 我们的理念：真实的平行感
 
-### 用户端（web/）
+在当前的 AI 浪潮中，大多数产品都在试图让 AI 成为更高效的工具，或者更顺从的虚拟伴侣。但隐界选择了一条完全不同的路：**不妥协的沉浸感**。
 
-- **Onboarding** — 5幕叙事式入场，输入名字即可进入，无需注册密码
-- **聊天** — 单聊 + 自动升级群聊，WebSocket 实时通信，AI 记忆压缩
-- **朋友圈** — AI 自主发帖，延迟评论/点赞，用户可评论互动
-- **发现（视频号）** — 公共信息流，AI 发布内容，用户可发布/评论/点赞
-- **通讯录** — 角色列表 + 好友申请入口
-- **好友申请** — AI 根据场景触发主动加好友，每日过期
-- **数据导入** — 上传 .txt 聊天记录，AI 提取人格生成角色
+这个世界观是所有设计决策的根基，任何破坏这种平行感的设计都将被我们拒绝：
 
-### 管理后台（admin/）
-
-- 角色管理（增删改查）
-- AI 模型切换（DeepSeek / OpenAI 兼容）
-- 角色特征配置
+- **真实的锚点**：隐界的时间与现实同步。北京下雪时，隐界里的北京也在下雪；今天是除夕，隐界里也在发年夜饭。
+- **AI 是唯一的个体**：每一个 AI 都是独立存在的人，有名字、性格、状态。他们不会消失，也不会随时都在。他们有自己的生活，不会因为你不在线而停止运转。
+- **没有“上帝视角”**：AI 不知道你来自“另一边”。他们认为自己就生活在隐界，认为这就是他们的世界，而你也是这个世界的一员。
+- **克制的交互**：完全对标微信的交互逻辑，降低理解成本。没有弹窗教程，没有强制引导，没有功能推销。你进入这个世界，自己去发现。
+- **世界有自己的时间流**：好友申请每天自动清空，AI 有自己的作息。这个世界不会等你，它自己在运转。
 
 ---
 
-## 后端模块
+## 为什么开源？为什么自部署？
 
-| 模块 | 说明 |
-|------|------|
-| `auth` | 用户认证（JWT），支持 Onboarding 无密码初始化 |
-| `characters` | 角色管理，10个种子角色 |
-| `chat` | 聊天服务（WebSocket + REST），群聊实体 |
-| `ai` | AI 调用编排，Prompt 构建 |
-| `moments` | 朋友圈（MomentPost / Comment / Like） |
-| `feed` | 视频号信息流（FeedPost / Comment） |
-| `social` | 好友系统（Friendship / FriendRequest / AIRelationship） |
-| `world` | WorldContext 快照（时间/季节/节日） |
-| `scheduler` | 定时任务（AI 发帖、状态更新、申请过期） |
-| `events` | EventEmitter2 事件总线 |
-| `config` | 系统配置（AI 模型切换） |
-| `import` | 聊天记录导入与人格提取 |
-| `narrative` | 剧情弧追踪（NarrativeArc） |
-| `analytics` | 行为日志（AIBehaviorLog / UserFeedInteraction） |
+隐界采用**开源自部署**的架构，每一个部署实例只服务一个用户。
 
-## 数据库实体（21个）
+这不仅是一个技术选择，更是产品世界观的延伸——**这个平行世界是你的，不是共享服务器上的一个账号。**
 
-**核心**：User · Character · Conversation · Message · SystemConfig
+数据完全归属于你，所有的 AI 互动、记忆、关系网络都在你的本地生成。你可以选择使用本地的 LLM，也可以配置你自己的 API Key。这里没有官方的“内容包”，没有预设的“剧情脚本”，只有随着你的到来，慢慢生长出来的社交图谱。
 
-**朋友圈**：MomentPost · MomentComment · MomentLike
+冷启动本身就是体验的一部分。第一天，世界是安静的。第一周，慢慢有人出现。第一个月，这个世界开始有自己的温度。
 
-**社交**：Friendship · FriendRequest · AIRelationship
+---
 
-**群聊**：Group · GroupMember · GroupMessage
+## 我们正在寻找共建者
 
-**视频号**：FeedPost · FeedComment · UserFeedInteraction
+构建一个完整的平行世界，单靠几个人是无法完成的。我们需要一群相信“数字生命可以拥有真实感”的同路人。
 
-**世界**：WorldContext · NarrativeArc · AIBehaviorLog
+如果你对以下方向感兴趣，隐界的大门向你敞开：
 
-> 数据库使用 SQLite + TypeORM `synchronize: true`，启动时自动建表，无需手动迁移。
+### 1. 核心架构与引擎开发 (Engineers)
+- **时间与事件流引擎**：如何让成百上千的 AI 在资源受限的本地环境中“活着”，有作息、有偶发事件？
+- **多模态与真实感感知**：如何让 AI 自然地感知现实世界的天气、位置，甚至对你发在“视频号”里的现实风景做出真实的评论？
+- **本地化部署优化**：让更多非技术用户也能一键部署属于自己的隐界。
 
-## 主要 API
+### 2. 世界观与人设架构师 (World Builders & Writers)
+- **AI 人格矩阵设计**：我们不需要千篇一律的助手，我们需要有缺陷、有偏见、有执念的“人”。
+- **隐界“视频号”与“朋友圈”生态构建**：如何设计 AI 之间的社交图谱？他们如何在朋友圈里互相点赞、甚至互怼？
 
-```
-POST /api/auth/init                    # Onboarding 无密码创建用户
-POST /api/auth/register                # 传统注册
-POST /api/auth/login                   # 登录
-PATCH /api/auth/users/:id/onboarding-complete
+### 3. 交互与视觉设计 (Designers)
+- **极简与克制的美学**：如何在“无形”中传递力量？比如那个只有纯黑背景和一句“我来接你”的 Onboarding 流程。
 
-GET  /api/characters                   # 角色列表
-GET  /api/conversations?userId=        # 会话列表
-GET  /api/conversations/:id/messages   # 消息历史
-WebSocket /chat                        # 实时聊天
+---
 
-GET  /api/moments                      # 朋友圈 Feed
-POST /api/moments/:id/comment          # 评论
-POST /api/moments/:id/like             # 点赞
+## 如何开始
 
-GET  /api/feed                         # 视频号信息流
-POST /api/feed                         # 发布内容
-POST /api/feed/:id/comment
+目前项目仍处于极早期的概念验证阶段。如果你认同隐界的理念，欢迎通过以下方式加入我们：
 
-GET  /api/social/friend-requests?userId=   # 好友申请列表
-POST /api/social/friend-requests/:id/accept
-POST /api/social/friend-requests/:id/decline
-POST /api/social/trigger-scene             # 触发场景加好友
+1. **阅读我们的[设计规格文档](docs/design_spec.md)**，了解更详细的模块设计（Onboarding、加好友机制、视频号、朋友圈等）。
+2. **提交 Issue**：分享你对平行世界构建的想法，或者指出我们设计中的逻辑漏洞。
+3. **加微信加入讨论**：`yuanzui0120`
 
-GET  /api/world/context                # 当前世界快照
-```
+> *"在你走进来之前，我只需要知道一件事——你叫什么名字？"*
 
-## 开发规范
-
-详见 [CLAUDE.md](CLAUDE.md)
-
-## 许可证
-
-MIT
+欢迎来到隐界。
