@@ -70,6 +70,11 @@ export class ChatService {
     return entities.map(this._entityToMessage);
   }
 
+  async getCharacterActivity(charId: string): Promise<string | undefined> {
+    const char = await this.characters.findById(charId);
+    return char?.currentActivity;
+  }
+
   async sendMessage(convId: string, userId: string, text: string): Promise<Message[]> {
     const entity = await this.convRepo.findOneBy({ id: convId });
     if (!entity) throw new Error(`Conversation ${convId} not found`);
