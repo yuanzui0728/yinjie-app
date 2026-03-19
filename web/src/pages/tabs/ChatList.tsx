@@ -34,7 +34,7 @@ export function ChatList() {
         borderBottom: '0.5px solid rgba(249,115,22,0.15)', flexShrink: 0,
       }}>
         <span style={{ fontSize: 17, fontWeight: 600, color: Colors.textPrimary }}>隐界</span>
-        <button onClick={() => navigate('/characters')} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer' }}>
+        <button onClick={() => navigate('/tabs/contacts')} style={{ padding: 4, background: 'none', border: 'none', cursor: 'pointer' }}>
           <span style={{ fontSize: 22, color: Colors.textPrimary }}>＋</span>
         </button>
       </div>

@@ -17,6 +17,7 @@ import { CreateGroup } from './pages/CreateGroup';
 import { CharacterDetail } from './pages/CharacterDetail';
 import { CreateCharacter } from './pages/CreateCharacter';
 import { FriendRequests } from './pages/FriendRequests';
+import { Import } from './pages/Import';
 
 function RequireAuth() {
   const token = useAuthStore((s) => s.token);
@@ -63,6 +64,7 @@ export default function App() {
             <Route path="/character/new" element={<CreateCharacter />} />
             <Route path="/character/:id" element={<CharacterDetail />} />
             <Route path="/friend-requests" element={<FriendRequests />} />
+            <Route path="/import" element={<Import />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
