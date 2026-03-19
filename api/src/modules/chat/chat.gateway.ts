@@ -62,9 +62,40 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         convId = conv.id;
       }
 
+      // Sleep interception: if AI is sleeping, don't call LLM
+      const activity = await this.chatService.getCharacterActivity(characterId);
+      if (activity === 'sleeping') {
+        const sleepReplies = [
+          '（消息已送达，对方正在睡觉 💤）',
+          '（深夜了，对方已入睡，明天再聊吧）',
+          '（对方睡着了，消息明天才能看到）',
+        ];
+        const sleepMsg = {
+          id: `msg_${Date.now()}_sleep`,
+          conversationId: convId,
+          senderType: 'system',
+          senderId: 'system',
+          senderName: 'system',
+          type: 'system',
+          text: sleepReplies[Math.floor(Math.random() * sleepReplies.length)],
+          createdAt: new Date(),
+        };
+        this.server.to(convId).emit('new_message', sleepMsg);
+        return { event: 'message_sent', data: { conversationId: convId } };
+      }
+
       this.server.to(convId).emit('typing_start', { characterId });
 
       const messages = await this.chatService.sendMessage(convId, userId, text);
+
+      // Simulate realistic typing delay based on reply length
+      const aiReply = messages.find((m) => m.senderType === 'character');
+      if (aiReply) {
+        const charCount = aiReply.text.length;
+        // ~60 chars/sec typing speed, capped at 3s
+        const delay = Math.min(Math.max(charCount * 16, 400), 3000);
+        await new Promise((r) => setTimeout(r, delay));
+      }
 
       this.server.to(convId).emit('typing_stop', { characterId });
 
