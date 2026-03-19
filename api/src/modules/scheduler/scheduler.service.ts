@@ -7,10 +7,12 @@ import { FriendRequestEntity } from '../social/friend-request.entity';
 import { MomentPostEntity } from '../moments/moment-post.entity';
 import { FeedPostEntity } from '../feed/feed-post.entity';
 import { UserEntity } from '../auth/user.entity';
+import { ConversationEntity } from '../chat/conversation.entity';
 import { WorldService } from '../world/world.service';
 import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
 import { SocialService } from '../social/social.service';
 import { FeedService } from '../feed/feed.service';
+import { ChatGateway } from '../chat/chat.gateway';
 
 @Injectable()
 export class SchedulerService {
@@ -27,10 +29,13 @@ export class SchedulerService {
     private feedPostRepo: Repository<FeedPostEntity>,
     @InjectRepository(UserEntity)
     private userRepo: Repository<UserEntity>,
+    @InjectRepository(ConversationEntity)
+    private convRepo: Repository<ConversationEntity>,
     private readonly worldService: WorldService,
     private readonly ai: AiOrchestratorService,
     private readonly socialService: SocialService,
     private readonly feedService: FeedService,
+    private readonly chatGateway: ChatGateway,
   ) {}
 
   // Every 30 minutes: update WorldContext snapshot
@@ -150,28 +155,73 @@ export class SchedulerService {
     }
   }
 
-  // Every 2 hours: generate AI dynamic status for online characters
+  // Every 2 hours: update character activity state based on time of day
   @Cron('0 */2 * * *')
   async updateCharacterStatus() {
     try {
-      const chars = await this.characterRepo.find({ where: { isOnline: true } });
+      const chars = await this.characterRepo.find();
+      const hour = new Date().getHours();
+
+      // Time-based activity mapping
+      const getActivity = (): string => {
+        if (hour >= 0 && hour <= 6) return 'sleeping';
+        if (hour === 7 || hour === 8 || hour === 18 || hour === 19) return 'commuting';
+        if ((hour >= 9 && hour <= 11) || (hour >= 14 && hour <= 17)) return 'working';
+        if (hour === 12 || hour === 13 || hour === 20) return 'eating';
+        return 'free'; // 21-23
+      };
+
+      const baseActivity = getActivity();
+      // Add some randomness: 20% chance to deviate
+      const activities = ['working', 'eating', 'resting', 'commuting', 'free', 'sleeping'];
+
+      for (const char of chars) {
+        const activity = Math.random() < 0.8 ? baseActivity : activities[Math.floor(Math.random() * activities.length)];
+        await this.characterRepo.update(char.id, { currentActivity: activity });
+        this.logger.debug(`Updated activity for ${char.name}: ${activity}`);
+      }
+    } catch (err) {
+      this.logger.error('Failed to update character status', err);
+    }
+  }
+
+  // Every day at 20:00: scan memories and send proactive messages
+  @Cron('0 20 * * *')
+  async triggerMemoryProactiveMessages() {
+    try {
+      const chars = await this.characterRepo.find();
       for (const char of chars) {
         try {
-          const status = await this.ai.generateMoment({
-            profile: char.profile,
-            currentTime: new Date(),
+          const memory = char.profile?.memory;
+          const memoryText = [memory?.coreMemory, memory?.recentSummary].filter(Boolean).join('\n');
+          if (!memoryText) continue;
+
+          // Ask LLM if there's something worth proactively reminding
+          const checkPrompt = `以下是${char.name}对用户的记忆：\n${memoryText}\n\n今天是${new Date().toLocaleDateString('zh-CN')}。判断是否有值得主动提醒用户的事项（如考试、面试、生日、重要约定等）。\n\n如果有，输出一条自然的提醒消息（以${char.name}的口吻，不超过50字）。\n如果没有，只输出：NO_ACTION`;
+          const model = await this.ai['configService'].getAiModel();
+          const client = this.ai['client'] as import('openai').default;
+          const resp = await client.chat.completions.create({
+            model,
+            messages: [{ role: 'user', content: checkPrompt }],
+            max_tokens: 100,
+            temperature: 0.7,
           });
-          if (status) {
-            const trimmed = status.slice(0, 15);
-            await this.characterRepo.update(char.id, { currentStatus: trimmed });
-            this.logger.debug(`Updated status for ${char.name}: ${trimmed}`);
+          const result = resp.choices[0]?.message?.content?.trim() ?? 'NO_ACTION';
+          if (result === 'NO_ACTION' || result.startsWith('NO_ACTION')) continue;
+
+          // Find conversations for this character
+          const convs = await this.convRepo.find();
+          for (const conv of convs) {
+            if (!conv.participants.includes(char.id)) continue;
+            await this.chatGateway.sendProactiveMessage(conv.id, char.id, char.name, result);
+            this.logger.debug(`Sent proactive message from ${char.name} to conv ${conv.id}`);
           }
         } catch {
           // ignore per-character errors
         }
       }
     } catch (err) {
-      this.logger.error('Failed to update character status', err);
+      this.logger.error('Failed to trigger proactive messages', err);
     }
   }
 

@@ -88,4 +88,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('error', { message: '消息发送失败，请重试' });
     }
   }
+
+  async sendProactiveMessage(convId: string, characterId: string, characterName: string, text: string) {
+    const message = {
+      id: `msg_${Date.now()}_proactive`,
+      conversationId: convId,
+      senderType: 'character',
+      senderId: characterId,
+      senderName: characterName,
+      type: 'text',
+      text,
+      createdAt: new Date(),
+    };
+    this.server.to(convId).emit('new_message', message);
+  }
 }
