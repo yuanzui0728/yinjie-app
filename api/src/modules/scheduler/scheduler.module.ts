@@ -10,14 +10,17 @@ import { WorldModule } from '../world/world.module';
 import { AiModule } from '../ai/ai.module';
 import { SocialModule } from '../social/social.module';
 import { FeedModule } from '../feed/feed.module';
+import { ChatModule } from '../chat/chat.module';
+import { ConversationEntity } from '../chat/conversation.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([MomentPostEntity, FeedPostEntity, FriendRequestEntity, CharacterEntity, UserEntity]),
+    TypeOrmModule.forFeature([MomentPostEntity, FeedPostEntity, FriendRequestEntity, CharacterEntity, UserEntity, ConversationEntity]),
     WorldModule,
     AiModule,
     SocialModule,
     FeedModule,
+    ChatModule,
   ],
   providers: [SchedulerService],
   exports: [SchedulerService],

@@ -69,4 +69,7 @@ export class CharacterEntity {
 
   @Column({ nullable: true })
   currentStatus?: string;
+
+  @Column({ nullable: true })
+  currentActivity?: string; // 'working' | 'eating' | 'resting' | 'commuting' | 'free' | 'sleeping'
 }

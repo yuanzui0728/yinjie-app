@@ -1,8 +1,13 @@
 import { PersonalityProfile, GenerateReplyOptions, GenerateMomentOptions } from './ai.types';
 
+export interface ChatContext {
+  currentActivity?: string;
+  lastChatAt?: Date;
+}
+
 export class PromptBuilderService {
 
-  buildChatSystemPrompt(profile: PersonalityProfile, isGroupChat = false): string {
+  buildChatSystemPrompt(profile: PersonalityProfile, isGroupChat = false, context?: ChatContext): string {
     const { name, expertDomains, basePrompt } = profile;
 
     const domainMap: Record<string, string> = {
@@ -104,6 +109,53 @@ export class PromptBuilderService {
     }
     memorySection += `\n</memory>`;
 
+    // Current context injection (AI's current state)
+    let currentContextSection = '';
+    if (context) {
+      const now = new Date();
+      const timeStr = now.toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        weekday: 'long',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+
+      const activityMap: Record<string, string> = {
+        working: '正在工作中',
+        eating: '正在吃饭',
+        sleeping: '正在睡觉',
+        commuting: '正在通勤路上',
+        resting: '正在休息',
+        free: '空闲中',
+      };
+      const activityDesc = context.currentActivity ? activityMap[context.currentActivity] || '空闲中' : '空闲中';
+
+      let timeSinceLastChat = '';
+      if (context.lastChatAt) {
+        const diffMs = now.getTime() - context.lastChatAt.getTime();
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffHours / 24);
+        if (diffDays > 0) {
+          timeSinceLastChat = `距离上次和这个人聊天：${diffDays}天前`;
+        } else if (diffHours > 0) {
+          timeSinceLastChat = `距离上次和这个人聊天：${diffHours}小时前`;
+        } else {
+          timeSinceLastChat = `距离上次和这个人聊天：刚刚`;
+        }
+      }
+
+      currentContextSection = `<current_context>
+- 现实时间：${timeStr}
+- 你现在的状态：${activityDesc}${timeSinceLastChat ? `\n- ${timeSinceLastChat}` : ''}
+</current_context>
+
+<behavioral_guideline>
+基于你当前的状态，适当调整回复风格。如果你正在忙碌（工作/吃饭/睡觉），回复可以简短一些，或者表现出有点累/忙的感觉。如果很久没聊天了，可以表现出想念或关心。
+</behavioral_guideline>`;
+    }
+
     // 群聊指令
     const groupInstruction = isGroupChat
       ? `\n<group_chat>\n你现在在一个群聊中，群里还有其他朋友。不要重复别人已经说过的内容，从你的专业角度补充观点。\n</group_chat>`
@@ -126,6 +178,7 @@ export class PromptBuilderService {
       reasoningSection,
       routingSection,
       memorySection,
+      currentContextSection,
       groupInstruction,
       rulesSection,
       '</system_prompt>',

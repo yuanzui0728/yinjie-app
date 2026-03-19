@@ -30,10 +30,10 @@ export class AiOrchestratorService {
   }
 
   async generateReply(options: GenerateReplyOptions): Promise<GenerateReplyResult> {
-    const { profile, conversationHistory, userMessage, isGroupChat, otherParticipants } = options;
+    const { profile, conversationHistory, userMessage, isGroupChat, otherParticipants, chatContext } = options;
 
     let systemPrompt = profile.systemPrompt
-      ?? this.promptBuilder.buildChatSystemPrompt(profile, isGroupChat);
+      ?? this.promptBuilder.buildChatSystemPrompt(profile, isGroupChat, chatContext);
 
     // Inject WorldContext (current time/season/holiday)
     try {

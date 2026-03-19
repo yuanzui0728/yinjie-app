@@ -158,7 +158,13 @@ export class ChatService {
         }
       }
 
-      const reply = await this.ai.generateReply({ profile, conversationHistory: history, userMessage: text });
+      const charEntity = await this.characters.findById(charId);
+      const lastMsg = await this.msgRepo.findOne({ where: { conversationId: convId, senderType: 'user' }, order: { createdAt: 'DESC' } });
+      const chatContext = {
+        currentActivity: charEntity?.currentActivity,
+        lastChatAt: lastMsg?.createdAt,
+      };
+      const reply = await this.ai.generateReply({ profile, conversationHistory: history, userMessage: text, chatContext });
       const aiEntity = this.msgRepo.create({ id: `msg_${Date.now()}_ai`, conversationId: convId, senderType: 'character', senderId: charId, senderName: profile.name, type: 'text', text: reply.text });
       await this.msgRepo.save(aiEntity);
       history.push({ role: 'assistant', content: reply.text });

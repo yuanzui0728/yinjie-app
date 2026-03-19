@@ -23,6 +23,6 @@ import { GroupMessageEntity } from './group-message.entity';
   ],
   providers: [ChatGateway, ChatService, GroupService],
   controllers: [ChatController, GroupController],
-  exports: [ChatService, GroupService],
+  exports: [ChatService, GroupService, ChatGateway],
 })
 export class ChatModule {}
