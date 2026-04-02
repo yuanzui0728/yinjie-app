@@ -1,13 +1,21 @@
 # Dependencies
 node_modules/
+apps/*/node_modules/
+packages/*/node_modules/
 .pnp
 .pnp.js
+.pnpm-store/
 
 # Build outputs
 dist/
 build/
 .next/
 out/
+apps/*/dist/
+packages/*/dist/
+apps/desktop/src-tauri/target/
+crates/*/target/
+.turbo/
 
 # Environment variables
 .env
@@ -39,6 +47,7 @@ Thumbs.db
 
 # Claude
 .claude/
+.Codex/
 
 # Expo / React Native (mobile - 不上传)
 mobile/
@@ -50,3 +59,5 @@ mobile/
 # Vite cache
 web/node_modules/.vite/
 admin/node_modules/.vite/
+apps/app/node_modules/.vite/
+apps/admin/node_modules/.vite/
