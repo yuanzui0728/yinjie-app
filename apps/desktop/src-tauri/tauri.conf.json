@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "隐界",
+  "version": "0.1.0",
+  "identifier": "com.yinjie.runtime",
+  "build": {
+    "beforeDevCommand": "pnpm --dir ..\\app dev",
+    "beforeBuildCommand": "pnpm --dir ..\\app build",
+    "devUrl": "http://127.0.0.1:5180",
+    "frontendDist": "..\\app\\dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "隐界",
+        "width": 1440,
+        "height": 960,
+        "minWidth": 1100,
+        "minHeight": 760
+      }
+    ],
+    "security": {
+      "capabilities": ["default"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": []
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "pubkey": "REPLACE_WITH_RELEASE_PUBLIC_KEY",
+      "endpoints": [
+        "https://example.com/yinjie/latest.json"
+      ]
+    }
+  }
+}

@@ -1,0 +1,21 @@
+:root {
+  --bg-canvas: #0f1720;
+  --bg-accent: radial-gradient(circle at top, rgba(249, 115, 22, 0.18), transparent 36%);
+  --surface-primary: rgba(17, 24, 39, 0.72);
+  --surface-secondary: rgba(255, 255, 255, 0.04);
+  --surface-console: #101827;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --brand-primary: #f97316;
+  --brand-secondary: #fbbf24;
+  --shadow-card: 0 16px 48px rgba(15, 23, 32, 0.35);
+}
+
+body {
+  background:
+    var(--bg-accent),
+    linear-gradient(180deg, #101726 0%, #090d15 100%);
+  color: var(--text-primary);
+}

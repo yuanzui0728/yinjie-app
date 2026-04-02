@@ -1,0 +1,15 @@
+{
+  "name": "@yinjie/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node ./scripts/run-tauri.mjs dev",
+    "build": "node ./scripts/run-tauri.mjs build",
+    "typecheck": "node -e \"console.log('Desktop shell is managed by Rust/Tauri.')\"",
+    "lint": "node -e \"console.log('Desktop shell linting is handled by cargo fmt/clippy when Rust is installed.')\""
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.2.5"
+  }
+}

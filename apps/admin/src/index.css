@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "JetBrains Mono", "Noto Sans SC", "Microsoft YaHei", monospace;
+  background: linear-gradient(180deg, #071018 0%, #0c1523 100%);
+}
