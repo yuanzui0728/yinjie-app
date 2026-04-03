@@ -4,6 +4,8 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use tokio::sync::broadcast;
+
 use crate::{
     models::{
         AppConfigStore, CharacterRecord, ConversationRecord, FeedCommentRecord,
@@ -20,6 +22,7 @@ pub struct AppState {
     pub database_path: PathBuf,
     pub runtime: Arc<RwLock<RuntimeState>>,
     pub realtime: Arc<RwLock<RealtimeState>>,
+    pub realtime_events: broadcast::Sender<RealtimeCommand>,
     pub scheduler: Arc<RwLock<SchedulerState>>,
 }
 
@@ -69,13 +72,25 @@ pub struct SchedulerState {
     pub jobs: HashMap<String, SchedulerJobRuntimeState>,
 }
 
+#[derive(Clone)]
+pub enum RealtimeCommand {
+    EmitConversationMessage {
+        conversation_id: String,
+        message: MessageRecord,
+        source: String,
+    },
+}
+
 impl AppState {
     pub fn new(port: u16, database_path: PathBuf) -> Self {
+        let (realtime_events, _) = broadcast::channel(64);
+
         Self {
             port,
             database_path,
             runtime: Arc::new(RwLock::new(RuntimeState::seeded())),
             realtime: Arc::new(RwLock::new(RealtimeState::default())),
+            realtime_events,
             scheduler: Arc::new(RwLock::new(SchedulerState {
                 mode: "scaffolded".into(),
                 ..SchedulerState::default()
