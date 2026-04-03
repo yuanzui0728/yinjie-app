@@ -4,11 +4,15 @@ use socketioxide::{
     extract::{Data, SocketRef},
     SocketIo,
 };
-use tokio::time::{sleep, Duration};
+use tokio::{
+    spawn,
+    sync::broadcast,
+    time::{sleep, Duration},
+};
 use tracing::info;
 
 use crate::{
-    app_state::AppState,
+    app_state::{AppState, RealtimeCommand},
     models::{
         CharacterRecord, ConversationRecord, ConversationUpdatedEventPayload, ErrorEventPayload,
         JoinConversationSocketPayload, MessageRecord, SendMessageSocketPayload, TypingEventPayload,
@@ -25,6 +29,31 @@ const EVENT_TYPING_STOP: &str = "typing_stop";
 const EVENT_CONVERSATION_UPDATED: &str = "conversation_updated";
 
 pub fn install(io: SocketIo, state: AppState) {
+    let mut event_receiver = state.realtime_events.subscribe();
+    let event_state = state.clone();
+    let event_io = io.clone();
+
+    spawn(async move {
+        loop {
+            match event_receiver.recv().await {
+                Ok(command) => handle_internal_command(command, &event_state, &event_io).await,
+                Err(broadcast::error::RecvError::Lagged(skipped)) => {
+                    let timestamp = now_token();
+                    let mut realtime = event_state
+                        .realtime
+                        .write()
+                        .expect("realtime lock poisoned");
+                    record_realtime_event(
+                        &mut realtime,
+                        format!("internal-command-lagged:{skipped}"),
+                        &timestamp,
+                    );
+                }
+                Err(broadcast::error::RecvError::Closed) => break,
+            }
+        }
+    });
+
     let connect_state = state.clone();
     let connect_io = io.clone();
 
@@ -71,6 +100,22 @@ pub fn install(io: SocketIo, state: AppState) {
             });
         }
     });
+}
+
+async fn handle_internal_command(command: RealtimeCommand, state: &AppState, io: &SocketIo) {
+    match command {
+        RealtimeCommand::EmitConversationMessage {
+            conversation_id,
+            message,
+            source,
+        } => {
+            emit_room_event(io, &conversation_id, EVENT_NEW_MESSAGE, &message).await;
+            stamp_message_event(
+                state,
+                &format!("internal-message:{source}:{conversation_id}"),
+            );
+        }
+    }
 }
 
 pub const fn namespace() -> &'static str {

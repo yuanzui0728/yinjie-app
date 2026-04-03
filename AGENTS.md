@@ -133,6 +133,11 @@
 - `typing_stop`
 - `conversation_updated`
 
+当前 scheduler 主动消息已接入 `/chat`：
+
+- scheduler 会把 proactive message 通过内部 realtime bus 推送为 `new_message`
+- `/system/realtime` 会记录对应 internal realtime event
+
 当前 scheduler 已有真实执行切片：
 
 - world context 更新

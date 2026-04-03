@@ -7,7 +7,7 @@ use tokio::{spawn, time::interval};
 use tracing::{info, warn};
 
 use crate::{
-    app_state::{AppState, SchedulerJobRuntimeState},
+    app_state::{AppState, RealtimeCommand, SchedulerJobRuntimeState},
     models::{FeedCommentRecord, FriendRequestRecord, MessageRecord, MomentPostRecord},
     seed::{build_world_context_snapshot, SCHEDULER_COLD_START_ENABLED},
 };
@@ -561,6 +561,7 @@ async fn trigger_memory_proactive_messages_job(state: AppState) -> Result<String
     let conversations = runtime.conversations.values().cloned().collect::<Vec<_>>();
     let mut sent = 0_usize;
     let today_start = start_of_day_millis(current_millis());
+    let mut outbound_messages = Vec::new();
 
     for conversation in conversations {
         if conversation.r#type != "direct" {
@@ -595,24 +596,39 @@ async fn trigger_memory_proactive_messages_job(state: AppState) -> Result<String
             continue;
         }
 
+        let proactive_message = MessageRecord {
+            id: format!("msg_{}_proactive_{}", now_token(), character.id),
+            conversation_id: conversation.id.clone(),
+            sender_type: "character".into(),
+            sender_id: character.id.clone(),
+            sender_name: character.name.clone(),
+            r#type: "text".into(),
+            text: format!(
+                "{} remembered something you mentioned earlier and wanted to check in.",
+                character.name
+            ),
+            created_at: now_token(),
+        };
+
         runtime
             .messages
             .entry(conversation.id.clone())
             .or_default()
-            .push(MessageRecord {
-                id: format!("msg_{}_proactive_{}", now_token(), character.id),
-                conversation_id: conversation.id.clone(),
-                sender_type: "character".into(),
-                sender_id: character.id.clone(),
-                sender_name: character.name.clone(),
-                r#type: "text".into(),
-                text: format!(
-                    "{} remembered something you mentioned earlier and wanted to check in.",
-                    character.name
-                ),
-                created_at: now_token(),
-            });
+            .push(proactive_message.clone());
+        outbound_messages.push((conversation.id.clone(), proactive_message));
         sent += 1;
+    }
+
+    drop(runtime);
+
+    for (conversation_id, message) in outbound_messages {
+        let _ = state
+            .realtime_events
+            .send(RealtimeCommand::EmitConversationMessage {
+                conversation_id,
+                message,
+                source: "scheduler-proactive-message".into(),
+            });
     }
 
     Ok(format!("sent {sent} proactive messages"))
