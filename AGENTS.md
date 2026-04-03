@@ -170,6 +170,7 @@
 - `POST /api/moments/generate-all`
 - scheduler `check-moment-schedule`
 - scheduler `process-pending-feed-reactions`
+- scheduler `trigger-memory-proactive-messages`
 
 以上链路会在 provider 可用时走 gateway 生成，在 provider 缺失或失败时回退到当前占位文案，保证业务语义和触发条件不变
 

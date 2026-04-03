@@ -586,68 +586,78 @@ async fn process_pending_feed_reactions_job(state: AppState) -> Result<String, S
 }
 
 async fn trigger_memory_proactive_messages_job(state: AppState) -> Result<String, String> {
-    let mut runtime = state.runtime.write().expect("runtime lock poisoned");
-    let conversations = runtime.conversations.values().cloned().collect::<Vec<_>>();
-    let mut sent = 0_usize;
+    let conversations = {
+        let runtime = state.runtime.read().expect("runtime lock poisoned");
+        runtime.conversations.values().cloned().collect::<Vec<_>>()
+    };
     let today_start = start_of_day_millis(current_millis());
-    let mut outbound_messages = Vec::new();
+    let candidates = {
+        let runtime = state.runtime.read().expect("runtime lock poisoned");
+        let mut candidates = Vec::new();
 
-    for conversation in conversations {
-        if conversation.r#type != "direct" {
-            continue;
-        }
+        for conversation in conversations {
+            if conversation.r#type != "direct" {
+                continue;
+            }
 
-        let Some(character_id) = conversation.participants.first().cloned() else {
-            continue;
-        };
+            let Some(character_id) = conversation.participants.first().cloned() else {
+                continue;
+            };
 
-        let Some(character) = runtime.characters.get(&character_id).cloned() else {
-            continue;
-        };
+            let Some(character) = runtime.characters.get(&character_id).cloned() else {
+                continue;
+            };
 
-        if character.profile.memory_summary.trim().is_empty() {
-            continue;
-        }
+            if character.profile.memory_summary.trim().is_empty() {
+                continue;
+            }
 
-        let already_sent_today = runtime
-            .messages
-            .get(&conversation.id)
-            .map(|messages| {
-                messages.iter().rev().any(|message| {
-                    message.sender_type == "character"
-                        && message.id.contains("proactive")
-                        && parse_timestamp(&message.created_at) >= today_start
+            let already_sent_today = runtime
+                .messages
+                .get(&conversation.id)
+                .map(|messages| {
+                    messages.iter().rev().any(|message| {
+                        message.sender_type == "character"
+                            && message.id.contains("proactive")
+                            && parse_timestamp(&message.created_at) >= today_start
+                    })
                 })
-            })
-            .unwrap_or(false);
+                .unwrap_or(false);
 
-        if already_sent_today {
-            continue;
+            if already_sent_today {
+                continue;
+            }
+
+            candidates.push((conversation.id.clone(), character));
         }
+        candidates
+    };
+    let mut outbound_messages = Vec::with_capacity(candidates.len());
 
+    for (conversation_id, character) in candidates {
+        let text = generation::generate_proactive_message_text(&state, &character).await;
         let proactive_message = MessageRecord {
             id: format!("msg_{}_proactive_{}", now_token(), character.id),
-            conversation_id: conversation.id.clone(),
+            conversation_id: conversation_id.clone(),
             sender_type: "character".into(),
             sender_id: character.id.clone(),
             sender_name: character.name.clone(),
             r#type: "text".into(),
-            text: format!(
-                "{} remembered something you mentioned earlier and wanted to check in.",
-                character.name
-            ),
+            text,
             created_at: now_token(),
         };
-
-        runtime
-            .messages
-            .entry(conversation.id.clone())
-            .or_default()
-            .push(proactive_message.clone());
-        outbound_messages.push((conversation.id.clone(), proactive_message));
-        sent += 1;
+        outbound_messages.push((conversation_id, proactive_message));
     }
 
+    let sent = outbound_messages.len();
+    let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+    for (conversation_id, proactive_message) in &outbound_messages {
+        runtime
+            .messages
+            .entry(conversation_id.clone())
+            .or_default()
+            .push(proactive_message.clone());
+    }
     drop(runtime);
 
     for (conversation_id, message) in outbound_messages {

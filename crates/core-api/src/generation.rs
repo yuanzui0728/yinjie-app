@@ -113,6 +113,57 @@ pub async fn generate_feed_comment_text(
     }
 }
 
+pub async fn generate_proactive_message_text(
+    state: &AppState,
+    character: &CharacterRecord,
+) -> String {
+    let fallback = fallback_proactive_message_text(character);
+    let Some(world_context) = latest_world_context(state) else {
+        return fallback;
+    };
+    if state.inference_gateway.active_provider().is_none() {
+        return fallback;
+    }
+
+    let memory_summary = character.profile.memory_summary.trim();
+    if memory_summary.is_empty() {
+        return fallback;
+    }
+
+    let system_prompt = format!(
+        "You are roleplaying {}. Send one concise proactive check-in message. Do not mention AI.",
+        character.name
+    );
+    let prompt = format!(
+        "Write one natural proactive message in Chinese, under 40 characters.\nCharacter: {name}\nRelationship: {relationship}\nCurrent world: {world}\nMemory summary: {memory}",
+        name = character.name,
+        relationship = character.relationship,
+        world = format_world_context(&world_context),
+        memory = memory_summary
+    );
+
+    let request = yinjie_inference_gateway::ChatCompletionRequest {
+        messages: vec![
+            yinjie_inference_gateway::ChatMessage {
+                role: "system".into(),
+                content: system_prompt,
+            },
+            yinjie_inference_gateway::ChatMessage {
+                role: "user".into(),
+                content: prompt,
+            },
+        ],
+        model: None,
+        temperature: Some(0.8),
+        max_tokens: Some(100),
+    };
+
+    match state.inference_gateway.chat_completion(request).await {
+        Ok(response) => normalize_generated_text(&response.content).unwrap_or(fallback),
+        Err(_) => fallback,
+    }
+}
+
 pub fn fallback_moment_text(character: &CharacterRecord) -> String {
     let activity = character
         .current_activity
@@ -126,6 +177,13 @@ pub fn fallback_moment_text(character: &CharacterRecord) -> String {
 
 pub fn fallback_feed_comment_text(character: &CharacterRecord) -> String {
     format!("{}看到了这条动态，也想来接一句。", character.name)
+}
+
+pub fn fallback_proactive_message_text(character: &CharacterRecord) -> String {
+    format!(
+        "{} remembered something you mentioned earlier and wanted to check in.",
+        character.name
+    )
 }
 
 fn latest_world_context(state: &AppState) -> Option<WorldContextRecord> {
