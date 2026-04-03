@@ -2,6 +2,16 @@ import type { AuthSession, InitUserRequest, LoginRequest, SuccessResponse, Regis
 import type { Character, CharacterDraft } from "./characters";
 import type { AiModelResponse, AvailableModelsResponse, UpdateAiModelRequest } from "./config";
 import type {
+  AcceptFriendRequestRequest,
+  DeclineFriendRequestRequest,
+  FriendListItem,
+  FriendRequest,
+  SendFriendRequestRequest,
+  ShakeRequest,
+  ShakeResult,
+  TriggerSceneRequest,
+} from "./social";
+import type {
   LogIndexResponse,
   OperationResult,
   ProviderTestRequest,
@@ -222,4 +232,67 @@ export function deleteCharacter(id: string, baseUrl?: string) {
 
 export function getLatestWorldContext(baseUrl?: string) {
   return requestLegacyApi<WorldContext>("/world/context", undefined, baseUrl);
+}
+
+export function getFriendRequests(userId: string, baseUrl?: string) {
+  return requestLegacyApi<FriendRequest[]>(`/social/friend-requests?userId=${encodeURIComponent(userId)}`, undefined, baseUrl);
+}
+
+export function acceptFriendRequest(id: string, payload: AcceptFriendRequestRequest, baseUrl?: string) {
+  return requestLegacyApi<FriendListItem["friendship"]>(
+    `/social/friend-requests/${id}/accept`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
+export function declineFriendRequest(id: string, payload: DeclineFriendRequestRequest, baseUrl?: string) {
+  return requestLegacyApi<SuccessResponse>(
+    `/social/friend-requests/${id}/decline`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
+export function getFriends(userId: string, baseUrl?: string) {
+  return requestLegacyApi<FriendListItem[]>(`/social/friends?userId=${encodeURIComponent(userId)}`, undefined, baseUrl);
+}
+
+export function shake(payload: ShakeRequest, baseUrl?: string) {
+  return requestLegacyApi<ShakeResult | null>(
+    "/social/shake",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
+export function sendFriendRequest(payload: SendFriendRequestRequest, baseUrl?: string) {
+  return requestLegacyApi<FriendRequest>(
+    "/social/friend-requests/send",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
+export function triggerSceneFriendRequest(payload: TriggerSceneRequest, baseUrl?: string) {
+  return requestLegacyApi<FriendRequest | null>(
+    "/social/trigger-scene",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
 }

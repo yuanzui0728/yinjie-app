@@ -406,3 +406,75 @@ pub struct SchedulerStatusRecord {
   pub last_world_snapshot_at: Option<String>,
   pub jobs: Vec<SchedulerJobRecord>,
 }
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FriendRequestRecord {
+  pub id: String,
+  pub user_id: String,
+  pub character_id: String,
+  pub character_name: String,
+  pub character_avatar: String,
+  pub trigger_scene: Option<String>,
+  pub greeting: Option<String>,
+  pub status: String,
+  pub created_at: String,
+  pub expires_at: Option<String>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FriendshipRecord {
+  pub id: String,
+  pub user_id: String,
+  pub character_id: String,
+  pub intimacy_level: i32,
+  pub status: String,
+  pub created_at: String,
+  pub last_interacted_at: Option<String>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FriendListItemRecord {
+  pub friendship: FriendshipRecord,
+  pub character: CharacterRecord,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UserScopedRequest {
+  pub user_id: String,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SendFriendRequestPayload {
+  pub user_id: String,
+  pub character_id: String,
+  pub greeting: String,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TriggerScenePayload {
+  pub user_id: String,
+  pub scene: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShakePreviewCharacterRecord {
+  pub id: String,
+  pub name: String,
+  pub avatar: String,
+  pub relationship: String,
+  pub expert_domains: Vec<String>,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShakeResultRecord {
+  pub character: ShakePreviewCharacterRecord,
+  pub greeting: String,
+}
