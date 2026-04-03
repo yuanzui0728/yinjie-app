@@ -8,13 +8,14 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use tracing::warn;
+use yinjie_inference_gateway::{InferenceGateway, ProviderConfig as GatewayProviderConfig};
 
 use crate::{
     models::{
         AppConfigStore, CharacterRecord, ConversationRecord, FeedCommentRecord,
         FeedInteractionRecord, FeedPostRecord, FriendRequestRecord, FriendshipRecord,
         GroupMemberRecord, GroupMessageRecord, GroupRecord, MessageRecord, MomentCommentRecord,
-        MomentLikeRecord, MomentPostRecord, UserRecord, WorldContextRecord,
+        MomentLikeRecord, MomentPostRecord, ProviderConfigRecord, UserRecord, WorldContextRecord,
     },
     persistence,
     seed::{seeded_characters, seeded_feed_stream, seeded_moments, seeded_world_context},
@@ -28,6 +29,7 @@ pub struct AppState {
     pub realtime: Arc<RwLock<RealtimeState>>,
     pub realtime_events: broadcast::Sender<RealtimeCommand>,
     pub scheduler: Arc<RwLock<SchedulerState>>,
+    pub inference_gateway: Arc<InferenceGateway>,
     persistence: mpsc::UnboundedSender<PersistenceCommand>,
 }
 
@@ -99,7 +101,7 @@ impl AppState {
     ) -> (Self, mpsc::UnboundedReceiver<PersistenceCommand>) {
         let (realtime_events, _) = broadcast::channel(64);
         let (persistence, persistence_receiver) = mpsc::unbounded_channel();
-        let (runtime, scheduler) = match persistence::load_persisted_state(&database_path) {
+        let (mut runtime, scheduler) = match persistence::load_persisted_state(&database_path) {
             Ok(Some((runtime, scheduler))) => (runtime, scheduler),
             Ok(None) => (
                 RuntimeState::seeded(),
@@ -119,6 +121,9 @@ impl AppState {
                 )
             }
         };
+        runtime.normalize_config();
+        let inference_gateway = Arc::new(InferenceGateway::new(4));
+        inference_gateway.configure_provider(runtime.config.provider.to_gateway_provider());
 
         (
             Self {
@@ -128,6 +133,7 @@ impl AppState {
                 realtime: Arc::new(RwLock::new(RealtimeState::default())),
                 realtime_events,
                 scheduler: Arc::new(RwLock::new(scheduler)),
+                inference_gateway,
                 persistence,
             },
             persistence_receiver,
@@ -171,5 +177,56 @@ impl RuntimeState {
             world_contexts: vec![seeded_world_context()],
             config: AppConfigStore::default(),
         }
+    }
+
+    fn normalize_config(&mut self) {
+        let default_provider = ProviderConfigRecord::default();
+        let resolved_model = if self.config.ai_model.trim().is_empty() {
+            self.config.provider.model.trim().to_string()
+        } else {
+            self.config.ai_model.trim().to_string()
+        };
+
+        self.config.provider.endpoint = normalize_or_default(
+            &self.config.provider.endpoint,
+            &default_provider.endpoint,
+        );
+        self.config.provider.mode =
+            normalize_or_default(&self.config.provider.mode, &default_provider.mode);
+        self.config.provider.model = if resolved_model.is_empty() {
+            default_provider.model.clone()
+        } else {
+            resolved_model.clone()
+        };
+        self.config.ai_model = self.config.provider.model.clone();
+
+        self.config.provider.api_key = self.config.provider.api_key.take().and_then(|value| {
+            let normalized = value.trim().to_string();
+            if normalized.is_empty() {
+                None
+            } else {
+                Some(normalized)
+            }
+        });
+    }
+}
+
+impl ProviderConfigRecord {
+    pub fn to_gateway_provider(&self) -> GatewayProviderConfig {
+        GatewayProviderConfig {
+            endpoint: self.endpoint.clone(),
+            model: self.model.clone(),
+            api_key: self.api_key.clone(),
+            mode: self.mode.clone(),
+        }
+    }
+}
+
+fn normalize_or_default(value: &str, fallback: &str) -> String {
+    let normalized = value.trim();
+    if normalized.is_empty() {
+        fallback.to_string()
+    } else {
+        normalized.to_string()
     }
 }

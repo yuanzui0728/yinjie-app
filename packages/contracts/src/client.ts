@@ -43,6 +43,7 @@ import type {
 import type {
   LogIndexResponse,
   OperationResult,
+  ProviderConfig,
   ProviderTestRequest,
   ProviderTestResult,
   RealtimeStatus,
@@ -121,6 +122,21 @@ export function testProviderConnection(payload: ProviderTestRequest, baseUrl?: s
     "/system/provider/test",
     {
       method: "POST",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
+export function getProviderConfig(baseUrl?: string) {
+  return request<ProviderConfig>("/system/provider", undefined, baseUrl);
+}
+
+export function setProviderConfig(payload: ProviderConfig, baseUrl?: string) {
+  return request<ProviderConfig>(
+    "/system/provider",
+    {
+      method: "PUT",
       body: JSON.stringify(payload),
     },
     baseUrl,

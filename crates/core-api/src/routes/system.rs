@@ -16,8 +16,8 @@ use crate::{
     app_state::AppState,
     error::{ApiError, ApiResult},
     models::{
-        ProviderTestRequest, ProviderTestResult, RealtimeRoomStatusRecord, RealtimeStatusRecord,
-        SchedulerStatusRecord,
+        ProviderConfigResponse, ProviderTestRequest, ProviderTestResult, RealtimeRoomStatusRecord,
+        RealtimeStatusRecord, SchedulerStatusRecord, UpdateProviderConfigRequest,
     },
     persistence, realtime, runtime_paths, scheduler,
     seed::{scheduler_jobs, LEGACY_MIGRATED_MODULES, SCHEDULER_COLD_START_ENABLED},
@@ -47,6 +47,12 @@ struct InferenceStatus {
     active_provider: Option<String>,
     queue_depth: u32,
     max_concurrency: u32,
+    in_flight_requests: u32,
+    total_requests: u32,
+    successful_requests: u32,
+    failed_requests: u32,
+    last_success_at: Option<String>,
+    last_error: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -83,6 +89,7 @@ pub fn router() -> Router<AppState> {
         .route("/realtime", get(realtime_status))
         .route("/scheduler", get(scheduler_status))
         .route("/scheduler/run/:id", post(run_scheduler_job))
+        .route("/provider", get(get_provider_config).put(set_provider_config))
         .route("/provider/test", post(provider_test))
         .route("/logs", get(log_index))
         .route("/diag/export", post(export_diag))
@@ -98,27 +105,102 @@ async fn realtime_status(State(state): State<AppState>) -> Json<RealtimeStatusRe
     Json(build_realtime_status(&state))
 }
 
-async fn provider_test(Json(payload): Json<ProviderTestRequest>) -> Json<ProviderTestResult> {
-    let normalized = payload.endpoint.trim().trim_end_matches('/').to_string();
-    let success = normalized.starts_with("http://") || normalized.starts_with("https://");
-    let auth_mode = if payload.api_key.as_deref().unwrap_or_default().is_empty() {
-        "no key provided"
-    } else {
-        "key provided"
+async fn get_provider_config(State(state): State<AppState>) -> Json<ProviderConfigResponse> {
+    let runtime = state.runtime.read().expect("runtime lock poisoned");
+    Json(build_provider_config_response(
+        &runtime.config.provider.endpoint,
+        &runtime.config.provider.model,
+        runtime.config.provider.api_key.as_deref(),
+        &runtime.config.provider.mode,
+    ))
+}
+
+async fn set_provider_config(
+    State(state): State<AppState>,
+    Json(payload): Json<UpdateProviderConfigRequest>,
+) -> ApiResult<Json<ProviderConfigResponse>> {
+    let provider = normalize_provider_payload(
+        &payload.endpoint,
+        &payload.model,
+        payload.api_key.as_deref(),
+        &payload.mode,
+    )
+    .map_err(ApiError::bad_request)?;
+
+    {
+        let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+        runtime.config.ai_model = provider.model.clone();
+        runtime.config.provider.endpoint = provider.endpoint.clone();
+        runtime.config.provider.model = provider.model.clone();
+        runtime.config.provider.api_key = provider.api_key.clone();
+        runtime.config.provider.mode = provider.mode.clone();
+    }
+
+    state
+        .inference_gateway
+        .configure_provider(provider_config_to_gateway(
+            &provider.endpoint,
+            &provider.model,
+            provider.api_key.as_deref(),
+            &provider.mode,
+        ));
+    state.request_persist("system-set-provider");
+    runtime_paths::append_core_api_log(
+        &state.database_path,
+        "INFO",
+        &format!(
+            "provider configuration updated: model={} endpoint={} mode={}",
+            provider.model, provider.endpoint, provider.mode
+        ),
+    );
+
+    Ok(Json(provider))
+}
+
+async fn provider_test(
+    State(state): State<AppState>,
+    Json(payload): Json<ProviderTestRequest>,
+) -> Json<ProviderTestResult> {
+    let provider = match normalize_provider_payload(
+        &payload.endpoint,
+        &payload.model,
+        payload.api_key.as_deref(),
+        payload.mode.as_deref().unwrap_or("cloud"),
+    ) {
+        Ok(provider) => provider,
+        Err(message) => {
+            return Json(ProviderTestResult {
+                success: false,
+                message,
+                normalized_endpoint: Some(payload.endpoint.trim().trim_end_matches('/').to_string()),
+                status_code: None,
+            });
+        }
     };
 
-    Json(ProviderTestResult {
-        success,
-        message: if success {
-            format!(
-                "Provider endpoint accepted for phase-2 migration. model={}, auth={}",
-                payload.model, auth_mode
-            )
-        } else {
-            "Endpoint must start with http:// or https://".into()
-        },
-        normalized_endpoint: Some(normalized),
-    })
+    match state
+        .inference_gateway
+        .probe_provider(provider_config_to_gateway(
+            &provider.endpoint,
+            &provider.model,
+            provider.api_key.as_deref(),
+            &provider.mode,
+        ))
+        .await
+    {
+        Ok(result) => Json(ProviderTestResult {
+            success: result.success,
+            message: result.message,
+            normalized_endpoint: Some(result.normalized_endpoint),
+            status_code: result.status_code,
+        }),
+        Err(message) => Json(ProviderTestResult {
+            success: false,
+            message,
+            normalized_endpoint: Some(provider.endpoint),
+            status_code: None,
+        }),
+    }
 }
 
 async fn scheduler_status(State(state): State<AppState>) -> Json<SchedulerStatusRecord> {
@@ -224,6 +306,7 @@ fn build_system_status(state: &AppState) -> SystemStatus {
     let runtime = state.runtime.read().expect("runtime lock poisoned");
     let scheduler = build_scheduler_status(state);
     let snapshot_path = persistence::snapshot_path(&state.database_path);
+    let gateway_metrics = state.inference_gateway.metrics();
 
     SystemStatus {
         core_api: ServiceHealth {
@@ -250,10 +333,19 @@ fn build_system_status(state: &AppState) -> SystemStatus {
             connected: snapshot_path.exists(),
         },
         inference_gateway: InferenceStatus {
-            healthy: false,
-            active_provider: None,
-            queue_depth: 0,
-            max_concurrency: 4,
+            healthy: gateway_metrics.active_provider.is_some() && gateway_metrics.last_error.is_none(),
+            active_provider: gateway_metrics
+                .active_provider
+                .as_ref()
+                .map(|provider| format!("{} @ {}", provider.model, provider.endpoint)),
+            queue_depth: gateway_metrics.queue_depth as u32,
+            max_concurrency: gateway_metrics.max_concurrency as u32,
+            in_flight_requests: gateway_metrics.in_flight_requests as u32,
+            total_requests: gateway_metrics.total_requests as u32,
+            successful_requests: gateway_metrics.successful_requests as u32,
+            failed_requests: gateway_metrics.failed_requests as u32,
+            last_success_at: gateway_metrics.last_success_at,
+            last_error: gateway_metrics.last_error,
         },
         legacy_surface: LegacySurfaceStatus {
             api_prefix: "/api".into(),
@@ -307,6 +399,73 @@ fn build_log_index(state: &AppState) -> Vec<String> {
     logs.into_iter()
         .map(|path| path.display().to_string())
         .collect()
+}
+
+fn normalize_provider_payload(
+    endpoint: &str,
+    model: &str,
+    api_key: Option<&str>,
+    mode: &str,
+) -> Result<ProviderConfigResponse, String> {
+    let normalized_endpoint = endpoint.trim().trim_end_matches('/').to_string();
+    let normalized_model = model.trim().to_string();
+    let normalized_mode = mode.trim().to_string();
+    let normalized_api_key = api_key.and_then(|value| {
+        let normalized = value.trim().to_string();
+        if normalized.is_empty() {
+            None
+        } else {
+            Some(normalized)
+        }
+    });
+
+    if normalized_endpoint.is_empty() {
+        return Err("Provider endpoint is required".into());
+    }
+    if !normalized_endpoint.starts_with("http://") && !normalized_endpoint.starts_with("https://") {
+        return Err("Provider endpoint must start with http:// or https://".into());
+    }
+    if normalized_model.is_empty() {
+        return Err("Provider model is required".into());
+    }
+    if normalized_mode.is_empty() {
+        return Err("Provider mode is required".into());
+    }
+
+    Ok(build_provider_config_response(
+        &normalized_endpoint,
+        &normalized_model,
+        normalized_api_key.as_deref(),
+        &normalized_mode,
+    ))
+}
+
+fn build_provider_config_response(
+    endpoint: &str,
+    model: &str,
+    api_key: Option<&str>,
+    mode: &str,
+) -> ProviderConfigResponse {
+    ProviderConfigResponse {
+        endpoint: endpoint.to_string(),
+        model: model.to_string(),
+        api_key: api_key.map(|value| value.to_string()),
+        mode: mode.to_string(),
+    }
+}
+
+fn provider_config_to_gateway(
+    endpoint: &str,
+    model: &str,
+    api_key: Option<&str>,
+    mode: &str,
+) -> yinjie_inference_gateway::ProviderConfig {
+    yinjie_inference_gateway::ProviderConfig {
+        endpoint: endpoint.to_string(),
+        model: model.to_string(),
+        api_key: api_key.map(|value| value.to_string()),
+        mode: mode.to_string(),
+    }
 }
 
 fn export_diagnostics_bundle(state: &AppState) -> Result<PathBuf, String> {

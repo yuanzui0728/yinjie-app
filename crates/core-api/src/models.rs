@@ -59,14 +59,38 @@ pub struct SuccessResponse {
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ProviderConfigRecord {
+    pub endpoint: String,
+    pub model: String,
+    pub api_key: Option<String>,
+    pub mode: String,
+}
+
+impl Default for ProviderConfigRecord {
+    fn default() -> Self {
+        Self {
+            endpoint: "http://127.0.0.1:11434/v1".into(),
+            model: "deepseek-chat".into(),
+            api_key: None,
+            mode: "local-compatible".into(),
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AppConfigStore {
+    #[serde(default)]
     pub ai_model: String,
+    #[serde(default)]
+    pub provider: ProviderConfigRecord,
 }
 
 impl Default for AppConfigStore {
     fn default() -> Self {
         Self {
             ai_model: "deepseek-chat".into(),
+            provider: ProviderConfigRecord::default(),
         }
     }
 }
@@ -93,6 +117,7 @@ pub struct ProviderTestRequest {
     pub endpoint: String,
     pub model: String,
     pub api_key: Option<String>,
+    pub mode: Option<String>,
 }
 
 #[derive(Clone, Serialize)]
@@ -101,6 +126,25 @@ pub struct ProviderTestResult {
     pub success: bool,
     pub message: String,
     pub normalized_endpoint: Option<String>,
+    pub status_code: Option<u16>,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UpdateProviderConfigRequest {
+    pub endpoint: String,
+    pub model: String,
+    pub api_key: Option<String>,
+    pub mode: String,
+}
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProviderConfigResponse {
+    pub endpoint: String,
+    pub model: String,
+    pub api_key: Option<String>,
+    pub mode: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
