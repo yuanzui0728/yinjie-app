@@ -9,42 +9,45 @@
 
 ## 当前架构状态
 
-项目正在从原有 Demo 结构迁移到生产级单用户自部署架构。
+项目正在从原始 Demo 结构迁移到生产级单用户自部署架构。
 
-### 生产级新结构
+### 新结构（生产级重构进行中）
 
-- `apps/app/`：新的主产品前端，桌面内嵌 WebView 使用
-- `apps/admin/`：新的本地后台前端，由本地服务托管，浏览器访问
+- `apps/app/`：新主产品前端，桌面内嵌 WebView 使用
+- `apps/admin/`：新本地后台前端，由本地服务托管或浏览器访问
 - `apps/desktop/`：Tauri 2 桌面壳
-- `crates/core-api/`：Rust Core API，本地业务服务与系统接口骨架
+- `crates/core-api/`：Rust Core API
 - `crates/inference-gateway/`：Rust 推理网关骨架
 - `packages/contracts/`：共享接口契约与 typed client
 - `packages/config/`：共享配置 schema
 - `packages/ui/`：共享设计系统与基础组件
 - `packages/tooling/`：共享工程配置
 
-### 旧结构（保留为迁移参照）
+### 旧结构（保留作为行为基线）
 
-- `api/`：旧后端实现，当前仍是业务行为基线
+- `api/`：旧 NestJS 后端，当前仍是业务行为对照基线
 - `web/`：旧 H5 主前端
 - `admin/`：旧管理后台
 - `mobile/`：冻结，不继续演进
 
 ## 技术栈与端口
 
-| 服务 | 技术 | 开发端口 / 运行方式 |
+| 服务 | 技术 | 端口 / 运行方式 |
 |------|------|------|
-| **桌面壳 ★** | Tauri 2 + Rust | 桌面应用 |
-| **Core API ★** | Rust + Axum + Tokio + SQLite(WAL 规划) | 默认 `39091` |
-| **推理网关 ★** | Rust（独立 crate） | 内嵌 / 同进程规划 |
-| **主产品前端 ★** | React 19 + Vite + TanStack Router + Query + Tailwind 4 | `5180` |
-| **本地后台 ★** | React 19 + Vite + typed schema 表单 | `5181` |
+| 桌面壳 | Tauri 2 + Rust | 桌面应用 |
+| Core API | Rust + Axum + Tokio + SQLite(WAL 规划) | 默认 `39091` |
+| 推理网关 | Rust（独立 crate） | 内嵌 / 同进程规划 |
+| 主产品前端 | React 19 + Vite + TanStack Router + Query + Tailwind 4 | `5180` |
+| 本地后台 | React 19 + Vite + typed schema 表单 | `5181` |
 | 旧后端 | NestJS + TypeORM + SQLite + Socket.IO | `3000` |
 | 旧前端 | React + Vite H5（`web/`） | `5174` |
-| 旧管理后台 | React + Vite + Ant Design（`admin/`） | `5173` |
+| 旧后台 | React + Vite + Ant Design（`admin/`） | `5173` |
 
-## 新系统接口（已开始建立）
+## 新 Core API 路由状态
 
+### 系统接口
+
+- `GET /health`
 - `GET /system/status`
 - `POST /system/provider/test`
 - `GET /system/logs`
@@ -52,9 +55,35 @@
 - `POST /system/backup/create`
 - `POST /system/backup/restore`
 
+### 已迁移的兼容接口切片
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `POST /api/auth/init`
+- `PATCH /api/auth/users/:id/onboarding-complete`
+- `PATCH /api/auth/users/:id`
+- `GET /api/config/ai-model`
+- `PUT /api/config/ai-model`
+- `GET /api/config/available-models`
+- `GET /api/characters`
+- `GET /api/characters/:id`
+- `POST /api/characters`
+- `PATCH /api/characters/:id`
+- `DELETE /api/characters/:id`
+
+## 共享契约状态（packages/contracts）
+
+已建立 typed contracts：
+
+- `system`
+- `auth`
+- `config`
+- `characters`
+- `ws`
+
 ## 业务兼容要求（迁移期间保持）
 
-以下接口语义未来要保持不变：
+以下接口语义必须保持不变：
 
 - `/api/auth/*`
 - `/api/characters/*`
@@ -76,21 +105,31 @@
 - `Onboarding.tsx`：5 幕叙事入场流程
 - `Login.tsx`：传统登录
 - `FriendRequests.tsx`：好友申请列表
-- `tabs/ChatList` · `Moments` · `Contacts` · `Discover` · `Profile`
+- `tabs/ChatList`
+- `tabs/Moments`
+- `tabs/Contacts`
+- `tabs/Discover`
+- `tabs/Profile`
 
 ## 数据库实体基线（21 个）
 
-**核心**：User · Character · Conversation · Message · SystemConfig
+核心：
+`User` · `Character` · `Conversation` · `Message` · `SystemConfig`
 
-**朋友圈**：MomentPost · MomentComment · MomentLike · MomentEntity(legacy)
+朋友圈：
+`MomentPost` · `MomentComment` · `MomentLike` · `MomentEntity(legacy)`
 
-**社交**：Friendship · FriendRequest · AIRelationship
+社交：
+`Friendship` · `FriendRequest` · `AIRelationship`
 
-**群聊**：Group · GroupMember · GroupMessage
+群聊：
+`Group` · `GroupMember` · `GroupMessage`
 
-**发现页**：FeedPost · FeedComment · UserFeedInteraction
+发现页：
+`FeedPost` · `FeedComment` · `UserFeedInteraction`
 
-**世界**：WorldContext · NarrativeArc · AIBehaviorLog
+世界：
+`WorldContext` · `NarrativeArc` · `AIBehaviorLog`
 
 ## 环境与配置
 
@@ -102,6 +141,6 @@
 
 ### 新架构配置方向
 
-- API Key 不再以普通明文环境变量为唯一配置方式，目标是进入系统 keychain/keyring
+- API Key 目标迁移到系统 keychain / keyring
 - 运行配置进入本地 app data 目录
-- SQLite 文件迁移到桌面运行时目录
+- SQLite 文件迁移到桌面运行时数据目录

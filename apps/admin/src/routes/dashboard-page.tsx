@@ -1,14 +1,37 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { getSystemStatus, testProviderConnection } from "@yinjie/contracts";
+import {
+  getAiModel,
+  getAvailableModels,
+  getSystemStatus,
+  listCharacters,
+  testProviderConnection,
+} from "@yinjie/contracts";
 import { providerConfigSchema, type ProviderConfig } from "@yinjie/config";
 import { Card, SectionHeading, StatusPill } from "@yinjie/ui";
 
 export function DashboardPage() {
+  const baseUrl = import.meta.env.VITE_CORE_API_BASE_URL;
+
   const statusQuery = useQuery({
-    queryKey: ["admin-system-status"],
-    queryFn: () => getSystemStatus(import.meta.env.VITE_CORE_API_BASE_URL),
+    queryKey: ["admin-system-status", baseUrl],
+    queryFn: () => getSystemStatus(baseUrl),
+  });
+
+  const charactersQuery = useQuery({
+    queryKey: ["admin-characters", baseUrl],
+    queryFn: () => listCharacters(baseUrl),
+  });
+
+  const aiModelQuery = useQuery({
+    queryKey: ["admin-ai-model", baseUrl],
+    queryFn: () => getAiModel(baseUrl),
+  });
+
+  const availableModelsQuery = useQuery({
+    queryKey: ["admin-available-models", baseUrl],
+    queryFn: () => getAvailableModels(baseUrl),
   });
 
   const form = useForm<ProviderConfig>({
@@ -29,42 +52,89 @@ export function DashboardPage() {
           model: values.model,
           apiKey: values.apiKey,
         },
-        import.meta.env.VITE_CORE_API_BASE_URL,
+        baseUrl,
       ),
   });
 
-  return (
-    <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
-      <Card className="bg-[color:var(--surface-console)]">
-        <SectionHeading>系统概览</SectionHeading>
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-            <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-muted)]">Core API</div>
-            <div className="mt-2 text-2xl font-semibold">
-              {statusQuery.data?.coreApi.version ?? "offline"}
-            </div>
-            <div className="mt-3">
-              <StatusPill tone={statusQuery.data?.coreApi.healthy ? "healthy" : "warning"}>
-                {statusQuery.isLoading ? "probing" : statusQuery.data?.coreApi.healthy ? "healthy" : "waiting"}
-              </StatusPill>
-            </div>
-          </div>
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-            <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-muted)]">Inference Queue</div>
-            <div className="mt-2 text-2xl font-semibold">
-              {statusQuery.data?.inferenceGateway.queueDepth ?? 0}
-            </div>
-            <div className="mt-3 text-sm text-[color:var(--text-secondary)]">
-              max concurrency: {statusQuery.data?.inferenceGateway.maxConcurrency ?? 0}
-            </div>
-          </div>
-        </div>
+  const previewCharacters = charactersQuery.data?.slice(0, 5) ?? [];
 
-        <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-[color:var(--text-secondary)]">
-          这一页是新的本地后台入口骨架。后续会在这里平移角色管理、模型配置、日志、诊断和备份恢复，
-          但不会改动现有角色与消息规则。
-        </div>
-      </Card>
+  return (
+    <div className="grid gap-6 xl:grid-cols-[1.25fr_1fr]">
+      <div className="space-y-6">
+        <Card className="bg-[color:var(--surface-console)]">
+          <SectionHeading>System Overview</SectionHeading>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-muted)]">Core API</div>
+              <div className="mt-2 text-2xl font-semibold">{statusQuery.data?.coreApi.version ?? "offline"}</div>
+              <div className="mt-3">
+                <StatusPill tone={statusQuery.data?.coreApi.healthy ? "healthy" : "warning"}>
+                  {statusQuery.isLoading ? "probing" : statusQuery.data?.coreApi.healthy ? "healthy" : "waiting"}
+                </StatusPill>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-muted)]">Inference Queue</div>
+              <div className="mt-2 text-2xl font-semibold">
+                {statusQuery.data?.inferenceGateway.queueDepth ?? 0}
+              </div>
+              <div className="mt-3 text-sm text-[color:var(--text-secondary)]">
+                max concurrency: {statusQuery.data?.inferenceGateway.maxConcurrency ?? 0}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-muted)]">Active AI Model</div>
+              <div className="mt-2 text-2xl font-semibold">{aiModelQuery.data?.model ?? "pending"}</div>
+              <div className="mt-3 text-sm text-[color:var(--text-secondary)]">
+                catalog size: {availableModelsQuery.data?.models.length ?? 0}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-muted)]">Characters</div>
+              <div className="mt-2 text-2xl font-semibold">
+                {charactersQuery.data?.length ?? statusQuery.data?.legacySurface.charactersCount ?? 0}
+              </div>
+              <div className="mt-3 text-sm text-[color:var(--text-secondary)]">
+                migrated modules: {statusQuery.data?.legacySurface.migratedModules.join(", ") ?? "pending"}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-[color:var(--text-secondary)]">
+            This control plane is now aligned with the shared contract layer. The first compatibility slice already
+            covers config, auth, and characters and is ready for the next scheduler, social, and chat migrations.
+          </div>
+        </Card>
+
+        <Card className="bg-[color:var(--surface-console)]">
+          <SectionHeading>Character Surface</SectionHeading>
+          <div className="mt-4 space-y-3">
+            {previewCharacters.length > 0 ? (
+              previewCharacters.map((character) => (
+                <div
+                  key={character.id}
+                  className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-[color:var(--text-secondary)]"
+                >
+                  <div className="font-semibold text-white">{character.name}</div>
+                  <div className="mt-1">{character.relationship}</div>
+                  <div className="mt-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+                    {character.id}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/10 bg-black/10 px-4 py-6 text-sm text-[color:var(--text-secondary)]">
+                {charactersQuery.error instanceof Error
+                  ? charactersQuery.error.message
+                  : "Character CRUD compatibility routes are online once the new Core API process is running."}
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
 
       <Card className="bg-[color:var(--surface-console)]">
         <SectionHeading>Provider Probe</SectionHeading>
@@ -98,19 +168,19 @@ export function DashboardPage() {
             className="w-full rounded-2xl bg-[linear-gradient(135deg,#f97316,#fbbf24)] px-4 py-3 text-sm font-semibold text-slate-950"
             type="submit"
           >
-            测试端点
+            Probe Provider
           </button>
         </form>
 
         <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-[color:var(--text-secondary)]">
-          {providerMutation.isPending && "正在探测 provider..."}
+          {providerMutation.isPending && "Probing provider endpoint..."}
           {providerMutation.isSuccess && providerMutation.data.message}
           {providerMutation.isError &&
             (providerMutation.error instanceof Error
               ? providerMutation.error.message
               : "Provider probe failed")}
           {!providerMutation.isPending && !providerMutation.isSuccess && !providerMutation.isError
-            ? "新推理网关会统一承接云端和本地兼容端点；这里已经切换到 typed schema。"
+            ? "The inference gateway will normalize cloud and local compatible providers behind one runtime queue."
             : null}
         </div>
       </Card>

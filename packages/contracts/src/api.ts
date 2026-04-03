@@ -11,3 +11,7 @@ export const LEGACY_HTTP_SURFACE = [
   "/api/config/*",
   "/api/world/*",
 ] as const;
+
+export const LEGACY_MIGRATED_MODULES = ["config", "auth", "characters"] as const;
+
+export type LegacyMigratedModule = (typeof LEGACY_MIGRATED_MODULES)[number];
