@@ -1,5 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import {
   CHAT_EVENTS,
@@ -9,6 +10,7 @@ import {
   getAiModel,
   getAvailableModels,
   getFeed,
+  getProviderConfig,
   getLatestWorldContext,
   getMoments,
   getRealtimeStatus,
@@ -18,6 +20,7 @@ import {
   listCharacters,
   restoreBackup,
   runSchedulerJob,
+  setProviderConfig,
   testProviderConnection,
 } from "@yinjie/contracts";
 import { providerConfigSchema, type ProviderConfig } from "@yinjie/config";
@@ -40,6 +43,11 @@ export function DashboardPage() {
   const aiModelQuery = useQuery({
     queryKey: ["admin-ai-model", baseUrl],
     queryFn: () => getAiModel(baseUrl),
+  });
+
+  const providerConfigQuery = useQuery({
+    queryKey: ["admin-provider-config", baseUrl],
+    queryFn: () => getProviderConfig(baseUrl),
   });
 
   const availableModelsQuery = useQuery({
@@ -87,16 +95,32 @@ export function DashboardPage() {
     },
   });
 
-  const providerMutation = useMutation({
+  useEffect(() => {
+    if (!providerConfigQuery.data || form.formState.isDirty) {
+      return;
+    }
+
+    form.reset(normalizeProviderForm(providerConfigQuery.data));
+  }, [form, form.formState.isDirty, providerConfigQuery.data]);
+
+  const providerProbeMutation = useMutation({
     mutationFn: (values: ProviderConfig) =>
       testProviderConnection(
-        {
-          endpoint: values.endpoint,
-          model: values.model,
-          apiKey: values.apiKey,
-        },
+        buildProviderPayload(values),
         baseUrl,
       ),
+  });
+
+  const providerSaveMutation = useMutation({
+    mutationFn: (values: ProviderConfig) => setProviderConfig(buildProviderPayload(values), baseUrl),
+    onSuccess: async (provider) => {
+      form.reset(normalizeProviderForm(provider));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-provider-config", baseUrl] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-system-status", baseUrl] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-ai-model", baseUrl] }),
+      ]);
+    },
   });
 
   const exportDiagnosticsMutation = useMutation({
@@ -109,6 +133,18 @@ export function DashboardPage() {
 
   const restoreBackupMutation = useMutation({
     mutationFn: () => restoreBackup(baseUrl),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-provider-config", baseUrl] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-system-status", baseUrl] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-ai-model", baseUrl] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-characters", baseUrl] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-world-context", baseUrl] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-scheduler-status", baseUrl] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-moments", baseUrl] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-feed", baseUrl] }),
+      ]);
+    },
   });
 
   const schedulerRunMutation = useMutation({
@@ -148,8 +184,11 @@ export function DashboardPage() {
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
               <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-muted)]">Inference Queue</div>
               <div className="mt-2 text-2xl font-semibold">{statusQuery.data?.inferenceGateway.queueDepth ?? 0}</div>
-              <div className="mt-3 text-sm text-[color:var(--text-secondary)]">
-                max concurrency: {statusQuery.data?.inferenceGateway.maxConcurrency ?? 0}
+              <div className="mt-3 grid gap-2 text-sm text-[color:var(--text-secondary)]">
+                <div>max concurrency: {statusQuery.data?.inferenceGateway.maxConcurrency ?? 0}</div>
+                <div>in flight: {statusQuery.data?.inferenceGateway.inFlightRequests ?? 0}</div>
+                <div>successful probes: {statusQuery.data?.inferenceGateway.successfulRequests ?? 0}</div>
+                <div>failed probes: {statusQuery.data?.inferenceGateway.failedRequests ?? 0}</div>
               </div>
             </div>
 
@@ -157,7 +196,9 @@ export function DashboardPage() {
               <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-muted)]">Active AI Model</div>
               <div className="mt-2 text-2xl font-semibold">{aiModelQuery.data?.model ?? "pending"}</div>
               <div className="mt-3 text-sm text-[color:var(--text-secondary)]">
-                catalog size: {availableModelsQuery.data?.models.length ?? 0}
+                {statusQuery.data?.inferenceGateway.activeProvider
+                  ? `gateway: ${statusQuery.data.inferenceGateway.activeProvider}`
+                  : `catalog size: ${availableModelsQuery.data?.models.length ?? 0}`}
               </div>
             </div>
 
@@ -452,10 +493,10 @@ export function DashboardPage() {
 
       <div className="space-y-6">
         <Card className="bg-[color:var(--surface-console)]">
-          <SectionHeading>Provider Probe</SectionHeading>
+          <SectionHeading>Provider Runtime</SectionHeading>
           <form
             className="mt-4 space-y-4"
-            onSubmit={form.handleSubmit((values) => providerMutation.mutate(values))}
+            onSubmit={form.handleSubmit((values) => providerProbeMutation.mutate(values))}
           >
             <label className="block text-sm text-[color:var(--text-secondary)]">
               Endpoint
@@ -472,6 +513,16 @@ export function DashboardPage() {
               />
             </label>
             <label className="block text-sm text-[color:var(--text-secondary)]">
+              Mode
+              <select
+                className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none"
+                {...form.register("mode")}
+              >
+                <option value="local-compatible">Local Compatible</option>
+                <option value="cloud">Cloud</option>
+              </select>
+            </label>
+            <label className="block text-sm text-[color:var(--text-secondary)]">
               API Key
               <input
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none"
@@ -479,24 +530,66 @@ export function DashboardPage() {
                 {...form.register("apiKey")}
               />
             </label>
-            <button
-              className="w-full rounded-2xl bg-[linear-gradient(135deg,#f97316,#fbbf24)] px-4 py-3 text-sm font-semibold text-slate-950"
-              type="submit"
-            >
-              Probe Provider
-            </button>
+            <div className="grid gap-3 md:grid-cols-2">
+              <button
+                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                type="submit"
+                disabled={providerProbeMutation.isPending || providerSaveMutation.isPending}
+              >
+                {providerProbeMutation.isPending ? "Probing..." : "Probe Provider"}
+              </button>
+              <button
+                className="w-full rounded-2xl bg-[linear-gradient(135deg,#f97316,#fbbf24)] px-4 py-3 text-sm font-semibold text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+                type="button"
+                disabled={providerProbeMutation.isPending || providerSaveMutation.isPending}
+                onClick={form.handleSubmit((values) => providerSaveMutation.mutate(values))}
+              >
+                {providerSaveMutation.isPending ? "Saving..." : "Save Provider"}
+              </button>
+            </div>
           </form>
 
           <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-[color:var(--text-secondary)]">
-            {providerMutation.isPending && "Probing provider endpoint..."}
-            {providerMutation.isSuccess && providerMutation.data.message}
-            {providerMutation.isError &&
-              (providerMutation.error instanceof Error
-                ? providerMutation.error.message
-                : "Provider probe failed")}
-            {!providerMutation.isPending && !providerMutation.isSuccess && !providerMutation.isError
-              ? "The inference gateway will normalize cloud and local compatible providers behind one runtime queue."
-              : null}
+            {providerConfigQuery.isLoading && <div>Loading saved provider configuration...</div>}
+            {providerConfigQuery.isError && providerConfigQuery.error instanceof Error && (
+              <div>{providerConfigQuery.error.message}</div>
+            )}
+            {providerSaveMutation.isSuccess && <div>{formatProviderSavedMessage(providerSaveMutation.data)}</div>}
+            {providerSaveMutation.isError && providerSaveMutation.error instanceof Error && (
+              <div>{providerSaveMutation.error.message}</div>
+            )}
+            {providerProbeMutation.isSuccess && <div>{formatProbeMessage(providerProbeMutation.data)}</div>}
+            {providerProbeMutation.isError && providerProbeMutation.error instanceof Error && (
+              <div>{providerProbeMutation.error.message}</div>
+            )}
+            {!providerConfigQuery.isLoading &&
+            !providerConfigQuery.isError &&
+            !providerSaveMutation.isSuccess &&
+            !providerSaveMutation.isError &&
+            !providerProbeMutation.isSuccess &&
+            !providerProbeMutation.isError ? (
+              <div>
+                The inference gateway now persists one active provider profile and exposes probe telemetry through the
+                typed system contract.
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-4 grid gap-3">
+            <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-[color:var(--text-secondary)]">
+              <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">Active Provider</div>
+              <div className="mt-2 text-white">
+                {statusQuery.data?.inferenceGateway.activeProvider ?? "not configured yet"}
+              </div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-[color:var(--text-secondary)]">
+              <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">Last Success</div>
+              <div className="mt-2 text-white">{statusQuery.data?.inferenceGateway.lastSuccessAt ?? "none yet"}</div>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-[color:var(--text-secondary)]">
+              <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">Last Error</div>
+              <div className="mt-2 text-white">{statusQuery.data?.inferenceGateway.lastError ?? "none"}</div>
+            </div>
           </div>
         </Card>
 
@@ -563,4 +656,51 @@ export function DashboardPage() {
       </div>
     </div>
   );
+}
+
+function buildProviderPayload(values: ProviderConfig) {
+  return {
+    endpoint: values.endpoint.trim(),
+    model: values.model.trim(),
+    mode: values.mode,
+    apiKey: values.apiKey?.trim() ? values.apiKey.trim() : undefined,
+  };
+}
+
+function normalizeProviderForm(values: {
+  endpoint: string;
+  model: string;
+  mode: string;
+  apiKey?: string;
+}): ProviderConfig {
+  return {
+    endpoint: values.endpoint,
+    model: values.model,
+    mode: values.mode === "cloud" ? "cloud" : "local-compatible",
+    apiKey: values.apiKey ?? "",
+  };
+}
+
+function formatProviderSavedMessage(values: {
+  endpoint: string;
+  model: string;
+  mode: string;
+}) {
+  return `Saved provider ${values.model} (${values.mode}) at ${values.endpoint}.`;
+}
+
+function formatProbeMessage(values: {
+  message: string;
+  normalizedEndpoint?: string;
+  statusCode?: number;
+}) {
+  if (values.normalizedEndpoint && typeof values.statusCode === "number") {
+    return `${values.message} normalized=${values.normalizedEndpoint} status=${values.statusCode}`;
+  }
+
+  if (values.normalizedEndpoint) {
+    return `${values.message} normalized=${values.normalizedEndpoint}`;
+  }
+
+  return values.message;
 }

@@ -19,7 +19,7 @@
 - `crates/core-api/`：Rust Core API
 - `crates/core-api/src/persistence.rs`：运行态 snapshot 持久化与备份恢复
 - `crates/core-api/src/runtime_paths.rs`：runtime/logs/diagnostics 路径与本地操作日志
-- `crates/inference-gateway/`：Rust 推理网关骨架
+- `crates/inference-gateway/`：Rust 推理网关，已具备 provider 配置 / 探活 / 队列指标运行时
 - `packages/contracts/`：共享接口契约与 typed client
 - `packages/config/`：共享配置 schema
 - `packages/ui/`：共享设计系统与基础组件
@@ -52,6 +52,8 @@
 - `GET /health`
 - `GET /system/status`
 - `GET /system/realtime`
+- `GET /system/provider`
+- `PUT /system/provider`
 - `POST /system/provider/test`
 - `GET /system/scheduler`
 - `POST /system/scheduler/run/:id`
@@ -151,6 +153,13 @@
 - `/system/logs` 返回真实 runtime log 路径
 - `/system/diag/export` 会导出 diagnostics 目录，包含 status / realtime / scheduler / snapshot / logs / recent backups
 - `runtime-data/logs/core-api.log` 已有本地操作日志兜底
+
+当前 inference gateway 已有真实 provider runtime：
+
+- `/system/provider` 可读取与保存当前 provider 配置
+- `/system/provider/test` 会通过真实 HTTP 探活更新队列指标
+- `/system/status` 会返回 active provider、队列并发、成功/失败次数、最近成功时间与最近错误
+- `/api/config/ai-model` 与 provider.model 已保持联动并随 snapshot 持久化恢复
 
 当前 scheduler 已有真实执行切片：
 

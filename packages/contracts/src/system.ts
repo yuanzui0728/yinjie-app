@@ -16,6 +16,12 @@ export interface InferenceStatus {
   activeProvider?: string;
   queueDepth: number;
   maxConcurrency: number;
+  inFlightRequests: number;
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  lastSuccessAt?: string;
+  lastError?: string;
 }
 
 export interface LegacySurfaceStatus {
@@ -82,12 +88,21 @@ export interface ProviderTestRequest {
   endpoint: string;
   model: string;
   apiKey?: string;
+  mode?: string;
 }
 
 export interface ProviderTestResult {
   success: boolean;
   message: string;
   normalizedEndpoint?: string;
+  statusCode?: number;
+}
+
+export interface ProviderConfig {
+  endpoint: string;
+  model: string;
+  apiKey?: string;
+  mode: string;
 }
 
 export interface OperationResult {

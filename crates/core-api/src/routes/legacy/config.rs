@@ -23,9 +23,17 @@ async fn set_ai_model(
     State(state): State<AppState>,
     Json(payload): Json<UpdateAiModelRequest>,
 ) -> Json<SuccessResponse> {
-    let mut runtime = state.runtime.write().expect("runtime lock poisoned");
-    runtime.config.ai_model = payload.model;
-    drop(runtime);
+    let model = payload.model.trim().to_string();
+    let provider = {
+        let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+        runtime.config.ai_model = model.clone();
+        runtime.config.provider.model = model.clone();
+        runtime.config.provider.clone()
+    };
+
+    state
+        .inference_gateway
+        .configure_provider(provider.to_gateway_provider());
     state.request_persist("config-set-ai-model");
 
     Json(SuccessResponse { success: true })
