@@ -17,6 +17,7 @@
 - `apps/admin/`：新本地后台前端，由本地服务托管或浏览器访问
 - `apps/desktop/`：Tauri 2 桌面壳
 - `crates/core-api/`：Rust Core API
+- `crates/core-api/src/persistence.rs`：运行态 snapshot 持久化与备份恢复
 - `crates/inference-gateway/`：Rust 推理网关骨架
 - `packages/contracts/`：共享接口契约与 typed client
 - `packages/config/`：共享配置 schema
@@ -137,6 +138,12 @@
 
 - scheduler 会把 proactive message 通过内部 realtime bus 推送为 `new_message`
 - `/system/realtime` 会记录对应 internal realtime event
+
+当前 Core API 已有本地运行态持久化：
+
+- runtime 与 scheduler 状态会落盘到 `*.runtime.json`
+- 进程重启会优先从 snapshot 恢复
+- `/system/backup/create` 与 `/system/backup/restore` 已接到真实 snapshot 备份恢复
 
 当前 scheduler 已有真实执行切片：
 

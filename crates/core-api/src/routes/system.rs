@@ -12,7 +12,7 @@ use crate::{
         ProviderTestRequest, ProviderTestResult, RealtimeRoomStatusRecord, RealtimeStatusRecord,
         SchedulerStatusRecord,
     },
-    realtime, scheduler,
+    persistence, realtime, scheduler,
     seed::{scheduler_jobs, LEGACY_MIGRATED_MODULES, SCHEDULER_COLD_START_ENABLED},
 };
 
@@ -86,6 +86,7 @@ pub fn router() -> Router<AppState> {
 async fn system_status(State(state): State<AppState>) -> Json<SystemStatus> {
     let runtime = state.runtime.read().expect("runtime lock poisoned");
     let scheduler = build_scheduler_status(&state);
+    let snapshot_path = persistence::snapshot_path(&state.database_path);
 
     Json(SystemStatus {
         core_api: ServiceHealth {
@@ -109,7 +110,7 @@ async fn system_status(State(state): State<AppState>) -> Json<SystemStatus> {
         database: DatabaseStatus {
             path: state.database_path.display().to_string(),
             wal_enabled: true,
-            connected: false,
+            connected: snapshot_path.exists(),
         },
         inference_gateway: InferenceStatus {
             healthy: false,
@@ -227,18 +228,23 @@ async fn export_diag() -> Json<OperationResult> {
     })
 }
 
-async fn create_backup() -> Json<OperationResult> {
-    Json(OperationResult {
-    success: true,
-    message: "Backup workflow scaffolded. SQLite snapshot pipeline will be added during production hardening.".into(),
-  })
+async fn create_backup(State(state): State<AppState>) -> ApiResult<Json<OperationResult>> {
+    let backup_path = persistence::create_backup(&state).map_err(ApiError::bad_request)?;
+
+    Ok(Json(OperationResult {
+        success: true,
+        message: format!("Backup created at {}", backup_path.display()),
+    }))
 }
 
-async fn restore_backup() -> Json<OperationResult> {
-    Json(OperationResult {
-    success: true,
-    message: "Restore workflow scaffolded. User-facing recovery guardrails will be added before release.".into(),
-  })
+async fn restore_backup(State(state): State<AppState>) -> ApiResult<Json<OperationResult>> {
+    let backup_path = persistence::restore_latest_backup(&state).map_err(ApiError::bad_request)?;
+    state.request_persist("system-restore-backup");
+
+    Ok(Json(OperationResult {
+        success: true,
+        message: format!("Restored runtime state from {}", backup_path.display()),
+    }))
 }
 
 fn build_scheduler_status(state: &AppState) -> SchedulerStatusRecord {

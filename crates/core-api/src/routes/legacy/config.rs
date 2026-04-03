@@ -25,6 +25,8 @@ async fn set_ai_model(
 ) -> Json<SuccessResponse> {
     let mut runtime = state.runtime.write().expect("runtime lock poisoned");
     runtime.config.ai_model = payload.model;
+    drop(runtime);
+    state.request_persist("config-set-ai-model");
 
     Json(SuccessResponse { success: true })
 }

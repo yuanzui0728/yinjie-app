@@ -27,6 +27,7 @@ pub fn install(state: AppState) {
         scheduler.mode = "parity".into();
         scheduler.started_at = Some(now_token());
     }
+    state.request_persist("scheduler-install");
 
     spawn_recurring_job(
         state.clone(),
@@ -228,6 +229,7 @@ where
         Ok(message) => info!("scheduler job {} completed: {}", job_id, message),
         Err(message) => warn!("scheduler job {} failed: {}", job_id, message),
     }
+    state.request_persist(format!("scheduler-job:{job_id}"));
 
     result
 }

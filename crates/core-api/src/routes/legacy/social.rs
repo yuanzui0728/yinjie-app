@@ -71,6 +71,8 @@ async fn accept_request(
         })
         .cloned()
     {
+        drop(runtime);
+        state.request_persist("social-accept-request");
         return Ok(Json(existing));
     }
 
@@ -87,6 +89,8 @@ async fn accept_request(
     runtime
         .friendships
         .insert(friendship.id.clone(), friendship.clone());
+    drop(runtime);
+    state.request_persist("social-accept-request");
 
     Ok(Json(friendship))
 }
@@ -103,6 +107,8 @@ async fn decline_request(
             request.status = "declined".into();
         }
     }
+    drop(runtime);
+    state.request_persist("social-decline-request");
 
     Json(SuccessResponse { success: true })
 }
@@ -205,6 +211,8 @@ async fn send_friend_request(
     runtime
         .friend_requests
         .insert(request.id.clone(), request.clone());
+    drop(runtime);
+    state.request_persist("social-send-request");
 
     Ok(Json(request))
 }
@@ -266,6 +274,8 @@ async fn trigger_scene(
     runtime
         .friend_requests
         .insert(request.id.clone(), request.clone());
+    drop(runtime);
+    state.request_persist("social-trigger-scene");
 
     Ok(Json(Some(request)))
 }

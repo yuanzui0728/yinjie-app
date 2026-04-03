@@ -1307,6 +1307,7 @@ dependencies = [
  "anyhow",
  "axum",
  "serde",
+ "serde_json",
  "socketioxide",
  "tokio",
  "tower-http",
