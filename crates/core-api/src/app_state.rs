@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{
-  models::{AppConfigStore, CharacterRecord, UserRecord, WorldContextRecord},
+  models::{AppConfigStore, CharacterRecord, FriendRequestRecord, FriendshipRecord, UserRecord, WorldContextRecord},
   seed::{seeded_characters, seeded_world_context},
 };
 
@@ -19,6 +19,8 @@ pub struct AppState {
 pub struct RuntimeState {
   pub users: HashMap<String, UserRecord>,
   pub characters: HashMap<String, CharacterRecord>,
+  pub friend_requests: HashMap<String, FriendRequestRecord>,
+  pub friendships: HashMap<String, FriendshipRecord>,
   pub world_contexts: Vec<WorldContextRecord>,
   pub config: AppConfigStore,
 }
@@ -43,6 +45,8 @@ impl RuntimeState {
     Self {
       users: HashMap::new(),
       characters,
+      friend_requests: HashMap::new(),
+      friendships: HashMap::new(),
       world_contexts: vec![seeded_world_context()],
       config: AppConfigStore::default(),
     }

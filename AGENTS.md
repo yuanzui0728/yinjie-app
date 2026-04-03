@@ -67,6 +67,13 @@
 - `PUT /api/config/ai-model`
 - `GET /api/config/available-models`
 - `GET /api/world/context`
+- `GET /api/social/friend-requests`
+- `POST /api/social/friend-requests/send`
+- `POST /api/social/friend-requests/:id/accept`
+- `POST /api/social/friend-requests/:id/decline`
+- `GET /api/social/friends`
+- `POST /api/social/shake`
+- `POST /api/social/trigger-scene`
 - `GET /api/characters`
 - `GET /api/characters/:id`
 - `POST /api/characters`
@@ -79,6 +86,7 @@
 
 - `system`
 - `world`
+- `social`
 - `auth`
 - `config`
 - `characters`

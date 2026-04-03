@@ -44,7 +44,7 @@ pub const AVAILABLE_AI_MODELS: &[&str] = &[
   "qwen3-max",
 ];
 
-pub const LEGACY_MIGRATED_MODULES: &[&str] = &["config", "auth", "characters", "world"];
+pub const LEGACY_MIGRATED_MODULES: &[&str] = &["config", "auth", "characters", "world", "social"];
 
 pub const SCHEDULER_COLD_START_ENABLED: bool = true;
 
@@ -61,6 +61,7 @@ pub fn seeded_characters() -> Vec<CharacterRecord> {
       "normal",
       1,
       2,
+      vec!["library".into(), "coffee_shop".into()],
     ),
     build_character(
       "char_doctor",
@@ -73,6 +74,7 @@ pub fn seeded_characters() -> Vec<CharacterRecord> {
       "normal",
       1,
       1,
+      vec!["park".into(), "gym".into()],
     ),
     build_character(
       "char_tech",
@@ -85,6 +87,7 @@ pub fn seeded_characters() -> Vec<CharacterRecord> {
       "high",
       2,
       3,
+      vec!["coffee_shop".into(), "tech_event".into()],
     ),
     build_character(
       "char_roommate",
@@ -97,6 +100,7 @@ pub fn seeded_characters() -> Vec<CharacterRecord> {
       "high",
       3,
       4,
+      vec!["restaurant".into(), "bar".into(), "mall".into()],
     ),
   ]
 }
@@ -112,6 +116,7 @@ fn build_character(
   activity_frequency: &str,
   moments_frequency: i32,
   feed_frequency: i32,
+  trigger_scenes: Vec<String>,
 ) -> CharacterRecord {
   CharacterRecord {
     id: id.into(),
@@ -151,7 +156,7 @@ fn build_character(
     feed_frequency,
     active_hours_start: Some(9),
     active_hours_end: Some(22),
-    trigger_scenes: None,
+    trigger_scenes: Some(trigger_scenes),
     intimacy_level: 0,
     last_active_at: None,
     ai_relationships: None,
