@@ -53,6 +53,8 @@ async fn create(
     runtime
         .characters
         .insert(character.id.clone(), character.clone());
+    drop(runtime);
+    state.request_persist("characters-create");
 
     Json(character)
 }
@@ -69,13 +71,18 @@ async fn update(
         .ok_or_else(|| ApiError::not_found(format!("Character {} not found", id)))?;
 
     character.apply_patch(payload);
+    let response = character.clone();
+    drop(runtime);
+    state.request_persist("characters-update");
 
-    Ok(Json(character.clone()))
+    Ok(Json(response))
 }
 
 async fn remove(Path(id): Path<String>, State(state): State<AppState>) -> Json<SuccessResponse> {
     let mut runtime = state.runtime.write().expect("runtime lock poisoned");
     runtime.characters.remove(&id);
+    drop(runtime);
+    state.request_persist("characters-remove");
     Json(SuccessResponse { success: true })
 }
 

@@ -499,6 +499,8 @@ fn persist_conversation_turn(
         conversation.title = title;
         conversation.clone()
     };
+    drop(runtime);
+    state.request_persist("realtime-conversation-turn");
 
     (conversation_snapshot, generated_messages)
 }

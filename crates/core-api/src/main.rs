@@ -1,6 +1,7 @@
 mod app_state;
 mod error;
 mod models;
+mod persistence;
 mod realtime;
 mod routes;
 mod scheduler;
@@ -29,10 +30,12 @@ async fn main() -> anyhow::Result<()> {
         .map(PathBuf::from)
         .unwrap_or_else(|_| PathBuf::from("./runtime-data/yinjie.sqlite"));
 
-    let state = AppState::new(port, database_path);
+    let (state, persistence_receiver) = AppState::new(port, database_path);
+    persistence::install(state.clone(), persistence_receiver);
     let (socket_layer, io) = SocketIo::new_layer();
     realtime::install(io, state.clone());
     scheduler::install(state.clone());
+    state.request_persist("core-api-started");
 
     let router = Router::new()
         .route("/health", get(health))

@@ -56,6 +56,8 @@ async fn register(
 
     let session = build_session(&user);
     runtime.users.insert(user.id.clone(), user);
+    drop(runtime);
+    state.request_persist("auth-register");
 
     Ok(Json(session))
 }
@@ -116,6 +118,8 @@ async fn init_user(
 
     let session = build_session(&user);
     runtime.users.insert(user.id.clone(), user);
+    drop(runtime);
+    state.request_persist("auth-init-user");
 
     Ok(Json(session))
 }
@@ -129,6 +133,8 @@ async fn complete_onboarding(
     if let Some(user) = runtime.users.get_mut(&user_id) {
         user.onboarding_completed = true;
     }
+    drop(runtime);
+    state.request_persist("auth-complete-onboarding");
 
     Json(SuccessResponse { success: true })
 }
@@ -168,6 +174,8 @@ async fn update_user(
             user.signature = Some(signature);
         }
     }
+    drop(runtime);
+    state.request_persist("auth-update-user");
 
     Ok(Json(SuccessResponse { success: true }))
 }

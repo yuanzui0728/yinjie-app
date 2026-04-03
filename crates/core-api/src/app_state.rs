@@ -4,7 +4,10 @@ use std::{
     sync::{Arc, RwLock},
 };
 
+use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
+use tokio::sync::mpsc;
+use tracing::warn;
 
 use crate::{
     models::{
@@ -13,6 +16,7 @@ use crate::{
         GroupMemberRecord, GroupMessageRecord, GroupRecord, MessageRecord, MomentCommentRecord,
         MomentLikeRecord, MomentPostRecord, UserRecord, WorldContextRecord,
     },
+    persistence,
     seed::{seeded_characters, seeded_feed_stream, seeded_moments, seeded_world_context},
 };
 
@@ -24,8 +28,10 @@ pub struct AppState {
     pub realtime: Arc<RwLock<RealtimeState>>,
     pub realtime_events: broadcast::Sender<RealtimeCommand>,
     pub scheduler: Arc<RwLock<SchedulerState>>,
+    persistence: mpsc::UnboundedSender<PersistenceCommand>,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct RuntimeState {
     pub users: HashMap<String, UserRecord>,
     pub characters: HashMap<String, CharacterRecord>,
@@ -55,7 +61,7 @@ pub struct RealtimeState {
     pub last_message_at: Option<String>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 pub struct SchedulerJobRuntimeState {
     pub run_count: usize,
     pub running: bool,
@@ -64,7 +70,7 @@ pub struct SchedulerJobRuntimeState {
     pub last_result: Option<String>,
 }
 
-#[derive(Default)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 pub struct SchedulerState {
     pub mode: String,
     pub started_at: Option<String>,
@@ -81,21 +87,57 @@ pub enum RealtimeCommand {
     },
 }
 
-impl AppState {
-    pub fn new(port: u16, database_path: PathBuf) -> Self {
-        let (realtime_events, _) = broadcast::channel(64);
+#[derive(Clone)]
+pub struct PersistenceCommand {
+    pub reason: String,
+}
 
-        Self {
-            port,
-            database_path,
-            runtime: Arc::new(RwLock::new(RuntimeState::seeded())),
-            realtime: Arc::new(RwLock::new(RealtimeState::default())),
-            realtime_events,
-            scheduler: Arc::new(RwLock::new(SchedulerState {
-                mode: "scaffolded".into(),
-                ..SchedulerState::default()
-            })),
-        }
+impl AppState {
+    pub fn new(
+        port: u16,
+        database_path: PathBuf,
+    ) -> (Self, mpsc::UnboundedReceiver<PersistenceCommand>) {
+        let (realtime_events, _) = broadcast::channel(64);
+        let (persistence, persistence_receiver) = mpsc::unbounded_channel();
+        let (runtime, scheduler) = match persistence::load_persisted_state(&database_path) {
+            Ok(Some((runtime, scheduler))) => (runtime, scheduler),
+            Ok(None) => (
+                RuntimeState::seeded(),
+                SchedulerState {
+                    mode: "scaffolded".into(),
+                    ..SchedulerState::default()
+                },
+            ),
+            Err(error) => {
+                warn!("failed to load runtime snapshot: {}", error);
+                (
+                    RuntimeState::seeded(),
+                    SchedulerState {
+                        mode: "scaffolded".into(),
+                        ..SchedulerState::default()
+                    },
+                )
+            }
+        };
+
+        (
+            Self {
+                port,
+                database_path,
+                runtime: Arc::new(RwLock::new(runtime)),
+                realtime: Arc::new(RwLock::new(RealtimeState::default())),
+                realtime_events,
+                scheduler: Arc::new(RwLock::new(scheduler)),
+                persistence,
+            },
+            persistence_receiver,
+        )
+    }
+
+    pub fn request_persist(&self, reason: impl Into<String>) {
+        let _ = self.persistence.send(PersistenceCommand {
+            reason: reason.into(),
+        });
     }
 }
 

@@ -89,6 +89,8 @@ async fn create_post(
         .feed_interactions
         .entry(post.id.clone())
         .or_default();
+    drop(runtime);
+    state.request_persist("feed-create-post");
 
     Json(post)
 }
@@ -123,6 +125,8 @@ async fn add_comment(
     if let Some(post) = runtime.feed_posts.get_mut(&id) {
         post.comment_count = comment_count;
     }
+    drop(runtime);
+    state.request_persist("feed-add-comment");
 
     Ok(Json(comment))
 }
@@ -158,6 +162,8 @@ async fn like_post(
     if let Some(post) = runtime.feed_posts.get_mut(&id) {
         post.like_count = like_count;
     }
+    drop(runtime);
+    state.request_persist("feed-like-post");
 
     Ok(StatusCode::OK)
 }

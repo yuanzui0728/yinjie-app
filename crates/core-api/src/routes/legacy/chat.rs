@@ -128,6 +128,8 @@ async fn get_or_create_conversation(
         .conversations
         .insert(conversation_id.clone(), conversation.clone());
     runtime.messages.insert(conversation_id, Vec::new());
+    drop(runtime);
+    state.request_persist("chat-create-conversation");
 
     Json(conversation)
 }
@@ -144,14 +146,17 @@ async fn mark_conversation_read(
     Path(id): Path<String>,
     State(state): State<AppState>,
 ) -> ApiResult<StatusCode> {
-    let mut runtime = state.runtime.write().expect("runtime lock poisoned");
-    let conversation = runtime
-        .conversations
-        .get_mut(&id)
-        .ok_or_else(|| ApiError::not_found(format!("Conversation {} not found", id)))?;
+    {
+        let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+        let conversation = runtime
+            .conversations
+            .get_mut(&id)
+            .ok_or_else(|| ApiError::not_found(format!("Conversation {} not found", id)))?;
 
-    conversation.last_read_at = Some(now_token());
-    conversation.updated_at = now_token();
+        conversation.last_read_at = Some(now_token());
+        conversation.updated_at = now_token();
+    }
+    state.request_persist("chat-mark-read");
 
     Ok(StatusCode::OK)
 }
@@ -200,6 +205,8 @@ async fn create_group(
 
     runtime.group_members.insert(group_id.clone(), members);
     runtime.group_messages.insert(group_id, Vec::new());
+    drop(runtime);
+    state.request_persist("chat-create-group");
 
     Json(group)
 }
@@ -231,28 +238,33 @@ async fn add_group_member(
     State(state): State<AppState>,
     Json(payload): Json<AddGroupMemberPayload>,
 ) -> Json<GroupMemberRecord> {
-    let mut runtime = state.runtime.write().expect("runtime lock poisoned");
-    let members = runtime.group_members.entry(id.clone()).or_default();
+    let member = {
+        let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+        let members = runtime.group_members.entry(id.clone()).or_default();
 
-    if let Some(existing) = members
-        .iter()
-        .find(|member| member.member_id == payload.member_id)
-    {
-        return Json(existing.clone());
-    }
+        if let Some(existing) = members
+            .iter()
+            .find(|member| member.member_id == payload.member_id)
+        {
+            return Json(existing.clone());
+        }
 
-    let member = GroupMemberRecord {
-        id: format!("member_{}", now_token()),
-        group_id: id,
-        member_id: payload.member_id,
-        member_type: payload.member_type,
-        member_name: Some(payload.member_name),
-        member_avatar: payload.member_avatar,
-        role: "member".into(),
-        joined_at: now_token(),
+        let member = GroupMemberRecord {
+            id: format!("member_{}", now_token()),
+            group_id: id,
+            member_id: payload.member_id,
+            member_type: payload.member_type,
+            member_name: Some(payload.member_name),
+            member_avatar: payload.member_avatar,
+            role: "member".into(),
+            joined_at: now_token(),
+        };
+
+        members.push(member.clone());
+        member
     };
 
-    members.push(member.clone());
+    state.request_persist("chat-add-group-member");
     Json(member)
 }
 
@@ -273,22 +285,27 @@ async fn send_group_message(
     State(state): State<AppState>,
     Json(payload): Json<SendGroupMessagePayload>,
 ) -> Json<GroupMessageRecord> {
-    let mut runtime = state.runtime.write().expect("runtime lock poisoned");
-    let messages = runtime.group_messages.entry(id.clone()).or_default();
+    let message = {
+        let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+        let messages = runtime.group_messages.entry(id.clone()).or_default();
 
-    let message = GroupMessageRecord {
-        id: format!("group_message_{}", now_token()),
-        group_id: id,
-        sender_id: payload.sender_id,
-        sender_type: payload.sender_type,
-        sender_name: payload.sender_name,
-        sender_avatar: payload.sender_avatar,
-        text: payload.text,
-        r#type: "text".into(),
-        created_at: now_token(),
+        let message = GroupMessageRecord {
+            id: format!("group_message_{}", now_token()),
+            group_id: id,
+            sender_id: payload.sender_id,
+            sender_type: payload.sender_type,
+            sender_name: payload.sender_name,
+            sender_avatar: payload.sender_avatar,
+            text: payload.text,
+            r#type: "text".into(),
+            created_at: now_token(),
+        };
+
+        messages.push(message.clone());
+        message
     };
 
-    messages.push(message.clone());
+    state.request_persist("chat-send-group-message");
     Json(message)
 }
 

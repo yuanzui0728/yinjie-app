@@ -78,8 +78,11 @@ async fn create_user_moment(
     runtime.moment_posts.insert(post.id.clone(), post.clone());
     runtime.moment_comments.entry(post.id.clone()).or_default();
     runtime.moment_likes.entry(post.id.clone()).or_default();
+    let response = enrich_moment(&post, &runtime);
+    drop(runtime);
+    state.request_persist("moments-create-user-post");
 
-    Json(enrich_moment(&post, &runtime))
+    Json(response)
 }
 
 async fn get_post(
@@ -108,8 +111,11 @@ async fn generate_for_character(
     runtime.moment_posts.insert(post.id.clone(), post.clone());
     runtime.moment_comments.entry(post.id.clone()).or_default();
     runtime.moment_likes.entry(post.id.clone()).or_default();
+    let response = enrich_moment(&post, &runtime);
+    drop(runtime);
+    state.request_persist("moments-generate-single");
 
-    Json(Some(enrich_moment(&post, &runtime)))
+    Json(Some(response))
 }
 
 async fn generate_all_moments(State(state): State<AppState>) -> Json<Vec<MomentRecord>> {
@@ -124,6 +130,8 @@ async fn generate_all_moments(State(state): State<AppState>) -> Json<Vec<MomentR
         runtime.moment_likes.entry(post.id.clone()).or_default();
         generated.push(enrich_moment(&post, &runtime));
     }
+    drop(runtime);
+    state.request_persist("moments-generate-all");
 
     Json(generated)
 }
@@ -158,6 +166,8 @@ async fn add_comment(
     if let Some(post) = runtime.moment_posts.get_mut(&id) {
         post.comment_count = comment_count;
     }
+    drop(runtime);
+    state.request_persist("moments-add-comment");
 
     Ok(Json(comment))
 }
@@ -198,6 +208,8 @@ async fn toggle_like(
     if let Some(post) = runtime.moment_posts.get_mut(&id) {
         post.like_count = like_count;
     }
+    drop(runtime);
+    state.request_persist("moments-toggle-like");
 
     Ok(Json(ToggleMomentLikeResult { liked }))
 }
