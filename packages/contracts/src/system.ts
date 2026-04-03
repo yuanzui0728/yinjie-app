@@ -18,11 +18,19 @@ export interface InferenceStatus {
   maxConcurrency: number;
 }
 
+export interface LegacySurfaceStatus {
+  apiPrefix: string;
+  migratedModules: string[];
+  usersCount: number;
+  charactersCount: number;
+}
+
 export interface SystemStatus {
   coreApi: ServiceHealth;
   desktopShell: ServiceHealth;
   database: DatabaseStatus;
   inferenceGateway: InferenceStatus;
+  legacySurface: LegacySurfaceStatus;
   appMode: "development" | "desktop" | "production";
 }
 

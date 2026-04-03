@@ -4,8 +4,8 @@ import { Box, Settings2 } from "lucide-react";
 import { cn } from "@yinjie/ui";
 
 const links = [
-  { to: "/", label: "世界面板", icon: Box },
-  { to: "/settings", label: "系统设置", icon: Settings2 },
+  { to: "/", label: "Runtime", icon: Box },
+  { to: "/settings", label: "Settings", icon: Settings2 },
 ];
 
 export function AppShell({ children }: PropsWithChildren) {
@@ -17,9 +17,10 @@ export function AppShell({ children }: PropsWithChildren) {
         <aside className="hidden w-80 shrink-0 flex-col rounded-[32px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-primary)] p-6 shadow-[var(--shadow-card)] lg:flex">
           <div className="mb-8">
             <div className="text-xs uppercase tracking-[0.36em] text-[color:var(--text-muted)]">Yinjie Runtime</div>
-            <div className="mt-4 text-3xl font-semibold tracking-[0.2em]">隐界</div>
+            <div className="mt-4 text-3xl font-semibold tracking-[0.18em]">Hidden World</div>
             <p className="mt-3 text-sm leading-7 text-[color:var(--text-secondary)]">
-              生产级单用户 AI 世界运行时。旧业务逻辑保留，新的桌面、自部署、推理调度基础设施从这里开始收口。
+              Production refactor workspace for the self-hosted single-user AI world. Legacy behavior stays frozen
+              while desktop runtime, typed contracts, and the new local control plane are rebuilt here.
             </p>
           </div>
 
@@ -45,10 +46,11 @@ export function AppShell({ children }: PropsWithChildren) {
           </nav>
 
           <div className="mt-auto rounded-3xl border border-white/10 bg-white/5 p-5">
-            <div className="text-xs uppercase tracking-[0.24em] text-[color:var(--text-muted)]">迁移定位</div>
-            <div className="mt-3 text-lg font-semibold">Phase 1 / Skeleton</div>
+            <div className="text-xs uppercase tracking-[0.24em] text-[color:var(--text-muted)]">Migration Slice</div>
+            <div className="mt-3 text-lg font-semibold">Config / Auth / Characters</div>
             <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-              新 monorepo、桌面壳、Rust 服务和 typed contracts 已落地。下一步开始平移业务模块。
+              The first compatibility slice now has shared contracts, client bindings, and a modular Rust route
+              surface ready for the next migration steps.
             </p>
           </div>
         </aside>
@@ -57,7 +59,7 @@ export function AppShell({ children }: PropsWithChildren) {
           <div className="mb-6 flex items-center justify-between border-b border-white/10 pb-4 lg:hidden">
             <div>
               <div className="text-xs uppercase tracking-[0.28em] text-[color:var(--text-muted)]">Yinjie</div>
-              <div className="text-2xl font-semibold tracking-[0.2em]">隐界</div>
+              <div className="text-2xl font-semibold tracking-[0.18em]">Hidden World</div>
             </div>
             <div className="flex gap-2">
               {links.map(({ to, label, icon: Icon }) => {

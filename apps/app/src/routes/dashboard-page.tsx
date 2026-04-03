@@ -1,36 +1,61 @@
 import { useQuery } from "@tanstack/react-query";
 import { HardDriveDownload, LayoutPanelTop, ShieldCheck, Sparkles } from "lucide-react";
-import { getSystemStatus } from "@yinjie/contracts";
+import { getAiModel, getAvailableModels, getSystemStatus, listCharacters } from "@yinjie/contracts";
 import { Card, SectionHeading, StatusPill } from "@yinjie/ui";
 
 const runtimeHighlights = [
   {
-    title: "桌面运行时",
-    description: "Tauri + Rust 负责安装包、自动更新、密钥管理、日志入口与本地守护。",
+    title: "Desktop Runtime",
+    description:
+      "Tauri and Rust take over packaging, local process management, updates, secrets, and runtime observability.",
     icon: LayoutPanelTop,
   },
   {
-    title: "核心服务",
-    description: "新的 Rust Core API 将承接现有 /api 与 /chat 语义，最终替换原型期 Node 服务。",
+    title: "Core API Parity",
+    description:
+      "The new Rust Core API is being migrated module by module while the old /api surface stays behavior-compatible.",
     icon: ShieldCheck,
   },
   {
-    title: "推理调度",
-    description: "Inference Gateway 会统一承接云端与本地兼容端点，控制并发、重试、熔断和队列。",
+    title: "Inference Gateway",
+    description:
+      "High-intensity model traffic will be centralized behind one gateway with queueing, retries, and provider abstraction.",
     icon: Sparkles,
   },
   {
-    title: "自部署交付",
-    description: "安装包即产品，用户只需配置 API Key 或本地端点，不依赖 SaaS 控制台。",
+    title: "Self-hosted Delivery",
+    description:
+      "Each user runs a private AI world locally and only needs a provider endpoint plus an API key or local compatible base URL.",
     icon: HardDriveDownload,
   },
 ];
 
 export function DashboardPage() {
+  const baseUrl = import.meta.env.VITE_CORE_API_BASE_URL;
+
   const statusQuery = useQuery({
-    queryKey: ["system-status"],
-    queryFn: () => getSystemStatus(import.meta.env.VITE_CORE_API_BASE_URL),
+    queryKey: ["system-status", baseUrl],
+    queryFn: () => getSystemStatus(baseUrl),
   });
+
+  const aiModelQuery = useQuery({
+    queryKey: ["active-ai-model", baseUrl],
+    queryFn: () => getAiModel(baseUrl),
+  });
+
+  const availableModelsQuery = useQuery({
+    queryKey: ["available-models", baseUrl],
+    queryFn: () => getAvailableModels(baseUrl),
+  });
+
+  const charactersQuery = useQuery({
+    queryKey: ["runtime-characters", baseUrl],
+    queryFn: () => listCharacters(baseUrl),
+  });
+
+  const migratedModules = statusQuery.data?.legacySurface.migratedModules ?? [];
+  const characterCount = charactersQuery.data?.length ?? statusQuery.data?.legacySurface.charactersCount ?? 0;
+  const modelCount = availableModelsQuery.data?.models.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -39,56 +64,48 @@ export function DashboardPage() {
           <div className="max-w-2xl space-y-5">
             <SectionHeading>Production Refactor</SectionHeading>
             <h1 className="text-4xl font-semibold leading-tight text-white">
-              让隐界从原型代码进入真正可交付、可更新、可维护的单用户 AI 世界运行时。
+              Move Hidden World out of demo mode and into a desktop-ready, self-hosted production runtime.
             </h1>
             <p className="max-w-xl text-base leading-8 text-[color:var(--text-secondary)]">
-              当前版本优先完成架构收口：workspace、shared contracts、桌面壳、Rust 服务骨架和新的 UI 设计系统。
-              业务逻辑仍以旧系统为准，新系统专注承接生产级运行方式。
+              The compatibility layer is now being migrated in slices. Config, auth, and characters are the first
+              modules to land in shared contracts and the new Rust route surface without changing product rules.
             </p>
             <div className="flex flex-wrap gap-3">
-              <StatusPill tone="healthy">Monorepo Ready</StatusPill>
-              <StatusPill tone="warning">Core API Migration Pending</StatusPill>
-              <StatusPill>Typed Contracts Enabled</StatusPill>
+              <StatusPill tone="healthy">Workspace Ready</StatusPill>
+              <StatusPill tone={migratedModules.length >= 3 ? "healthy" : "warning"}>
+                {migratedModules.length} Modules Migrated
+              </StatusPill>
+              <StatusPill>{modelCount} Models Catalogued</StatusPill>
             </div>
           </div>
         </Card>
 
         <Card className="bg-[color:var(--surface-secondary)]">
-          <SectionHeading>系统状态</SectionHeading>
+          <SectionHeading>System Snapshot</SectionHeading>
           <div className="mt-4 space-y-4">
             <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-              <div className="text-sm text-[color:var(--text-secondary)]">核心服务</div>
+              <div className="text-sm text-[color:var(--text-secondary)]">Core API</div>
               <div className="mt-2 flex items-center justify-between">
-                <div className="text-xl font-semibold">
-                  {statusQuery.data?.coreApi.version ?? "未连接"}
-                </div>
+                <div className="text-xl font-semibold">{statusQuery.data?.coreApi.version ?? "offline"}</div>
                 <StatusPill tone={statusQuery.data?.coreApi.healthy ? "healthy" : "warning"}>
-                  {statusQuery.isLoading
-                    ? "检测中"
-                    : statusQuery.data?.coreApi.healthy
-                    ? "在线"
-                    : "离线"}
+                  {statusQuery.isLoading ? "probing" : statusQuery.data?.coreApi.healthy ? "online" : "offline"}
                 </StatusPill>
               </div>
               <div className="mt-3 text-sm text-[color:var(--text-muted)]">
                 {statusQuery.error instanceof Error
                   ? statusQuery.error.message
-                  : statusQuery.data?.coreApi.message ?? "等待 Rust Core API 接入。"}
+                  : statusQuery.data?.coreApi.message ?? "Waiting for the Rust Core API process."}
               </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                <div className="text-sm text-[color:var(--text-secondary)]">数据库</div>
-                <div className="mt-2 text-lg font-semibold">
-                  {statusQuery.data?.database.connected ? "已连接" : "未初始化"}
-                </div>
+                <div className="text-sm text-[color:var(--text-secondary)]">Active Model</div>
+                <div className="mt-2 text-lg font-semibold">{aiModelQuery.data?.model ?? "pending"}</div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-black/10 p-4">
-                <div className="text-sm text-[color:var(--text-secondary)]">推理网关</div>
-                <div className="mt-2 text-lg font-semibold">
-                  {statusQuery.data?.inferenceGateway.healthy ? "可用" : "待接入"}
-                </div>
+                <div className="text-sm text-[color:var(--text-secondary)]">Characters Surface</div>
+                <div className="mt-2 text-lg font-semibold">{characterCount}</div>
               </div>
             </div>
           </div>
@@ -109,20 +126,20 @@ export function DashboardPage() {
 
       <section className="grid gap-6 xl:grid-cols-2">
         <Card>
-          <SectionHeading>保留不动的业务面</SectionHeading>
+          <SectionHeading>Frozen Product Logic</SectionHeading>
           <ul className="mt-4 space-y-3 text-sm leading-7 text-[color:var(--text-secondary)]">
-            <li>聊天、朋友圈、发现页、摇一摇、好友申请、世界调度的业务规则不变。</li>
-            <li>现有 `/api/*` 路由语义与 `/chat` WebSocket 事件命名不变。</li>
-            <li>旧 `api/`、`web/`、`admin/` 代码保留在仓库，作为行为对照和迁移来源。</li>
+            <li>Chat, social triggers, moments, feed, scheduling, and the AI world rules remain untouched.</li>
+            <li>The legacy `/api/*` semantics and `/chat` event names are preserved as migration targets.</li>
+            <li>The old `api/`, `web/`, and `admin/` code stays in the repo as the behavior baseline.</li>
           </ul>
         </Card>
 
         <Card>
-          <SectionHeading>当前已落地的重构层</SectionHeading>
+          <SectionHeading>Current Migration Slice</SectionHeading>
           <ul className="mt-4 space-y-3 text-sm leading-7 text-[color:var(--text-secondary)]">
-            <li>根级 `pnpm workspace + turbo` 已接入，后续可统一构建、校验和发版。</li>
-            <li>共享契约包已开始收口系统接口和 WebSocket 事件常量。</li>
-            <li>新 UI 已切入 shared tokens / components，不再继续堆页面内联样式。</li>
+            <li>Migrated modules: {migratedModules.length > 0 ? migratedModules.join(", ") : "pending"}.</li>
+            <li>Typed contract coverage now includes auth session flow, AI model config, and character CRUD shapes.</li>
+            <li>New app and admin screens are already wired against the same shared client surface.</li>
           </ul>
         </Card>
       </section>
