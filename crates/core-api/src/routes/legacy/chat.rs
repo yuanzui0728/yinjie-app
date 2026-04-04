@@ -1,4 +1,8 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+    time::{Duration, SystemTime, UNIX_EPOCH},
+};
 
 use axum::{
     extract::{Path, Query, State},
@@ -6,15 +10,18 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
+use tokio::time::sleep;
 
 use crate::{
     app_state::AppState,
     error::{ApiError, ApiResult},
+    generation::generate_chat_reply_text,
     models::{
         AddGroupMemberPayload, ConversationListItemRecord, ConversationRecord, CreateGroupPayload,
         GetOrCreateConversationPayload, GroupMemberRecord, GroupMessageRecord, GroupRecord,
         MessageRecord, SendGroupMessagePayload, UserScopedRequest,
     },
+    runtime_paths,
 };
 
 pub fn router() -> Router<AppState> {
@@ -285,13 +292,16 @@ async fn send_group_message(
     State(state): State<AppState>,
     Json(payload): Json<SendGroupMessagePayload>,
 ) -> Json<GroupMessageRecord> {
+    let should_trigger_ai_replies = payload.sender_type == "user";
+    let trigger_sender_name = payload.sender_name.clone();
+    let trigger_text = payload.text.clone();
     let message = {
         let mut runtime = state.runtime.write().expect("runtime lock poisoned");
         let messages = runtime.group_messages.entry(id.clone()).or_default();
 
         let message = GroupMessageRecord {
             id: format!("group_message_{}", now_token()),
-            group_id: id,
+            group_id: id.clone(),
             sender_id: payload.sender_id,
             sender_type: payload.sender_type,
             sender_name: payload.sender_name,
@@ -306,7 +316,206 @@ async fn send_group_message(
     };
 
     state.request_persist("chat-send-group-message");
+
+    if should_trigger_ai_replies {
+        spawn_group_ai_replies(state.clone(), id, trigger_sender_name, trigger_text);
+    }
+
     Json(message)
+}
+
+fn spawn_group_ai_replies(
+    state: AppState,
+    group_id: String,
+    sender_name: String,
+    user_text: String,
+) {
+    let plans = build_group_reply_plans(&state, &group_id, &sender_name, &user_text);
+
+    for plan in plans {
+        let state = state.clone();
+        let group_id = group_id.clone();
+        let sender_name = sender_name.clone();
+        let user_text = user_text.clone();
+        tokio::spawn(async move {
+            sleep(Duration::from_millis(plan.delay_ms)).await;
+
+            let reply_text = generate_chat_reply_text(
+                &state,
+                &plan.character,
+                &plan.conversation,
+                &plan.history,
+            )
+            .await
+            .unwrap_or_else(|| fallback_group_reply_text(&plan.character, &sender_name, &user_text));
+
+            {
+                let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+                let messages = runtime.group_messages.entry(group_id.clone()).or_default();
+                messages.push(GroupMessageRecord {
+                    id: format!("group_message_{}", now_token()),
+                    group_id: group_id.clone(),
+                    sender_id: plan.character.id.clone(),
+                    sender_type: "character".into(),
+                    sender_name: plan.character.name.clone(),
+                    sender_avatar: Some(plan.character.avatar.clone()),
+                    text: reply_text,
+                    r#type: "text".into(),
+                    created_at: now_token(),
+                });
+            }
+
+            runtime_paths::append_core_api_log(
+                &state.database_path,
+                "INFO",
+                &format!(
+                    "group {} generated async reply from {} after user message",
+                    group_id, plan.character.id
+                ),
+            );
+            state.request_persist("chat-group-ai-reply");
+        });
+    }
+}
+
+fn build_group_reply_plans(
+    state: &AppState,
+    group_id: &str,
+    sender_name: &str,
+    user_text: &str,
+) -> Vec<GroupReplyPlan> {
+    let runtime = state.runtime.read().expect("runtime lock poisoned");
+    let Some(group) = runtime.groups.get(group_id) else {
+        return Vec::new();
+    };
+
+    let character_members = runtime
+        .group_members
+        .get(group_id)
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|member| member.member_type == "character")
+        .collect::<Vec<_>>();
+    if character_members.is_empty() {
+        return Vec::new();
+    }
+
+    let participants = character_members
+        .iter()
+        .map(|member| member.member_id.clone())
+        .collect::<Vec<_>>();
+    let conversation = ConversationRecord {
+        id: group_id.to_string(),
+        user_id: group.creator_id.clone(),
+        r#type: "group".into(),
+        title: group.name.clone(),
+        participants,
+        messages: Vec::new(),
+        created_at: group.created_at.clone(),
+        updated_at: now_token(),
+        last_read_at: None,
+    };
+    let history = runtime
+        .group_messages
+        .get(group_id)
+        .cloned()
+        .unwrap_or_default()
+        .into_iter()
+        .rev()
+        .take(10)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .map(group_message_to_conversation_message)
+        .collect::<Vec<_>>();
+
+    character_members
+        .into_iter()
+        .filter_map(|member| {
+            let character = runtime.characters.get(&member.member_id)?.clone();
+            if !should_emit_group_reply(&character, group_id, sender_name, user_text) {
+                return None;
+            }
+
+            Some(GroupReplyPlan {
+                character,
+                conversation: conversation.clone(),
+                history: history.clone(),
+                delay_ms: reply_delay_ms(group_id, &member.member_id, sender_name, user_text),
+            })
+        })
+        .collect()
+}
+
+fn group_message_to_conversation_message(message: GroupMessageRecord) -> MessageRecord {
+    MessageRecord {
+        id: message.id,
+        conversation_id: message.group_id,
+        sender_type: message.sender_type,
+        sender_id: message.sender_id,
+        sender_name: message.sender_name,
+        r#type: message.r#type,
+        text: message.text,
+        created_at: message.created_at,
+    }
+}
+
+fn should_emit_group_reply(
+    character: &crate::models::CharacterRecord,
+    group_id: &str,
+    sender_name: &str,
+    user_text: &str,
+) -> bool {
+    let threshold = match character.activity_frequency.as_str() {
+        "high" => 0.7,
+        "low" => 0.2,
+        _ => 0.4,
+    };
+
+    deterministic_roll(&[
+        group_id,
+        &character.id,
+        sender_name,
+        user_text,
+        &now_token(),
+    ]) <= threshold
+}
+
+fn deterministic_roll(parts: &[&str]) -> f64 {
+    let mut hasher = DefaultHasher::new();
+    for part in parts {
+        part.hash(&mut hasher);
+    }
+    (hasher.finish() % 10_000) as f64 / 10_000.0
+}
+
+fn reply_delay_ms(group_id: &str, character_id: &str, sender_name: &str, user_text: &str) -> u64 {
+    let mut hasher = DefaultHasher::new();
+    group_id.hash(&mut hasher);
+    character_id.hash(&mut hasher);
+    sender_name.hash(&mut hasher);
+    user_text.hash(&mut hasher);
+    5_000 + (hasher.finish() % 25_001)
+}
+
+fn fallback_group_reply_text(
+    character: &crate::models::CharacterRecord,
+    sender_name: &str,
+    user_text: &str,
+) -> String {
+    format!(
+        "{}看到{}提到“{}”，也补充了一句自己的看法。",
+        character.name, sender_name, user_text
+    )
+}
+
+#[derive(Clone)]
+struct GroupReplyPlan {
+    character: crate::models::CharacterRecord,
+    conversation: ConversationRecord,
+    history: Vec<MessageRecord>,
+    delay_ms: u64,
 }
 
 fn parse_timestamp(value: &str) -> u128 {
