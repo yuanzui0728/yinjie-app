@@ -255,3 +255,4 @@
 - The realtime execution path now snapshots runtime state before inference so gateway waits do not hold the runtime write lock.
 - Fallback placeholder replies are still preserved when the provider is unavailable or the gateway call fails.
 - Social first-contact greetings in `/api/social/shake` and `/api/social/trigger-scene` now also use the gateway-backed generation layer with fallback copy preserved.
+- Scheduler `trigger-scene-friend-requests` now reuses the same gateway-backed social greeting generation path before persisting pending friend requests.
