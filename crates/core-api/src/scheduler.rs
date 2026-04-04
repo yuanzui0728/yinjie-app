@@ -431,8 +431,10 @@ async fn check_moment_schedule_job(state: AppState) -> Result<String, String> {
 }
 
 async fn trigger_scene_friend_requests_job(state: AppState) -> Result<String, String> {
-    let mut runtime = state.runtime.write().expect("runtime lock poisoned");
-    let user_ids = runtime.users.keys().cloned().collect::<Vec<_>>();
+    let user_ids = {
+        let runtime = state.runtime.read().expect("runtime lock poisoned");
+        runtime.users.keys().cloned().collect::<Vec<_>>()
+    };
 
     if user_ids.is_empty() {
         return Ok("no registered users available for scene triggers".into());
@@ -452,58 +454,82 @@ async fn trigger_scene_friend_requests_job(state: AppState) -> Result<String, St
         "cafe",
     ];
     let scene = scenes[pseudo_percent(&now_token()).rem_euclid(scenes.len() as u64) as usize];
-    let mut created = 0_usize;
+    let candidates = {
+        let runtime = state.runtime.read().expect("runtime lock poisoned");
+        user_ids
+            .into_iter()
+            .take(2)
+            .filter_map(|user_id| {
+                let existing_friend_ids = runtime
+                    .friendships
+                    .values()
+                    .filter(|friendship| friendship.user_id == user_id)
+                    .map(|friendship| friendship.character_id.clone())
+                    .collect::<Vec<_>>();
+                let pending_ids = runtime
+                    .friend_requests
+                    .values()
+                    .filter(|request| request.user_id == user_id && request.status == "pending")
+                    .map(|request| request.character_id.clone())
+                    .collect::<Vec<_>>();
 
-    for user_id in user_ids.into_iter().take(2) {
-        let existing_friend_ids = runtime
-            .friendships
-            .values()
-            .filter(|friendship| friendship.user_id == user_id)
-            .map(|friendship| friendship.character_id.clone())
-            .collect::<Vec<_>>();
-        let pending_ids = runtime
-            .friend_requests
-            .values()
-            .filter(|request| request.user_id == user_id && request.status == "pending")
-            .map(|request| request.character_id.clone())
-            .collect::<Vec<_>>();
-
-        let Some(character) = runtime
-            .characters
-            .values()
-            .find(|character| {
-                character
-                    .trigger_scenes
-                    .as_ref()
-                    .map(|items| items.iter().any(|item| item == scene))
-                    .unwrap_or(false)
-                    && !existing_friend_ids.contains(&character.id)
-                    && !pending_ids.contains(&character.id)
+                runtime
+                    .characters
+                    .values()
+                    .find(|character| {
+                        character
+                            .trigger_scenes
+                            .as_ref()
+                            .map(|items| items.iter().any(|item| item == scene))
+                            .unwrap_or(false)
+                            && !existing_friend_ids.contains(&character.id)
+                            && !pending_ids.contains(&character.id)
+                    })
+                    .cloned()
+                    .map(|character| (user_id, character))
             })
-            .cloned()
-        else {
-            continue;
-        };
+            .collect::<Vec<_>>()
+    };
+    let mut planned_requests = Vec::with_capacity(candidates.len());
 
-        let request_id = format!("friend_request_{}", now_token());
-        runtime.friend_requests.insert(
-            request_id.clone(),
-            FriendRequestRecord {
-                id: request_id,
-                user_id: user_id.clone(),
-                character_id: character.id.clone(),
-                character_name: character.name.clone(),
-                character_avatar: character.avatar.clone(),
-                trigger_scene: Some(scene.into()),
-                greeting: Some(format!(
-                    "Hi, I'm {}. We just crossed paths in {} and I wanted to say hello.",
-                    character.name, scene
-                )),
-                status: "pending".into(),
-                created_at: now_token(),
-                expires_at: Some(tomorrow_end_millis_token()),
-            },
-        );
+    for (user_id, character) in candidates {
+        let greeting = generation::generate_social_greeting_text(&state, &character, Some(scene))
+            .await
+            .unwrap_or_else(|| fallback_scene_friend_request_greeting(&character.name, scene));
+
+        planned_requests.push(FriendRequestRecord {
+            id: format!("friend_request_{}", now_token()),
+            user_id,
+            character_id: character.id.clone(),
+            character_name: character.name.clone(),
+            character_avatar: character.avatar.clone(),
+            trigger_scene: Some(scene.into()),
+            greeting: Some(greeting),
+            status: "pending".into(),
+            created_at: now_token(),
+            expires_at: Some(tomorrow_end_millis_token()),
+        });
+    }
+
+    let mut created = 0_usize;
+    let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+    for request in planned_requests {
+        let already_pending = runtime.friend_requests.values().any(|existing| {
+            existing.user_id == request.user_id
+                && existing.character_id == request.character_id
+                && existing.status == "pending"
+        });
+        let already_friend = runtime.friendships.values().any(|friendship| {
+            friendship.user_id == request.user_id && friendship.character_id == request.character_id
+        });
+
+        if already_pending || already_friend {
+            continue;
+        }
+
+        runtime
+            .friend_requests
+            .insert(request.id.clone(), request);
         created += 1;
     }
 
@@ -703,6 +729,13 @@ fn tomorrow_end_millis_token() -> String {
     let day_ms = 24_u128 * 60 * 60 * 1000;
     let tomorrow_start = start_of_day_millis(current_millis()).saturating_add(day_ms);
     (tomorrow_start + day_ms - 1).to_string()
+}
+
+fn fallback_scene_friend_request_greeting(character_name: &str, scene: &str) -> String {
+    format!(
+        "Hi, I'm {}. We just crossed paths in {} and I wanted to say hello.",
+        character_name, scene
+    )
 }
 
 fn pseudo_percent(seed: &str) -> u64 {
