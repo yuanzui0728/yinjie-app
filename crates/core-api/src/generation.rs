@@ -112,6 +112,63 @@ pub async fn generate_social_greeting_text(
     }
 }
 
+pub async fn generate_memory_summary_text(
+    state: &AppState,
+    character: &CharacterRecord,
+    conversation_history: &[MessageRecord],
+) -> Option<String> {
+    if state.inference_gateway.active_provider().is_none() || conversation_history.is_empty() {
+        return None;
+    }
+
+    let history_window = conversation_history
+        .iter()
+        .filter_map(|message| match message.sender_type.as_str() {
+            "user" => Some(format!("User: {}", message.text)),
+            "character" => Some(format!("{}: {}", message.sender_name, message.text)),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    if history_window.is_empty() {
+        return None;
+    }
+
+    let request = yinjie_inference_gateway::ChatCompletionRequest {
+        messages: vec![
+            yinjie_inference_gateway::ChatMessage {
+                role: "system".into(),
+                content: format!(
+                    "You are maintaining the recent memory for {}. Summarize in Chinese only, under 100 characters, as the character's remembered impression of the user and the most important recent topics.",
+                    character.name
+                ),
+            },
+            yinjie_inference_gateway::ChatMessage {
+                role: "user".into(),
+                content: format!(
+                    "Character: {name}\nRelationship: {relationship}\nCurrent memory summary: {memory}\nConversation history:\n{history}",
+                    name = character.name,
+                    relationship = character.relationship,
+                    memory = if character.profile.memory_summary.trim().is_empty() {
+                        "none"
+                    } else {
+                        character.profile.memory_summary.trim()
+                    },
+                    history = history_window.join("\n")
+                ),
+            },
+        ],
+        model: None,
+        temperature: Some(0.3),
+        max_tokens: Some(140),
+    };
+
+    match state.inference_gateway.chat_completion(request).await {
+        Ok(response) => normalize_generated_text(&response.content),
+        Err(_) => None,
+    }
+}
+
 pub async fn generate_moment_text(state: &AppState, character: &CharacterRecord) -> String {
     let fallback = fallback_moment_text(character);
     let Some(world_context) = latest_world_context(state) else {

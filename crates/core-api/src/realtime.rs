@@ -13,7 +13,7 @@ use tracing::info;
 
 use crate::{
     app_state::{AppState, RealtimeCommand},
-    generation::generate_chat_reply_text,
+    generation::{generate_chat_reply_text, generate_memory_summary_text},
     models::{
         CharacterRecord, ConversationRecord, ConversationUpdatedEventPayload, ErrorEventPayload,
         JoinConversationSocketPayload, MessageRecord, SendMessageSocketPayload, TypingEventPayload,
@@ -518,7 +518,7 @@ async fn persist_conversation_turn_gateway(
     user_id: &str,
     text: &str,
 ) -> (ConversationRecord, Vec<MessageRecord>) {
-    let (user_name, conversation, previous_messages, reply_characters) = {
+    let (user_name, conversation, previous_messages, reply_characters, primary_character_id) = {
         let runtime = state.runtime.read().expect("runtime lock poisoned");
         let conversation = runtime
             .conversations
@@ -550,6 +550,17 @@ async fn persist_conversation_turn_gateway(
                 .cloned()
                 .unwrap_or_default(),
             reply_characters,
+            runtime
+                .conversations
+                .get(conversation_id)
+                .and_then(|stored| stored.participants.first().cloned())
+                .or_else(|| {
+                    if requested_character_id.trim().is_empty() {
+                        None
+                    } else {
+                        Some(requested_character_id.to_string())
+                    }
+                }),
         )
     };
 
@@ -589,6 +600,28 @@ async fn persist_conversation_turn_gateway(
         generated_messages.push(reply);
     }
 
+    let mut full_history = previous_messages.clone();
+    full_history.extend(generated_messages.iter().cloned());
+    let refreshed_memory = if !full_history.is_empty() && full_history.len() % 10 == 0 {
+        if let Some(primary_character_id) = primary_character_id.as_ref() {
+            let primary_character = {
+                let runtime = state.runtime.read().expect("runtime lock poisoned");
+                runtime.characters.get(primary_character_id).cloned()
+            };
+
+            match primary_character {
+                Some(character) => generate_memory_summary_text(state, &character, &full_history)
+                    .await
+                    .map(|summary| (character.id, summary, character.profile.memory_summary)),
+                None => None,
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     let conversation_snapshot = {
         let mut runtime = state.runtime.write().expect("runtime lock poisoned");
         let messages = runtime
@@ -596,6 +629,27 @@ async fn persist_conversation_turn_gateway(
             .entry(conversation_id.to_string())
             .or_default();
         messages.extend(generated_messages.iter().cloned());
+        if let Some((character_id, summary, previous_summary)) = refreshed_memory.as_ref() {
+            if let Some(character) = runtime.characters.get_mut(character_id) {
+                character.profile.memory_summary = summary.clone();
+                match character.profile.memory.as_mut() {
+                    Some(memory) => {
+                        memory.recent_summary = summary.clone();
+                    }
+                    None => {
+                        character.profile.memory = Some(crate::models::MemoryLayers {
+                            core_memory: if previous_summary.trim().is_empty() {
+                                summary.clone()
+                            } else {
+                                previous_summary.clone()
+                            },
+                            recent_summary: summary.clone(),
+                            forgetting_curve: 70,
+                        });
+                    }
+                }
+            }
+        }
         let stored_conversation = runtime
             .conversations
             .get_mut(conversation_id)

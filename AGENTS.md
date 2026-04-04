@@ -256,3 +256,4 @@
 - Fallback placeholder replies are still preserved when the provider is unavailable or the gateway call fails.
 - Social first-contact greetings in `/api/social/shake` and `/api/social/trigger-scene` now also use the gateway-backed generation layer with fallback copy preserved.
 - Scheduler `trigger-scene-friend-requests` now reuses the same gateway-backed social greeting generation path before persisting pending friend requests.
+- Realtime conversation turns now refresh character memory summaries every 10 messages through the gateway and persist both `profile.memorySummary` and `profile.memory.recentSummary`.
