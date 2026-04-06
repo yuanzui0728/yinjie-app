@@ -23,7 +23,7 @@ export function ListItemCard({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-white/10 bg-black/20 px-4 py-4 text-sm text-[color:var(--text-secondary)]",
+        "rounded-[22px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.035))] px-4 py-4 text-sm text-[color:var(--text-secondary)] shadow-[var(--shadow-soft)] transition-[background-color,box-shadow,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.075),rgba(255,255,255,0.05))] hover:shadow-[var(--shadow-lift)]",
         className,
       )}
       {...props}

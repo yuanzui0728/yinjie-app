@@ -2,18 +2,20 @@ import { io, type Socket } from "socket.io-client";
 import {
   CHAT_EVENTS,
   CHAT_NAMESPACE,
-  DEFAULT_CORE_API_BASE_URL,
+  type ChatErrorPayload,
   type ConversationUpdatedPayload,
   type JoinConversationPayload,
   type Message,
   type SendMessagePayload,
   type TypingPayload,
 } from "@yinjie/contracts";
+import { resolveAppSocketBaseUrl } from "./runtime-config";
+import { useSessionStore } from "../store/session-store";
 
 let socket: Socket | null = null;
 
 function socketBaseUrl() {
-  return import.meta.env.VITE_CORE_API_BASE_URL || DEFAULT_CORE_API_BASE_URL;
+  return resolveAppSocketBaseUrl();
 }
 
 export function getChatSocket() {
@@ -29,12 +31,28 @@ export function getChatSocket() {
   return socket;
 }
 
+export function disconnectChatSocket() {
+  if (!socket) {
+    return;
+  }
+
+  socket.removeAllListeners();
+  socket.disconnect();
+  socket = null;
+}
+
 export function joinConversationRoom(payload: JoinConversationPayload) {
-  getChatSocket().emit(CHAT_EVENTS.joinConversation, payload);
+  getChatSocket().emit(CHAT_EVENTS.joinConversation, {
+    ...payload,
+    token: payload.token ?? useSessionStore.getState().token ?? undefined,
+  });
 }
 
 export function emitChatMessage(payload: SendMessagePayload) {
-  getChatSocket().emit(CHAT_EVENTS.sendMessage, payload);
+  getChatSocket().emit(CHAT_EVENTS.sendMessage, {
+    ...payload,
+    token: payload.token ?? useSessionStore.getState().token ?? undefined,
+  });
 }
 
 export function onChatMessage(handler: (payload: Message) => void) {
@@ -59,4 +77,19 @@ export function onConversationUpdated(handler: (payload: ConversationUpdatedPayl
   const active = getChatSocket();
   active.on(CHAT_EVENTS.conversationUpdated, handler);
   return () => active.off(CHAT_EVENTS.conversationUpdated, handler);
+}
+
+export function onChatError(handler: (message: string) => void) {
+  const active = getChatSocket();
+  const listener = (payload: ChatErrorPayload | string) => {
+    if (typeof payload === "string") {
+      handler(payload);
+      return;
+    }
+
+    handler(payload.message);
+  };
+
+  active.on(CHAT_EVENTS.error, listener);
+  return () => active.off(CHAT_EVENTS.error, listener);
 }

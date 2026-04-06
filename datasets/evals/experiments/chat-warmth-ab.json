@@ -1,0 +1,12 @@
+{
+  "id": "chat-warmth-ab",
+  "title": "Chat Warmth A/B",
+  "description": "Compare default chat behavior against a warmer prompt variant on the chat foundation dataset.",
+  "datasetId": "chat-foundation",
+  "mode": "pairwise",
+  "experimentLabel": "chat-warmth-ab",
+  "baseline": {},
+  "candidate": {
+    "promptVariant": "warmer"
+  }
+}

@@ -13,6 +13,7 @@ use tracing::info;
 
 use crate::{
     app_state::{AppState, RealtimeCommand},
+    auth_support::require_session_token_user,
     generation::{
         classify_group_chat_intent, generate_chat_reply_text, generate_group_coordinator_text,
         generate_memory_summary_text,
@@ -183,8 +184,54 @@ async fn handle_disconnect(socket: SocketRef, state: AppState) {
 
 async fn handle_join(socket: SocketRef, payload: JoinConversationSocketPayload, state: AppState) {
     let conversation_id = payload.conversation_id.trim().to_string();
+    let Some(user_id) = payload.user_id.filter(|value| !value.trim().is_empty()) else {
+        let _ = socket.emit(
+            "error",
+            &ErrorEventPayload {
+                message: "未登录，无法订阅会话".into(),
+            },
+        );
+        return;
+    };
+    let Some(token) = payload.token.filter(|value| !value.trim().is_empty()) else {
+        let _ = socket.emit(
+            "error",
+            &ErrorEventPayload {
+                message: "未登录，无法订阅会话".into(),
+            },
+        );
+        return;
+    };
 
     if conversation_id.is_empty() {
+        return;
+    }
+
+    if require_session_token_user(&state, &token, &user_id).is_err() {
+        let _ = socket.emit(
+            "error",
+            &ErrorEventPayload {
+                message: "未登录，无法订阅会话".into(),
+            },
+        );
+        return;
+    }
+
+    let can_join = {
+        let runtime = state.runtime.read().expect("runtime lock poisoned");
+        runtime
+            .conversations
+            .get(&conversation_id)
+            .is_some_and(|conversation| conversation.user_id == user_id)
+    };
+
+    if !can_join {
+        let _ = socket.emit(
+            "error",
+            &ErrorEventPayload {
+                message: "无权订阅该会话".into(),
+            },
+        );
         return;
     }
 
@@ -229,32 +276,93 @@ async fn handle_send_message(
         );
         return;
     };
+    let Some(token) = payload
+        .token
+        .clone()
+        .filter(|value| !value.trim().is_empty())
+    else {
+        let _ = socket.emit(
+            "error",
+            &ErrorEventPayload {
+                message: "未登录，请先登录".into(),
+            },
+        );
+        return;
+    };
+
+    if require_session_token_user(&state, &token, &user_id).is_err() {
+        let _ = socket.emit(
+            "error",
+            &ErrorEventPayload {
+                message: "未登录，请先登录".into(),
+            },
+        );
+        return;
+    }
+
+    let text = payload.text.trim().to_string();
+    if text.is_empty() {
+        let _ = socket.emit(
+            "error",
+            &ErrorEventPayload {
+                message: "消息内容不能为空".into(),
+            },
+        );
+        return;
+    }
+
+    let character_id = payload.character_id.trim().to_string();
+    if character_id.is_empty() {
+        let _ = socket.emit(
+            "error",
+            &ErrorEventPayload {
+                message: "目标角色不存在".into(),
+            },
+        );
+        return;
+    }
+
+    let character_exists = {
+        let runtime = state.runtime.read().expect("runtime lock poisoned");
+        runtime.characters.contains_key(&character_id)
+    };
+
+    if !character_exists {
+        let _ = socket.emit(
+            "error",
+            &ErrorEventPayload {
+                message: "目标角色不存在".into(),
+            },
+        );
+        return;
+    }
 
     let conversation = ensure_conversation(
         &state,
         &user_id,
-        &payload.character_id,
+        &character_id,
         &payload.conversation_id,
     );
     let conversation_id = conversation.id.clone();
     ensure_socket_joined(&socket, &conversation_id, &state);
 
-    match get_activity_mode(&state, &payload.character_id).as_deref() {
+    match get_activity_mode(&state, &character_id).as_deref() {
         Some("sleeping") => {
-            let system_message = build_system_message(&conversation_id, sleeping_hints());
+            let system_message = persist_system_message(&state, &conversation_id, sleeping_hints());
             emit_room_event(&io, &conversation_id, EVENT_NEW_MESSAGE, &system_message).await;
             stamp_message_event(&state, "sleeping-system-message");
             return;
         }
         Some("working") | Some("commuting") => {
-            let system_message = build_system_message(&conversation_id, busy_hints());
+            let system_message = persist_system_message(&state, &conversation_id, busy_hints());
             emit_room_event(&io, &conversation_id, EVENT_NEW_MESSAGE, &system_message).await;
             stamp_message_event(&state, "busy-system-message");
 
             let delayed_state = state.clone();
             let delayed_io = io.clone();
-            let delayed_payload = payload.clone();
             let delayed_conversation_id = conversation_id.clone();
+            let delayed_character_id = character_id.clone();
+            let delayed_text = text.clone();
 
             tokio::spawn(async move {
                 sleep(Duration::from_millis(busy_delay_ms())).await;
@@ -262,9 +370,9 @@ async fn handle_send_message(
                     delayed_state,
                     delayed_io,
                     delayed_conversation_id,
-                    delayed_payload.character_id,
+                    delayed_character_id,
                     user_id,
-                    delayed_payload.text,
+                    delayed_text,
                 )
                 .await;
             });
@@ -278,9 +386,9 @@ async fn handle_send_message(
         state,
         io,
         conversation_id,
-        payload.character_id,
+        character_id,
         user_id,
-        payload.text,
+        text,
     )
     .await;
 }
@@ -298,6 +406,7 @@ async fn process_conversation_turn(
         &conversation_id,
         EVENT_TYPING_START,
         &TypingEventPayload {
+            conversation_id: conversation_id.clone(),
             character_id: character_id.clone(),
         },
     )
@@ -322,7 +431,10 @@ async fn process_conversation_turn(
         &io,
         &conversation_id,
         EVENT_TYPING_STOP,
-        &TypingEventPayload { character_id },
+        &TypingEventPayload {
+            conversation_id: conversation_id.clone(),
+            character_id,
+        },
     )
     .await;
 
@@ -391,13 +503,25 @@ fn ensure_conversation(
     requested_id: &str,
 ) -> ConversationRecord {
     let mut runtime = state.runtime.write().expect("runtime lock poisoned");
-    let conversation_id = if requested_id.trim().is_empty() {
-        format!("{user_id}_{character_id}")
-    } else {
-        requested_id.to_string()
-    };
+    let canonical_id = format!("{user_id}_{character_id}");
+    let requested_id = requested_id.trim();
 
-    if let Some(existing) = runtime.conversations.get(&conversation_id) {
+    if !requested_id.is_empty() {
+        if let Some(existing) = runtime.conversations.get(requested_id) {
+            let same_user = existing.user_id == user_id;
+            let targets_requested_character = character_id.trim().is_empty()
+                || existing
+                    .participants
+                    .iter()
+                    .any(|participant| participant == character_id);
+
+            if same_user && targets_requested_character {
+                return existing.clone();
+            }
+        }
+    }
+
+    if let Some(existing) = runtime.conversations.get(&canonical_id) {
         return existing.clone();
     }
 
@@ -408,7 +532,7 @@ fn ensure_conversation(
         .unwrap_or_else(|| character_id.to_string());
 
     let conversation = ConversationRecord {
-        id: conversation_id.clone(),
+        id: canonical_id.clone(),
         user_id: user_id.to_string(),
         r#type: "direct".into(),
         title,
@@ -421,8 +545,8 @@ fn ensure_conversation(
 
     runtime
         .conversations
-        .insert(conversation_id.clone(), conversation.clone());
-    runtime.messages.entry(conversation_id).or_default();
+        .insert(canonical_id.clone(), conversation.clone());
+    runtime.messages.entry(canonical_id).or_default();
 
     conversation
 }
@@ -441,14 +565,33 @@ fn persist_conversation_turn(
         .get(user_id)
         .map(|user| user.username.clone())
         .unwrap_or_else(|| "我".into());
+    let fallback_title = runtime
+        .characters
+        .get(requested_character_id)
+        .map(|character| character.name.clone())
+        .unwrap_or_else(|| requested_character_id.to_string());
+
+    let conversation = runtime
+        .conversations
+        .entry(conversation_id.to_string())
+        .or_insert_with(|| ConversationRecord {
+            id: conversation_id.to_string(),
+            user_id: user_id.to_string(),
+            r#type: "direct".into(),
+            title: fallback_title.clone(),
+            participants: if requested_character_id.trim().is_empty() {
+                Vec::new()
+            } else {
+                vec![requested_character_id.to_string()]
+            },
+            messages: Vec::new(),
+            created_at: now_token(),
+            updated_at: now_token(),
+            last_read_at: None,
+        })
+        .clone();
 
     let (conversation_type, participants, title) = {
-        let conversation = runtime
-            .conversations
-            .get(conversation_id)
-            .cloned()
-            .expect("conversation should exist before message persistence");
-
         (
             conversation.r#type,
             conversation.participants,
@@ -503,8 +646,18 @@ fn persist_conversation_turn(
         messages.extend(generated_messages.iter().cloned());
         let conversation = runtime
             .conversations
-            .get_mut(conversation_id)
-            .expect("conversation should exist while updating timestamp");
+            .entry(conversation_id.to_string())
+            .or_insert_with(|| ConversationRecord {
+                id: conversation_id.to_string(),
+                user_id: user_id.to_string(),
+                r#type: conversation_type.clone(),
+                title: title.clone(),
+                participants: participants.clone(),
+                messages: Vec::new(),
+                created_at: now_token(),
+                updated_at: now_token(),
+                last_read_at: None,
+            });
         conversation.updated_at = now_token();
         conversation.title = title;
         conversation.clone()
@@ -522,12 +675,31 @@ async fn persist_conversation_turn_gateway(
     text: &str,
 ) -> (ConversationRecord, Vec<MessageRecord>) {
     let (user_name, mut conversation, previous_messages, reply_characters, primary_character_id) = {
-        let runtime = state.runtime.read().expect("runtime lock poisoned");
+        let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+        let fallback_title = runtime
+            .characters
+            .get(requested_character_id)
+            .map(|character| character.name.clone())
+            .unwrap_or_else(|| requested_character_id.to_string());
         let conversation = runtime
             .conversations
-            .get(conversation_id)
-            .cloned()
-            .expect("conversation should exist before message persistence");
+            .entry(conversation_id.to_string())
+            .or_insert_with(|| ConversationRecord {
+                id: conversation_id.to_string(),
+                user_id: user_id.to_string(),
+                r#type: "direct".into(),
+                title: fallback_title,
+                participants: if requested_character_id.trim().is_empty() {
+                    Vec::new()
+                } else {
+                    vec![requested_character_id.to_string()]
+                },
+                messages: Vec::new(),
+                created_at: now_token(),
+                updated_at: now_token(),
+                last_read_at: None,
+            })
+            .clone();
         let mut reply_characters = conversation
             .participants
             .iter()
@@ -770,8 +942,18 @@ async fn persist_conversation_turn_gateway(
         }
         let stored_conversation = runtime
             .conversations
-            .get_mut(conversation_id)
-            .expect("conversation should exist while updating timestamp");
+            .entry(conversation_id.to_string())
+            .or_insert_with(|| ConversationRecord {
+                id: conversation_id.to_string(),
+                user_id: conversation.user_id.clone(),
+                r#type: conversation.r#type.clone(),
+                title: conversation.title.clone(),
+                participants: conversation.participants.clone(),
+                messages: Vec::new(),
+                created_at: now_token(),
+                updated_at: now_token(),
+                last_read_at: None,
+            });
         stored_conversation.updated_at = now_token();
         stored_conversation.title = conversation.title.clone();
         stored_conversation.r#type = conversation.r#type.clone();
@@ -810,6 +992,25 @@ fn build_system_message(conversation_id: &str, options: &[&str]) -> MessageRecor
         text: options[index].to_string(),
         created_at: timestamp,
     }
+}
+
+fn persist_system_message(state: &AppState, conversation_id: &str, options: &[&str]) -> MessageRecord {
+    let message = build_system_message(conversation_id, options);
+
+    {
+        let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+        runtime
+            .messages
+            .entry(conversation_id.to_string())
+            .or_default()
+            .push(message.clone());
+        if let Some(conversation) = runtime.conversations.get_mut(conversation_id) {
+            conversation.updated_at = message.created_at.clone();
+        }
+    }
+
+    state.request_persist("realtime-system-message");
+    message
 }
 
 fn build_group_invite_system_message(

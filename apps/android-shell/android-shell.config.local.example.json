@@ -1,0 +1,8 @@
+{
+  "allowCleartextTraffic": true,
+  "runtime": {
+    "environment": "development",
+    "apiBaseUrl": "http://192.168.1.10:39091",
+    "socketBaseUrl": "http://192.168.1.10:39091"
+  }
+}

@@ -14,9 +14,9 @@ use crate::{
     error::{ApiError, ApiResult},
     generation::generate_social_greeting_text,
     models::{
-        FriendListItemRecord, FriendRequestRecord, FriendshipRecord, SendFriendRequestPayload,
-        ShakePreviewCharacterRecord, ShakeResultRecord, SuccessResponse, TriggerScenePayload,
-        UserScopedRequest,
+        BlockCharacterPayload, BlockedCharacterRecord, FriendListItemRecord, FriendRequestRecord,
+        FriendshipRecord, SendFriendRequestPayload, ShakePreviewCharacterRecord, ShakeResultRecord,
+        SuccessResponse, TriggerScenePayload, UnblockCharacterPayload, UserScopedRequest,
     },
 };
 
@@ -27,6 +27,9 @@ pub fn router() -> Router<AppState> {
         .route("/friend-requests/:id/accept", post(accept_request))
         .route("/friend-requests/:id/decline", post(decline_request))
         .route("/friends", get(get_friends))
+        .route("/blocks", get(get_blocked_characters))
+        .route("/block", post(block_character))
+        .route("/unblock", post(unblock_character))
         .route("/shake", post(shake))
         .route("/trigger-scene", post(trigger_scene))
 }
@@ -57,20 +60,26 @@ async fn accept_request(
 ) -> ApiResult<Json<FriendshipRecord>> {
     require_session_user(&headers, &state, &payload.user_id)?;
     let mut runtime = state.runtime.write().expect("runtime lock poisoned");
-    let character_id = {
-        let request = runtime
-            .friend_requests
-            .get_mut(&id)
-            .ok_or_else(|| ApiError::not_found("Request not found"))?;
+    let request = runtime
+        .friend_requests
+        .get(&id)
+        .cloned()
+        .ok_or_else(|| ApiError::not_found("Request not found"))?;
 
-        if request.user_id != payload.user_id {
-            return Err(ApiError::not_found("Request not found"));
-        }
+    if request.user_id != payload.user_id {
+        return Err(ApiError::not_found("Request not found"));
+    }
 
-        request.status = "accepted".into();
-        request.character_id.clone()
-    };
-    let accepted_character = runtime.characters.get(&character_id).cloned();
+    if request.status == "declined" {
+        return Err(ApiError::conflict("Request already declined"));
+    }
+
+    let character_id = request.character_id.clone();
+    let accepted_character = runtime
+        .characters
+        .get(&character_id)
+        .cloned()
+        .ok_or_else(|| ApiError::not_found("Character not found"))?;
 
     if let Some(existing) = runtime
         .friendships
@@ -80,12 +89,24 @@ async fn accept_request(
         })
         .cloned()
     {
-        drop(runtime);
-        if let Some(character) = accepted_character.as_ref() {
-            state.ensure_narrative_arc(&payload.user_id, character);
+        if let Some(request) = runtime.friend_requests.get_mut(&id) {
+            request.status = "accepted".into();
         }
+        drop(runtime);
+        state.ensure_narrative_arc(&payload.user_id, &accepted_character);
         state.request_persist("social-accept-request");
         return Ok(Json(existing));
+    }
+
+    if request.status != "pending" {
+        return Err(ApiError::conflict(format!(
+            "Request is already {}",
+            request.status
+        )));
+    }
+
+    if let Some(request) = runtime.friend_requests.get_mut(&id) {
+        request.status = "accepted".into();
     }
 
     let friendship = FriendshipRecord {
@@ -102,20 +123,18 @@ async fn accept_request(
         .friendships
         .insert(friendship.id.clone(), friendship.clone());
     drop(runtime);
-    if let Some(character) = accepted_character.as_ref() {
-        state.ensure_narrative_arc(&friendship.user_id, character);
-        state.append_behavior_log(
-            character.id.clone(),
-            "friend_request",
-            Some(friendship.id.clone()),
-            Some("friend-request-accepted".into()),
-            Some(json!({
-                "userId": friendship.user_id,
-                "characterName": character.name,
-                "friendshipId": friendship.id,
-            })),
-        );
-    }
+    state.ensure_narrative_arc(&friendship.user_id, &accepted_character);
+    state.append_behavior_log(
+        accepted_character.id.clone(),
+        "friend_request",
+        Some(friendship.id.clone()),
+        Some("friend-request-accepted".into()),
+        Some(json!({
+            "userId": friendship.user_id,
+            "characterName": accepted_character.name,
+            "friendshipId": friendship.id,
+        })),
+    );
     state.request_persist("social-accept-request");
 
     Ok(Json(friendship))
@@ -129,11 +148,27 @@ async fn decline_request(
 ) -> ApiResult<Json<SuccessResponse>> {
     require_session_user(&headers, &state, &payload.user_id)?;
     let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+    let request = runtime
+        .friend_requests
+        .get(&id)
+        .cloned()
+        .ok_or_else(|| ApiError::not_found("Request not found"))?;
+
+    if request.user_id != payload.user_id {
+        return Err(ApiError::not_found("Request not found"));
+    }
+
+    if request.status == "accepted" {
+        return Err(ApiError::conflict("Request already accepted"));
+    }
+
+    if request.status == "declined" {
+        drop(runtime);
+        return Ok(Json(SuccessResponse { success: true }));
+    }
 
     if let Some(request) = runtime.friend_requests.get_mut(&id) {
-        if request.user_id == payload.user_id {
-            request.status = "declined".into();
-        }
+        request.status = "declined".into();
     }
     drop(runtime);
     state.request_persist("social-decline-request");
@@ -167,6 +202,94 @@ async fn get_friends(
     Ok(Json(items))
 }
 
+async fn get_blocked_characters(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<UserScopedRequest>,
+) -> ApiResult<Json<Vec<BlockedCharacterRecord>>> {
+    require_session_user(&headers, &state, &query.user_id)?;
+    let runtime = state.runtime.read().expect("runtime lock poisoned");
+    let mut items = runtime
+        .blocked_characters
+        .values()
+        .filter(|item| item.user_id == query.user_id)
+        .cloned()
+        .collect::<Vec<_>>();
+    items.sort_by(|left, right| right.created_at.cmp(&left.created_at));
+    Ok(Json(items))
+}
+
+async fn block_character(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(payload): Json<BlockCharacterPayload>,
+) -> ApiResult<Json<BlockedCharacterRecord>> {
+    require_session_user(&headers, &state, &payload.user_id)?;
+    let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+    let character = runtime
+        .characters
+        .get(&payload.character_id)
+        .cloned()
+        .ok_or_else(|| ApiError::not_found("Character not found"))?;
+
+    if let Some(existing) = runtime
+        .blocked_characters
+        .values()
+        .find(|item| item.user_id == payload.user_id && item.character_id == payload.character_id)
+        .cloned()
+    {
+        return Ok(Json(existing));
+    }
+
+    runtime
+        .friend_requests
+        .retain(|_, request| !(request.user_id == payload.user_id && request.character_id == payload.character_id));
+    runtime
+        .friendships
+        .retain(|_, friendship| !(friendship.user_id == payload.user_id && friendship.character_id == payload.character_id));
+
+    let record = BlockedCharacterRecord {
+        id: format!("block_{}", now_token()),
+        user_id: payload.user_id.clone(),
+        character_id: payload.character_id.clone(),
+        reason: payload.reason.as_ref().map(|value| value.trim().to_string()).filter(|value| !value.is_empty()),
+        created_at: now_token(),
+    };
+    runtime
+        .blocked_characters
+        .insert(record.id.clone(), record.clone());
+    drop(runtime);
+    state.append_behavior_log(
+        character.id.clone(),
+        "block",
+        Some(record.id.clone()),
+        Some("user-blocked-character".into()),
+        Some(json!({
+            "userId": payload.user_id,
+            "characterName": character.name,
+        })),
+    );
+    state.request_persist("social-block-character");
+
+    Ok(Json(record))
+}
+
+async fn unblock_character(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(payload): Json<UnblockCharacterPayload>,
+) -> ApiResult<Json<SuccessResponse>> {
+    require_session_user(&headers, &state, &payload.user_id)?;
+    let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+    runtime
+        .blocked_characters
+        .retain(|_, item| !(item.user_id == payload.user_id && item.character_id == payload.character_id));
+    drop(runtime);
+    state.request_persist("social-unblock-character");
+
+    Ok(Json(SuccessResponse { success: true }))
+}
+
 async fn shake(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -178,11 +301,7 @@ async fn shake(
         let available = runtime
             .characters
             .values()
-            .filter(|character| {
-                !runtime.friendships.values().any(|friendship| {
-                    friendship.user_id == payload.user_id && friendship.character_id == character.id
-                })
-            })
+            .filter(|character| is_available_for_new_request(&runtime, &payload.user_id, &character.id))
             .cloned()
             .collect::<Vec<_>>();
 
@@ -214,6 +333,10 @@ async fn send_friend_request(
     Json(payload): Json<SendFriendRequestPayload>,
 ) -> ApiResult<Json<FriendRequestRecord>> {
     require_session_user(&headers, &state, &payload.user_id)?;
+    let greeting = payload.greeting.trim();
+    if greeting.is_empty() {
+        return Err(ApiError::bad_request("greeting is required"));
+    }
     let mut runtime = state.runtime.write().expect("runtime lock poisoned");
     let character = runtime
         .characters
@@ -221,14 +344,21 @@ async fn send_friend_request(
         .cloned()
         .ok_or_else(|| ApiError::not_found("Character not found"))?;
 
+    if is_blocked(&runtime, &payload.user_id, &payload.character_id) {
+        return Err(ApiError::conflict(format!("{} is blocked", character.name)));
+    }
+
+    if has_friendship(&runtime, &payload.user_id, &payload.character_id) {
+        return Err(ApiError::conflict(format!(
+            "{} is already your friend",
+            character.name
+        )));
+    }
+
     if let Some(existing) = runtime
         .friend_requests
         .values()
-        .find(|request| {
-            request.user_id == payload.user_id
-                && request.character_id == payload.character_id
-                && request.status == "pending"
-        })
+        .find(|request| is_pending_request(request, &payload.user_id, &payload.character_id))
         .cloned()
     {
         return Ok(Json(existing));
@@ -240,7 +370,7 @@ async fn send_friend_request(
         character.name,
         character.avatar,
         Some("shake".into()),
-        Some(payload.greeting),
+        Some(greeting.into()),
     );
 
     runtime
@@ -269,11 +399,7 @@ async fn trigger_scene(
                     .as_ref()
                     .is_some_and(|scenes| scenes.iter().any(|scene| scene == &payload.scene))
             })
-            .filter(|character| {
-                !runtime.friendships.values().any(|friendship| {
-                    friendship.user_id == payload.user_id && friendship.character_id == character.id
-                })
-            })
+            .filter(|character| is_available_for_new_request(&runtime, &payload.user_id, &character.id))
             .cloned()
             .collect::<Vec<_>>();
 
@@ -281,22 +407,7 @@ async fn trigger_scene(
             return Ok(Json(None));
         }
 
-        let character = candidates[pseudo_random_index(candidates.len())].clone();
-
-        if let Some(existing) = runtime
-            .friend_requests
-            .values()
-            .find(|request| {
-                request.user_id == payload.user_id
-                    && request.character_id == character.id
-                    && request.status == "pending"
-            })
-            .cloned()
-        {
-            return Ok(Json(Some(existing)));
-        }
-
-        character
+        candidates[pseudo_random_index(candidates.len())].clone()
     };
     let greeting = generate_social_greeting_text(&state, &character, Some(&payload.scene))
         .await
@@ -305,14 +416,14 @@ async fn trigger_scene(
     let request = {
         let mut runtime = state.runtime.write().expect("runtime lock poisoned");
 
+        if has_friendship(&runtime, &payload.user_id, &character.id) {
+            return Ok(Json(None));
+        }
+
         if let Some(existing) = runtime
             .friend_requests
             .values()
-            .find(|request| {
-                request.user_id == payload.user_id
-                    && request.character_id == character.id
-                    && request.status == "pending"
-            })
+            .find(|request| is_pending_request(request, &payload.user_id, &character.id))
             .cloned()
         {
             return Ok(Json(Some(existing)));
@@ -346,6 +457,36 @@ async fn trigger_scene(
     );
 
     Ok(Json(Some(request)))
+}
+
+fn is_available_for_new_request(
+    runtime: &crate::app_state::RuntimeState,
+    user_id: &str,
+    character_id: &str,
+) -> bool {
+    !has_friendship(runtime, user_id, character_id)
+        && !is_blocked(runtime, user_id, character_id)
+        && !runtime
+            .friend_requests
+            .values()
+            .any(|request| is_pending_request(request, user_id, character_id))
+}
+
+fn has_friendship(runtime: &crate::app_state::RuntimeState, user_id: &str, character_id: &str) -> bool {
+    runtime.friendships.values().any(|friendship| {
+        friendship.user_id == user_id && friendship.character_id == character_id
+    })
+}
+
+fn is_blocked(runtime: &crate::app_state::RuntimeState, user_id: &str, character_id: &str) -> bool {
+    runtime
+        .blocked_characters
+        .values()
+        .any(|item| item.user_id == user_id && item.character_id == character_id)
+}
+
+fn is_pending_request(request: &FriendRequestRecord, user_id: &str, character_id: &str) -> bool {
+    request.user_id == user_id && request.character_id == character_id && request.status == "pending"
 }
 
 fn build_friend_request(

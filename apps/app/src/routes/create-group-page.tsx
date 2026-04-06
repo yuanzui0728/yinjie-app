@@ -1,21 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { createGroup, getFriends } from "@yinjie/contracts";
-import { AppPage, AppSection, Button, ErrorBlock, LoadingBlock, TextField } from "@yinjie/ui";
+import { AppHeader, AppPage, AppSection, Button, ErrorBlock, LoadingBlock, TextField } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
+import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useSessionStore } from "../store/session-store";
 
 export function CreateGroupPage() {
   const navigate = useNavigate();
   const userId = useSessionStore((state) => state.userId);
+  const runtimeConfig = useAppRuntimeConfig();
+  const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
   const [name, setName] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const friendsQuery = useQuery({
-    queryKey: ["app-group-friends", userId],
+    queryKey: ["app-group-friends", baseUrl, userId],
     queryFn: () => getFriends(userId!),
     enabled: Boolean(userId),
   });
@@ -34,24 +37,31 @@ export function CreateGroupPage() {
   });
   const canCreate = selectedIds.length > 0 && Boolean(userId);
 
+  useEffect(() => {
+    setName("");
+    setSelectedIds([]);
+    createMutation.reset();
+  }, [baseUrl, userId]);
+
   return (
     <AppPage>
-      <div className="flex items-center gap-3">
-        <Button
-          onClick={() => navigate({ to: "/tabs/contacts" })}
-          variant="ghost"
-          size="icon"
-          className="text-[color:var(--text-secondary)]"
-        >
-          <ArrowLeft size={18} />
-        </Button>
-        <div>
-          <div className="text-lg font-semibold text-white">创建群聊</div>
-          <div className="text-xs text-[color:var(--text-muted)]">把已经认识的人拉到同一个空间里</div>
-        </div>
-      </div>
+      <AppHeader
+        eyebrow="群聊"
+        title="创建群聊"
+        description="把已经认识的人拉到同一个空间里，让对话从单聊扩展成协作。"
+        actions={
+          <Button
+            onClick={() => navigate({ to: "/tabs/contacts" })}
+            variant="ghost"
+            size="icon"
+            className="text-[color:var(--text-secondary)]"
+          >
+            <ArrowLeft size={18} />
+          </Button>
+        }
+      />
 
-      <AppSection className="mt-5">
+      <AppSection>
         <div className="text-sm font-medium text-white">群名称</div>
         <TextField
           value={name}
@@ -64,7 +74,11 @@ export function CreateGroupPage() {
         </div>
       </AppSection>
 
-      <div className="mt-5 space-y-3">
+      <AppSection className="space-y-4">
+        <div>
+          <div className="text-sm font-medium text-white">选择成员</div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">至少选择一位已经建立关系的人，才能开始一个新的临时群聊。</div>
+        </div>
         {friendsQuery.isLoading ? <LoadingBlock className="text-left" label="正在读取你已经认识的人..." /> : null}
 
         {friendsQuery.isError && friendsQuery.error instanceof Error ? <ErrorBlock message={friendsQuery.error.message} /> : null}
@@ -88,10 +102,10 @@ export function CreateGroupPage() {
                   checked ? current.filter((item) => item !== character.id) : [...current, character.id],
                 )
               }
-              className={`flex w-full items-center gap-3 rounded-[24px] border px-4 py-4 text-left ${
+              className={`flex w-full items-center gap-3 rounded-[24px] border px-4 py-4 text-left shadow-[var(--shadow-soft)] transition-[background-color,box-shadow,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)] ${
                 checked
-                  ? "border-[color:var(--brand-primary)] bg-[rgba(249,115,22,0.12)]"
-                  : "border-[color:var(--border-subtle)] bg-[color:var(--surface-secondary)]"
+                  ? "border-[color:var(--border-brand)] bg-[linear-gradient(135deg,rgba(249,115,22,0.16),rgba(251,191,36,0.08))]"
+                  : "border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.065),rgba(255,255,255,0.04))]"
               } disabled:opacity-60`}
             >
               <AvatarChip name={character.name} src={character.avatar} />
@@ -101,13 +115,15 @@ export function CreateGroupPage() {
               </div>
               <div
                 className={`h-5 w-5 rounded-full border ${
-                  checked ? "border-[color:var(--brand-primary)] bg-[color:var(--brand-primary)]" : "border-white/20"
+                  checked
+                    ? "border-[color:var(--brand-primary)] bg-[color:var(--brand-primary)]"
+                    : "border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))]"
                 }`}
               />
             </button>
           );
         })}
-      </div>
+      </AppSection>
 
       {createMutation.isError && createMutation.error instanceof Error ? <ErrorBlock className="mt-4" message={createMutation.error.message} /> : null}
 

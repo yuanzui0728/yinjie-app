@@ -31,6 +31,17 @@ export function DesktopRuntimeGuard() {
     startMutation.mutate();
   }, [desktopAvailable, desktopStatusQuery.data, startMutation]);
 
+  useEffect(() => {
+    if (!desktopAvailable) {
+      attemptedAutostartRef.current = false;
+      return;
+    }
+
+    if (desktopStatusQuery.data?.reachable) {
+      attemptedAutostartRef.current = false;
+    }
+  }, [desktopAvailable, desktopStatusQuery.data?.baseUrl, desktopStatusQuery.data?.reachable]);
+
   if (!desktopAvailable) {
     return null;
   }
@@ -99,7 +110,7 @@ export function DesktopRuntimeGuard() {
         <div className="mt-4 text-xs leading-6 text-[color:var(--text-muted)]">
           {probeMutation.data?.message ??
             startMutation.data?.message ??
-            "如果长时间没有恢复，检查桌面环境中是否存在可执行的 yinjie-core-api 或设置了 YINJIE_CORE_API_CMD。"}
+            "如果长时间没有恢复，先检查桌面包内置的 core-api 是否完整，再确认是否需要通过 YINJIE_CORE_API_CMD 覆盖启动命令。"}
         </div>
         {errorMessage ? <div className="mt-3 text-sm text-[#fda4af]">{errorMessage}</div> : null}
       </div>
@@ -109,13 +120,51 @@ export function DesktopRuntimeGuard() {
 
 function formatDesktopDiagnostics(values: {
   platform: string;
+  diagnosticsStatus?: string;
+  coreApiCommandSource?: string;
   coreApiCommandResolved: boolean;
+  coreApiPortOccupied?: boolean;
+  bundledCoreApiExists?: boolean;
+  managedByDesktopShell?: boolean;
+  managedChildPid?: number | null;
+  desktopLogPath?: string;
+  lastCoreApiError?: string | null;
   linuxMissingPackages: string[];
   summary: string;
 }) {
   const packageStatus = values.linuxMissingPackages.length
     ? `missing=${values.linuxMissingPackages.join(", ")}`
     : "linux deps ok";
+  const sidecarStatus = formatCommandSource(values.coreApiCommandSource, values.bundledCoreApiExists);
+  const failureStatus =
+    values.diagnosticsStatus === "port-occupied"
+      ? "port occupied"
+      : values.diagnosticsStatus === "bundled-sidecar-missing"
+        ? "bundled sidecar missing"
+        : values.diagnosticsStatus === "spawn-failed"
+          ? "spawn failed"
+          : values.diagnosticsStatus === "health-probe-failed"
+            ? "health probe failed"
+            : values.diagnosticsStatus ?? "unknown";
+  const managedStatus = values.managedByDesktopShell
+    ? `managed${values.managedChildPid ? ` pid=${values.managedChildPid}` : ""}`
+    : "unmanaged";
+  const logPath = values.desktopLogPath ? ` · log=${values.desktopLogPath}` : "";
+  const lastError = values.lastCoreApiError ? ` · last-error=${values.lastCoreApiError}` : "";
 
-  return `${values.platform} · ${values.summary} · ${values.coreApiCommandResolved ? "command ok" : "command missing"} · ${packageStatus}`;
+  return `${values.platform} · ${values.summary} · ${values.coreApiCommandResolved ? "command ok" : "command missing"} · ${sidecarStatus} · ${failureStatus} · ${managedStatus} · ${packageStatus}${values.coreApiPortOccupied ? " · port-in-use" : ""}${logPath}${lastError}`;
+}
+
+function formatCommandSource(source?: string, bundledExists?: boolean) {
+  if (source === "bundled" || source === "bundled-sidecar") {
+    return "bundled sidecar";
+  }
+  if (source === "env" || source === "env-override") {
+    return "env override";
+  }
+  if (source === "path" || source === "path-lookup") {
+    return bundledExists ? "path lookup (bundled missing)" : "path lookup";
+  }
+
+  return bundledExists ? "sidecar ready" : "sidecar missing";
 }

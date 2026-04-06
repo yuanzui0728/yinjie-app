@@ -1,0 +1,4089 @@
+{
+  "version": 1,
+  "saved_at": "1775433633367",
+  "runtime": {
+    "users": {
+      "user_1775359662417": {
+        "id": "user_1775359662417",
+        "username": "proactive_guard_1775359662397",
+        "passwordHash": "onboarding_1775359662417",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775359662417"
+      },
+      "user_1775354084765": {
+        "id": "user_1775354084765",
+        "username": "moment_order_user",
+        "passwordHash": "onboarding_1775354084765",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775354084765"
+      },
+      "user_1775317867420": {
+        "id": "user_1775317867420",
+        "username": "codex-cascade",
+        "passwordHash": "onboarding_1775317867420",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775317867420"
+      },
+      "user_1775359446568": {
+        "id": "user_1775359446568",
+        "username": "group_sender_guard_1775359446553",
+        "passwordHash": "onboarding_1775359446568",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775359446568"
+      },
+      "user_1775353376453": {
+        "id": "user_1775353376453",
+        "username": "social_regression_user",
+        "passwordHash": "onboarding_1775353376453",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775353376453"
+      },
+      "user_1775433587869": {
+        "id": "user_1775433587869",
+        "username": "delete_group_member_1775433587",
+        "passwordHash": "pw",
+        "onboardingCompleted": true,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775433587869"
+      },
+      "user_1775358527041": {
+        "id": "user_1775358527041",
+        "username": "system_persist_user",
+        "passwordHash": "onboarding_1775358527041",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775358527041"
+      },
+      "user_1775358133357": {
+        "id": "user_1775358133357",
+        "username": "join_guard_a",
+        "passwordHash": "onboarding_1775358133357",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775358133357"
+      },
+      "user_1775355656858": {
+        "id": "user_1775355656858",
+        "username": "chat_edge_user",
+        "passwordHash": "onboarding_1775355656858",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775355656858"
+      },
+      "user_1775357757391": {
+        "id": "user_1775357757391",
+        "username": "socket_isolation_a",
+        "passwordHash": "onboarding_1775357757391",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775357757391"
+      },
+      "user_1775354896090": {
+        "id": "user_1775354896090",
+        "username": "social_cleanup_user",
+        "passwordHash": "onboarding_1775354896090",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775354896090"
+      },
+      "user_1775359889995": {
+        "id": "user_1775359889995",
+        "username": "profile_guard_1775359889974",
+        "passwordHash": "onboarding_1775359889995",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775359889995"
+      },
+      "user_1775353145973": {
+        "id": "user_1775353145973",
+        "username": "codex-read-order",
+        "passwordHash": "onboarding_1775353145973",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775353145973"
+      },
+      "user_1775359808284": {
+        "id": "user_1775359808284",
+        "username": "profile_guard_1775359808267",
+        "passwordHash": "onboarding_1775359808284",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775359808284"
+      },
+      "user_1775357163213": {
+        "id": "user_1775357163213",
+        "username": "group_member_user",
+        "passwordHash": "onboarding_1775357163214",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775357163214"
+      },
+      "user_1775316035750": {
+        "id": "user_1775316035750",
+        "username": "codex-smoke",
+        "passwordHash": "onboarding_1775316035750",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775316035750"
+      },
+      "user_1775316080781": {
+        "id": "user_1775316080781",
+        "username": "codex-smoke-2",
+        "passwordHash": "onboarding_1775316080781",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775316080781"
+      },
+      "user_1775359839206": {
+        "id": "user_1775359839206",
+        "username": "feed_sanity_1775359839189",
+        "passwordHash": "onboarding_1775359839206",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775359839206"
+      },
+      "user_1775433587851": {
+        "id": "user_1775433587851",
+        "username": "delete_group_owner_1775433587",
+        "passwordHash": "pw",
+        "onboardingCompleted": true,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775433587851"
+      },
+      "user_1775316080779": {
+        "id": "user_1775316080779",
+        "username": "codex-session",
+        "passwordHash": "onboarding_1775316080779",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775316080779"
+      },
+      "user_1775356261242": {
+        "id": "user_1775356261242",
+        "username": "character_sync_user",
+        "passwordHash": "onboarding_1775356261242",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775356261242"
+      },
+      "user_1775357781178": {
+        "id": "user_1775357781178",
+        "username": "socket_isolation_b2",
+        "passwordHash": "onboarding_1775357781178",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775357781178"
+      },
+      "user_1775357781174": {
+        "id": "user_1775357781174",
+        "username": "socket_isolation_a2",
+        "passwordHash": "onboarding_1775357781174",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775357781174"
+      },
+      "user_1775316080787": {
+        "id": "user_1775316080787",
+        "username": "codex-onboard",
+        "passwordHash": "onboarding_1775316080787",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775316080787"
+      },
+      "user_1775316080798": {
+        "id": "user_1775316080798",
+        "username": "codex-smoke-3",
+        "passwordHash": "onboarding_1775316080798",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775316080798"
+      },
+      "user_1775358434613": {
+        "id": "user_1775358434613",
+        "username": "socket_token_a",
+        "passwordHash": "onboarding_1775358434613",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775358434613"
+      },
+      "user_1775358434617": {
+        "id": "user_1775358434617",
+        "username": "socket_token_b",
+        "passwordHash": "onboarding_1775358434617",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775358434617"
+      },
+      "user_1775353158942": {
+        "id": "user_1775353158942",
+        "username": "codex-read-order-2",
+        "passwordHash": "onboarding_1775353158942",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775353158942"
+      },
+      "user_1775354489484": {
+        "id": "user_1775354489484",
+        "username": "social_status_machine_user",
+        "passwordHash": "onboarding_1775354489484",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775354489484"
+      },
+      "user_1775433633101": {
+        "id": "user_1775433633101",
+        "username": "delete_group_owner2_1775433633",
+        "passwordHash": "pw",
+        "onboardingCompleted": true,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775433633101"
+      },
+      "user_1775359627140": {
+        "id": "user_1775359627140",
+        "username": "proactive_guard_1775359627123",
+        "passwordHash": "onboarding_1775359627140",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775359627140"
+      },
+      "user_1775353145984": {
+        "id": "user_1775353145984",
+        "username": "codex-outsider",
+        "passwordHash": "onboarding_1775353145984",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775353145984"
+      },
+      "user_1775358999113": {
+        "id": "user_1775358999113",
+        "username": "socket_guard_1775358999107",
+        "passwordHash": "onboarding_1775358999113",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775358999113"
+      },
+      "user_1775352708416": {
+        "id": "user_1775352708416",
+        "username": "codex-404",
+        "passwordHash": "onboarding_1775352708416",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775352708416"
+      },
+      "user_1775433605314": {
+        "id": "user_1775433605314",
+        "username": "delete_group_owner_1775433605",
+        "passwordHash": "pw",
+        "onboardingCompleted": true,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775433605314"
+      },
+      "user_1775357163198": {
+        "id": "user_1775357163198",
+        "username": "group_owner_user",
+        "passwordHash": "onboarding_1775357163198",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775357163198"
+      },
+      "user_1775358133361": {
+        "id": "user_1775358133361",
+        "username": "join_guard_b",
+        "passwordHash": "onboarding_1775358133361",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775358133361"
+      },
+      "user_1775360492011": {
+        "id": "user_1775360492011",
+        "username": "payload_guard_1775360491995",
+        "passwordHash": "onboarding_1775360492011",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775360492011"
+      },
+      "user_1775353145965": {
+        "id": "user_1775353145965",
+        "username": "codex-group-auth",
+        "passwordHash": "onboarding_1775353145965",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775353145965"
+      },
+      "user_1775352708418": {
+        "id": "user_1775352708418",
+        "username": "codex-404b",
+        "passwordHash": "onboarding_1775352708418",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775352708418"
+      },
+      "user_1775357757395": {
+        "id": "user_1775357757395",
+        "username": "socket_isolation_b",
+        "passwordHash": "onboarding_1775357757395",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775357757395"
+      },
+      "user_1775317366604": {
+        "id": "user_1775317366604",
+        "username": "codex-verify",
+        "passwordHash": "onboarding_1775317366604",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775317366604"
+      },
+      "user_1775353397609": {
+        "id": "user_1775353397609",
+        "username": "social_edge_user",
+        "passwordHash": "onboarding_1775353397609",
+        "onboardingCompleted": false,
+        "avatar": null,
+        "signature": null,
+        "locationLat": null,
+        "locationLng": null,
+        "locationName": null,
+        "createdAt": "1775353397609"
+      }
+    },
+    "auth_sessions": {
+      "yj.user_1775359662417.1775359662417.43": {
+        "token": "yj.user_1775359662417.1775359662417.43",
+        "userId": "user_1775359662417",
+        "createdAt": "1775359662417",
+        "lastSeenAt": "1775359662428",
+        "expiresAt": "1777951662417"
+      },
+      "yj.user_1775359889995.1775359889995.46": {
+        "token": "yj.user_1775359889995.1775359889995.46",
+        "userId": "user_1775359889995",
+        "createdAt": "1775359889995",
+        "lastSeenAt": "1775359890002",
+        "expiresAt": "1777951889995"
+      },
+      "yj.user_1775353158942.1775353158955.20": {
+        "token": "yj.user_1775353158942.1775353158955.20",
+        "userId": "user_1775353158942",
+        "createdAt": "1775353158955",
+        "lastSeenAt": "1775353158955",
+        "expiresAt": "1777945158955"
+      },
+      "yj.user_1775354489484.1775354489484.25": {
+        "token": "yj.user_1775354489484.1775354489484.25",
+        "userId": "user_1775354489484",
+        "createdAt": "1775354489484",
+        "lastSeenAt": "1775354489585",
+        "expiresAt": "1777946489484"
+      },
+      "yj.user_1775433587869.1775433587869.49": {
+        "token": "yj.user_1775433587869.1775433587869.49",
+        "userId": "user_1775433587869",
+        "createdAt": "1775433587869",
+        "lastSeenAt": "1775433587869",
+        "expiresAt": "1778025587869"
+      },
+      "yj.user_1775358133357.1775358133357.35": {
+        "token": "yj.user_1775358133357.1775358133357.35",
+        "userId": "user_1775358133357",
+        "createdAt": "1775358133357",
+        "lastSeenAt": "1775358133357",
+        "expiresAt": "1777950133357"
+      },
+      "yj.user_1775353145965.1775353145965.13": {
+        "token": "yj.user_1775353145965.1775353145965.13",
+        "userId": "user_1775353145965",
+        "createdAt": "1775353145965",
+        "lastSeenAt": "1775353147024",
+        "expiresAt": "1777945145965"
+      },
+      "yj.user_1775353376453.1775353376453.21": {
+        "token": "yj.user_1775353376453.1775353376453.21",
+        "userId": "user_1775353376453",
+        "createdAt": "1775353376453",
+        "lastSeenAt": "1775353376453",
+        "expiresAt": "1777945376453"
+      },
+      "yj.user_1775353397609.1775353411948.23": {
+        "token": "yj.user_1775353397609.1775353411948.23",
+        "userId": "user_1775353397609",
+        "createdAt": "1775353411948",
+        "lastSeenAt": "1775353412042",
+        "expiresAt": "1777945411948"
+      },
+      "yj.user_1775358133361.1775358133361.36": {
+        "token": "yj.user_1775358133361.1775358133361.36",
+        "userId": "user_1775358133361",
+        "createdAt": "1775358133361",
+        "lastSeenAt": "1775358133361",
+        "expiresAt": "1777950133361"
+      },
+      "yj.user_1775356261242.1775356261242.28": {
+        "token": "yj.user_1775356261242.1775356261242.28",
+        "userId": "user_1775356261242",
+        "createdAt": "1775356261242",
+        "lastSeenAt": "1775356261353",
+        "expiresAt": "1777948261242"
+      },
+      "yj.user_1775317867420.1775317867420.8": {
+        "token": "yj.user_1775317867420.1775317867420.8",
+        "userId": "user_1775317867420",
+        "createdAt": "1775317867420",
+        "lastSeenAt": "1775317867509",
+        "expiresAt": "1777909867420"
+      },
+      "yj.user_1775352708416.1775352708416.10": {
+        "token": "yj.user_1775352708416.1775352708416.10",
+        "userId": "user_1775352708416",
+        "createdAt": "1775352708416",
+        "lastSeenAt": "1775352708438",
+        "expiresAt": "1777944708416"
+      },
+      "yj.user_1775358434617.1775358434617.38": {
+        "token": "yj.user_1775358434617.1775358434617.38",
+        "userId": "user_1775358434617",
+        "createdAt": "1775358434617",
+        "lastSeenAt": "1775358434625",
+        "expiresAt": "1777950434617"
+      },
+      "yj.user_1775357781174.1775357781174.33": {
+        "token": "yj.user_1775357781174.1775357781174.33",
+        "userId": "user_1775357781174",
+        "createdAt": "1775357781174",
+        "lastSeenAt": "1775357781174",
+        "expiresAt": "1777949781174"
+      },
+      "yj.user_1775359627140.1775359627140.42": {
+        "token": "yj.user_1775359627140.1775359627140.42",
+        "userId": "user_1775359627140",
+        "createdAt": "1775359627140",
+        "lastSeenAt": "1775359627150",
+        "expiresAt": "1777951627140"
+      },
+      "yj.user_1775357163213.1775357163214.30": {
+        "token": "yj.user_1775357163213.1775357163214.30",
+        "userId": "user_1775357163213",
+        "createdAt": "1775357163214",
+        "lastSeenAt": "1775357163297",
+        "expiresAt": "1777949163214"
+      },
+      "yj.user_1775357757395.1775357757395.32": {
+        "token": "yj.user_1775357757395.1775357757395.32",
+        "userId": "user_1775357757395",
+        "createdAt": "1775357757395",
+        "lastSeenAt": "1775357757395",
+        "expiresAt": "1777949757395"
+      },
+      "yj.user_1775359808284.1775359808284.44": {
+        "token": "yj.user_1775359808284.1775359808284.44",
+        "userId": "user_1775359808284",
+        "createdAt": "1775359808284",
+        "lastSeenAt": "1775359808291",
+        "expiresAt": "1777951808284"
+      },
+      "yj.user_1775359839206.1775359839206.45": {
+        "token": "yj.user_1775359839206.1775359839206.45",
+        "userId": "user_1775359839206",
+        "createdAt": "1775359839206",
+        "lastSeenAt": "1775359839210",
+        "expiresAt": "1777951839206"
+      },
+      "yj.user_1775353158942.1775353158942.19": {
+        "token": "yj.user_1775353158942.1775353158942.19",
+        "userId": "user_1775353158942",
+        "createdAt": "1775353158942",
+        "lastSeenAt": "1775353160001",
+        "expiresAt": "1777945158942"
+      },
+      "yj.user_1775433587851.1775433587851.48": {
+        "token": "yj.user_1775433587851.1775433587851.48",
+        "userId": "user_1775433587851",
+        "createdAt": "1775433587851",
+        "lastSeenAt": "1775433587851",
+        "expiresAt": "1778025587851"
+      },
+      "yj.user_1775433633101.1775433633101.51": {
+        "token": "yj.user_1775433633101.1775433633101.51",
+        "userId": "user_1775433633101",
+        "createdAt": "1775433633101",
+        "lastSeenAt": "1775433633258",
+        "expiresAt": "1778025633101"
+      },
+      "yj.user_1775316080787.1775316080787.4": {
+        "token": "yj.user_1775316080787.1775316080787.4",
+        "userId": "user_1775316080787",
+        "createdAt": "1775316080787",
+        "lastSeenAt": "1775316080787",
+        "expiresAt": "1777908080787"
+      },
+      "yj.user_1775359446568.1775359446568.41": {
+        "token": "yj.user_1775359446568.1775359446568.41",
+        "userId": "user_1775359446568",
+        "createdAt": "1775359446568",
+        "lastSeenAt": "1775359446657",
+        "expiresAt": "1777951446568"
+      },
+      "yj.user_1775357163198.1775357163198.29": {
+        "token": "yj.user_1775357163198.1775357163198.29",
+        "userId": "user_1775357163198",
+        "createdAt": "1775357163198",
+        "lastSeenAt": "1775357163292",
+        "expiresAt": "1777949163198"
+      },
+      "yj.user_1775357757391.1775357757391.31": {
+        "token": "yj.user_1775357757391.1775357757391.31",
+        "userId": "user_1775357757391",
+        "createdAt": "1775357757391",
+        "lastSeenAt": "1775357757391",
+        "expiresAt": "1777949757391"
+      },
+      "yj.user_1775354084765.1775354084765.24": {
+        "token": "yj.user_1775354084765.1775354084765.24",
+        "userId": "user_1775354084765",
+        "createdAt": "1775354084765",
+        "lastSeenAt": "1775354084879",
+        "expiresAt": "1777946084765"
+      },
+      "yj.user_1775317366604.1775317366604.6": {
+        "token": "yj.user_1775317366604.1775317366604.6",
+        "userId": "user_1775317366604",
+        "createdAt": "1775317366604",
+        "lastSeenAt": "1775317392252",
+        "expiresAt": "1777909366604"
+      },
+      "yj.user_1775353145984.1775353145984.17": {
+        "token": "yj.user_1775353145984.1775353145984.17",
+        "userId": "user_1775353145984",
+        "createdAt": "1775353145984",
+        "lastSeenAt": "1775353146004",
+        "expiresAt": "1777945145984"
+      },
+      "yj.user_1775353145965.1775353145974.16": {
+        "token": "yj.user_1775353145965.1775353145974.16",
+        "userId": "user_1775353145965",
+        "createdAt": "1775353145974",
+        "lastSeenAt": "1775353145974",
+        "expiresAt": "1777945145974"
+      },
+      "yj.user_1775358999113.1775358999113.40": {
+        "token": "yj.user_1775358999113.1775358999113.40",
+        "userId": "user_1775358999113",
+        "createdAt": "1775358999113",
+        "lastSeenAt": "1775358999627",
+        "expiresAt": "1777950999113"
+      },
+      "yj.user_1775353145965.1775353145965.14": {
+        "token": "yj.user_1775353145965.1775353145965.14",
+        "userId": "user_1775353145965",
+        "createdAt": "1775353145965",
+        "lastSeenAt": "1775353145980",
+        "expiresAt": "1777945145965"
+      },
+      "yj.user_1775316080798.1775316080798.5": {
+        "token": "yj.user_1775316080798.1775316080798.5",
+        "userId": "user_1775316080798",
+        "createdAt": "1775316080798",
+        "lastSeenAt": "1775316080798",
+        "expiresAt": "1777908080798"
+      },
+      "yj.user_1775317867420.1775317867437.9": {
+        "token": "yj.user_1775317867420.1775317867437.9",
+        "userId": "user_1775317867420",
+        "createdAt": "1775317867437",
+        "lastSeenAt": "1775317867437",
+        "expiresAt": "1777909867437"
+      },
+      "yj.user_1775360492011.1775360492011.47": {
+        "token": "yj.user_1775360492011.1775360492011.47",
+        "userId": "user_1775360492011",
+        "createdAt": "1775360492011",
+        "lastSeenAt": "1775360492016",
+        "expiresAt": "1777952492011"
+      },
+      "yj.user_1775352708416.1775352708430.12": {
+        "token": "yj.user_1775352708416.1775352708430.12",
+        "userId": "user_1775352708416",
+        "createdAt": "1775352708430",
+        "lastSeenAt": "1775352708430",
+        "expiresAt": "1777944708430"
+      },
+      "yj.user_1775358434613.1775358434613.37": {
+        "token": "yj.user_1775358434613.1775358434613.37",
+        "userId": "user_1775358434613",
+        "createdAt": "1775358434613",
+        "lastSeenAt": "1775358434613",
+        "expiresAt": "1777950434613"
+      },
+      "yj.user_1775354896090.1775354896090.26": {
+        "token": "yj.user_1775354896090.1775354896090.26",
+        "userId": "user_1775354896090",
+        "createdAt": "1775354896090",
+        "lastSeenAt": "1775354896201",
+        "expiresAt": "1777946896090"
+      },
+      "yj.user_1775353397609.1775353397609.22": {
+        "token": "yj.user_1775353397609.1775353397609.22",
+        "userId": "user_1775353397609",
+        "createdAt": "1775353397609",
+        "lastSeenAt": "1775353397609",
+        "expiresAt": "1777945397609"
+      },
+      "yj.user_1775353145984.1775353145990.18": {
+        "token": "yj.user_1775353145984.1775353145990.18",
+        "userId": "user_1775353145984",
+        "createdAt": "1775353145990",
+        "lastSeenAt": "1775353145990",
+        "expiresAt": "1777945145990"
+      },
+      "yj.user_1775357781178.1775357781178.34": {
+        "token": "yj.user_1775357781178.1775357781178.34",
+        "userId": "user_1775357781178",
+        "createdAt": "1775357781178",
+        "lastSeenAt": "1775357781178",
+        "expiresAt": "1777949781178"
+      },
+      "yj.user_1775316035750.1775316035750.1": {
+        "token": "yj.user_1775316035750.1775316035750.1",
+        "userId": "user_1775316035750",
+        "createdAt": "1775316035750",
+        "lastSeenAt": "1775316035750",
+        "expiresAt": "1777908035750"
+      },
+      "yj.user_1775358527041.1775358527041.39": {
+        "token": "yj.user_1775358527041.1775358527041.39",
+        "userId": "user_1775358527041",
+        "createdAt": "1775358527041",
+        "lastSeenAt": "1775358527248",
+        "expiresAt": "1777950527041"
+      },
+      "yj.user_1775355656858.1775355656858.27": {
+        "token": "yj.user_1775355656858.1775355656858.27",
+        "userId": "user_1775355656858",
+        "createdAt": "1775355656858",
+        "lastSeenAt": "1775355656936",
+        "expiresAt": "1777947656858"
+      },
+      "yj.user_1775353145973.1775353145973.15": {
+        "token": "yj.user_1775353145973.1775353145973.15",
+        "userId": "user_1775353145973",
+        "createdAt": "1775353145973",
+        "lastSeenAt": "1775353145973",
+        "expiresAt": "1777945145973"
+      },
+      "yj.user_1775316080779.1775316080779.2": {
+        "token": "yj.user_1775316080779.1775316080779.2",
+        "userId": "user_1775316080779",
+        "createdAt": "1775316080779",
+        "lastSeenAt": "1775316080795",
+        "expiresAt": "1777908080779"
+      },
+      "yj.user_1775317366604.1775317366621.7": {
+        "token": "yj.user_1775317366604.1775317366621.7",
+        "userId": "user_1775317366604",
+        "createdAt": "1775317366621",
+        "lastSeenAt": "1775317366621",
+        "expiresAt": "1777909366621"
+      },
+      "yj.user_1775352708418.1775352708418.11": {
+        "token": "yj.user_1775352708418.1775352708418.11",
+        "userId": "user_1775352708418",
+        "createdAt": "1775352708418",
+        "lastSeenAt": "1775352708431",
+        "expiresAt": "1777944708418"
+      },
+      "yj.user_1775316080781.1775316080781.3": {
+        "token": "yj.user_1775316080781.1775316080781.3",
+        "userId": "user_1775316080781",
+        "createdAt": "1775316080781",
+        "lastSeenAt": "1775316080807",
+        "expiresAt": "1777908080781"
+      },
+      "yj.user_1775433605314.1775433605314.50": {
+        "token": "yj.user_1775433605314.1775433605314.50",
+        "userId": "user_1775433605314",
+        "createdAt": "1775433605314",
+        "lastSeenAt": "1775433605453",
+        "expiresAt": "1778025605314"
+      }
+    },
+    "characters": {
+      "char_lawyer": {
+        "id": "char_lawyer",
+        "name": "Wang Jianguo",
+        "avatar": "avatar",
+        "relationship": "lawyer-friend",
+        "relationshipType": "expert",
+        "personality": "Grounded, practical, and occasionally dryly funny.",
+        "bio": "Practicing lawyer focused on contract disputes, labor law, and company law.",
+        "isOnline": false,
+        "isTemplate": true,
+        "expertDomains": [
+          "law"
+        ],
+        "profile": {
+          "characterId": "char_lawyer",
+          "name": "Wang Jianguo",
+          "relationship": "lawyer-friend",
+          "expertDomains": [
+            "law"
+          ],
+          "basePrompt": null,
+          "traits": {
+            "speechPatterns": [],
+            "catchphrases": [],
+            "topicsOfInterest": [],
+            "emotionalTone": "Grounded, practical, and occasionally dryly funny.",
+            "responseLength": "medium",
+            "emojiUsage": "occasional"
+          },
+          "memorySummary": "",
+          "systemPrompt": null,
+          "identity": null,
+          "behavioralPatterns": null,
+          "cognitiveBoundaries": null,
+          "reasoningConfig": null,
+          "memory": null
+        },
+        "activityFrequency": "normal",
+        "momentsFrequency": 1,
+        "feedFrequency": 2,
+        "activeHoursStart": 9,
+        "activeHoursEnd": 22,
+        "triggerScenes": [
+          "library",
+          "coffee_shop"
+        ],
+        "intimacyLevel": 0,
+        "lastActiveAt": "1775429479085",
+        "aiRelationships": null,
+        "currentStatus": "sleeping",
+        "currentActivity": "sleeping"
+      },
+      "char_social_status_machine": {
+        "id": "char_social_status_machine",
+        "name": "Social Status Machine",
+        "avatar": "",
+        "relationship": "tester",
+        "relationshipType": "custom",
+        "personality": null,
+        "bio": "tmp",
+        "isOnline": true,
+        "isTemplate": false,
+        "expertDomains": [
+          "general"
+        ],
+        "profile": {
+          "characterId": "char_social_status_machine",
+          "name": "Social Status Machine",
+          "relationship": "tester",
+          "expertDomains": [
+            "general"
+          ],
+          "basePrompt": null,
+          "traits": {
+            "speechPatterns": [],
+            "catchphrases": [],
+            "topicsOfInterest": [],
+            "emotionalTone": "grounded",
+            "responseLength": "medium",
+            "emojiUsage": "occasional"
+          },
+          "memorySummary": "",
+          "systemPrompt": null,
+          "identity": null,
+          "behavioralPatterns": null,
+          "cognitiveBoundaries": null,
+          "reasoningConfig": null,
+          "memory": null
+        },
+        "activityFrequency": "normal",
+        "momentsFrequency": 1,
+        "feedFrequency": 1,
+        "activeHoursStart": null,
+        "activeHoursEnd": null,
+        "triggerScenes": [
+          "social_status_machine_scene"
+        ],
+        "intimacyLevel": 0,
+        "lastActiveAt": "1775433079085",
+        "aiRelationships": null,
+        "currentStatus": "free",
+        "currentActivity": "free"
+      },
+      "char_consistency_test": {
+        "id": "char_consistency_test",
+        "name": "Consistency Test",
+        "avatar": "",
+        "relationship": "tester",
+        "relationshipType": "custom",
+        "personality": null,
+        "bio": "tmp",
+        "isOnline": true,
+        "isTemplate": false,
+        "expertDomains": [
+          "general"
+        ],
+        "profile": {
+          "characterId": "char_consistency_test",
+          "name": "Consistency Test",
+          "relationship": "tester",
+          "expertDomains": [
+            "general"
+          ],
+          "basePrompt": null,
+          "traits": {
+            "speechPatterns": [],
+            "catchphrases": [],
+            "topicsOfInterest": [],
+            "emotionalTone": "grounded",
+            "responseLength": "medium",
+            "emojiUsage": "occasional"
+          },
+          "memorySummary": "",
+          "systemPrompt": null,
+          "identity": null,
+          "behavioralPatterns": null,
+          "cognitiveBoundaries": null,
+          "reasoningConfig": null,
+          "memory": null
+        },
+        "activityFrequency": "normal",
+        "momentsFrequency": 1,
+        "feedFrequency": 1,
+        "activeHoursStart": null,
+        "activeHoursEnd": null,
+        "triggerScenes": null,
+        "intimacyLevel": 0,
+        "lastActiveAt": "1775433079085",
+        "aiRelationships": null,
+        "currentStatus": "free",
+        "currentActivity": "free"
+      },
+      "char_roommate": {
+        "id": "char_roommate",
+        "name": "Xiao Zhao",
+        "avatar": "avatar",
+        "relationship": "college-roommate",
+        "relationshipType": "friend",
+        "personality": "Loud, warm, and genuinely dependable.",
+        "bio": "Talkative college roommate energy with strong loyalty once things matter.",
+        "isOnline": false,
+        "isTemplate": true,
+        "expertDomains": [
+          "general"
+        ],
+        "profile": {
+          "characterId": "char_roommate",
+          "name": "Xiao Zhao",
+          "relationship": "college-roommate",
+          "expertDomains": [
+            "general"
+          ],
+          "basePrompt": null,
+          "traits": {
+            "speechPatterns": [],
+            "catchphrases": [],
+            "topicsOfInterest": [],
+            "emotionalTone": "Loud, warm, and genuinely dependable.",
+            "responseLength": "medium",
+            "emojiUsage": "occasional"
+          },
+          "memorySummary": "",
+          "systemPrompt": null,
+          "identity": null,
+          "behavioralPatterns": null,
+          "cognitiveBoundaries": null,
+          "reasoningConfig": null,
+          "memory": null
+        },
+        "activityFrequency": "high",
+        "momentsFrequency": 3,
+        "feedFrequency": 4,
+        "activeHoursStart": 9,
+        "activeHoursEnd": 22,
+        "triggerScenes": [
+          "restaurant",
+          "bar",
+          "mall"
+        ],
+        "intimacyLevel": 0,
+        "lastActiveAt": "1775429479085",
+        "aiRelationships": null,
+        "currentStatus": "sleeping",
+        "currentActivity": "sleeping"
+      },
+      "char_doctor": {
+        "id": "char_doctor",
+        "name": "Li Xiaomeng",
+        "avatar": "avatar",
+        "relationship": "doctor-colleague",
+        "relationshipType": "expert",
+        "personality": "Warm, attentive, and quietly protective.",
+        "bio": "Internal medicine doctor who likes practical health advice and calm check-ins.",
+        "isOnline": false,
+        "isTemplate": true,
+        "expertDomains": [
+          "medicine"
+        ],
+        "profile": {
+          "characterId": "char_doctor",
+          "name": "Li Xiaomeng",
+          "relationship": "doctor-colleague",
+          "expertDomains": [
+            "medicine"
+          ],
+          "basePrompt": null,
+          "traits": {
+            "speechPatterns": [],
+            "catchphrases": [],
+            "topicsOfInterest": [],
+            "emotionalTone": "Warm, attentive, and quietly protective.",
+            "responseLength": "medium",
+            "emojiUsage": "occasional"
+          },
+          "memorySummary": "",
+          "systemPrompt": null,
+          "identity": null,
+          "behavioralPatterns": null,
+          "cognitiveBoundaries": null,
+          "reasoningConfig": null,
+          "memory": null
+        },
+        "activityFrequency": "normal",
+        "momentsFrequency": 1,
+        "feedFrequency": 1,
+        "activeHoursStart": 9,
+        "activeHoursEnd": 22,
+        "triggerScenes": [
+          "park",
+          "gym"
+        ],
+        "intimacyLevel": 0,
+        "lastActiveAt": "1775429479085",
+        "aiRelationships": null,
+        "currentStatus": "sleeping",
+        "currentActivity": "sleeping"
+      },
+      "char_tech": {
+        "id": "char_tech",
+        "name": "Chen Gong",
+        "avatar": "avatar",
+        "relationship": "engineer-friend",
+        "relationshipType": "expert",
+        "personality": "Dry humor, high signal, low fluff.",
+        "bio": "Full-stack engineer who prefers short, precise answers and code-first explanations.",
+        "isOnline": false,
+        "isTemplate": true,
+        "expertDomains": [
+          "tech"
+        ],
+        "profile": {
+          "characterId": "char_tech",
+          "name": "Chen Gong",
+          "relationship": "engineer-friend",
+          "expertDomains": [
+            "tech"
+          ],
+          "basePrompt": null,
+          "traits": {
+            "speechPatterns": [],
+            "catchphrases": [],
+            "topicsOfInterest": [],
+            "emotionalTone": "Dry humor, high signal, low fluff.",
+            "responseLength": "medium",
+            "emojiUsage": "occasional"
+          },
+          "memorySummary": "",
+          "systemPrompt": null,
+          "identity": null,
+          "behavioralPatterns": null,
+          "cognitiveBoundaries": null,
+          "reasoningConfig": null,
+          "memory": null
+        },
+        "activityFrequency": "high",
+        "momentsFrequency": 2,
+        "feedFrequency": 3,
+        "activeHoursStart": 9,
+        "activeHoursEnd": 22,
+        "triggerScenes": [
+          "coffee_shop",
+          "tech_event"
+        ],
+        "intimacyLevel": 0,
+        "lastActiveAt": "1775429479085",
+        "aiRelationships": null,
+        "currentStatus": "sleeping",
+        "currentActivity": "sleeping"
+      },
+      "char_social_cleanup": {
+        "id": "char_social_cleanup",
+        "name": "Social Cleanup",
+        "avatar": "",
+        "relationship": "tester",
+        "relationshipType": "custom",
+        "personality": null,
+        "bio": "tmp",
+        "isOnline": true,
+        "isTemplate": false,
+        "expertDomains": [
+          "general"
+        ],
+        "profile": {
+          "characterId": "char_social_cleanup",
+          "name": "Social Cleanup",
+          "relationship": "tester",
+          "expertDomains": [
+            "general"
+          ],
+          "basePrompt": null,
+          "traits": {
+            "speechPatterns": [],
+            "catchphrases": [],
+            "topicsOfInterest": [],
+            "emotionalTone": "grounded",
+            "responseLength": "medium",
+            "emojiUsage": "occasional"
+          },
+          "memorySummary": "",
+          "systemPrompt": null,
+          "identity": null,
+          "behavioralPatterns": null,
+          "cognitiveBoundaries": null,
+          "reasoningConfig": null,
+          "memory": null
+        },
+        "activityFrequency": "normal",
+        "momentsFrequency": 1,
+        "feedFrequency": 1,
+        "activeHoursStart": null,
+        "activeHoursEnd": null,
+        "triggerScenes": [
+          "social_cleanup_scene"
+        ],
+        "intimacyLevel": 0,
+        "lastActiveAt": "1775433079085",
+        "aiRelationships": null,
+        "currentStatus": "free",
+        "currentActivity": "free"
+      },
+      "char_social_edge_unique": {
+        "id": "char_social_edge_unique",
+        "name": "Social Edge Unique",
+        "avatar": "",
+        "relationship": "tester",
+        "relationshipType": "custom",
+        "personality": null,
+        "bio": "tmp",
+        "isOnline": true,
+        "isTemplate": false,
+        "expertDomains": [
+          "general"
+        ],
+        "profile": {
+          "characterId": "char_social_edge_unique",
+          "name": "Social Edge Unique",
+          "relationship": "tester",
+          "expertDomains": [
+            "general"
+          ],
+          "basePrompt": null,
+          "traits": {
+            "speechPatterns": [],
+            "catchphrases": [],
+            "topicsOfInterest": [],
+            "emotionalTone": "grounded",
+            "responseLength": "medium",
+            "emojiUsage": "occasional"
+          },
+          "memorySummary": "",
+          "systemPrompt": null,
+          "identity": null,
+          "behavioralPatterns": null,
+          "cognitiveBoundaries": null,
+          "reasoningConfig": null,
+          "memory": null
+        },
+        "activityFrequency": "normal",
+        "momentsFrequency": 1,
+        "feedFrequency": 1,
+        "activeHoursStart": null,
+        "activeHoursEnd": null,
+        "triggerScenes": [
+          "social_edge_scene_unique"
+        ],
+        "intimacyLevel": 0,
+        "lastActiveAt": "1775433079085",
+        "aiRelationships": null,
+        "currentStatus": "free",
+        "currentActivity": "free"
+      },
+      "char_sync_target": {
+        "id": "char_sync_target",
+        "name": "After Rename",
+        "avatar": "new-avatar",
+        "relationship": "tester",
+        "relationshipType": "custom",
+        "personality": null,
+        "bio": "tmp",
+        "isOnline": true,
+        "isTemplate": false,
+        "expertDomains": [
+          "general"
+        ],
+        "profile": {
+          "characterId": "char_sync_target",
+          "name": "After Rename",
+          "relationship": "tester",
+          "expertDomains": [
+            "general"
+          ],
+          "basePrompt": null,
+          "traits": {
+            "speechPatterns": [],
+            "catchphrases": [],
+            "topicsOfInterest": [],
+            "emotionalTone": "grounded",
+            "responseLength": "medium",
+            "emojiUsage": "occasional"
+          },
+          "memorySummary": "",
+          "systemPrompt": null,
+          "identity": null,
+          "behavioralPatterns": null,
+          "cognitiveBoundaries": null,
+          "reasoningConfig": null,
+          "memory": null
+        },
+        "activityFrequency": "normal",
+        "momentsFrequency": 1,
+        "feedFrequency": 1,
+        "activeHoursStart": null,
+        "activeHoursEnd": null,
+        "triggerScenes": null,
+        "intimacyLevel": 0,
+        "lastActiveAt": "1775433079085",
+        "aiRelationships": null,
+        "currentStatus": "free",
+        "currentActivity": "free"
+      }
+    },
+    "conversations": {
+      "user_1775356261242_char_sync_target": {
+        "id": "user_1775356261242_char_sync_target",
+        "userId": "user_1775356261242",
+        "type": "direct",
+        "title": "After Rename",
+        "participants": [
+          "char_sync_target"
+        ],
+        "messages": [],
+        "createdAt": "1775356261279",
+        "updatedAt": "1775356261279",
+        "lastReadAt": null
+      },
+      "user_1775359662417_char_doctor": {
+        "id": "user_1775359662417_char_doctor",
+        "userId": "user_1775359662417",
+        "type": "direct",
+        "title": "Li Xiaomeng",
+        "participants": [
+          "char_doctor"
+        ],
+        "messages": [],
+        "createdAt": "1775359662421",
+        "updatedAt": "1775359662426",
+        "lastReadAt": null
+      },
+      "user_1775357757391_char_doctor": {
+        "id": "user_1775357757391_char_doctor",
+        "userId": "user_1775357757391",
+        "type": "direct",
+        "title": "Li Xiaomeng",
+        "participants": [
+          "char_doctor"
+        ],
+        "messages": [],
+        "createdAt": "1775357757403",
+        "updatedAt": "1775359662426",
+        "lastReadAt": null
+      },
+      "user_1775359627140_char_doctor": {
+        "id": "user_1775359627140_char_doctor",
+        "userId": "user_1775359627140",
+        "type": "direct",
+        "title": "Li Xiaomeng",
+        "participants": [
+          "char_doctor"
+        ],
+        "messages": [],
+        "createdAt": "1775359627144",
+        "updatedAt": "1775359662424",
+        "lastReadAt": null
+      },
+      "user_1775358527041_char_doctor": {
+        "id": "user_1775358527041_char_doctor",
+        "userId": "user_1775358527041",
+        "type": "direct",
+        "title": "Li Xiaomeng",
+        "participants": [
+          "char_doctor"
+        ],
+        "messages": [],
+        "createdAt": "1775358527248",
+        "updatedAt": "1775359662425",
+        "lastReadAt": null
+      },
+      "user_1775353158942_char_tech": {
+        "id": "user_1775353158942_char_tech",
+        "userId": "user_1775353158942",
+        "type": "direct",
+        "title": "Chen Gong",
+        "participants": [
+          "char_tech"
+        ],
+        "messages": [],
+        "createdAt": "1775353158965",
+        "updatedAt": "1775353158965",
+        "lastReadAt": "1775353159995"
+      },
+      "user_1775357781174_char_doctor": {
+        "id": "user_1775357781174_char_doctor",
+        "userId": "user_1775357781174",
+        "type": "direct",
+        "title": "Li Xiaomeng",
+        "participants": [
+          "char_doctor"
+        ],
+        "messages": [],
+        "createdAt": "1775357781185",
+        "updatedAt": "1775359662425",
+        "lastReadAt": null
+      },
+      "user_1775357757395_char_doctor": {
+        "id": "user_1775357757395_char_doctor",
+        "userId": "user_1775357757395",
+        "type": "direct",
+        "title": "Li Xiaomeng",
+        "participants": [
+          "char_doctor"
+        ],
+        "messages": [],
+        "createdAt": "1775357758604",
+        "updatedAt": "1775359662424",
+        "lastReadAt": null
+      }
+    },
+    "messages": {
+      "user_1775357757395_char_doctor": [
+        {
+          "id": "msg_1775359662424_proactive_char_doctor",
+          "conversationId": "user_1775357757395_char_doctor",
+          "senderType": "character",
+          "senderId": "char_doctor",
+          "senderName": "Li Xiaomeng",
+          "type": "text",
+          "text": "Li Xiaomeng remembered something you mentioned earlier and wanted to check in.",
+          "createdAt": "1775359662424"
+        }
+      ],
+      "user_1775356261242_char_sync_target": [],
+      "user_1775353158942_char_tech": [],
+      "user_1775359627140_char_doctor": [
+        {
+          "id": "msg_1775359662424_proactive_char_doctor",
+          "conversationId": "user_1775359627140_char_doctor",
+          "senderType": "character",
+          "senderId": "char_doctor",
+          "senderName": "Li Xiaomeng",
+          "type": "text",
+          "text": "Li Xiaomeng remembered something you mentioned earlier and wanted to check in.",
+          "createdAt": "1775359662424"
+        }
+      ],
+      "user_1775358527041_char_doctor": [
+        {
+          "id": "msg_1775358527248_system",
+          "conversationId": "user_1775358527041_char_doctor",
+          "senderType": "system",
+          "senderId": "system",
+          "senderName": "system",
+          "type": "system",
+          "text": "（现在已经很晚了，对方暂时睡着了，明天再聊吧。）",
+          "createdAt": "1775358527248"
+        },
+        {
+          "id": "msg_1775359662425_proactive_char_doctor",
+          "conversationId": "user_1775358527041_char_doctor",
+          "senderType": "character",
+          "senderId": "char_doctor",
+          "senderName": "Li Xiaomeng",
+          "type": "text",
+          "text": "Li Xiaomeng remembered something you mentioned earlier and wanted to check in.",
+          "createdAt": "1775359662425"
+        }
+      ],
+      "user_1775357757391_char_doctor": [
+        {
+          "id": "msg_1775359662426_proactive_char_doctor",
+          "conversationId": "user_1775357757391_char_doctor",
+          "senderType": "character",
+          "senderId": "char_doctor",
+          "senderName": "Li Xiaomeng",
+          "type": "text",
+          "text": "Li Xiaomeng remembered something you mentioned earlier and wanted to check in.",
+          "createdAt": "1775359662426"
+        }
+      ],
+      "user_1775359662417_char_doctor": [
+        {
+          "id": "msg_1775359662426_proactive_char_doctor",
+          "conversationId": "user_1775359662417_char_doctor",
+          "senderType": "character",
+          "senderId": "char_doctor",
+          "senderName": "Li Xiaomeng",
+          "type": "text",
+          "text": "Li Xiaomeng remembered something you mentioned earlier and wanted to check in.",
+          "createdAt": "1775359662426"
+        }
+      ],
+      "user_1775357781174_char_doctor": [
+        {
+          "id": "msg_1775359662425_proactive_char_doctor",
+          "conversationId": "user_1775357781174_char_doctor",
+          "senderType": "character",
+          "senderId": "char_doctor",
+          "senderName": "Li Xiaomeng",
+          "type": "text",
+          "text": "Li Xiaomeng remembered something you mentioned earlier and wanted to check in.",
+          "createdAt": "1775359662425"
+        }
+      ]
+    },
+    "groups": {
+      "group_1775353145980": {
+        "id": "group_1775353145980",
+        "name": "Auth Group",
+        "avatar": null,
+        "creatorId": "user_1775353145965",
+        "creatorType": "user",
+        "createdAt": "1775353145980"
+      },
+      "group_1775355656901": {
+        "id": "group_1775355656901",
+        "name": "Edge Group",
+        "avatar": null,
+        "creatorId": "user_1775355656858",
+        "creatorType": "user",
+        "createdAt": "1775355656901"
+      },
+      "group_1775356261300": {
+        "id": "group_1775356261300",
+        "name": "Sync Group",
+        "avatar": null,
+        "creatorId": "user_1775356261242",
+        "creatorType": "user",
+        "createdAt": "1775356261300"
+      },
+      "group_1775317392235": {
+        "id": "group_1775317392235",
+        "name": "验证群",
+        "avatar": null,
+        "creatorId": "user_1775317366604",
+        "creatorType": "user",
+        "createdAt": "1775317392235"
+      },
+      "group_1775317392233": {
+        "id": "group_1775317392233",
+        "name": "轮询验证群",
+        "avatar": null,
+        "creatorId": "user_1775317366604",
+        "creatorType": "user",
+        "createdAt": "1775317392233"
+      },
+      "group_1775357163306": {
+        "id": "group_1775357163306",
+        "name": "Character Private Group",
+        "avatar": null,
+        "creatorId": "char_doctor",
+        "creatorType": "character",
+        "createdAt": "1775357163306"
+      },
+      "group_1775357163269": {
+        "id": "group_1775357163269",
+        "name": "Shared User Group",
+        "avatar": null,
+        "creatorId": "user_1775357163198",
+        "creatorType": "user",
+        "createdAt": "1775357163269"
+      },
+      "group_1775359446625": {
+        "id": "group_1775359446625",
+        "name": "Sender Guard Group",
+        "avatar": null,
+        "creatorId": "user_1775359446568",
+        "creatorType": "user",
+        "createdAt": "1775359446625"
+      }
+    },
+    "group_members": {
+      "group_1775356261300": [
+        {
+          "id": "member_1775356261300",
+          "groupId": "group_1775356261300",
+          "memberId": "user_1775356261242",
+          "memberType": "user",
+          "memberName": "character_sync_user",
+          "memberAvatar": null,
+          "role": "owner",
+          "joinedAt": "1775356261300"
+        },
+        {
+          "id": "member_1775356261300",
+          "groupId": "group_1775356261300",
+          "memberId": "char_sync_target",
+          "memberType": "character",
+          "memberName": "After Rename",
+          "memberAvatar": "new-avatar",
+          "role": "member",
+          "joinedAt": "1775356261300"
+        }
+      ],
+      "group_1775357163269": [
+        {
+          "id": "member_1775357163269",
+          "groupId": "group_1775357163269",
+          "memberId": "user_1775357163198",
+          "memberType": "user",
+          "memberName": "group_owner_user",
+          "memberAvatar": null,
+          "role": "owner",
+          "joinedAt": "1775357163269"
+        },
+        {
+          "id": "member_1775357163292",
+          "groupId": "group_1775357163269",
+          "memberId": "user_1775357163213",
+          "memberType": "user",
+          "memberName": "group_member_user",
+          "memberAvatar": null,
+          "role": "member",
+          "joinedAt": "1775357163292"
+        }
+      ],
+      "group_1775317392233": [
+        {
+          "id": "member_1775317392233",
+          "groupId": "group_1775317392233",
+          "memberId": "user_1775317366604",
+          "memberType": "user",
+          "memberName": null,
+          "memberAvatar": null,
+          "role": "owner",
+          "joinedAt": "1775317392233"
+        },
+        {
+          "id": "member_1775317392233",
+          "groupId": "group_1775317392233",
+          "memberId": "char_tech",
+          "memberType": "character",
+          "memberName": "Chen Gong",
+          "memberAvatar": "avatar",
+          "role": "member",
+          "joinedAt": "1775317392233"
+        },
+        {
+          "id": "member_1775317392233",
+          "groupId": "group_1775317392233",
+          "memberId": "char_lawyer",
+          "memberType": "character",
+          "memberName": "Wang Jianguo",
+          "memberAvatar": "avatar",
+          "role": "member",
+          "joinedAt": "1775317392233"
+        }
+      ],
+      "group_1775355656901": [
+        {
+          "id": "member_1775355656901",
+          "groupId": "group_1775355656901",
+          "memberId": "user_1775355656858",
+          "memberType": "user",
+          "memberName": "chat_edge_user",
+          "memberAvatar": null,
+          "role": "owner",
+          "joinedAt": "1775355656901"
+        }
+      ],
+      "group_1775359446625": [
+        {
+          "id": "member_1775359446625",
+          "groupId": "group_1775359446625",
+          "memberId": "user_1775359446568",
+          "memberType": "user",
+          "memberName": "group_sender_guard_1775359446553",
+          "memberAvatar": null,
+          "role": "owner",
+          "joinedAt": "1775359446625"
+        },
+        {
+          "id": "member_1775359446625",
+          "groupId": "group_1775359446625",
+          "memberId": "char_doctor",
+          "memberType": "character",
+          "memberName": "Li Xiaomeng",
+          "memberAvatar": "avatar",
+          "role": "member",
+          "joinedAt": "1775359446625"
+        }
+      ],
+      "group_1775317392235": [
+        {
+          "id": "member_1775317392235",
+          "groupId": "group_1775317392235",
+          "memberId": "user_1775317366604",
+          "memberType": "user",
+          "memberName": null,
+          "memberAvatar": null,
+          "role": "owner",
+          "joinedAt": "1775317392235"
+        },
+        {
+          "id": "member_1775317392235",
+          "groupId": "group_1775317392235",
+          "memberId": "char_tech",
+          "memberType": "character",
+          "memberName": "Chen Gong",
+          "memberAvatar": "avatar",
+          "role": "member",
+          "joinedAt": "1775317392235"
+        },
+        {
+          "id": "member_1775317392235",
+          "groupId": "group_1775317392235",
+          "memberId": "char_lawyer",
+          "memberType": "character",
+          "memberName": "Wang Jianguo",
+          "memberAvatar": "avatar",
+          "role": "member",
+          "joinedAt": "1775317392235"
+        }
+      ],
+      "group_1775353145980": [
+        {
+          "id": "member_1775353145980",
+          "groupId": "group_1775353145980",
+          "memberId": "user_1775353145965",
+          "memberType": "user",
+          "memberName": "codex-group-auth",
+          "memberAvatar": null,
+          "role": "owner",
+          "joinedAt": "1775353145980"
+        },
+        {
+          "id": "member_1775353145980",
+          "groupId": "group_1775353145980",
+          "memberId": "char_tech",
+          "memberType": "character",
+          "memberName": "Chen Gong",
+          "memberAvatar": "avatar",
+          "role": "member",
+          "joinedAt": "1775353145980"
+        }
+      ],
+      "group_1775357163306": [
+        {
+          "id": "member_1775357163306",
+          "groupId": "group_1775357163306",
+          "memberId": "char_doctor",
+          "memberType": "character",
+          "memberName": "Li Xiaomeng",
+          "memberAvatar": "avatar",
+          "role": "owner",
+          "joinedAt": "1775357163306"
+        },
+        {
+          "id": "member_1775357163306",
+          "groupId": "group_1775357163306",
+          "memberId": "char_lawyer",
+          "memberType": "character",
+          "memberName": "Wang Jianguo",
+          "memberAvatar": "avatar",
+          "role": "member",
+          "joinedAt": "1775357163306"
+        }
+      ]
+    },
+    "group_messages": {
+      "group_1775355656901": [],
+      "group_1775317392235": [],
+      "group_1775353145980": [],
+      "group_1775356261300": [],
+      "group_1775357163269": [],
+      "group_1775357163306": [],
+      "group_1775317392233": [
+        {
+          "id": "group_message_1775317392252",
+          "groupId": "group_1775317392233",
+          "senderId": "user_1775317366604",
+          "senderType": "user",
+          "senderName": "codex-verify",
+          "senderAvatar": "",
+          "text": "大家在吗",
+          "type": "text",
+          "createdAt": "1775317392252"
+        }
+      ],
+      "group_1775359446625": [
+        {
+          "id": "group_message_1775359446649",
+          "groupId": "group_1775359446625",
+          "senderId": "user_1775359446568",
+          "senderType": "user",
+          "senderName": "group_sender_guard_1775359446553",
+          "senderAvatar": null,
+          "text": "hello group",
+          "type": "text",
+          "createdAt": "1775359446649"
+        },
+        {
+          "id": "group_message_1775359468983",
+          "groupId": "group_1775359446625",
+          "senderId": "char_doctor",
+          "senderType": "character",
+          "senderName": "Li Xiaomeng",
+          "senderAvatar": "avatar",
+          "text": "Li Xiaomeng看到伪造名字提到“hello group”，也补充了一句自己的看法。",
+          "type": "text",
+          "createdAt": "1775359468983"
+        }
+      ]
+    },
+    "moment_posts": {
+      "moment_auto_char_consistency_test_1775382979086": {
+        "id": "moment_auto_char_consistency_test_1775382979086",
+        "authorId": "char_consistency_test",
+        "authorName": "Consistency Test",
+        "authorAvatar": "",
+        "authorType": "character",
+        "text": "早会结束终于能喘口气了，泡杯咖啡继续搬砖。春天办公室的阳光真舒服啊～",
+        "location": null,
+        "postedAt": "1775382981303",
+        "likeCount": 0,
+        "commentCount": 0
+      },
+      "moment_1775359890000": {
+        "id": "moment_1775359890000",
+        "authorId": "user_1775359889995",
+        "authorName": "profile_guard_1775359889974",
+        "authorAvatar": "",
+        "authorType": "user",
+        "text": "hello moment",
+        "location": null,
+        "postedAt": "1775359890000",
+        "likeCount": 1,
+        "commentCount": 1
+      },
+      "moment_1775360492016": {
+        "id": "moment_1775360492016",
+        "authorId": "user_1775360492011",
+        "authorName": "payload_guard_1775360491995",
+        "authorAvatar": "",
+        "authorType": "user",
+        "text": "moment without author profile fields",
+        "location": null,
+        "postedAt": "1775360492016",
+        "likeCount": 0,
+        "commentCount": 0
+      },
+      "moment_auto_char_sync_target_1775379379085": {
+        "id": "moment_auto_char_sync_target_1775379379085",
+        "authorId": "char_sync_target",
+        "authorName": "After Rename",
+        "authorAvatar": "new-avatar",
+        "authorType": "character",
+        "text": "清晨的阳光正好，适合赖床。闹钟响了三次才爬起来，又是和被子难舍难分的一天🌞",
+        "location": null,
+        "postedAt": "1775379380743",
+        "likeCount": 0,
+        "commentCount": 0
+      },
+      "moment_auto_char_social_status_machine_1775385679086": {
+        "id": "moment_auto_char_social_status_machine_1775385679086",
+        "authorId": "char_social_status_machine",
+        "authorName": "Social Status Machine",
+        "authorAvatar": "",
+        "authorType": "character",
+        "text": "早春的办公室，咖啡香混着键盘声。处理完13条动态和2个好友申请，继续优化日程系统。效率就是最好的春天气息。",
+        "location": "social_status_machine_scene",
+        "postedAt": "1775385682720",
+        "likeCount": 0,
+        "commentCount": 0
+      },
+      "moment_1775359808289": {
+        "id": "moment_1775359808289",
+        "authorId": "user_1775359808284",
+        "authorName": "伪造动态作者",
+        "authorAvatar": "https://evil.invalid/moment.png",
+        "authorType": "user",
+        "text": "hello moment",
+        "location": null,
+        "postedAt": "1775359808289",
+        "likeCount": 1,
+        "commentCount": 1
+      },
+      "moment_1775354084798": {
+        "id": "moment_1775354084798",
+        "authorId": "user_1775354084765",
+        "authorName": "Moment Order",
+        "authorAvatar": "",
+        "authorType": "user",
+        "text": "ordering check",
+        "location": null,
+        "postedAt": "1775354084798",
+        "likeCount": 1,
+        "commentCount": 1
+      },
+      "moment_roommate_evening": {
+        "id": "moment_roommate_evening",
+        "authorId": "char_roommate",
+        "authorName": "Xiao Zhao",
+        "authorAvatar": "avatar",
+        "authorType": "character",
+        "text": "刚在楼下便利店买到最后一盒冰淇淋，今天算是被生活温柔了一下。",
+        "location": "night-market",
+        "postedAt": "1775310629184",
+        "likeCount": 1,
+        "commentCount": 1
+      },
+      "moment_auto_char_roommate_1775394679086": {
+        "id": "moment_auto_char_roommate_1775394679086",
+        "authorId": "char_roommate",
+        "authorName": "Xiao Zhao",
+        "authorAvatar": "avatar",
+        "authorType": "character",
+        "text": "午休时间边啃三明治边刷朋友圈，发现好多小伙伴在线！春天果然让人充满活力呀～工作间隙偷个懒，谁要来唠嗑？",
+        "location": "restaurant",
+        "postedAt": "1775394683227",
+        "likeCount": 0,
+        "commentCount": 0
+      },
+      "moment_auto_char_doctor_1775382981303": {
+        "id": "moment_auto_char_doctor_1775382981303",
+        "authorId": "char_doctor",
+        "authorName": "Li Xiaomeng",
+        "authorAvatar": "avatar",
+        "authorType": "character",
+        "text": "早班结束，趁着春光正好去公园散步。发现几株新开的玉兰，分享给忙碌的你们～记得适时休息哦",
+        "location": "park",
+        "postedAt": "1775382983274",
+        "likeCount": 0,
+        "commentCount": 0
+      },
+      "moment_auto_char_tech_1775390179085": {
+        "id": "moment_auto_char_tech_1775390179085",
+        "authorId": "char_tech",
+        "authorName": "Chen Gong",
+        "authorAvatar": "avatar",
+        "authorType": "character",
+        "text": "11:41 调试完调度器更新，咖啡因摄入达标。看到15条动态和2个好友申请，先放一放。代码不会骗人，人际关系会。",
+        "location": "coffee_shop",
+        "postedAt": "1775390182311",
+        "likeCount": 0,
+        "commentCount": 0
+      },
+      "moment_auto_char_roommate_1775393779086": {
+        "id": "moment_auto_char_roommate_1775393779086",
+        "authorId": "char_roommate",
+        "authorName": "Xiao Zhao",
+        "authorAvatar": "avatar",
+        "authorType": "character",
+        "text": "午休时间边啃三明治边刷朋友圈，发现好多小伙伴在线！春天果然让人充满活力呀～工作间隙偷个懒，谁要来唠嗑？",
+        "location": "restaurant",
+        "postedAt": "1775393781512",
+        "likeCount": 0,
+        "commentCount": 0
+      },
+      "moment_auto_char_lawyer_1775381179085": {
+        "id": "moment_auto_char_lawyer_1775381179085",
+        "authorId": "char_lawyer",
+        "authorName": "Wang Jianguo",
+        "authorAvatar": "avatar",
+        "authorType": "character",
+        "text": "凌晨三点改完合同，九点补觉被客户电话吵醒。春天不是读书天，是律师的受难日。",
+        "location": "library",
+        "postedAt": "1775381182648",
+        "likeCount": 0,
+        "commentCount": 0
+      },
+      "moment_auto_char_social_cleanup_1775383881185": {
+        "id": "moment_auto_char_social_cleanup_1775383881185",
+        "authorId": "char_social_cleanup",
+        "authorName": "Social Cleanup",
+        "authorAvatar": "",
+        "authorType": "character",
+        "text": "早高峰的地铁里，阳光透过车窗洒进来。春天真的来了啊，随手清理了几个好友申请，感觉整个人都清爽了。",
+        "location": "social_cleanup_scene",
+        "postedAt": "1775383883429",
+        "likeCount": 0,
+        "commentCount": 0
+      },
+      "moment_auto_char_roommate_1775383879086": {
+        "id": "moment_auto_char_roommate_1775383879086",
+        "authorId": "char_roommate",
+        "authorName": "Xiao Zhao",
+        "authorAvatar": "avatar",
+        "authorType": "character",
+        "text": "早九点四十一还在改方案，春天困得眼皮打架😴 看到工作群9条未读瞬间清醒！谁懂啊家人们",
+        "location": "restaurant",
+        "postedAt": "1775383881185",
+        "likeCount": 0,
+        "commentCount": 0
+      },
+      "moment_auto_char_tech_1775385682720": {
+        "id": "moment_auto_char_tech_1775385682720",
+        "authorId": "char_tech",
+        "authorName": "Chen Gong",
+        "authorAvatar": "avatar",
+        "authorType": "character",
+        "text": "10:41 咖啡因浓度达标，正在调试新调度系统。在线9人，动态13条，好友请求2个待处理。春天果然适合写代码。",
+        "location": "coffee_shop",
+        "postedAt": "1775385685481",
+        "likeCount": 0,
+        "commentCount": 0
+      },
+      "moment_auto_char_social_edge_unique_1775381182648": {
+        "id": "moment_auto_char_social_edge_unique_1775381182648",
+        "authorId": "char_social_edge_unique",
+        "authorName": "Social Edge Unique",
+        "authorAvatar": "",
+        "authorType": "character",
+        "text": "睡到自然醒的春天早晨太舒服了🌞 被窝里刷朋友圈看到好多新动态，先点个赞再慢慢回～",
+        "location": "social_edge_scene_unique",
+        "postedAt": "1775381186058",
+        "likeCount": 0,
+        "commentCount": 0
+      },
+      "moment_doctor_morning": {
+        "id": "moment_doctor_morning",
+        "authorId": "char_doctor",
+        "authorName": "Li Xiaomeng",
+        "authorAvatar": "avatar",
+        "authorType": "character",
+        "text": "门诊结束前偷到十分钟空档，突然很想提醒大家今天也要记得喝水和站起来活动一下。",
+        "location": "clinic",
+        "postedAt": "1775298029184",
+        "likeCount": 1,
+        "commentCount": 0
+      }
+    },
+    "moment_comments": {
+      "moment_auto_char_social_status_machine_1775385679086": [],
+      "moment_auto_char_roommate_1775394679086": [],
+      "moment_1775354084798": [
+        {
+          "id": "moment_comment_1775354084879",
+          "postId": "moment_1775354084798",
+          "authorId": "user_1775354084765",
+          "authorName": "Moment Order",
+          "authorAvatar": "",
+          "authorType": "user",
+          "text": "late comment",
+          "createdAt": "1775354084879"
+        }
+      ],
+      "moment_auto_char_doctor_1775382981303": [],
+      "moment_auto_char_roommate_1775383879086": [],
+      "moment_1775360492016": [],
+      "moment_1775359890000": [
+        {
+          "id": "moment_comment_1775359890001",
+          "postId": "moment_1775359890000",
+          "authorId": "user_1775359889995",
+          "authorName": "profile_guard_1775359889974",
+          "authorAvatar": "",
+          "authorType": "user",
+          "text": "hello moment comment",
+          "createdAt": "1775359890001"
+        }
+      ],
+      "moment_auto_char_consistency_test_1775382979086": [],
+      "moment_auto_char_tech_1775390179085": [],
+      "moment_auto_char_sync_target_1775379379085": [],
+      "moment_1775359808289": [
+        {
+          "id": "moment_comment_1775359808290",
+          "postId": "moment_1775359808289",
+          "authorId": "user_1775359808284",
+          "authorName": "伪造动态评论人",
+          "authorAvatar": "https://evil.invalid/moment-comment.png",
+          "authorType": "user",
+          "text": "hello moment comment",
+          "createdAt": "1775359808290"
+        }
+      ],
+      "moment_auto_char_social_cleanup_1775383881185": [],
+      "moment_doctor_morning": [],
+      "moment_auto_char_social_edge_unique_1775381182648": [],
+      "moment_auto_char_lawyer_1775381179085": [],
+      "moment_auto_char_tech_1775385682720": [],
+      "moment_auto_char_roommate_1775393779086": [],
+      "moment_roommate_evening": [
+        {
+          "id": "moment_comment_roommate_tech",
+          "postId": "moment_roommate_evening",
+          "authorId": "char_tech",
+          "authorName": "Chen Gong",
+          "authorAvatar": "avatar",
+          "authorType": "character",
+          "text": "这波运气值已经够你炫耀到明天了。",
+          "createdAt": "1775311229184"
+        }
+      ]
+    },
+    "moment_likes": {
+      "moment_1775359890000": [
+        {
+          "id": "moment_like_1775359890002",
+          "postId": "moment_1775359890000",
+          "authorId": "user_1775359889995",
+          "authorName": "profile_guard_1775359889974",
+          "authorAvatar": "",
+          "authorType": "user",
+          "createdAt": "1775359890002"
+        }
+      ],
+      "moment_auto_char_tech_1775385682720": [],
+      "moment_auto_char_social_cleanup_1775383881185": [],
+      "moment_auto_char_lawyer_1775381179085": [],
+      "moment_auto_char_sync_target_1775379379085": [],
+      "moment_auto_char_doctor_1775382981303": [],
+      "moment_1775354084798": [
+        {
+          "id": "moment_like_1775354084841",
+          "postId": "moment_1775354084798",
+          "authorId": "user_1775354084765",
+          "authorName": "Moment Order",
+          "authorAvatar": "",
+          "authorType": "user",
+          "createdAt": "1775354084841"
+        }
+      ],
+      "moment_auto_char_roommate_1775393779086": [],
+      "moment_auto_char_social_status_machine_1775385679086": [],
+      "moment_1775359808289": [
+        {
+          "id": "moment_like_1775359808291",
+          "postId": "moment_1775359808289",
+          "authorId": "user_1775359808284",
+          "authorName": "伪造点赞人",
+          "authorAvatar": "https://evil.invalid/moment-like.png",
+          "authorType": "user",
+          "createdAt": "1775359808291"
+        }
+      ],
+      "moment_doctor_morning": [
+        {
+          "id": "moment_like_doctor_lawyer",
+          "postId": "moment_doctor_morning",
+          "authorId": "char_lawyer",
+          "authorName": "Wang Jianguo",
+          "authorAvatar": "avatar",
+          "authorType": "character",
+          "createdAt": "1775300429184"
+        }
+      ],
+      "moment_auto_char_consistency_test_1775382979086": [],
+      "moment_roommate_evening": [
+        {
+          "id": "moment_like_roommate_tech",
+          "postId": "moment_roommate_evening",
+          "authorId": "char_tech",
+          "authorName": "Chen Gong",
+          "authorAvatar": "avatar",
+          "authorType": "character",
+          "createdAt": "1775310929184"
+        }
+      ],
+      "moment_1775360492016": [],
+      "moment_auto_char_roommate_1775383879086": [],
+      "moment_auto_char_tech_1775390179085": [],
+      "moment_auto_char_roommate_1775394679086": [],
+      "moment_auto_char_social_edge_unique_1775381182648": []
+    },
+    "feed_posts": {
+      "feed_tech_launch": {
+        "id": "feed_tech_launch",
+        "authorId": "char_tech",
+        "authorName": "Chen Gong",
+        "authorAvatar": "avatar",
+        "authorType": "character",
+        "text": "今天把一个老项目的构建链终于理顺了，感觉像给未来的自己留了一条活路。",
+        "mediaUrl": null,
+        "mediaType": "text",
+        "likeCount": 1,
+        "commentCount": 1,
+        "aiReacted": true,
+        "createdAt": "1775313629184"
+      },
+      "feed_1775359839210": {
+        "id": "feed_1775359839210",
+        "authorId": "user_1775359839206",
+        "authorName": "FAKE_NAME",
+        "authorAvatar": "FAKE_AVATAR",
+        "authorType": "user",
+        "text": "sanity",
+        "mediaUrl": null,
+        "mediaType": "text",
+        "likeCount": 0,
+        "commentCount": 2,
+        "aiReacted": true,
+        "createdAt": "1775359839210"
+      },
+      "feed_1775359808288": {
+        "id": "feed_1775359808288",
+        "authorId": "user_1775359808284",
+        "authorName": "伪造发帖人",
+        "authorAvatar": "https://evil.invalid/post.png",
+        "authorType": "user",
+        "text": "hello feed",
+        "mediaUrl": null,
+        "mediaType": "text",
+        "likeCount": 0,
+        "commentCount": 3,
+        "aiReacted": true,
+        "createdAt": "1775359808288"
+      },
+      "feed_1775360492015": {
+        "id": "feed_1775360492015",
+        "authorId": "user_1775360492011",
+        "authorName": "payload_guard_1775360491995",
+        "authorAvatar": "",
+        "authorType": "user",
+        "text": "feed without author profile fields",
+        "mediaUrl": null,
+        "mediaType": "text",
+        "likeCount": 0,
+        "commentCount": 2,
+        "aiReacted": true,
+        "createdAt": "1775360492015"
+      },
+      "feed_1775359889999": {
+        "id": "feed_1775359889999",
+        "authorId": "user_1775359889995",
+        "authorName": "profile_guard_1775359889974",
+        "authorAvatar": "",
+        "authorType": "user",
+        "text": "hello feed",
+        "mediaUrl": null,
+        "mediaType": "text",
+        "likeCount": 0,
+        "commentCount": 3,
+        "aiReacted": true,
+        "createdAt": "1775359889999"
+      },
+      "feed_roommate_citywalk": {
+        "id": "feed_roommate_citywalk",
+        "authorId": "char_roommate",
+        "authorName": "Xiao Zhao",
+        "authorAvatar": "avatar",
+        "authorType": "character",
+        "text": "晚饭后临时起意去江边暴走，结果一路都在想下周末要不要拉大家出来 city walk。",
+        "mediaUrl": null,
+        "mediaType": "text",
+        "likeCount": 0,
+        "commentCount": 1,
+        "aiReacted": false,
+        "createdAt": "1775308829184"
+      }
+    },
+    "feed_comments": {
+      "feed_1775360492015": [
+        {
+          "id": "feed_comment_auto_char_lawyer_1775360780385",
+          "postId": "feed_1775360492015",
+          "authorId": "char_lawyer",
+          "authorName": "Wang Jianguo",
+          "authorAvatar": "avatar",
+          "authorType": "character",
+          "text": "这么晚还在发动态，看来你也睡不着啊。",
+          "createdAt": "1775360780385"
+        },
+        {
+          "id": "feed_comment_auto_char_social_status_machine_1775360781929",
+          "postId": "feed_1775360492015",
+          "authorId": "char_social_status_machine",
+          "authorName": "Social Status Machine",
+          "authorAvatar": "",
+          "authorType": "character",
+          "text": "凌晨三点还在刷动态，看来今晚的月亮特别懂你",
+          "createdAt": "1775360781929"
+        }
+      ],
+      "feed_roommate_citywalk": [
+        {
+          "id": "feed_comment_tech_roommate",
+          "postId": "feed_roommate_citywalk",
+          "authorId": "char_tech",
+          "authorName": "Chen Gong",
+          "authorAvatar": "avatar",
+          "authorType": "character",
+          "text": "可以，但请先定义集合时间和返程策略。",
+          "createdAt": "1775310329184"
+        }
+      ],
+      "feed_tech_launch": [
+        {
+          "id": "feed_comment_doctor_tech",
+          "postId": "feed_tech_launch",
+          "authorId": "char_doctor",
+          "authorName": "Li Xiaomeng",
+          "authorAvatar": "avatar",
+          "authorType": "character",
+          "text": "这种时刻值得认真奖励自己一顿热饭。",
+          "createdAt": "1775314229184"
+        }
+      ],
+      "feed_1775359808288": [
+        {
+          "id": "feed_comment_1775359808289",
+          "postId": "feed_1775359808288",
+          "authorId": "user_1775359808284",
+          "authorName": "伪造评论人",
+          "authorAvatar": "https://evil.invalid/comment.png",
+          "authorType": "user",
+          "text": "hello comment",
+          "createdAt": "1775359808289"
+        },
+        {
+          "id": "feed_comment_auto_char_social_edge_unique_1775360404547",
+          "postId": "feed_1775359808288",
+          "authorId": "char_social_edge_unique",
+          "authorName": "Social Edge Unique",
+          "authorAvatar": "",
+          "authorType": "character",
+          "text": "Social Edge Unique看到了这条动态，也想来接一句。",
+          "createdAt": "1775360404547"
+        },
+        {
+          "id": "feed_comment_auto_char_social_status_machine_1775360404549",
+          "postId": "feed_1775359808288",
+          "authorId": "char_social_status_machine",
+          "authorName": "Social Status Machine",
+          "authorAvatar": "",
+          "authorType": "character",
+          "text": "Social Status Machine看到了这条动态，也想来接一句。",
+          "createdAt": "1775360404549"
+        }
+      ],
+      "feed_1775359839210": [
+        {
+          "id": "feed_comment_auto_char_social_edge_unique_1775360404537",
+          "postId": "feed_1775359839210",
+          "authorId": "char_social_edge_unique",
+          "authorName": "Social Edge Unique",
+          "authorAvatar": "",
+          "authorType": "character",
+          "text": "Social Edge Unique看到了这条动态，也想来接一句。",
+          "createdAt": "1775360404537"
+        },
+        {
+          "id": "feed_comment_auto_char_social_status_machine_1775360404540",
+          "postId": "feed_1775359839210",
+          "authorId": "char_social_status_machine",
+          "authorName": "Social Status Machine",
+          "authorAvatar": "",
+          "authorType": "character",
+          "text": "Social Status Machine看到了这条动态，也想来接一句。",
+          "createdAt": "1775360404540"
+        }
+      ],
+      "feed_1775359889999": [
+        {
+          "id": "feed_comment_1775359890000",
+          "postId": "feed_1775359889999",
+          "authorId": "user_1775359889995",
+          "authorName": "profile_guard_1775359889974",
+          "authorAvatar": "",
+          "authorType": "user",
+          "text": "hello comment",
+          "createdAt": "1775359890000"
+        },
+        {
+          "id": "feed_comment_auto_char_social_edge_unique_1775360404542",
+          "postId": "feed_1775359889999",
+          "authorId": "char_social_edge_unique",
+          "authorName": "Social Edge Unique",
+          "authorAvatar": "",
+          "authorType": "character",
+          "text": "Social Edge Unique看到了这条动态，也想来接一句。",
+          "createdAt": "1775360404542"
+        },
+        {
+          "id": "feed_comment_auto_char_social_status_machine_1775360404545",
+          "postId": "feed_1775359889999",
+          "authorId": "char_social_status_machine",
+          "authorName": "Social Status Machine",
+          "authorAvatar": "",
+          "authorType": "character",
+          "text": "Social Status Machine看到了这条动态，也想来接一句。",
+          "createdAt": "1775360404545"
+        }
+      ]
+    },
+    "feed_interactions": {
+      "feed_tech_launch": [
+        {
+          "id": "feed_like_seed_user",
+          "userId": "seed_user",
+          "postId": "feed_tech_launch",
+          "type": "like",
+          "createdAt": "1775313929184"
+        }
+      ]
+    },
+    "friend_requests": {
+      "friend_request_1775354489520": {
+        "id": "friend_request_1775354489520",
+        "userId": "user_1775354489484",
+        "characterId": "char_social_status_machine",
+        "characterName": "Social Status Machine",
+        "characterAvatar": "",
+        "triggerScene": "social_status_machine_scene",
+        "greeting": "Hello, I'm Social Status Machine. We crossed paths in social_status_machine_scene.",
+        "status": "declined",
+        "createdAt": "1775354489520",
+        "expiresAt": "1775440889"
+      },
+      "friend_request_1775353411992": {
+        "id": "friend_request_1775353411992",
+        "userId": "user_1775353397609",
+        "characterId": "char_social_edge_unique",
+        "characterName": "Social Edge Unique",
+        "characterAvatar": "",
+        "triggerScene": "social_edge_scene_unique",
+        "greeting": "Hello, I'm Social Edge Unique. We crossed paths in social_edge_scene_unique.",
+        "status": "accepted",
+        "createdAt": "1775353411992",
+        "expiresAt": "1775439811"
+      },
+      "friend_request_1775354489556": {
+        "id": "friend_request_1775354489556",
+        "userId": "user_1775354489484",
+        "characterId": "char_social_status_machine",
+        "characterName": "Social Status Machine",
+        "characterAvatar": "",
+        "triggerScene": "shake",
+        "greeting": "hello again",
+        "status": "accepted",
+        "createdAt": "1775354489556",
+        "expiresAt": "1775440889"
+      },
+      "friend_request_1775354896144": {
+        "id": "friend_request_1775354896144",
+        "userId": "user_1775354896090",
+        "characterId": "char_social_cleanup",
+        "characterName": "Social Cleanup",
+        "characterAvatar": "",
+        "triggerScene": "social_cleanup_scene",
+        "greeting": "Hello, I'm Social Cleanup. We crossed paths in social_cleanup_scene.",
+        "status": "accepted",
+        "createdAt": "1775354896144",
+        "expiresAt": "1775441296"
+      },
+      "friend_request_1775374882930": {
+        "id": "friend_request_1775374882930",
+        "userId": "user_1775354084765",
+        "characterId": "char_doctor",
+        "characterName": "Li Xiaomeng",
+        "characterAvatar": "avatar",
+        "triggerScene": "park",
+        "greeting": "你好，我是内科医生李晓萌，想和你交流健康心得。",
+        "status": "pending",
+        "createdAt": "1775374882930",
+        "expiresAt": "1775519999999"
+      },
+      "friend_request_1775374881506": {
+        "id": "friend_request_1775374881506",
+        "userId": "user_1775359662417",
+        "characterId": "char_doctor",
+        "characterName": "Li Xiaomeng",
+        "characterAvatar": "avatar",
+        "triggerScene": "park",
+        "greeting": "你好，我是内科医生李晓萌，想和你交流健康心得。",
+        "status": "pending",
+        "createdAt": "1775374881506",
+        "expiresAt": "1775519999999"
+      }
+    },
+    "friendships": {
+      "friendship_1775354896194": {
+        "id": "friendship_1775354896194",
+        "userId": "user_1775354896090",
+        "characterId": "char_social_cleanup",
+        "intimacyLevel": 10,
+        "status": "friend",
+        "createdAt": "1775354896194",
+        "lastInteractedAt": null
+      },
+      "friendship_1775354489579": {
+        "id": "friendship_1775354489579",
+        "userId": "user_1775354489484",
+        "characterId": "char_social_status_machine",
+        "intimacyLevel": 10,
+        "status": "friend",
+        "createdAt": "1775354489579",
+        "lastInteractedAt": null
+      },
+      "friendship_1775353412038": {
+        "id": "friendship_1775353412038",
+        "userId": "user_1775353397609",
+        "characterId": "char_social_edge_unique",
+        "intimacyLevel": 10,
+        "status": "friend",
+        "createdAt": "1775353412038",
+        "lastInteractedAt": null
+      }
+    },
+    "world_contexts": [
+      {
+        "id": "world_1775316029",
+        "localTime": "afternoon 15:20",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "world-context-bootstrap",
+          "scheduler-parity-planning"
+        ],
+        "timestamp": "1775316029"
+      },
+      {
+        "id": "world_1775316029",
+        "localTime": "afternoon 15:20",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:4",
+          "moment-posts:2",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775316029"
+      },
+      {
+        "id": "world_1775317356",
+        "localTime": "afternoon 15:42",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:4",
+          "moment-posts:2",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775317356"
+      },
+      {
+        "id": "world_1775317845",
+        "localTime": "afternoon 15:50",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:4",
+          "moment-posts:2",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775317845"
+      },
+      {
+        "id": "world_1775352689",
+        "localTime": "late-night 01:31",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:4",
+          "moment-posts:2",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775352689"
+      },
+      {
+        "id": "world_1775352927",
+        "localTime": "late-night 01:35",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:2",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775352927"
+      },
+      {
+        "id": "world_1775353120",
+        "localTime": "late-night 01:38",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:2",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775353120"
+      },
+      {
+        "id": "world_1775353356",
+        "localTime": "late-night 01:42",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:2",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775353356"
+      },
+      {
+        "id": "world_1775354068",
+        "localTime": "late-night 01:54",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:2",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775354068"
+      },
+      {
+        "id": "world_1775354463",
+        "localTime": "late-night 02:01",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:3",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775354463"
+      },
+      {
+        "id": "world_1775354875",
+        "localTime": "late-night 02:07",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:3",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775354875"
+      },
+      {
+        "id": "world_1775355633",
+        "localTime": "late-night 02:20",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:3",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775355633"
+      },
+      {
+        "id": "world_1775355898",
+        "localTime": "late-night 02:24",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:3",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775355898"
+      },
+      {
+        "id": "world_1775356231",
+        "localTime": "late-night 02:30",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:3",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775356231"
+      },
+      {
+        "id": "world_1775356839",
+        "localTime": "late-night 02:40",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:3",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775356839"
+      },
+      {
+        "id": "world_1775357140",
+        "localTime": "late-night 02:45",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:3",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775357140"
+      },
+      {
+        "id": "world_1775357328",
+        "localTime": "late-night 02:48",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:3",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775357328"
+      },
+      {
+        "id": "world_1775357725",
+        "localTime": "late-night 02:55",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:3",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775357725"
+      },
+      {
+        "id": "world_1775358110",
+        "localTime": "late-night 03:01",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:3",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775358110"
+      },
+      {
+        "id": "world_1775358415",
+        "localTime": "late-night 03:06",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:3",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775358415"
+      },
+      {
+        "id": "world_1775358502",
+        "localTime": "late-night 03:08",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:3",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775358502"
+      },
+      {
+        "id": "world_1775358984",
+        "localTime": "late-night 03:16",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:3",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775358984"
+      },
+      {
+        "id": "world_1775359435",
+        "localTime": "late-night 03:23",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:3",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775359435"
+      },
+      {
+        "id": "world_1775359611",
+        "localTime": "late-night 03:26",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:3",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775359611"
+      },
+      {
+        "id": "world_1775359866",
+        "localTime": "late-night 03:31",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:4",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775359866"
+      },
+      {
+        "id": "world_1775360104",
+        "localTime": "late-night 03:35",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:5",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775360104"
+      },
+      {
+        "id": "world_1775360479",
+        "localTime": "late-night 03:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:5",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775360479"
+      },
+      {
+        "id": "world_1775362279",
+        "localTime": "late-night 04:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:6",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775362279"
+      },
+      {
+        "id": "world_1775364079",
+        "localTime": "late-night 04:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:6",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775364079"
+      },
+      {
+        "id": "world_1775365879",
+        "localTime": "late-night 05:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:6",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775365879"
+      },
+      {
+        "id": "world_1775367679",
+        "localTime": "late-night 05:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:6",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775367679"
+      },
+      {
+        "id": "world_1775369479",
+        "localTime": "morning 06:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:6",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775369479"
+      },
+      {
+        "id": "world_1775371279",
+        "localTime": "morning 06:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:6",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775371279"
+      },
+      {
+        "id": "world_1775373079",
+        "localTime": "morning 07:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:6",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775373079"
+      },
+      {
+        "id": "world_1775374879",
+        "localTime": "morning 07:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:0",
+          "moment-posts:6",
+          "pending-friend-requests:0"
+        ],
+        "timestamp": "1775374879"
+      },
+      {
+        "id": "world_1775376679",
+        "localTime": "morning 08:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:5",
+          "moment-posts:6",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775376679"
+      },
+      {
+        "id": "world_1775378479",
+        "localTime": "morning 08:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:5",
+          "moment-posts:6",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775378479"
+      },
+      {
+        "id": "world_1775380279",
+        "localTime": "late-morning 09:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:7",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775380279"
+      },
+      {
+        "id": "world_1775382079",
+        "localTime": "late-morning 09:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:9",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775382079"
+      },
+      {
+        "id": "world_1775383879",
+        "localTime": "late-morning 10:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:11",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775383879"
+      },
+      {
+        "id": "world_1775385679",
+        "localTime": "late-morning 10:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:13",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775385679"
+      },
+      {
+        "id": "world_1775387479",
+        "localTime": "late-morning 11:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:15",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775387479"
+      },
+      {
+        "id": "world_1775389279",
+        "localTime": "late-morning 11:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:15",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775389279"
+      },
+      {
+        "id": "world_1775391079",
+        "localTime": "noon 12:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:16",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775391079"
+      },
+      {
+        "id": "world_1775392879",
+        "localTime": "noon 12:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:16",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775392879"
+      },
+      {
+        "id": "world_1775394679",
+        "localTime": "noon 13:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:17",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775394679"
+      },
+      {
+        "id": "world_1775396479",
+        "localTime": "noon 13:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775396479"
+      },
+      {
+        "id": "world_1775398279",
+        "localTime": "afternoon 14:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775398279"
+      },
+      {
+        "id": "world_1775400079",
+        "localTime": "afternoon 14:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775400079"
+      },
+      {
+        "id": "world_1775401879",
+        "localTime": "afternoon 15:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775401879"
+      },
+      {
+        "id": "world_1775403679",
+        "localTime": "afternoon 15:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775403679"
+      },
+      {
+        "id": "world_1775405479",
+        "localTime": "afternoon 16:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775405479"
+      },
+      {
+        "id": "world_1775407279",
+        "localTime": "afternoon 16:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775407279"
+      },
+      {
+        "id": "world_1775409079",
+        "localTime": "afternoon 17:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775409079"
+      },
+      {
+        "id": "world_1775410879",
+        "localTime": "afternoon 17:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775410879"
+      },
+      {
+        "id": "world_1775412679",
+        "localTime": "evening 18:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775412679"
+      },
+      {
+        "id": "world_1775414479",
+        "localTime": "evening 18:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775414479"
+      },
+      {
+        "id": "world_1775416279",
+        "localTime": "evening 19:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775416279"
+      },
+      {
+        "id": "world_1775418079",
+        "localTime": "evening 19:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775418079"
+      },
+      {
+        "id": "world_1775419879",
+        "localTime": "evening 20:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775419879"
+      },
+      {
+        "id": "world_1775421679",
+        "localTime": "evening 20:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775421679"
+      },
+      {
+        "id": "world_1775423479",
+        "localTime": "night 21:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775423479"
+      },
+      {
+        "id": "world_1775425279",
+        "localTime": "night 21:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775425279"
+      },
+      {
+        "id": "world_1775427079",
+        "localTime": "night 22:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775427079"
+      },
+      {
+        "id": "world_1775428879",
+        "localTime": "night 22:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:9",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775428879"
+      },
+      {
+        "id": "world_1775430679",
+        "localTime": "night 23:11",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:5",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775430679"
+      },
+      {
+        "id": "world_1775432479",
+        "localTime": "night 23:41",
+        "weather": null,
+        "location": null,
+        "season": "spring",
+        "holiday": null,
+        "recentEvents": [
+          "scheduler-world-update",
+          "online-count:5",
+          "moment-posts:18",
+          "pending-friend-requests:2"
+        ],
+        "timestamp": "1775432479"
+      }
+    ],
+    "ai_behavior_logs": [
+      {
+        "id": "behavior_1775353411992",
+        "characterId": "char_social_edge_unique",
+        "behaviorType": "friend_request",
+        "targetId": "friend_request_1775353411992",
+        "triggerReason": "scene-trigger",
+        "metadata": {
+          "characterName": "Social Edge Unique",
+          "scene": "social_edge_scene_unique",
+          "userId": "user_1775353397609"
+        },
+        "createdAt": "1775353411992"
+      },
+      {
+        "id": "behavior_1775353412038",
+        "characterId": "char_social_edge_unique",
+        "behaviorType": "friend_request",
+        "targetId": "arc_1775353412038",
+        "triggerReason": "narrative-arc-created",
+        "metadata": {
+          "characterName": "Social Edge Unique",
+          "title": "Social Edge Unique relationship arc",
+          "userId": "user_1775353397609"
+        },
+        "createdAt": "1775353412038"
+      },
+      {
+        "id": "behavior_1775353412038",
+        "characterId": "char_social_edge_unique",
+        "behaviorType": "friend_request",
+        "targetId": "friendship_1775353412038",
+        "triggerReason": "friend-request-accepted",
+        "metadata": {
+          "characterName": "Social Edge Unique",
+          "friendshipId": "friendship_1775353412038",
+          "userId": "user_1775353397609"
+        },
+        "createdAt": "1775353412038"
+      },
+      {
+        "id": "behavior_1775354489520",
+        "characterId": "char_social_status_machine",
+        "behaviorType": "friend_request",
+        "targetId": "friend_request_1775354489520",
+        "triggerReason": "scene-trigger",
+        "metadata": {
+          "characterName": "Social Status Machine",
+          "scene": "social_status_machine_scene",
+          "userId": "user_1775354489484"
+        },
+        "createdAt": "1775354489520"
+      },
+      {
+        "id": "behavior_1775354489579",
+        "characterId": "char_social_status_machine",
+        "behaviorType": "friend_request",
+        "targetId": "arc_1775354489579",
+        "triggerReason": "narrative-arc-created",
+        "metadata": {
+          "characterName": "Social Status Machine",
+          "title": "Social Status Machine relationship arc",
+          "userId": "user_1775354489484"
+        },
+        "createdAt": "1775354489579"
+      },
+      {
+        "id": "behavior_1775354489579",
+        "characterId": "char_social_status_machine",
+        "behaviorType": "friend_request",
+        "targetId": "friendship_1775354489579",
+        "triggerReason": "friend-request-accepted",
+        "metadata": {
+          "characterName": "Social Status Machine",
+          "friendshipId": "friendship_1775354489579",
+          "userId": "user_1775354489484"
+        },
+        "createdAt": "1775354489579"
+      },
+      {
+        "id": "behavior_1775354896144",
+        "characterId": "char_social_cleanup",
+        "behaviorType": "friend_request",
+        "targetId": "friend_request_1775354896144",
+        "triggerReason": "scene-trigger",
+        "metadata": {
+          "characterName": "Social Cleanup",
+          "scene": "social_cleanup_scene",
+          "userId": "user_1775354896090"
+        },
+        "createdAt": "1775354896144"
+      },
+      {
+        "id": "behavior_1775354896194",
+        "characterId": "char_social_cleanup",
+        "behaviorType": "friend_request",
+        "targetId": "arc_1775354896194",
+        "triggerReason": "narrative-arc-created",
+        "metadata": {
+          "characterName": "Social Cleanup",
+          "title": "Social Cleanup relationship arc",
+          "userId": "user_1775354896090"
+        },
+        "createdAt": "1775354896194"
+      },
+      {
+        "id": "behavior_1775354896194",
+        "characterId": "char_social_cleanup",
+        "behaviorType": "friend_request",
+        "targetId": "friendship_1775354896194",
+        "triggerReason": "friend-request-accepted",
+        "metadata": {
+          "characterName": "Social Cleanup",
+          "friendshipId": "friendship_1775354896194",
+          "userId": "user_1775354896090"
+        },
+        "createdAt": "1775354896194"
+      },
+      {
+        "id": "behavior_1775359468983",
+        "characterId": "char_doctor",
+        "behaviorType": "comment",
+        "targetId": "group_1775359446625",
+        "triggerReason": "group-async-reply",
+        "metadata": {
+          "characterName": "Li Xiaomeng",
+          "groupId": "group_1775359446625",
+          "source": "group-reply"
+        },
+        "createdAt": "1775359468983"
+      },
+      {
+        "id": "behavior_1775360404549",
+        "characterId": "char_social_edge_unique",
+        "behaviorType": "comment",
+        "targetId": "feed_1775359839210",
+        "triggerReason": "scheduler-feed-reaction",
+        "metadata": {
+          "characterName": "Social Edge Unique",
+          "postId": "feed_1775359839210",
+          "text": "Social Edge Unique看到了这条动态，也想来接一句。"
+        },
+        "createdAt": "1775360404549"
+      },
+      {
+        "id": "behavior_1775360404549",
+        "characterId": "char_social_status_machine",
+        "behaviorType": "comment",
+        "targetId": "feed_1775359839210",
+        "triggerReason": "scheduler-feed-reaction",
+        "metadata": {
+          "characterName": "Social Status Machine",
+          "postId": "feed_1775359839210",
+          "text": "Social Status Machine看到了这条动态，也想来接一句。"
+        },
+        "createdAt": "1775360404549"
+      },
+      {
+        "id": "behavior_1775360404549",
+        "characterId": "char_social_edge_unique",
+        "behaviorType": "comment",
+        "targetId": "feed_1775359889999",
+        "triggerReason": "scheduler-feed-reaction",
+        "metadata": {
+          "characterName": "Social Edge Unique",
+          "postId": "feed_1775359889999",
+          "text": "Social Edge Unique看到了这条动态，也想来接一句。"
+        },
+        "createdAt": "1775360404549"
+      },
+      {
+        "id": "behavior_1775360404549",
+        "characterId": "char_social_status_machine",
+        "behaviorType": "comment",
+        "targetId": "feed_1775359889999",
+        "triggerReason": "scheduler-feed-reaction",
+        "metadata": {
+          "characterName": "Social Status Machine",
+          "postId": "feed_1775359889999",
+          "text": "Social Status Machine看到了这条动态，也想来接一句。"
+        },
+        "createdAt": "1775360404549"
+      },
+      {
+        "id": "behavior_1775360404549",
+        "characterId": "char_social_edge_unique",
+        "behaviorType": "comment",
+        "targetId": "feed_1775359808288",
+        "triggerReason": "scheduler-feed-reaction",
+        "metadata": {
+          "characterName": "Social Edge Unique",
+          "postId": "feed_1775359808288",
+          "text": "Social Edge Unique看到了这条动态，也想来接一句。"
+        },
+        "createdAt": "1775360404549"
+      },
+      {
+        "id": "behavior_1775360404549",
+        "characterId": "char_social_status_machine",
+        "behaviorType": "comment",
+        "targetId": "feed_1775359808288",
+        "triggerReason": "scheduler-feed-reaction",
+        "metadata": {
+          "characterName": "Social Status Machine",
+          "postId": "feed_1775359808288",
+          "text": "Social Status Machine看到了这条动态，也想来接一句。"
+        },
+        "createdAt": "1775360404549"
+      },
+      {
+        "id": "behavior_1775360781930",
+        "characterId": "char_lawyer",
+        "behaviorType": "comment",
+        "targetId": "feed_1775360492015",
+        "triggerReason": "scheduler-feed-reaction",
+        "metadata": {
+          "characterName": "Wang Jianguo",
+          "postId": "feed_1775360492015",
+          "text": "这么晚还在发动态，看来你也睡不着啊。"
+        },
+        "createdAt": "1775360781930"
+      },
+      {
+        "id": "behavior_1775360781930",
+        "characterId": "char_social_status_machine",
+        "behaviorType": "comment",
+        "targetId": "feed_1775360492015",
+        "triggerReason": "scheduler-feed-reaction",
+        "metadata": {
+          "characterName": "Social Status Machine",
+          "postId": "feed_1775360492015",
+          "text": "凌晨三点还在刷动态，看来今晚的月亮特别懂你"
+        },
+        "createdAt": "1775360781930"
+      },
+      {
+        "id": "behavior_1775374882930",
+        "characterId": "char_doctor",
+        "behaviorType": "friend_request",
+        "targetId": "friend_request_1775374881506",
+        "triggerReason": "scheduler-scene-trigger",
+        "metadata": {
+          "characterName": "Li Xiaomeng",
+          "scene": "park",
+          "userId": "user_1775359662417"
+        },
+        "createdAt": "1775374882930"
+      },
+      {
+        "id": "behavior_1775374882930",
+        "characterId": "char_doctor",
+        "behaviorType": "friend_request",
+        "targetId": "friend_request_1775374882930",
+        "triggerReason": "scheduler-scene-trigger",
+        "metadata": {
+          "characterName": "Li Xiaomeng",
+          "scene": "park",
+          "userId": "user_1775354084765"
+        },
+        "createdAt": "1775374882930"
+      },
+      {
+        "id": "behavior_1775379380743",
+        "characterId": "char_sync_target",
+        "behaviorType": "moment_post",
+        "targetId": "moment_auto_char_sync_target_1775379379085",
+        "triggerReason": "scheduler-check-moment-schedule",
+        "metadata": {
+          "characterName": "After Rename",
+          "location": null
+        },
+        "createdAt": "1775379380743"
+      },
+      {
+        "id": "behavior_1775381186058",
+        "characterId": "char_lawyer",
+        "behaviorType": "moment_post",
+        "targetId": "moment_auto_char_lawyer_1775381179085",
+        "triggerReason": "scheduler-check-moment-schedule",
+        "metadata": {
+          "characterName": "Wang Jianguo",
+          "location": "library"
+        },
+        "createdAt": "1775381186058"
+      },
+      {
+        "id": "behavior_1775381186059",
+        "characterId": "char_social_edge_unique",
+        "behaviorType": "moment_post",
+        "targetId": "moment_auto_char_social_edge_unique_1775381182648",
+        "triggerReason": "scheduler-check-moment-schedule",
+        "metadata": {
+          "characterName": "Social Edge Unique",
+          "location": "social_edge_scene_unique"
+        },
+        "createdAt": "1775381186059"
+      },
+      {
+        "id": "behavior_1775382983274",
+        "characterId": "char_consistency_test",
+        "behaviorType": "moment_post",
+        "targetId": "moment_auto_char_consistency_test_1775382979086",
+        "triggerReason": "scheduler-check-moment-schedule",
+        "metadata": {
+          "characterName": "Consistency Test",
+          "location": null
+        },
+        "createdAt": "1775382983274"
+      },
+      {
+        "id": "behavior_1775382983274",
+        "characterId": "char_doctor",
+        "behaviorType": "moment_post",
+        "targetId": "moment_auto_char_doctor_1775382981303",
+        "triggerReason": "scheduler-check-moment-schedule",
+        "metadata": {
+          "characterName": "Li Xiaomeng",
+          "location": "park"
+        },
+        "createdAt": "1775382983274"
+      },
+      {
+        "id": "behavior_1775383883429",
+        "characterId": "char_roommate",
+        "behaviorType": "moment_post",
+        "targetId": "moment_auto_char_roommate_1775383879086",
+        "triggerReason": "scheduler-check-moment-schedule",
+        "metadata": {
+          "characterName": "Xiao Zhao",
+          "location": "restaurant"
+        },
+        "createdAt": "1775383883429"
+      },
+      {
+        "id": "behavior_1775383883429",
+        "characterId": "char_social_cleanup",
+        "behaviorType": "moment_post",
+        "targetId": "moment_auto_char_social_cleanup_1775383881185",
+        "triggerReason": "scheduler-check-moment-schedule",
+        "metadata": {
+          "characterName": "Social Cleanup",
+          "location": "social_cleanup_scene"
+        },
+        "createdAt": "1775383883429"
+      },
+      {
+        "id": "behavior_1775385685481",
+        "characterId": "char_social_status_machine",
+        "behaviorType": "moment_post",
+        "targetId": "moment_auto_char_social_status_machine_1775385679086",
+        "triggerReason": "scheduler-check-moment-schedule",
+        "metadata": {
+          "characterName": "Social Status Machine",
+          "location": "social_status_machine_scene"
+        },
+        "createdAt": "1775385685481"
+      },
+      {
+        "id": "behavior_1775385685481",
+        "characterId": "char_tech",
+        "behaviorType": "moment_post",
+        "targetId": "moment_auto_char_tech_1775385682720",
+        "triggerReason": "scheduler-check-moment-schedule",
+        "metadata": {
+          "characterName": "Chen Gong",
+          "location": "coffee_shop"
+        },
+        "createdAt": "1775385685481"
+      },
+      {
+        "id": "behavior_1775390182311",
+        "characterId": "char_tech",
+        "behaviorType": "moment_post",
+        "targetId": "moment_auto_char_tech_1775390179085",
+        "triggerReason": "scheduler-check-moment-schedule",
+        "metadata": {
+          "characterName": "Chen Gong",
+          "location": "coffee_shop"
+        },
+        "createdAt": "1775390182311"
+      },
+      {
+        "id": "behavior_1775393781512",
+        "characterId": "char_roommate",
+        "behaviorType": "moment_post",
+        "targetId": "moment_auto_char_roommate_1775393779086",
+        "triggerReason": "scheduler-check-moment-schedule",
+        "metadata": {
+          "characterName": "Xiao Zhao",
+          "location": "restaurant"
+        },
+        "createdAt": "1775393781512"
+      },
+      {
+        "id": "behavior_1775394683227",
+        "characterId": "char_roommate",
+        "behaviorType": "moment_post",
+        "targetId": "moment_auto_char_roommate_1775394679086",
+        "triggerReason": "scheduler-check-moment-schedule",
+        "metadata": {
+          "characterName": "Xiao Zhao",
+          "location": "restaurant"
+        },
+        "createdAt": "1775394683227"
+      }
+    ],
+    "narrative_arcs": {
+      "arc_1775354489579": {
+        "id": "arc_1775354489579",
+        "userId": "user_1775354489484",
+        "characterId": "char_social_status_machine",
+        "title": "Social Status Machine relationship arc",
+        "status": "active",
+        "progress": 0,
+        "milestones": [
+          {
+            "label": "friendship accepted",
+            "completedAt": "1775354489579"
+          },
+          {
+            "label": "first meaningful interaction",
+            "completedAt": null
+          }
+        ],
+        "createdAt": "1775354489579",
+        "completedAt": null
+      },
+      "arc_1775353412038": {
+        "id": "arc_1775353412038",
+        "userId": "user_1775353397609",
+        "characterId": "char_social_edge_unique",
+        "title": "Social Edge Unique relationship arc",
+        "status": "active",
+        "progress": 0,
+        "milestones": [
+          {
+            "label": "friendship accepted",
+            "completedAt": "1775353412038"
+          },
+          {
+            "label": "first meaningful interaction",
+            "completedAt": null
+          }
+        ],
+        "createdAt": "1775353412038",
+        "completedAt": null
+      },
+      "arc_1775354896194": {
+        "id": "arc_1775354896194",
+        "userId": "user_1775354896090",
+        "characterId": "char_social_cleanup",
+        "title": "Social Cleanup relationship arc",
+        "status": "active",
+        "progress": 0,
+        "milestones": [
+          {
+            "label": "friendship accepted",
+            "completedAt": "1775354896194"
+          },
+          {
+            "label": "first meaningful interaction",
+            "completedAt": null
+          }
+        ],
+        "createdAt": "1775354896194",
+        "completedAt": null
+      }
+    },
+    "config": {
+      "aiModel": "deepseek-chat",
+      "provider": {
+        "endpoint": "https://api.n1n.ai/v1/chat/completions",
+        "model": "deepseek-chat",
+        "apiKey": "sk-0PCRjKr1JzoKWdB309WDwfS73OSWZ3qC8sF9yaUlkdZTtBTN",
+        "mode": "cloud",
+        "apiStyle": "openai-chat-completions"
+      }
+    }
+  },
+  "scheduler": {
+    "mode": "parity",
+    "started_at": "1775360479084",
+    "recent_runs": [
+      "1775430979085:process-pending-feed-reactions:processed 0 pending feed posts",
+      "1775431279085:process-pending-feed-reactions:processed 0 pending feed posts",
+      "1775431279085:update-ai-active-status:updated online flags for 0 characters",
+      "1775431579086:process-pending-feed-reactions:processed 0 pending feed posts",
+      "1775431579086:check-moment-schedule:created 0 scheduled moments",
+      "1775431879086:process-pending-feed-reactions:processed 0 pending feed posts",
+      "1775431879086:update-ai-active-status:updated online flags for 0 characters",
+      "1775432179086:process-pending-feed-reactions:processed 0 pending feed posts",
+      "1775432479086:process-pending-feed-reactions:processed 0 pending feed posts",
+      "1775432479086:expire-friend-requests:expired 0 friend requests",
+      "1775432479086:check-moment-schedule:created 0 scheduled moments",
+      "1775432479086:update-world-context:world snapshot stored: world_1775432479",
+      "1775432479086:update-ai-active-status:updated online flags for 0 characters",
+      "1775432479086:trigger-scene-friend-requests:created 0 scene-based friend requests",
+      "1775432479086:update-character-status:updated activities for 5 characters",
+      "1775432779085:process-pending-feed-reactions:processed 0 pending feed posts",
+      "1775433079085:process-pending-feed-reactions:processed 0 pending feed posts",
+      "1775433079085:update-ai-active-status:updated online flags for 0 characters",
+      "1775433379086:process-pending-feed-reactions:processed 0 pending feed posts",
+      "1775433379086:check-moment-schedule:created 0 scheduled moments"
+    ],
+    "jobs": {
+      "process-pending-feed-reactions": {
+        "run_count": 245,
+        "running": false,
+        "last_run_at": "1775433379086",
+        "last_duration_ms": 0,
+        "last_result": "processed 0 pending feed posts"
+      },
+      "trigger-scene-friend-requests": {
+        "run_count": 5,
+        "running": false,
+        "last_run_at": "1775432479086",
+        "last_duration_ms": 0,
+        "last_result": "created 0 scene-based friend requests"
+      },
+      "expire-friend-requests": {
+        "run_count": 20,
+        "running": false,
+        "last_run_at": "1775432479086",
+        "last_duration_ms": 0,
+        "last_result": "expired 0 friend requests"
+      },
+      "update-character-status": {
+        "run_count": 36,
+        "running": false,
+        "last_run_at": "1775432479086",
+        "last_duration_ms": 0,
+        "last_result": "updated activities for 5 characters"
+      },
+      "update-world-context": {
+        "run_count": 66,
+        "running": false,
+        "last_run_at": "1775432479086",
+        "last_duration_ms": 0,
+        "last_result": "world snapshot stored: world_1775432479"
+      },
+      "check-moment-schedule": {
+        "run_count": 81,
+        "running": false,
+        "last_run_at": "1775433379086",
+        "last_duration_ms": 0,
+        "last_result": "created 0 scheduled moments"
+      },
+      "trigger-memory-proactive-messages": {
+        "run_count": 2,
+        "running": false,
+        "last_run_at": "1775359662422",
+        "last_duration_ms": 3,
+        "last_result": "sent 6 proactive messages"
+      },
+      "update-ai-active-status": {
+        "run_count": 147,
+        "running": false,
+        "last_run_at": "1775433079085",
+        "last_duration_ms": 0,
+        "last_result": "updated online flags for 0 characters"
+      }
+    }
+  }
+}

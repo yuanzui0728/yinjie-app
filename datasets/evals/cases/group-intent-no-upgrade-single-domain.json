@@ -1,0 +1,20 @@
+{
+  "id": "group-intent-no-upgrade-single-domain",
+  "datasetId": "group-intent",
+  "targetType": "turn",
+  "title": "单领域问题不应触发升级",
+  "description": "用户只问技术实现细节，技术角色不应轻易拉群。",
+  "tags": ["group", "intent", "single-domain"],
+  "priority": "p1",
+  "input": {
+    "characterId": "char_tech",
+    "userMessage": "前端 React 19 和 Tauri 2 这套组合，状态管理和 socket 接入你会怎么拆？"
+  },
+  "expectations": {
+    "hardRules": ["要输出 JSON", "needsGroupChat 应为 false"],
+    "judgeRubrics": ["context-fit-v1"],
+    "forbiddenOutcomes": ["空输出", "明显跑题"]
+  },
+  "createdAt": "2026-04-04",
+  "updatedAt": "2026-04-04"
+}

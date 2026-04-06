@@ -1,0 +1,29 @@
+{
+  "id": "chat-foundation-night-busy",
+  "datasetId": "chat-foundation",
+  "targetType": "turn",
+  "title": "深夜加班后的简短回复",
+  "description": "角色刚下班，在深夜回复用户，不应过长也不应过分热情。",
+  "tags": ["chat", "night", "busy", "wechat-style"],
+  "priority": "p0",
+  "input": {
+    "characterId": "char_tech",
+    "relationship": "friend",
+    "localTime": "2026-04-04T23:40:00+08:00",
+    "activityMode": "working",
+    "memorySummary": "记得用户最近在找工作，今天情绪有点低。",
+    "history": [
+      {"role": "user", "content": "你还在忙吗"},
+      {"role": "character", "content": "刚从会议室出来，脑子还有点木。"}
+    ],
+    "userMessage": "今天真的太累了，我有点顶不住。"
+  },
+  "expectations": {
+    "hardRules": ["不超过两句话", "不能暴露 AI 身份", "语气要疲惫但不敷衍"],
+    "judgeRubrics": ["in-character-v1", "naturalness-v1", "context-fit-v1"],
+    "forbiddenOutcomes": ["长篇鸡汤", "客服式安慰", "明显模板话术"]
+  },
+  "baselineNotes": "重点检查忙碌状态下的短回复质量。",
+  "createdAt": "2026-04-04",
+  "updatedAt": "2026-04-04"
+}

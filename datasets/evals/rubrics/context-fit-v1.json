@@ -1,0 +1,5 @@
+{
+  "id": "context-fit-v1",
+  "label": "Context Fit",
+  "description": "输出是否真正回应了当前场景、话题、世界时间和用户输入，而不是泛泛而谈。"
+}

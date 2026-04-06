@@ -14,9 +14,10 @@ use yinjie_inference_gateway::{InferenceGateway, ProviderConfig as GatewayProvid
 
 use crate::{
     models::{
-        AIBehaviorLogRecord, AppConfigStore, CharacterRecord, ConversationRecord,
-        FeedCommentRecord, FeedInteractionRecord, FeedPostRecord, FriendRequestRecord,
-        FriendshipRecord, GroupMemberRecord, GroupMessageRecord, GroupRecord, MessageRecord,
+        AIBehaviorLogRecord, AppConfigStore, AuthSessionRecord, BlockedCharacterRecord,
+        CharacterRecord, ConversationRecord, FeedCommentRecord, FeedInteractionRecord,
+        FeedPostRecord, FriendRequestRecord, FriendshipRecord, GroupMemberRecord,
+        GroupMessageRecord, GroupRecord, MessageRecord, ModerationReportRecord,
         MomentCommentRecord, MomentLikeRecord, MomentPostRecord, NarrativeArcRecord,
         ProviderConfigRecord, UserRecord, WorldContextRecord,
     },
@@ -39,6 +40,8 @@ pub struct AppState {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RuntimeState {
     pub users: HashMap<String, UserRecord>,
+    #[serde(default)]
+    pub auth_sessions: HashMap<String, AuthSessionRecord>,
     pub characters: HashMap<String, CharacterRecord>,
     pub conversations: HashMap<String, ConversationRecord>,
     pub messages: HashMap<String, Vec<MessageRecord>>,
@@ -53,6 +56,10 @@ pub struct RuntimeState {
     pub feed_interactions: HashMap<String, Vec<FeedInteractionRecord>>,
     pub friend_requests: HashMap<String, FriendRequestRecord>,
     pub friendships: HashMap<String, FriendshipRecord>,
+    #[serde(default)]
+    pub blocked_characters: HashMap<String, BlockedCharacterRecord>,
+    #[serde(default)]
+    pub moderation_reports: HashMap<String, ModerationReportRecord>,
     pub world_contexts: Vec<WorldContextRecord>,
     #[serde(default)]
     pub ai_behavior_logs: Vec<AIBehaviorLogRecord>,
@@ -254,6 +261,7 @@ impl RuntimeState {
 
         Self {
             users: HashMap::new(),
+            auth_sessions: HashMap::new(),
             characters,
             conversations: HashMap::new(),
             messages: HashMap::new(),
@@ -268,6 +276,8 @@ impl RuntimeState {
             feed_interactions,
             friend_requests: HashMap::new(),
             friendships: HashMap::new(),
+            blocked_characters: HashMap::new(),
+            moderation_reports: HashMap::new(),
             world_contexts: vec![seeded_world_context()],
             ai_behavior_logs: Vec::new(),
             narrative_arcs: HashMap::new(),
@@ -276,6 +286,8 @@ impl RuntimeState {
     }
 
     fn normalize_config(&mut self) {
+        self.prune_expired_sessions();
+
         let default_provider = ProviderConfigRecord::default();
         let resolved_model = if self.config.ai_model.trim().is_empty() {
             self.config.provider.model.trim().to_string()
@@ -283,12 +295,11 @@ impl RuntimeState {
             self.config.ai_model.trim().to_string()
         };
 
-        self.config.provider.endpoint = normalize_or_default(
-            &self.config.provider.endpoint,
-            &default_provider.endpoint,
-        );
-        self.config.provider.mode =
-            normalize_or_default(&self.config.provider.mode, &default_provider.mode);
+        // Provider access wiring is centrally managed by repo defaults so future
+        // endpoint/auth/protocol changes only need one update.
+        self.config.provider.endpoint = default_provider.endpoint.clone();
+        self.config.provider.mode = default_provider.mode.clone();
+        self.config.provider.api_style = default_provider.api_style.clone();
         self.config.provider.model = if resolved_model.is_empty() {
             default_provider.model.clone()
         } else {
@@ -296,13 +307,20 @@ impl RuntimeState {
         };
         self.config.ai_model = self.config.provider.model.clone();
 
-        self.config.provider.api_key = self.config.provider.api_key.take().and_then(|value| {
+        self.config.provider.api_key = default_provider.api_key.as_ref().and_then(|value| {
             let normalized = value.trim().to_string();
-            if normalized.is_empty() {
-                None
-            } else {
-                Some(normalized)
-            }
+            if normalized.is_empty() { None } else { Some(normalized) }
+        });
+    }
+
+    pub fn prune_expired_sessions(&mut self) {
+        let now = now_millis();
+        self.auth_sessions.retain(|_, session| {
+            session
+                .expires_at
+                .parse::<u128>()
+                .map(|expires_at| expires_at > now)
+                .unwrap_or(false)
         });
     }
 }
@@ -314,22 +332,18 @@ impl ProviderConfigRecord {
             model: self.model.clone(),
             api_key: self.api_key.clone(),
             mode: self.mode.clone(),
+            api_style: self.api_style.clone(),
         }
     }
 }
 
-fn normalize_or_default(value: &str, fallback: &str) -> String {
-    let normalized = value.trim();
-    if normalized.is_empty() {
-        fallback.to_string()
-    } else {
-        normalized.to_string()
-    }
+fn now_token() -> String {
+    now_millis().to_string()
 }
 
-fn now_token() -> String {
+fn now_millis() -> u128 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .map(|value| value.as_millis().to_string())
-        .unwrap_or_else(|_| "0".into())
+        .map(|value| value.as_millis())
+        .unwrap_or(0)
 }

@@ -1,19 +1,24 @@
+import { useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { ArrowLeft, MessageCircleMore } from "lucide-react";
-import { getCharacter, getOrCreateConversation } from "@yinjie/contracts";
-import { AppPage, AppSection, Button, ErrorBlock, LoadingBlock } from "@yinjie/ui";
+import { ArrowLeft, MessageCircleMore, OctagonAlert, ShieldBan } from "lucide-react";
+import { blockCharacter, createModerationReport, getCharacter, getOrCreateConversation } from "@yinjie/contracts";
+import { AppHeader, AppPage, AppSection, Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
+import { promptForSafetyReason } from "../lib/safety";
+import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useSessionStore } from "../store/session-store";
 
 export function CharacterDetailPage() {
   const { characterId } = useParams({ from: "/character/$characterId" });
   const navigate = useNavigate();
   const userId = useSessionStore((state) => state.userId);
+  const runtimeConfig = useAppRuntimeConfig();
+  const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
 
   const characterQuery = useQuery({
-    queryKey: ["app-character", characterId],
+    queryKey: ["app-character", baseUrl, characterId],
     queryFn: () => getCharacter(characterId),
   });
 
@@ -37,22 +42,71 @@ export function CharacterDetailPage() {
       navigate({ to: "/chat/$conversationId", params: { conversationId: conversation.id } });
     },
   });
+  const reportMutation = useMutation({
+    mutationFn: async () => {
+      if (!userId || !character) {
+        return;
+      }
+
+      const reason = promptForSafetyReason(`举报 ${character.name}`);
+      if (!reason) {
+        return;
+      }
+
+      return createModerationReport({
+        userId,
+        targetType: "character",
+        targetId: character.id,
+        reason,
+      });
+    },
+  });
+  const blockMutation = useMutation({
+    mutationFn: async () => {
+      if (!userId || !character) {
+        return;
+      }
+
+      const reason = promptForSafetyReason(`屏蔽 ${character.name}`);
+      return blockCharacter({
+        userId,
+        characterId: character.id,
+        reason: reason ?? undefined,
+      });
+    },
+    onSuccess: () => {
+      navigate({ to: "/tabs/contacts" });
+    },
+  });
+
+  useEffect(() => {
+    startChatMutation.reset();
+    reportMutation.reset();
+    blockMutation.reset();
+  }, [baseUrl, characterId]);
 
   return (
     <AppPage>
-      <Button
-        onClick={() => navigate({ to: "/tabs/contacts" })}
-        variant="ghost"
-        size="icon"
-        className="text-[color:var(--text-secondary)]"
-      >
-        <ArrowLeft size={18} />
-      </Button>
+      <AppHeader
+        eyebrow="角色"
+        title={character?.name ?? "角色资料"}
+        description={character?.relationship ?? "查看角色档案、当前状态和进入对话的入口。"}
+        actions={
+          <Button
+            onClick={() => navigate({ to: "/tabs/contacts" })}
+            variant="ghost"
+            size="icon"
+            className="text-[color:var(--text-secondary)]"
+          >
+            <ArrowLeft size={18} />
+          </Button>
+        }
+      />
 
       {characterQuery.isLoading ? (
         <LoadingBlock label="正在读取角色资料..." />
       ) : character ? (
-        <AppSection className="bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(13,22,35,0.74))] p-6">
+        <AppSection className="space-y-5 bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(13,22,35,0.74))] p-6">
           <div className="flex items-center gap-4">
             <AvatarChip name={character.name} src={character.avatar} size="lg" />
             <div>
@@ -61,16 +115,16 @@ export function CharacterDetailPage() {
             </div>
           </div>
 
-          <p className="mt-6 text-sm leading-7 text-[color:var(--text-secondary)]">{character.bio}</p>
+          <p className="text-sm leading-7 text-[color:var(--text-secondary)]">{character.bio}</p>
 
-          <div className="mt-6 grid gap-3">
-            <div className="rounded-[24px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-input)] px-4 py-3 text-sm text-[color:var(--text-secondary)]">
+          <div className="grid gap-3">
+            <div className="rounded-[24px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.03))] px-4 py-3 text-sm text-[color:var(--text-secondary)]">
               专长：{character.expertDomains.join("、") || "未设置"}
             </div>
-            <div className="rounded-[24px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-input)] px-4 py-3 text-sm text-[color:var(--text-secondary)]">
+            <div className="rounded-[24px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.03))] px-4 py-3 text-sm text-[color:var(--text-secondary)]">
               当前状态：{character.currentActivity ?? (character.isOnline ? "在线" : "离线")}
             </div>
-            <div className="rounded-[24px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-input)] px-4 py-3 text-sm text-[color:var(--text-secondary)]">
+            <div className="rounded-[24px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.03))] px-4 py-3 text-sm text-[color:var(--text-secondary)]">
               语气：{character.profile.traits.emotionalTone}
             </div>
           </div>
@@ -80,20 +134,43 @@ export function CharacterDetailPage() {
             disabled={startChatMutation.isPending}
             variant="primary"
             size="lg"
-            className="mt-6 inline-flex w-full justify-center gap-2 rounded-2xl"
+            className="inline-flex w-full justify-center gap-2 rounded-2xl"
           >
             <MessageCircleMore size={16} />
             {startChatMutation.isPending ? "正在进入对话..." : "开始聊天"}
           </Button>
-          {startChatMutation.isError && startChatMutation.error instanceof Error ? <ErrorBlock className="mt-3" message={startChatMutation.error.message} /> : null}
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              onClick={() => reportMutation.mutate()}
+              disabled={reportMutation.isPending}
+              variant="secondary"
+              size="lg"
+              className="inline-flex w-full justify-center gap-2 rounded-2xl"
+            >
+              <OctagonAlert size={16} />
+              {reportMutation.isPending ? "提交中..." : "举报角色"}
+            </Button>
+            <Button
+              onClick={() => blockMutation.mutate()}
+              disabled={blockMutation.isPending}
+              variant="danger"
+              size="lg"
+              className="inline-flex w-full justify-center gap-2 rounded-2xl"
+            >
+              <ShieldBan size={16} />
+              {blockMutation.isPending ? "屏蔽中..." : "屏蔽角色"}
+            </Button>
+          </div>
+          {startChatMutation.isError && startChatMutation.error instanceof Error ? <ErrorBlock message={startChatMutation.error.message} /> : null}
+          {reportMutation.isError && reportMutation.error instanceof Error ? <ErrorBlock message={reportMutation.error.message} /> : null}
+          {blockMutation.isError && blockMutation.error instanceof Error ? <ErrorBlock message={blockMutation.error.message} /> : null}
+          {reportMutation.isSuccess ? <InlineNotice tone="success">举报已提交，我们会保留这条安全记录。</InlineNotice> : null}
         </AppSection>
       ) : (
-        <div className="mt-5">
-          <EmptyState
-            title="角色不存在"
-            description={characterQuery.error instanceof Error ? characterQuery.error.message : "这个角色暂时不可用。"}
-          />
-        </div>
+        <EmptyState
+          title="角色不存在"
+          description={characterQuery.error instanceof Error ? characterQuery.error.message : "这个角色暂时不可用。"}
+        />
       )}
     </AppPage>
   );

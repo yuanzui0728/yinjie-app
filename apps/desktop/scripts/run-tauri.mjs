@@ -1,17 +1,27 @@
 import { mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { homedir } from "node:os";
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const mode = process.argv[2] ?? "dev";
+const forwardedArgs = process.argv.slice(3);
+const scriptDir = fileURLToPath(new URL(".", import.meta.url));
+const desktopDir = join(scriptDir, "..");
 const cargoBin = join(homedir(), ".cargo", "bin");
 const cargoTargetDir = join(homedir(), ".cargo-target", "yinjie-desktop");
 const env = {
   ...process.env,
-  PATH: `${cargoBin};${process.env.PATH ?? ""}`,
+  PATH: `${cargoBin}${delimiter}${process.env.PATH ?? ""}`,
   CARGO_TARGET_DIR: process.env.CARGO_TARGET_DIR ?? cargoTargetDir,
   CARGO_BUILD_JOBS: process.env.CARGO_BUILD_JOBS ?? "1",
 };
+
+const explicitTarget = readTargetArg(forwardedArgs);
+if (explicitTarget) {
+  env.CARGO_BUILD_TARGET = explicitTarget;
+  env.YINJIE_DESKTOP_TARGET_TRIPLE = explicitTarget;
+}
 
 mkdirSync(env.CARGO_TARGET_DIR, { recursive: true });
 
@@ -25,6 +35,141 @@ function hasCommand(command, args = ["--version"]) {
   return result.status === 0;
 }
 
+function hasPkgConfigPackage(pkg) {
+  const result = spawnSync("pkg-config", ["--exists", pkg], {
+    stdio: "ignore",
+    shell: true,
+    env,
+  });
+
+  return result.status === 0;
+}
+
+function ensureLinuxDesktopDependencies() {
+  if (process.platform !== "linux") {
+    return;
+  }
+
+  if (!hasCommand("pkg-config")) {
+    console.error(
+      [
+        "Linux desktop build requires pkg-config and GTK/WebKit development libraries.",
+        "Install pkg-config plus the Tauri Linux system dependencies, then rerun this command.",
+      ].join(" "),
+    );
+    process.exit(1);
+  }
+
+  const requiredPackages = ["glib-2.0", "gobject-2.0", "gtk+-3.0"];
+  const missingPackages = requiredPackages.filter((pkg) => !hasPkgConfigPackage(pkg));
+
+  if (missingPackages.length === 0) {
+    return;
+  }
+
+  console.error(
+    [
+      `Missing Linux desktop system packages: ${missingPackages.join(", ")}.`,
+      "Install the Tauri Linux dependencies first.",
+      "For Debian/Ubuntu this usually includes:",
+      "libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev",
+    ].join(" "),
+  );
+  process.exit(1);
+}
+
+function ensureMacDesktopAssets() {
+  if (process.platform !== "darwin") {
+    return;
+  }
+
+  if (!hasCommand("iconutil")) {
+    console.error(
+      [
+        "macOS desktop build expects Apple's iconutil to be available.",
+        "Run this build on a Mac with Xcode Command Line Tools installed.",
+      ].join(" "),
+    );
+    process.exit(1);
+  }
+
+  const iconResult = spawnSync("test", ["-f", "src-tauri/icons/icon.icns"], {
+    stdio: "ignore",
+    shell: true,
+    env,
+    cwd: desktopDir,
+  });
+
+  if (iconResult.status !== 0) {
+    console.error(
+      [
+        "Missing src-tauri/icons/icon.icns.",
+        "Generate the macOS icon asset before running a desktop build.",
+      ].join(" "),
+    );
+    process.exit(1);
+  }
+}
+
+function ensureWindowsDesktopDependencies() {
+  if (process.platform !== "win32") {
+    return;
+  }
+
+  if (!hasCommand("cl", ["/?"])) {
+    console.error(
+      [
+        "Windows desktop build requires MSVC Build Tools.",
+        "Install Visual Studio Build Tools with the Desktop development with C++ workload and Windows SDK,",
+        "then rerun this command from a Developer PowerShell or terminal with MSVC on PATH.",
+      ].join(" "),
+    );
+    process.exit(1);
+  }
+
+  const installedTargets = spawnSync("rustup", ["target", "list", "--installed"], {
+    stdio: "pipe",
+    shell: true,
+    env,
+    encoding: "utf8",
+  });
+
+  if ((installedTargets.status ?? 1) !== 0) {
+    console.error(
+      "Failed to inspect installed Rust targets. Ensure rustup is available before building the Windows desktop shell.",
+    );
+    process.exit(installedTargets.status ?? 1);
+  }
+
+  const requiredTarget = explicitTarget ?? "x86_64-pc-windows-msvc";
+  if (!installedTargets.stdout.includes(requiredTarget)) {
+    console.error(
+      [
+        `Missing Rust target ${requiredTarget}.`,
+        `Run \`rustup target add ${requiredTarget}\` and rerun this command.`,
+      ].join(" "),
+    );
+    process.exit(1);
+  }
+}
+
+function prepareCoreApiSidecar() {
+  const result = spawnSync(
+    "node",
+    ["./scripts/prepare-core-api-sidecar.mjs", mode, ...forwardedArgs],
+    {
+      stdio: "inherit",
+      shell: true,
+      env,
+      cwd: desktopDir,
+    },
+  );
+
+  if ((result.status ?? 1) !== 0) {
+    process.exit(result.status ?? 1);
+  }
+}
+
 if (!hasCommand("rustc") || !hasCommand("cargo")) {
   console.error(
     [
@@ -36,10 +181,15 @@ if (!hasCommand("rustc") || !hasCommand("cargo")) {
   process.exit(1);
 }
 
+ensureLinuxDesktopDependencies();
+ensureMacDesktopAssets();
+ensureWindowsDesktopDependencies();
+prepareCoreApiSidecar();
+
 const maxAttempts = mode === "build" ? 6 : 1;
 
 for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-  const result = spawnSync("pnpm", ["exec", "tauri", mode], {
+  const result = spawnSync("pnpm", ["exec", "tauri", mode, ...forwardedArgs], {
     stdio: "pipe",
     shell: true,
     env,
@@ -80,3 +230,17 @@ for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
 }
 
 process.exit(1);
+
+function readTargetArg(args) {
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--target") {
+      return args[index + 1] ?? null;
+    }
+    if (arg.startsWith("--target=")) {
+      return arg.slice("--target=".length);
+    }
+  }
+
+  return null;
+}

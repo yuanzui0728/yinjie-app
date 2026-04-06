@@ -6,15 +6,23 @@ import { setAuthTokenProvider } from "@yinjie/contracts";
 import "@yinjie/ui/tokens.css";
 import "./index.css";
 import { queryClient } from "./lib/query-client";
+import { configureContractsRuntime } from "./lib/runtime-config";
 import { router } from "./router";
+import { hydrateNativeRuntimeConfig } from "./runtime/runtime-config-store";
 import { useSessionStore } from "./store/session-store";
 
-setAuthTokenProvider(() => useSessionStore.getState().token);
+async function bootstrap() {
+  await hydrateNativeRuntimeConfig();
+  setAuthTokenProvider(() => useSessionStore.getState().token);
+  configureContractsRuntime();
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  </React.StrictMode>,
-);
+  ReactDOM.createRoot(document.getElementById("root")!).render(
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    </React.StrictMode>,
+  );
+}
+
+void bootstrap();

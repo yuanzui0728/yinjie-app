@@ -8,6 +8,7 @@ pub mod chat;
 pub mod config;
 pub mod feed;
 pub mod moments;
+pub mod moderation;
 pub mod social;
 pub mod world;
 
@@ -18,6 +19,7 @@ pub fn router() -> Router<AppState> {
         .nest("/characters", characters::router())
         .nest("/config", config::router())
         .nest("/feed", feed::router())
+        .nest("/moderation", moderation::router())
         .nest("/moments", moments::router())
         .nest("/social", social::router())
         .nest("/world", world::router())

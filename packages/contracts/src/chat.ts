@@ -66,7 +66,7 @@ export interface GroupMember {
 export interface AddGroupMemberRequest {
   memberId: string;
   memberType: GroupMemberType;
-  memberName: string;
+  memberName?: string;
   memberAvatar?: string;
 }
 
@@ -85,7 +85,7 @@ export interface GroupMessage {
 export interface SendGroupMessageRequest {
   senderId: string;
   senderType: GroupMemberType;
-  senderName: string;
+  senderName?: string;
   senderAvatar?: string;
   text: string;
 }

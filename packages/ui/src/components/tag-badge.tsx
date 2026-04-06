@@ -5,7 +5,7 @@ import { cn } from "../cn";
 const tagBadgeVariants = cva("inline-flex rounded-full border px-3 py-1 text-xs", {
   variants: {
     tone: {
-      neutral: "border-white/10 text-white",
+      neutral: "border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.04))] text-white",
       success: "border-emerald-400/30 bg-emerald-500/10 text-emerald-100",
       warning: "border-amber-400/30 bg-amber-500/10 text-amber-100",
       danger: "border-rose-400/30 bg-rose-500/10 text-rose-100",

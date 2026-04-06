@@ -1,0 +1,27 @@
+{
+  "name": "@yinjie/ios-shell",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:web": "pnpm --dir ../app build",
+    "prepare:web": "pnpm run build:web && node ./scripts/inject-runtime-config.mjs",
+    "sync": "pnpm run prepare:web && cap sync ios",
+    "configure": "node ./scripts/configure-ios-project.mjs",
+    "doctor": "node ./scripts/doctor-ios.mjs",
+    "open": "cap open ios",
+    "typecheck": "node -e \"console.log('iOS shell is scaffolded and currently managed by Capacitor tooling.')\"",
+    "lint": "node -e \"console.log('iOS shell linting is handled by Capacitor/Xcode tooling when installed.')\""
+  },
+  "dependencies": {
+    "@capacitor/app": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/ios": "^7.0.0",
+    "@capacitor/keyboard": "^7.0.0",
+    "@capacitor/splash-screen": "^7.0.0",
+    "@capacitor/status-bar": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.0.0"
+  }
+}

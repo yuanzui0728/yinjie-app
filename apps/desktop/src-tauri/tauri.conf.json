@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "com.yinjie.runtime",
   "build": {
-    "beforeDevCommand": "pnpm --dir ..\\app dev",
-    "beforeBuildCommand": "pnpm --dir ..\\app build",
+    "beforeDevCommand": "pnpm --dir ../app dev",
+    "beforeBuildCommand": "pnpm --dir ../app build",
     "devUrl": "http://127.0.0.1:5180",
-    "frontendDist": "..\\..\\app\\dist"
+    "frontendDist": "../../app/dist"
   },
   "app": {
     "windows": [
@@ -26,16 +26,15 @@
   },
   "bundle": {
     "active": true,
-    "targets": "msi",
-    "icon": ["icons/icon.ico", "icons/icon.png"]
+    "targets": "all",
+    "icon": ["icons/icon.ico", "icons/icon.png", "icons/icon.icns"],
+    "externalBin": ["binaries/yinjie-core-api"]
   },
   "plugins": {
     "updater": {
-      "active": true,
-      "pubkey": "REPLACE_WITH_RELEASE_PUBLIC_KEY",
-      "endpoints": [
-        "https://example.com/yinjie/latest.json"
-      ]
+      "active": false,
+      "pubkey": "",
+      "endpoints": []
     }
   }
 }

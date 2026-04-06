@@ -28,6 +28,14 @@ export interface FriendListItem {
   character: Character;
 }
 
+export interface BlockedCharacter {
+  id: string;
+  userId: string;
+  characterId: string;
+  reason?: string;
+  createdAt: string;
+}
+
 export interface AcceptFriendRequestRequest {
   userId: string;
 }
@@ -62,4 +70,15 @@ export interface ShakePreviewCharacter extends Pick<CharacterDraft, "id" | "name
 export interface ShakeResult {
   character: ShakePreviewCharacter;
   greeting: string;
+}
+
+export interface BlockCharacterRequest {
+  userId: string;
+  characterId: string;
+  reason?: string;
+}
+
+export interface UnblockCharacterRequest {
+  userId: string;
+  characterId: string;
 }

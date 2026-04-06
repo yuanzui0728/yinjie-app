@@ -1,4 +1,12 @@
-import type { AuthSession, InitUserRequest, LoginRequest, SuccessResponse, RegisterRequest, UpdateUserRequest } from "./auth";
+import type {
+  AuthSession,
+  AuthSessionSummary,
+  InitUserRequest,
+  LoginRequest,
+  SuccessResponse,
+  RegisterRequest,
+  UpdateUserRequest,
+} from "./auth";
 import type {
   AddGroupMemberRequest,
   Conversation,
@@ -31,7 +39,13 @@ import type {
   ToggleMomentLikeResult,
 } from "./moments";
 import type {
+  CreateModerationReportRequest,
+  ModerationReport,
+} from "./moderation";
+import type {
   AcceptFriendRequestRequest,
+  BlockCharacterRequest,
+  BlockedCharacter,
   DeclineFriendRequestRequest,
   FriendListItem,
   FriendRequest,
@@ -39,6 +53,7 @@ import type {
   ShakeRequest,
   ShakeResult,
   TriggerSceneRequest,
+  UnblockCharacterRequest,
 } from "./social";
 import type {
   InferencePreviewRequest,
@@ -54,25 +69,42 @@ import type {
 } from "./system";
 import type { WorldContext } from "./world";
 import type {
+  CompareEvalRunsRequest,
+  EvalComparisonRecord,
   EvalDatasetDetail,
   EvalDatasetManifest,
+  EvalExperimentPresetRecord,
+  EvalExperimentReportRecord,
+  EvalExperimentRunResponse,
+  EvalMemoryStrategyRecord,
   EvalOverview,
+  EvalPromptVariantRecord,
+  ListEvalComparisonsQuery,
+  ListEvalRunsQuery,
+  PairwiseEvalRunResponse,
   EvalRunRecord,
   GenerationTrace,
   PersonaAssetRecord,
+  RunPairwiseEvalRequest,
   RunEvalDatasetRequest,
+  UpdateEvalReportDecisionRequest,
 } from "./evals";
 import { LEGACY_API_PREFIX } from "./api";
 
-export const DEFAULT_CORE_API_BASE_URL = "http://127.0.0.1:39091";
+export const DEFAULT_CORE_API_BASE_URL = "http://localhost:39091";
 let authTokenProvider: (() => string | null | undefined) | null = null;
+let coreApiBaseUrlProvider: (() => string | null | undefined) | null = null;
 
 export function resolveCoreApiBaseUrl(override?: string) {
-  return override || DEFAULT_CORE_API_BASE_URL;
+  return override || coreApiBaseUrlProvider?.() || DEFAULT_CORE_API_BASE_URL;
 }
 
 export function setAuthTokenProvider(provider: (() => string | null | undefined) | null) {
   authTokenProvider = provider;
+}
+
+export function setCoreApiBaseUrlProvider(provider: (() => string | null | undefined) | null) {
+  coreApiBaseUrlProvider = provider;
 }
 
 async function request<T>(path: string, init?: RequestInit, baseUrl?: string): Promise<T> {
@@ -187,12 +219,66 @@ export function listEvalDatasets(baseUrl?: string) {
   return request<EvalDatasetManifest[]>("/system/evals/datasets", undefined, baseUrl);
 }
 
+export function listEvalMemoryStrategies(baseUrl?: string) {
+  return request<EvalMemoryStrategyRecord[]>("/system/evals/strategies", undefined, baseUrl);
+}
+
+export function listEvalPromptVariants(baseUrl?: string) {
+  return request<EvalPromptVariantRecord[]>("/system/evals/prompt-variants", undefined, baseUrl);
+}
+
+export function listEvalExperimentPresets(baseUrl?: string) {
+  return request<EvalExperimentPresetRecord[]>("/system/evals/experiments", undefined, baseUrl);
+}
+
+export function runEvalExperimentPreset(id: string, baseUrl?: string) {
+  return request<EvalExperimentRunResponse>(
+    `/system/evals/experiments/${encodeURIComponent(id)}/run`,
+    {
+      method: "POST",
+    },
+    baseUrl,
+  );
+}
+
+export function listEvalExperimentReports(baseUrl?: string) {
+  return request<EvalExperimentReportRecord[]>("/system/evals/reports", undefined, baseUrl);
+}
+
+export function updateEvalReportDecision(id: string, payload: UpdateEvalReportDecisionRequest, baseUrl?: string) {
+  return request<EvalExperimentReportRecord>(
+    `/system/evals/reports/${encodeURIComponent(id)}/decision`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
 export function getEvalDataset(id: string, baseUrl?: string) {
   return request<EvalDatasetDetail>(`/system/evals/datasets/${encodeURIComponent(id)}`, undefined, baseUrl);
 }
 
 export function listEvalRuns(baseUrl?: string) {
   return request<EvalRunRecord[]>("/system/evals/runs", undefined, baseUrl);
+}
+
+export function listEvalRunsWithQuery(query: ListEvalRunsQuery, baseUrl?: string) {
+  const params = new URLSearchParams();
+  if (query.datasetId) params.set("datasetId", query.datasetId);
+  if (query.experimentLabel) params.set("experimentLabel", query.experimentLabel);
+  if (query.providerModel) params.set("providerModel", query.providerModel);
+  if (query.judgeModel) params.set("judgeModel", query.judgeModel);
+  if (query.promptVariant) params.set("promptVariant", query.promptVariant);
+  if (query.memoryPolicyVariant) params.set("memoryPolicyVariant", query.memoryPolicyVariant);
+  const suffix = params.toString();
+
+  return request<EvalRunRecord[]>(
+    `/system/evals/runs${suffix ? `?${suffix}` : ""}`,
+    undefined,
+    baseUrl,
+  );
 }
 
 export function getEvalRun(id: string, baseUrl?: string) {
@@ -210,8 +296,70 @@ export function runEvalDataset(payload: RunEvalDatasetRequest, baseUrl?: string)
   );
 }
 
+export function compareEvalRuns(payload: CompareEvalRunsRequest, baseUrl?: string) {
+  return request<EvalComparisonRecord>(
+    "/system/evals/compare",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
+export function listEvalComparisonsWithQuery(query: ListEvalComparisonsQuery, baseUrl?: string) {
+  const params = new URLSearchParams();
+  if (query.datasetId) params.set("datasetId", query.datasetId);
+  if (query.experimentLabel) params.set("experimentLabel", query.experimentLabel);
+  if (query.providerModel) params.set("providerModel", query.providerModel);
+  if (query.judgeModel) params.set("judgeModel", query.judgeModel);
+  if (query.promptVariant) params.set("promptVariant", query.promptVariant);
+  if (query.memoryPolicyVariant) params.set("memoryPolicyVariant", query.memoryPolicyVariant);
+  const suffix = params.toString();
+
+  return request<EvalComparisonRecord[]>(
+    `/system/evals/comparisons${suffix ? `?${suffix}` : ""}`,
+    undefined,
+    baseUrl,
+  );
+}
+
+export function runPairwiseEval(payload: RunPairwiseEvalRequest, baseUrl?: string) {
+  return request<PairwiseEvalRunResponse>(
+    "/system/evals/compare/run",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
 export function listGenerationTraces(baseUrl?: string) {
   return request<GenerationTrace[]>("/system/evals/traces", undefined, baseUrl);
+}
+
+export function listGenerationTracesWithQuery(
+  query: {
+    source?: string;
+    status?: string;
+    characterId?: string;
+    limit?: number;
+  },
+  baseUrl?: string,
+) {
+  const params = new URLSearchParams();
+  if (query.source) params.set("source", query.source);
+  if (query.status) params.set("status", query.status);
+  if (query.characterId) params.set("characterId", query.characterId);
+  if (typeof query.limit === "number") params.set("limit", String(query.limit));
+  const suffix = params.toString();
+
+  return request<GenerationTrace[]>(
+    `/system/evals/traces${suffix ? `?${suffix}` : ""}`,
+    undefined,
+    baseUrl,
+  );
 }
 
 export function getGenerationTrace(id: string, baseUrl?: string) {
@@ -285,6 +433,40 @@ export function initUser(payload: InitUserRequest, baseUrl?: string) {
   );
 }
 
+export function listAuthSessions(baseUrl?: string) {
+  return requestLegacyApi<AuthSessionSummary[]>("/auth/sessions", undefined, baseUrl);
+}
+
+export function revokeAuthSession(sessionId: string, baseUrl?: string) {
+  return requestLegacyApi<SuccessResponse>(
+    `/auth/sessions/${sessionId}/revoke`,
+    {
+      method: "POST",
+    },
+    baseUrl,
+  );
+}
+
+export function logoutCurrentSession(baseUrl?: string) {
+  return requestLegacyApi<SuccessResponse>(
+    "/auth/logout",
+    {
+      method: "POST",
+    },
+    baseUrl,
+  );
+}
+
+export function logoutAllSessions(baseUrl?: string) {
+  return requestLegacyApi<SuccessResponse>(
+    "/auth/logout-all",
+    {
+      method: "POST",
+    },
+    baseUrl,
+  );
+}
+
 export function completeOnboarding(userId: string, baseUrl?: string) {
   return requestLegacyApi<SuccessResponse>(
     `/auth/users/${userId}/onboarding-complete`,
@@ -301,6 +483,16 @@ export function updateUser(userId: string, payload: UpdateUserRequest, baseUrl?:
     {
       method: "PATCH",
       body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
+export function deleteUser(userId: string, baseUrl?: string) {
+  return requestLegacyApi<SuccessResponse>(
+    `/auth/users/${userId}`,
+    {
+      method: "DELETE",
     },
     baseUrl,
   );
@@ -477,13 +669,58 @@ export function getFriends(userId: string, baseUrl?: string) {
   return requestLegacyApi<FriendListItem[]>(`/social/friends?userId=${encodeURIComponent(userId)}`, undefined, baseUrl);
 }
 
+export function getBlockedCharacters(userId: string, baseUrl?: string) {
+  return requestLegacyApi<BlockedCharacter[]>(`/social/blocks?userId=${encodeURIComponent(userId)}`, undefined, baseUrl);
+}
+
+export function blockCharacter(payload: BlockCharacterRequest, baseUrl?: string) {
+  return requestLegacyApi<BlockedCharacter>(
+    "/social/block",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
+export function unblockCharacter(payload: UnblockCharacterRequest, baseUrl?: string) {
+  return requestLegacyApi<SuccessResponse>(
+    "/social/unblock",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
+export function listModerationReports(userId: string, baseUrl?: string) {
+  return requestLegacyApi<ModerationReport[]>(
+    `/moderation/reports?userId=${encodeURIComponent(userId)}`,
+    undefined,
+    baseUrl,
+  );
+}
+
+export function createModerationReport(payload: CreateModerationReportRequest, baseUrl?: string) {
+  return requestLegacyApi<ModerationReport>(
+    "/moderation/reports",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
 export function getMoments(authorId?: string, baseUrl?: string) {
   const path = authorId ? `/moments?authorId=${encodeURIComponent(authorId)}` : "/moments";
   return requestLegacyApi<Moment[]>(path, undefined, baseUrl);
 }
 
 export function getMoment(id: string, baseUrl?: string) {
-  return requestLegacyApi<Moment | null>(`/moments/${id}`, undefined, baseUrl);
+  return requestLegacyApi<Moment>(`/moments/${id}`, undefined, baseUrl);
 }
 
 export function createUserMoment(payload: CreateUserMomentRequest, baseUrl?: string) {
@@ -548,7 +785,7 @@ export function getFeed(page = 1, limit = 20, baseUrl?: string) {
 }
 
 export function getFeedPost(id: string, baseUrl?: string) {
-  return requestLegacyApi<FeedPostWithComments | null>(`/feed/${id}`, undefined, baseUrl);
+  return requestLegacyApi<FeedPostWithComments>(`/feed/${id}`, undefined, baseUrl);
 }
 
 export function createFeedPost(payload: CreateFeedPostRequest, baseUrl?: string) {

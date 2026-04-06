@@ -210,6 +210,15 @@ export function DashboardPage() {
     return () => window.clearTimeout(timer);
   }, [successNotice]);
 
+  useEffect(() => {
+    setSuccessNotice("");
+    previewMutation.reset();
+    exportDiagnosticsMutation.reset();
+    createBackupMutation.reset();
+    restoreBackupMutation.reset();
+    schedulerRunMutation.reset();
+  }, [baseUrl]);
+
   return (
     <div className="space-y-6">
       <AppHeader
@@ -796,13 +805,51 @@ export function DashboardPage() {
 function formatDesktopDiagnostics(values: {
   platform: string;
   coreApiCommand: string;
+  diagnosticsStatus?: string;
+  coreApiCommandSource?: string;
   coreApiCommandResolved: boolean;
+  coreApiPortOccupied?: boolean;
+  bundledCoreApiExists?: boolean;
+  managedByDesktopShell?: boolean;
+  managedChildPid?: number | null;
+  desktopLogPath?: string;
+  lastCoreApiError?: string | null;
   linuxMissingPackages: string[];
   summary: string;
 }) {
   const packageStatus = values.linuxMissingPackages.length
     ? `missing=${values.linuxMissingPackages.join(", ")}`
     : "linux deps ok";
+  const sidecarStatus = formatCommandSource(values.coreApiCommandSource, values.bundledCoreApiExists);
+  const failureStatus =
+    values.diagnosticsStatus === "port-occupied"
+      ? "port occupied"
+      : values.diagnosticsStatus === "bundled-sidecar-missing"
+        ? "bundled sidecar missing"
+        : values.diagnosticsStatus === "spawn-failed"
+          ? "spawn failed"
+          : values.diagnosticsStatus === "health-probe-failed"
+            ? "health probe failed"
+            : values.diagnosticsStatus ?? "unknown";
+  const managedStatus = values.managedByDesktopShell
+    ? `managed${values.managedChildPid ? ` pid=${values.managedChildPid}` : ""}`
+    : "unmanaged";
+  const logPath = values.desktopLogPath ? ` · log=${values.desktopLogPath}` : "";
+  const lastError = values.lastCoreApiError ? ` · last-error=${values.lastCoreApiError}` : "";
 
-  return `${values.platform} · ${values.summary} · ${values.coreApiCommandResolved ? "command ok" : "command missing"} · ${packageStatus}`;
+  return `${values.platform} · ${values.summary} · ${values.coreApiCommandResolved ? "command ok" : "command missing"} · ${sidecarStatus} · ${failureStatus} · ${managedStatus} · ${packageStatus}${values.coreApiPortOccupied ? " · port-in-use" : ""}${logPath}${lastError}`;
+}
+
+function formatCommandSource(source?: string, bundledExists?: boolean) {
+  if (source === "bundled" || source === "bundled-sidecar") {
+    return "bundled sidecar";
+  }
+  if (source === "env" || source === "env-override") {
+    return "env override";
+  }
+  if (source === "path" || source === "path-lookup") {
+    return bundledExists ? "path lookup (bundled missing)" : "path lookup";
+  }
+
+  return bundledExists ? "sidecar ready" : "sidecar missing";
 }

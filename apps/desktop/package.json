@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "node ./scripts/run-tauri.mjs dev",
     "build": "node ./scripts/run-tauri.mjs build",
+    "build:windows:x64": "node ./scripts/run-tauri.mjs build --target x86_64-pc-windows-msvc",
+    "build:mac:aarch64": "node ./scripts/run-tauri.mjs build --target aarch64-apple-darwin",
+    "build:mac:x86_64": "node ./scripts/run-tauri.mjs build --target x86_64-apple-darwin",
     "typecheck": "node -e \"console.log('Desktop shell is managed by Rust/Tauri.')\"",
     "lint": "node -e \"console.log('Desktop shell linting is handled by cargo fmt/clippy when Rust is installed.')\""
   },

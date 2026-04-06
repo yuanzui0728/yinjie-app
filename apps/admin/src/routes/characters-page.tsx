@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { deleteCharacter, listCharacters, type Character } from "@yinjie/contracts";
@@ -35,6 +36,10 @@ export function CharactersPage() {
   });
 
   const deletingCharacterId = deleteMutation.isPending ? deleteMutation.variables : null;
+
+  useEffect(() => {
+    deleteMutation.reset();
+  }, [baseUrl]);
 
   return (
     <div className="space-y-6">

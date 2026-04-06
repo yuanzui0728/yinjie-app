@@ -1,0 +1,12 @@
+{
+  "appId": "com.yinjie.mobile",
+  "appName": "Yinjie",
+  "versionCode": 1,
+  "versionName": "1.0.0",
+  "allowCleartextTraffic": false,
+  "runtime": {
+    "environment": "production",
+    "apiBaseUrl": "",
+    "socketBaseUrl": ""
+  }
+}

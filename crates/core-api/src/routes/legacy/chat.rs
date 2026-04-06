@@ -16,7 +16,7 @@ use tokio::time::sleep;
 
 use crate::{
     app_state::AppState,
-    auth_support::require_session_user,
+    auth_support::{require_any_session_user, require_session_user},
     error::{ApiError, ApiResult},
     generation::generate_chat_reply_text,
     models::{
@@ -65,17 +65,31 @@ async fn get_conversations(
         .conversations
         .values()
         .filter(|conversation| conversation.user_id == query.user_id)
+        .filter(|conversation| {
+            conversation.r#type != "direct"
+                || !conversation
+                    .participants
+                    .iter()
+                    .any(|participant| is_character_blocked(&runtime, &query.user_id, participant))
+        })
         .map(|conversation| {
-            let messages = runtime
+            let mut messages = runtime
                 .messages
                 .get(&conversation.id)
                 .cloned()
                 .unwrap_or_default();
-            let last_message = messages.last().cloned();
+            messages.sort_by(|left, right| {
+                parse_timestamp(&left.created_at).cmp(&parse_timestamp(&right.created_at))
+            });
+            let last_message = messages
+                .iter()
+                .max_by_key(|message| parse_timestamp(&message.created_at))
+                .cloned();
             let unread_count = messages
                 .iter()
                 .filter(|message| {
                     message.sender_type == "character"
+                        && message.r#type != "system"
                         && match conversation.last_read_at.as_ref() {
                             Some(last_read) => {
                                 parse_timestamp(&message.created_at) > parse_timestamp(last_read)
@@ -120,18 +134,22 @@ async fn get_or_create_conversation(
         return Ok(Json(existing.clone()));
     }
 
-    let title = runtime
+    let character = runtime
         .characters
         .get(&payload.character_id)
-        .map(|character| character.name.clone())
-        .unwrap_or_else(|| payload.character_id.clone());
+        .cloned()
+        .ok_or_else(|| ApiError::not_found("Character not found"))?;
+    if is_character_blocked(&runtime, &payload.user_id, &payload.character_id) {
+        return Err(ApiError::conflict(format!("{} is blocked", character.name)));
+    }
+    let title = character.name.clone();
 
     let conversation = ConversationRecord {
         id: conversation_id.clone(),
         user_id: payload.user_id,
         r#type: "direct".into(),
         title,
-        participants: vec![payload.character_id],
+        participants: vec![character.id],
         messages: Vec::new(),
         created_at: now_token(),
         updated_at: now_token(),
@@ -159,7 +177,18 @@ async fn get_conversation_messages(
         .get(&id)
         .cloned()
         .ok_or_else(|| ApiError::not_found(format!("Conversation {} not found", id)))?;
-    let messages = runtime.messages.get(&id).cloned().unwrap_or_default();
+    let mut messages = runtime.messages.get(&id).cloned().unwrap_or_default();
+    if conversation.r#type == "direct"
+        && conversation
+            .participants
+            .iter()
+            .any(|participant| is_character_blocked(&runtime, &conversation.user_id, participant))
+    {
+        return Err(ApiError::conflict("conversation participant is blocked"));
+    }
+    messages.sort_by(|left, right| {
+        parse_timestamp(&left.created_at).cmp(&parse_timestamp(&right.created_at))
+    });
     drop(runtime);
     require_session_user(&headers, &state, &conversation.user_id)?;
     Ok(Json(messages))
@@ -187,7 +216,6 @@ async fn mark_conversation_read(
             .ok_or_else(|| ApiError::not_found(format!("Conversation {} not found", id)))?;
 
         conversation.last_read_at = Some(now_token());
-        conversation.updated_at = now_token();
     }
     state.request_persist("chat-mark-read");
 
@@ -199,14 +227,35 @@ async fn create_group(
     headers: HeaderMap,
     Json(payload): Json<CreateGroupPayload>,
 ) -> ApiResult<Json<GroupRecord>> {
+    let name = payload.name.trim();
+    if name.is_empty() {
+        return Err(ApiError::bad_request("group name is required"));
+    }
     if payload.creator_type == "user" {
         require_session_user(&headers, &state, &payload.creator_id)?;
     }
     let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+    let (creator_name, creator_avatar) = match payload.creator_type.as_str() {
+        "user" => {
+            let user = runtime
+                .users
+                .get(&payload.creator_id)
+                .ok_or_else(|| ApiError::not_found("Creator not found"))?;
+            (Some(user.username.clone()), user.avatar.clone())
+        }
+        "character" => {
+            let character = runtime
+                .characters
+                .get(&payload.creator_id)
+                .ok_or_else(|| ApiError::not_found("Creator not found"))?;
+            (Some(character.name.clone()), Some(character.avatar.clone()))
+        }
+        _ => return Err(ApiError::bad_request("unsupported creator type")),
+    };
     let group_id = format!("group_{}", now_token());
     let group = GroupRecord {
         id: group_id.clone(),
-        name: payload.name,
+        name: name.into(),
         avatar: None,
         creator_id: payload.creator_id.clone(),
         creator_type: payload.creator_type.clone(),
@@ -218,23 +267,34 @@ async fn create_group(
     let mut members = vec![GroupMemberRecord {
         id: format!("member_{}", now_token()),
         group_id: group_id.clone(),
-        member_id: payload.creator_id,
-        member_type: payload.creator_type,
-        member_name: None,
-        member_avatar: None,
+        member_id: payload.creator_id.clone(),
+        member_type: payload.creator_type.clone(),
+        member_name: creator_name,
+        member_avatar: creator_avatar,
         role: "owner".into(),
         joined_at: now_token(),
     }];
 
+    let mut seen_member_ids = members
+        .iter()
+        .map(|member| member.member_id.clone())
+        .collect::<std::collections::HashSet<_>>();
     for member_id in payload.member_ids {
-        let character = runtime.characters.get(&member_id).cloned();
+        if !seen_member_ids.insert(member_id.clone()) {
+            continue;
+        }
+        let character = runtime
+            .characters
+            .get(&member_id)
+            .cloned()
+            .ok_or_else(|| ApiError::not_found(format!("Character {} not found", member_id)))?;
         members.push(GroupMemberRecord {
             id: format!("member_{}", now_token()),
             group_id: group_id.clone(),
             member_id,
             member_type: "character".into(),
-            member_name: character.as_ref().map(|item| item.name.clone()),
-            member_avatar: character.as_ref().map(|item| item.avatar.clone()),
+            member_name: Some(character.name),
+            member_avatar: Some(character.avatar),
             role: "member".into(),
             joined_at: now_token(),
         });
@@ -253,16 +313,15 @@ async fn get_group(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> ApiResult<Json<GroupRecord>> {
-    let runtime = state.runtime.read().expect("runtime lock poisoned");
-    let group = runtime
-        .groups
-        .get(&id)
-        .cloned()
-        .ok_or_else(|| ApiError::not_found(format!("Group {} not found", id)))?;
-    drop(runtime);
-    if group.creator_type == "user" {
-        require_session_user(&headers, &state, &group.creator_id)?;
-    }
+    let group = {
+        let runtime = state.runtime.read().expect("runtime lock poisoned");
+        runtime
+            .groups
+            .get(&id)
+            .cloned()
+            .ok_or_else(|| ApiError::not_found(format!("Group {} not found", id)))?
+    };
+    ensure_group_user_membership(&headers, &state, &id)?;
 
     Ok(Json(group))
 }
@@ -272,17 +331,16 @@ async fn get_group_members(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> ApiResult<Json<Vec<GroupMemberRecord>>> {
-    let runtime = state.runtime.read().expect("runtime lock poisoned");
-    let group = runtime
-        .groups
-        .get(&id)
-        .cloned()
-        .ok_or_else(|| ApiError::not_found(format!("Group {} not found", id)))?;
-    let members = runtime.group_members.get(&id).cloned().unwrap_or_default();
-    drop(runtime);
-    if group.creator_type == "user" {
-        require_session_user(&headers, &state, &group.creator_id)?;
-    }
+    let members = {
+        let runtime = state.runtime.read().expect("runtime lock poisoned");
+        runtime
+            .groups
+            .get(&id)
+            .cloned()
+            .ok_or_else(|| ApiError::not_found(format!("Group {} not found", id)))?;
+        runtime.group_members.get(&id).cloned().unwrap_or_default()
+    };
+    ensure_group_user_membership(&headers, &state, &id)?;
     Ok(Json(members))
 }
 
@@ -292,6 +350,10 @@ async fn add_group_member(
     headers: HeaderMap,
     Json(payload): Json<AddGroupMemberPayload>,
 ) -> ApiResult<Json<GroupMemberRecord>> {
+    let _provided_member_profile = (
+        payload.member_name.as_deref().map(str::trim),
+        payload.member_avatar.as_deref(),
+    );
     let group = {
         let runtime = state.runtime.read().expect("runtime lock poisoned");
         runtime
@@ -300,16 +362,31 @@ async fn add_group_member(
             .cloned()
             .ok_or_else(|| ApiError::not_found(format!("Group {} not found", id)))?
     };
-    if group.creator_type == "user" {
-        require_session_user(&headers, &state, &group.creator_id)?;
-    }
+    ensure_group_owner_access(&headers, &state, &group)?;
     let member = {
         let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+        let (member_name, member_avatar) = match payload.member_type.as_str() {
+            "user" => {
+                let user = runtime
+                    .users
+                    .get(&payload.member_id)
+                    .ok_or_else(|| ApiError::not_found("Group member not found"))?;
+                (Some(user.username.clone()), user.avatar.clone())
+            }
+            "character" => {
+                let character = runtime
+                    .characters
+                    .get(&payload.member_id)
+                    .ok_or_else(|| ApiError::not_found("Group member not found"))?;
+                (Some(character.name.clone()), Some(character.avatar.clone()))
+            }
+            _ => return Err(ApiError::bad_request("unsupported member type")),
+        };
         let members = runtime.group_members.entry(id.clone()).or_default();
 
         if let Some(existing) = members
             .iter()
-            .find(|member| member.member_id == payload.member_id)
+            .find(|member| member.member_id == payload.member_id && member.member_type == payload.member_type)
         {
             return Ok(Json(existing.clone()));
         }
@@ -319,8 +396,8 @@ async fn add_group_member(
             group_id: id,
             member_id: payload.member_id,
             member_type: payload.member_type,
-            member_name: Some(payload.member_name),
-            member_avatar: payload.member_avatar,
+            member_name,
+            member_avatar,
             role: "member".into(),
             joined_at: now_token(),
         };
@@ -338,20 +415,19 @@ async fn get_group_messages(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> ApiResult<Json<Vec<GroupMessageRecord>>> {
-    let runtime = state.runtime.read().expect("runtime lock poisoned");
-    let group = runtime
-        .groups
-        .get(&id)
-        .cloned()
-        .ok_or_else(|| ApiError::not_found(format!("Group {} not found", id)))?;
-    let mut messages = runtime.group_messages.get(&id).cloned().unwrap_or_default();
+    let mut messages = {
+        let runtime = state.runtime.read().expect("runtime lock poisoned");
+        runtime
+            .groups
+            .get(&id)
+            .cloned()
+            .ok_or_else(|| ApiError::not_found(format!("Group {} not found", id)))?;
+        runtime.group_messages.get(&id).cloned().unwrap_or_default()
+    };
+    ensure_group_user_membership(&headers, &state, &id)?;
     messages.sort_by(|left, right| {
         parse_timestamp(&right.created_at).cmp(&parse_timestamp(&left.created_at))
     });
-    drop(runtime);
-    if group.creator_type == "user" {
-        require_session_user(&headers, &state, &group.creator_id)?;
-    }
     Ok(Json(messages))
 }
 
@@ -361,14 +437,61 @@ async fn send_group_message(
     headers: HeaderMap,
     Json(payload): Json<SendGroupMessagePayload>,
 ) -> ApiResult<Json<GroupMessageRecord>> {
+    let _provided_sender_profile = (
+        payload.sender_name.as_deref().map(str::trim),
+        payload.sender_avatar.as_deref(),
+    );
+    let text = payload.text.trim().to_string();
+    if text.is_empty() {
+        return Err(ApiError::bad_request("group message text is required"));
+    }
     let should_trigger_ai_replies = payload.sender_type == "user";
-    let trigger_sender_name = payload.sender_name.clone();
-    let trigger_text = payload.text.clone();
+    let trigger_text = text.clone();
     if payload.sender_type == "user" {
         require_session_user(&headers, &state, &payload.sender_id)?;
     }
+    {
+        let runtime = state.runtime.read().expect("runtime lock poisoned");
+        let group = runtime
+            .groups
+            .get(&id)
+            .ok_or_else(|| ApiError::not_found(format!("Group {} not found", id)))?;
+
+        let sender_in_group = runtime
+            .group_members
+            .get(&id)
+            .is_some_and(|members| {
+                members.iter().any(|member| {
+                    member.member_id == payload.sender_id && member.member_type == payload.sender_type
+                })
+            });
+
+        if !sender_in_group {
+            return Err(ApiError::unauthorized(format!(
+                "{} is not a member of group {}",
+                payload.sender_id, group.id
+            )));
+        }
+    }
     let message = {
         let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+        let (sender_name, sender_avatar) = match payload.sender_type.as_str() {
+            "user" => {
+                let user = runtime
+                    .users
+                    .get(&payload.sender_id)
+                    .ok_or_else(|| ApiError::not_found("Group sender not found"))?;
+                (user.username.clone(), user.avatar.clone())
+            }
+            "character" => {
+                let character = runtime
+                    .characters
+                    .get(&payload.sender_id)
+                    .ok_or_else(|| ApiError::not_found("Group sender not found"))?;
+                (character.name.clone(), Some(character.avatar.clone()))
+            }
+            _ => return Err(ApiError::bad_request("unsupported sender type")),
+        };
         let messages = runtime.group_messages.entry(id.clone()).or_default();
 
         let message = GroupMessageRecord {
@@ -376,9 +499,9 @@ async fn send_group_message(
             group_id: id.clone(),
             sender_id: payload.sender_id,
             sender_type: payload.sender_type,
-            sender_name: payload.sender_name,
-            sender_avatar: payload.sender_avatar,
-            text: payload.text,
+            sender_name,
+            sender_avatar,
+            text,
             r#type: "text".into(),
             created_at: now_token(),
         };
@@ -389,7 +512,7 @@ async fn send_group_message(
 
     state.request_persist("chat-send-group-message");
     if should_trigger_ai_replies {
-        spawn_group_ai_replies(state.clone(), id, trigger_sender_name, trigger_text);
+        spawn_group_ai_replies(state.clone(), id, message.sender_name.clone(), trigger_text);
     }
     Ok(Json(message))
 }
@@ -421,6 +544,20 @@ fn spawn_group_ai_replies(
 
             {
                 let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+                let group_still_exists = runtime.groups.contains_key(&group_id);
+                let character_still_in_group = runtime
+                    .group_members
+                    .get(&group_id)
+                    .is_some_and(|members| {
+                        members.iter().any(|member| {
+                            member.member_id == plan.character.id && member.member_type == "character"
+                        })
+                    });
+
+                if !group_still_exists || !character_still_in_group {
+                    return;
+                }
+
                 let messages = runtime.group_messages.entry(group_id.clone()).or_default();
                 messages.push(GroupMessageRecord {
                     id: format!("group_message_{}", now_token()),
@@ -599,8 +736,49 @@ struct GroupReplyPlan {
     delay_ms: u64,
 }
 
+fn ensure_group_user_membership(headers: &HeaderMap, state: &AppState, group_id: &str) -> ApiResult<String> {
+    let user_id = require_any_session_user(headers, state)?;
+    let runtime = state.runtime.read().expect("runtime lock poisoned");
+    let is_member = runtime
+        .group_members
+        .get(group_id)
+        .is_some_and(|members| {
+            members
+                .iter()
+                .any(|member| member.member_type == "user" && member.member_id == user_id)
+        });
+
+    if !is_member {
+        return Err(ApiError::unauthorized(format!(
+            "{} is not a member of group {}",
+            user_id, group_id
+        )));
+    }
+
+    Ok(user_id)
+}
+
+fn ensure_group_owner_access(headers: &HeaderMap, state: &AppState, group: &GroupRecord) -> ApiResult<String> {
+    if group.creator_type != "user" {
+        return Err(ApiError::unauthorized("character-owned groups are read-only via legacy API"));
+    }
+
+    require_session_user(headers, state, &group.creator_id)
+}
+
 fn parse_timestamp(value: &str) -> u128 {
     value.parse::<u128>().unwrap_or_default()
+}
+
+fn is_character_blocked(
+    runtime: &crate::app_state::RuntimeState,
+    user_id: &str,
+    character_id: &str,
+) -> bool {
+    runtime
+        .blocked_characters
+        .values()
+        .any(|item| item.user_id == user_id && item.character_id == character_id)
 }
 
 fn now_token() -> String {

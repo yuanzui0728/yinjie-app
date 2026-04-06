@@ -91,6 +91,7 @@ export interface ProviderTestRequest {
   model: string;
   apiKey?: string;
   mode?: string;
+  apiStyle?: string;
 }
 
 export interface ProviderTestResult {
@@ -105,6 +106,7 @@ export interface ProviderConfig {
   model: string;
   apiKey?: string;
   mode: string;
+  apiStyle: string;
 }
 
 export interface InferencePreviewRequest {

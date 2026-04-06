@@ -29,6 +29,8 @@ use crate::app_state::AppState;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let _ = dotenvy::dotenv();
+
     let port = std::env::var("YINJIE_CORE_API_PORT")
         .ok()
         .and_then(|value| value.parse::<u16>().ok())

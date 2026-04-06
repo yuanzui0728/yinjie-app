@@ -1,0 +1,21 @@
+{
+  "id": "group-intent",
+  "title": "群聊升级判断集",
+  "scope": "generation",
+  "targetType": "turn",
+  "description": "覆盖应升级、不应升级与多领域协作的群聊升级判断评测。",
+  "caseIds": [
+    "group-intent-upgrade-multi-domain",
+    "group-intent-no-upgrade-single-domain"
+  ],
+  "rubricIds": [
+    "context-fit-v1",
+    "anti-assistant-v1"
+  ],
+  "defaultJudgeConfig": {
+    "judgeModel": "fixed-judge-model",
+    "strategy": "single"
+  },
+  "owner": "codex",
+  "version": "v1"
+}

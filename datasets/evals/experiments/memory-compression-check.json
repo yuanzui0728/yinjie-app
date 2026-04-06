@@ -1,0 +1,11 @@
+{
+  "id": "memory-compression-check",
+  "title": "Memory Compression Check",
+  "description": "Run the memory summary dataset with compressed memory strategy to evaluate retention under tighter context.",
+  "datasetId": "memory-summary",
+  "mode": "single",
+  "experimentLabel": "memory-compression-check",
+  "candidate": {
+    "memoryPolicyVariant": "compressed"
+  }
+}

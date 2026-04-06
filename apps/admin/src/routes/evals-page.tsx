@@ -92,7 +92,7 @@ type EvalsPreset = {
 export function EvalsPage() {
   const baseUrl = import.meta.env.VITE_CORE_API_BASE_URL;
   const queryClient = useQueryClient();
-  const persistedState = readInitialEvalsState();
+  const persistedState = readInitialEvalsState(baseUrl);
   const [compactView, setCompactView] = useState(persistedState.compactView);
   const [shareViewName, setShareViewName] = useState(persistedState.shareViewName);
   const [compareFiltersExpanded, setCompareFiltersExpanded] = useState(persistedState.compareFiltersExpanded);
@@ -135,7 +135,7 @@ export function EvalsPage() {
   function persistSavedPresets(nextPresets: EvalsPreset[]) {
     setSavedPresets(nextPresets);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(EVALS_PRESETS_KEY, JSON.stringify(nextPresets));
+      window.localStorage.setItem(getEvalStorageKey(EVALS_PRESETS_KEY, baseUrl), JSON.stringify(nextPresets));
     }
   }
 
@@ -388,6 +388,14 @@ export function EvalsPage() {
     return () => window.clearTimeout(timer);
   }, [successNotice]);
 
+  useEffect(() => {
+    setSuccessNotice("");
+    runDatasetMutation.reset();
+    runPairwiseMutation.reset();
+    runExperimentPresetMutation.reset();
+    updateReportDecisionMutation.reset();
+  }, [baseUrl]);
+
   const selectedRunTraceIds = new Set((runDetailQuery.data?.caseResults ?? []).flatMap((caseResult) => caseResult.traceIds));
   const compareTraceIds = new Set((compareQuery.data?.caseComparisons ?? []).flatMap((comparison) => [
     ...comparison.baselineTraceIds,
@@ -559,7 +567,7 @@ export function EvalsPage() {
       return;
     }
     try {
-      const raw = window.localStorage.getItem(EVALS_PRESETS_KEY);
+      const raw = window.localStorage.getItem(getEvalStorageKey(EVALS_PRESETS_KEY, baseUrl));
       if (!raw) {
         setSavedPresets([]);
         return;
@@ -568,7 +576,7 @@ export function EvalsPage() {
     } catch {
       setSavedPresets([]);
     }
-  }, []);
+  }, [baseUrl]);
 
   useEffect(() => {
     if (recentRuns.length >= 2 && !baselineRunId && !candidateRunId) {
@@ -594,7 +602,7 @@ export function EvalsPage() {
       return;
     }
     window.localStorage.setItem(
-      EVALS_STATE_KEY,
+      getEvalStorageKey(EVALS_STATE_KEY, baseUrl),
       JSON.stringify({
         traceSource,
         compactView,
@@ -626,6 +634,7 @@ export function EvalsPage() {
       }),
     );
   }, [
+    baseUrl,
     baselineRunId,
     candidateRunId,
     compactView,
@@ -654,6 +663,49 @@ export function EvalsPage() {
     traceSource,
     traceStatus,
   ]);
+
+  useEffect(() => {
+    if (selectedReportId && !experimentReports.some((report) => report.id === selectedReportId)) {
+      setSelectedReportId(null);
+    }
+  }, [experimentReports, selectedReportId]);
+
+  useEffect(() => {
+    if (selectedRunId && !allRuns.some((run) => run.id === selectedRunId)) {
+      setSelectedRunId(null);
+    }
+    if (baselineRunId && !allRuns.some((run) => run.id === baselineRunId)) {
+      setBaselineRunId("");
+    }
+    if (candidateRunId && !allRuns.some((run) => run.id === candidateRunId)) {
+      setCandidateRunId("");
+    }
+  }, [allRuns, baselineRunId, candidateRunId, selectedRunId]);
+
+  useEffect(() => {
+    if (selectedDatasetId && !datasetList.some((dataset) => dataset.id === selectedDatasetId)) {
+      setSelectedDatasetId(null);
+    }
+  }, [datasetList, selectedDatasetId]);
+
+  useEffect(() => {
+    if (selectedTraceId && !tracePool.some((trace) => trace.id === selectedTraceId)) {
+      setSelectedTraceId(null);
+    }
+
+    setFocusedTraceIds((current) => current.filter((traceId) => tracePool.some((trace) => trace.id === traceId)));
+  }, [selectedTraceId, tracePool]);
+
+  useEffect(() => {
+    if (focusedCaseId) {
+      const caseExists =
+        availableTraceCaseIds.includes(focusedCaseId) ||
+        visibleComparisons.some((comparison) => comparison.caseId === focusedCaseId);
+      if (!caseExists) {
+        setFocusedCaseId(null);
+      }
+    }
+  }, [availableTraceCaseIds, focusedCaseId, visibleComparisons]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -958,6 +1010,11 @@ export function EvalsPage() {
     setTraceFailureTagFilter("");
     setFocusedCaseId(null);
     setFocusedTraceIds([]);
+    setPairwiseProviderOverride("");
+    setPairwiseJudgeModelOverride("");
+    setPairwisePromptVariant("warmer");
+    setPairwiseMemoryPolicyVariant("default");
+    setPresetName("");
   }
 
   return (
@@ -2461,7 +2518,7 @@ export function EvalsPage() {
   );
 }
 
-function readInitialEvalsState(): EvalsViewState {
+function readInitialEvalsState(baseUrl: string): EvalsViewState {
   const fallback: EvalsViewState = {
     compactView: false,
     shareViewName: "",
@@ -2497,7 +2554,7 @@ function readInitialEvalsState(): EvalsViewState {
 
   let persisted = fallback;
   try {
-    const raw = window.localStorage.getItem(EVALS_STATE_KEY);
+    const raw = window.localStorage.getItem(getEvalStorageKey(EVALS_STATE_KEY, baseUrl));
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<EvalsViewState>;
       persisted = {
@@ -2579,6 +2636,10 @@ function readInitialEvalsState(): EvalsViewState {
     focusedCaseId: params.get("case") ?? persisted.focusedCaseId,
     focusedTraceIds: persisted.focusedTraceIds,
   };
+}
+
+function getEvalStorageKey(prefix: string, baseUrl: string) {
+  return `${prefix}:${baseUrl || "default"}`;
 }
 
 function setQueryParam(params: URLSearchParams, key: string, value: string | null) {

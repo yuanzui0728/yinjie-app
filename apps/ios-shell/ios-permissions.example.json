@@ -1,0 +1,8 @@
+{
+  "NSCameraUsageDescription": "用于拍摄头像或动态图片。",
+  "NSPhotoLibraryUsageDescription": "用于从相册选择头像或动态图片。",
+  "NSPhotoLibraryAddUsageDescription": "用于将导出图片保存到相册。",
+  "NSMicrophoneUsageDescription": "用于语音输入或语音互动功能。",
+  "NSUserTrackingUsageDescription": "隐界当前不用于跨应用追踪，如果后续启用广告相关能力，需要重新评估。",
+  "PushNotificationsPurpose": "用于新消息、好友申请和安全处理结果通知。"
+}

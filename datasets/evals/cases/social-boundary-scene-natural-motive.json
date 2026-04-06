@@ -1,0 +1,20 @@
+{
+  "id": "social-boundary-scene-natural-motive",
+  "datasetId": "social-boundary",
+  "targetType": "turn",
+  "title": "场景结识的自然动机",
+  "description": "通过特定场景产生好友请求，应该说明结识缘由，但不能显得设计感过重。",
+  "tags": ["social", "trigger-scene", "friend-request"],
+  "priority": "p1",
+  "input": {
+    "characterId": "char_lawyer",
+    "triggerScene": "共同参加一场线下分享会"
+  },
+  "expectations": {
+    "hardRules": ["40 字以内", "提到结识场景", "包含轻微连接动机"],
+    "judgeRubrics": ["social-boundary-v1", "context-fit-v1"],
+    "forbiddenOutcomes": ["推销感", "油腻", "过于熟络"]
+  },
+  "createdAt": "2026-04-04",
+  "updatedAt": "2026-04-04"
+}

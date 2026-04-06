@@ -1,0 +1,5 @@
+{
+  "id": "social-boundary-v1",
+  "label": "Social Boundary",
+  "description": "输出是否符合当前关系阶段的边界感，不越界亲密，不官腔，不冷硬失真。"
+}

@@ -1,20 +1,22 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { AuthSession } from "@yinjie/contracts";
+import { createSessionStateStorage } from "../runtime/session-storage";
 
 type SessionState = {
   token: string | null;
   userId: string | null;
   username: string | null;
   onboardingCompleted: boolean;
-  desktopSetupCompleted: boolean;
-  desktopProviderConfigured: boolean;
+  environmentSetupCompleted: boolean;
+  providerReady: boolean;
+  runtimeMode: "self-hosted" | "remote";
   avatar: string;
   signature: string;
   hydrateSession: (session: AuthSession) => void;
   updateProfile: (input: { username?: string; avatar?: string; signature?: string }) => void;
   completeOnboarding: () => void;
-  completeDesktopSetup: (input?: { providerConfigured?: boolean }) => void;
+  completeEnvironmentSetup: (input?: { providerReady?: boolean; runtimeMode?: "self-hosted" | "remote" }) => void;
   logout: () => void;
 };
 
@@ -28,8 +30,9 @@ export const useSessionStore = create<SessionState>()(
       userId: null,
       username: null,
       onboardingCompleted: false,
-      desktopSetupCompleted: false,
-      desktopProviderConfigured: false,
+      environmentSetupCompleted: false,
+      providerReady: false,
+      runtimeMode: "remote",
       avatar: defaultAvatar,
       signature: defaultSignature,
       hydrateSession: (session) =>
@@ -52,10 +55,11 @@ export const useSessionStore = create<SessionState>()(
           signature: input.signature ?? state.signature,
         })),
       completeOnboarding: () => set({ onboardingCompleted: true }),
-      completeDesktopSetup: (input) =>
+      completeEnvironmentSetup: (input) =>
         set((state) => ({
-          desktopSetupCompleted: true,
-          desktopProviderConfigured: input?.providerConfigured ?? state.desktopProviderConfigured,
+          environmentSetupCompleted: true,
+          providerReady: input?.providerReady ?? state.providerReady,
+          runtimeMode: input?.runtimeMode ?? state.runtimeMode,
         })),
       logout: () =>
         set({
@@ -63,14 +67,16 @@ export const useSessionStore = create<SessionState>()(
           userId: null,
           username: null,
           onboardingCompleted: false,
-          desktopSetupCompleted: false,
-          desktopProviderConfigured: false,
+          environmentSetupCompleted: false,
+          providerReady: false,
+          runtimeMode: "remote",
           avatar: defaultAvatar,
           signature: defaultSignature,
         }),
     }),
     {
       name: "yinjie-app-session",
+      storage: createSessionStateStorage(),
     },
   ),
 );

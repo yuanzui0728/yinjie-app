@@ -1,0 +1,6 @@
+{
+  "apiBaseUrl": "https://api.example.yinjie.app",
+  "socketBaseUrl": "https://api.example.yinjie.app",
+  "environment": "production",
+  "publicAppName": "Yinjie"
+}

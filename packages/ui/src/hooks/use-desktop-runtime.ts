@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import {
   getDesktopCoreApiStatus,
@@ -74,6 +75,22 @@ export function useDesktopRuntime({
     mutationFn: restartDesktopCoreApi,
     onSuccess: invalidateRuntimeQueries,
   });
+
+  useEffect(() => {
+    if (!desktopAvailable) {
+      return;
+    }
+
+    probeMutation.reset();
+    startMutation.reset();
+    stopMutation.reset();
+    restartMutation.reset();
+  }, [
+    desktopAvailable,
+    desktopStatusQuery.data?.baseUrl,
+    desktopStatusQuery.data?.reachable,
+    runtimeContextQuery.data?.coreApiBaseUrl,
+  ]);
 
   return {
     desktopAvailable,

@@ -58,7 +58,7 @@ export function ProviderSetupForm({
   className,
 }: ProviderSetupFormProps) {
   return (
-    <section className={className ?? "rounded-[28px] border border-white/10 bg-white/5 p-5"}>
+    <section className={className ?? "rounded-[28px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.04))] p-5 shadow-[var(--shadow-section)]"}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-sm font-medium text-white">{title}</div>
@@ -84,7 +84,7 @@ export function ProviderSetupForm({
             value={draft.endpoint}
             onChange={(event) => onChange("endpoint", event.target.value)}
             disabled={disabled}
-            className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-2xl border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(15,23,42,0.6),rgba(15,23,42,0.5))] px-4 py-3 text-sm text-white outline-none disabled:cursor-not-allowed disabled:opacity-50"
             placeholder={endpointPlaceholder}
           />
         </label>
@@ -96,7 +96,7 @@ export function ProviderSetupForm({
               value={draft.mode}
               onChange={(event) => onChange("mode", event.target.value === "cloud" ? "cloud" : "local-compatible")}
               disabled={disabled}
-              className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-2xl border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(15,23,42,0.6),rgba(15,23,42,0.5))] px-4 py-3 text-sm text-white outline-none disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="local-compatible">local-compatible</option>
               <option value="cloud">cloud</option>
@@ -110,7 +110,7 @@ export function ProviderSetupForm({
               onChange={(event) => onChange("model", event.target.value)}
               disabled={disabled}
               list={availableModelsId}
-              className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-2xl border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(15,23,42,0.6),rgba(15,23,42,0.5))] px-4 py-3 text-sm text-white outline-none disabled:cursor-not-allowed disabled:opacity-50"
               placeholder={modelPlaceholder}
             />
             <datalist id={availableModelsId}>
@@ -128,7 +128,7 @@ export function ProviderSetupForm({
             onChange={(event) => onChange("apiKey", event.target.value)}
             disabled={disabled}
             type="password"
-            className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white outline-none disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-2xl border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(15,23,42,0.6),rgba(15,23,42,0.5))] px-4 py-3 text-sm text-white outline-none disabled:cursor-not-allowed disabled:opacity-50"
             placeholder={apiKeyPlaceholder}
           />
         </label>
@@ -156,14 +156,14 @@ export function ProviderSetupForm({
             type="button"
             disabled={disabled || probePending}
             onClick={onProbe}
-            className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {probeLabel}
           </button>
           <button
             type="submit"
             disabled={disabled || savePending}
-            className="rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full bg-[var(--brand-gradient)] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saveLabel}
           </button>

@@ -1,22 +1,26 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
-import { ArrowLeft, Users } from "lucide-react";
-import { getConversationMessages, getConversations, markConversationRead, type Message } from "@yinjie/contracts";
+import { ArrowLeft, OctagonAlert, Users } from "lucide-react";
+import { createModerationReport, getConversationMessages, getConversations, markConversationRead, type Message } from "@yinjie/contracts";
 import { Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { ChatComposer } from "../components/chat-composer";
 import { ChatMessageList } from "../components/chat-message-list";
 import { EmptyState } from "../components/empty-state";
+import { useScrollAnchor } from "../hooks/use-scroll-anchor";
+import { promptForSafetyReason } from "../lib/safety";
 import {
   emitChatMessage,
   joinConversationRoom,
+  onChatError,
   onChatMessage,
   onConversationUpdated,
   onTypingStart,
   onTypingStop,
 } from "../lib/socket";
 import { formatTimestamp } from "../lib/format";
+import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useSessionStore } from "../store/session-store";
 
 export function ChatRoomPage() {
@@ -25,22 +29,35 @@ export function ChatRoomPage() {
   const queryClient = useQueryClient();
   const userId = useSessionStore((state) => state.userId);
   const username = useSessionStore((state) => state.username);
+  const runtimeConfig = useAppRuntimeConfig();
+  const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [typingCharacterId, setTypingCharacterId] = useState<string | null>(null);
+  const [socketError, setSocketError] = useState<string | null>(null);
   const [conversationType, setConversationType] = useState<"direct" | "group">("direct");
   const [conversationTitle, setConversationTitle] = useState("对话");
   const [participants, setParticipants] = useState<string[]>([]);
+  const scrollAnchorRef = useScrollAnchor<HTMLDivElement>([messages.length, typingCharacterId, conversationId]);
 
   const messagesQuery = useQuery({
-    queryKey: ["app-conversation-messages", conversationId],
+    queryKey: ["app-conversation-messages", baseUrl, conversationId],
     queryFn: () => getConversationMessages(conversationId),
   });
   const conversationsQuery = useQuery({
-    queryKey: ["app-conversations", userId],
+    queryKey: ["app-conversations", baseUrl, userId],
     queryFn: () => getConversations(userId!),
     enabled: Boolean(userId),
   });
+
+  useEffect(() => {
+    setMessages([]);
+    setTypingCharacterId(null);
+    setSocketError(null);
+    setConversationType("direct");
+    setConversationTitle("对话");
+    setParticipants([]);
+  }, [baseUrl, conversationId]);
 
   useEffect(() => {
     setMessages(messagesQuery.data ?? []);
@@ -62,14 +79,18 @@ export function ChatRoomPage() {
       return;
     }
 
-    joinConversationRoom({ conversationId });
-    void markConversationRead(conversationId);
+    setSocketError(null);
+    joinConversationRoom({ conversationId, userId: userId ?? undefined });
+    void markConversationRead(conversationId).then(() => {
+      void queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl, userId] });
+    });
 
     const offMessage = onChatMessage((payload) => {
       if (payload.conversationId !== conversationId) {
         return;
       }
 
+      setSocketError(null);
       setMessages((current) => {
         const withoutPendingEcho =
           payload.senderType === "user" && payload.senderId === userId
@@ -81,19 +102,21 @@ export function ChatRoomPage() {
         }
         return [...withoutPendingEcho, payload];
       });
-      void queryClient.invalidateQueries({ queryKey: ["app-conversations", userId] });
+      void queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl, userId] });
     });
 
     const offTypingStart = onTypingStart((payload) => {
       if (payload.conversationId !== conversationId) {
         return;
       }
+      setSocketError(null);
       setTypingCharacterId(payload.characterId);
     });
     const offTypingStop = onTypingStop((payload) => {
       if (payload.conversationId !== conversationId) {
         return;
       }
+      setSocketError(null);
       setTypingCharacterId(null);
     });
     const offConversationUpdated = onConversationUpdated((payload) => {
@@ -101,10 +124,15 @@ export function ChatRoomPage() {
         return;
       }
 
+      setSocketError(null);
       setConversationType(payload.type);
       setConversationTitle(payload.title);
       setParticipants(payload.participants);
-      void queryClient.invalidateQueries({ queryKey: ["app-conversations", userId] });
+      void queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl, userId] });
+    });
+    const offError = onChatError((message) => {
+      setMessages((current) => current.filter((item) => !item.id.startsWith("local_")));
+      setSocketError(message);
     });
 
     return () => {
@@ -112,8 +140,9 @@ export function ChatRoomPage() {
       offTypingStart();
       offTypingStop();
       offConversationUpdated();
+      offError();
     };
-  }, [conversationId, queryClient, userId]);
+  }, [baseUrl, conversationId, queryClient, userId]);
 
   const sendMutation = useMutation({
     mutationFn: async () => {
@@ -122,10 +151,17 @@ export function ChatRoomPage() {
         return;
       }
 
-      const targetCharacterId =
-        messagesQuery.data?.find((item) => item.senderType === "character")?.senderId ??
-        participants[0] ??
-        "";
+      const targetCharacterId = resolveTargetCharacterId({
+        conversationId,
+        userId,
+        messages,
+        participants,
+      });
+
+      if (!targetCharacterId) {
+        setSocketError("当前会话目标未就绪，请稍后再试。");
+        return;
+      }
 
       emitChatMessage({
         conversationId,
@@ -134,6 +170,7 @@ export function ChatRoomPage() {
         userId,
       });
 
+      setSocketError(null);
       setMessages((current) => [
         ...current,
         {
@@ -150,6 +187,26 @@ export function ChatRoomPage() {
       setText("");
     },
   });
+  const reportMutation = useMutation({
+    mutationFn: async () => {
+      if (!userId || conversationType !== "direct" || participants.length === 0) {
+        return;
+      }
+
+      const reason = promptForSafetyReason(`举报 ${conversationTitle}`);
+      if (!reason) {
+        return;
+      }
+
+      return createModerationReport({
+        userId,
+        targetType: "character",
+        targetId: participants[0]!,
+        reason,
+        details: `conversation:${conversationId}`,
+      });
+    },
+  });
 
   const renderedMessages = useMemo(() => {
     const deduped = new Map<string, Message>();
@@ -161,7 +218,7 @@ export function ChatRoomPage() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="flex items-center gap-3 border-b border-[color:var(--border-subtle)] bg-[rgba(7,12,20,0.45)] px-4 py-4">
+      <header className="flex items-center gap-3 border-b border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(7,12,20,0.3),rgba(7,12,20,0.5))] px-5 py-4 backdrop-blur-xl">
         <Button onClick={() => navigate({ to: "/tabs/chat" })} variant="ghost" size="icon" className="text-[color:var(--text-secondary)]">
           <ArrowLeft size={18} />
         </Button>
@@ -177,12 +234,27 @@ export function ChatRoomPage() {
         <Link to="/tabs/contacts" className="text-xs text-[color:var(--brand-secondary)]">
           通讯录
         </Link>
+        {conversationType === "direct" && participants[0] ? (
+          <button
+            type="button"
+            onClick={() => reportMutation.mutate()}
+            className="text-xs text-[color:var(--brand-secondary)]"
+          >
+            <span className="inline-flex items-center gap-1">
+              <OctagonAlert size={12} />
+              举报
+            </span>
+          </button>
+        ) : null}
       </header>
 
-      <div className="flex-1 space-y-3 overflow-auto px-4 py-4">
+      <div ref={scrollAnchorRef} className="flex-1 space-y-4 overflow-auto px-5 py-5">
         {messagesQuery.isLoading ? <LoadingBlock label="正在读取对话..." /> : null}
 
         {messagesQuery.isError && messagesQuery.error instanceof Error ? <ErrorBlock message={messagesQuery.error.message} /> : null}
+        {socketError ? <ErrorBlock message={socketError} /> : null}
+        {reportMutation.isError && reportMutation.error instanceof Error ? <ErrorBlock message={reportMutation.error.message} /> : null}
+        {reportMutation.isSuccess ? <InlineNotice tone="success">举报已提交，后续可以在资料页查看安全记录。</InlineNotice> : null}
 
         <ChatMessageList
           messages={renderedMessages}
@@ -195,9 +267,9 @@ export function ChatRoomPage() {
         />
 
         {typingCharacterId ? (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 pt-1">
             <AvatarChip name={typingCharacterId} size="sm" />
-            <div className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface-secondary)] px-4 py-2 text-xs text-[color:var(--text-secondary)]">
+            <div className="rounded-full border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.065),rgba(255,255,255,0.04))] px-4 py-2 text-xs text-[color:var(--text-secondary)] shadow-[var(--shadow-soft)]">
               对方正在输入...
             </div>
           </div>
@@ -210,7 +282,12 @@ export function ChatRoomPage() {
         placeholder="发消息"
         pending={sendMutation.isPending}
         error={sendMutation.error instanceof Error ? sendMutation.error.message : null}
-        onChange={setText}
+        onChange={(value) => {
+          if (socketError) {
+            setSocketError(null);
+          }
+          setText(value);
+        }}
         onSubmit={() => void sendMutation.mutateAsync()}
       />
     </div>
@@ -231,4 +308,31 @@ function removePendingUserEcho(current: Message[], incoming: Message) {
   }
 
   return current.filter((_, index) => index !== pendingIndex);
+}
+
+function resolveTargetCharacterId(input: {
+  conversationId: string;
+  userId: string;
+  messages: Message[];
+  participants: string[];
+}) {
+  const fromMessages = input.messages.find((item) => item.senderType === "character")?.senderId;
+  if (fromMessages) {
+    return fromMessages;
+  }
+
+  const fromParticipants = input.participants[0];
+  if (fromParticipants) {
+    return fromParticipants;
+  }
+
+  const directPrefix = `${input.userId}_`;
+  if (input.conversationId.startsWith(directPrefix)) {
+    const inferred = input.conversationId.slice(directPrefix.length).trim();
+    if (inferred) {
+      return inferred;
+    }
+  }
+
+  return "";
 }

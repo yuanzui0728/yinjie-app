@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
@@ -8,6 +8,8 @@ import { AvatarChip } from "../components/avatar-chip";
 import { ChatComposer } from "../components/chat-composer";
 import { ChatMessageList } from "../components/chat-message-list";
 import { EmptyState } from "../components/empty-state";
+import { useScrollAnchor } from "../hooks/use-scroll-anchor";
+import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useSessionStore } from "../store/session-store";
 
 export function GroupChatPage() {
@@ -15,38 +17,41 @@ export function GroupChatPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const userId = useSessionStore((state) => state.userId);
-  const username = useSessionStore((state) => state.username);
-  const avatar = useSessionStore((state) => state.avatar);
+  const runtimeConfig = useAppRuntimeConfig();
+  const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
   const [text, setText] = useState("");
 
   const groupQuery = useQuery({
-    queryKey: ["app-group", groupId],
+    queryKey: ["app-group", baseUrl, groupId],
     queryFn: () => getGroup(groupId),
   });
 
   const membersQuery = useQuery({
-    queryKey: ["app-group-members", groupId],
+    queryKey: ["app-group-members", baseUrl, groupId],
     queryFn: () => getGroupMembers(groupId),
   });
 
   const messagesQuery = useQuery({
-    queryKey: ["app-group-messages", groupId],
+    queryKey: ["app-group-messages", baseUrl, groupId],
     queryFn: () => getGroupMessages(groupId),
     refetchInterval: 3_000,
   });
+  const scrollAnchorRef = useScrollAnchor<HTMLDivElement>([groupId, messagesQuery.data?.length ?? 0]);
+
+  useEffect(() => {
+    setText("");
+  }, [baseUrl, groupId]);
 
   const sendMutation = useMutation({
     mutationFn: () =>
       sendGroupMessage(groupId, {
         senderId: userId!,
         senderType: "user",
-        senderName: username ?? "我",
-        senderAvatar: avatar,
         text: text.trim(),
       }),
     onSuccess: async () => {
       setText("");
-      await queryClient.invalidateQueries({ queryKey: ["app-group-messages", groupId] });
+      await queryClient.invalidateQueries({ queryKey: ["app-group-messages", baseUrl, groupId] });
     },
   });
   const orderedMessages = useMemo(
@@ -58,7 +63,7 @@ export function GroupChatPage() {
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="flex items-center gap-3 border-b border-[color:var(--border-subtle)] bg-[rgba(7,12,20,0.45)] px-4 py-4">
+      <header className="flex items-center gap-3 border-b border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(7,12,20,0.3),rgba(7,12,20,0.5))] px-5 py-4 backdrop-blur-xl">
         <Button
           onClick={() => navigate({ to: "/tabs/chat" })}
           variant="ghost"
@@ -76,7 +81,7 @@ export function GroupChatPage() {
         </div>
       </header>
 
-      <div className="border-b border-[color:var(--border-subtle)] px-4 py-3">
+      <div className="border-b border-[color:var(--border-faint)] px-5 py-3">
         {groupQuery.isError && groupQuery.error instanceof Error ? <ErrorBlock className="mb-3" message={groupQuery.error.message} /> : null}
         {membersQuery.isError && membersQuery.error instanceof Error ? <ErrorBlock className="mb-3" message={membersQuery.error.message} /> : null}
         <div className="flex gap-2 overflow-auto">
@@ -84,7 +89,7 @@ export function GroupChatPage() {
             <InlineNotice className="rounded-full px-3 py-2 text-xs" tone="muted">正在读取成员...</InlineNotice>
           ) : null}
           {(membersQuery.data ?? []).map((member) => (
-            <div key={member.id} className="flex min-w-fit items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface-secondary)] px-3 py-2">
+            <div key={member.id} className="flex min-w-fit items-center gap-2 rounded-full border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.065),rgba(255,255,255,0.04))] px-3 py-2 shadow-[var(--shadow-soft)]">
               <AvatarChip name={member.memberName ?? member.memberId} src={member.memberAvatar} size="sm" />
               <span className="text-xs text-[color:var(--text-secondary)]">{member.memberName ?? member.memberId}</span>
             </div>
@@ -92,7 +97,7 @@ export function GroupChatPage() {
         </div>
       </div>
 
-      <div className="flex-1 space-y-3 overflow-auto px-4 py-4">
+      <div ref={scrollAnchorRef} className="flex-1 space-y-4 overflow-auto px-5 py-5">
         {messagesQuery.isLoading ? <LoadingBlock label="正在读取群消息..." /> : null}
 
         {messagesQuery.isError && messagesQuery.error instanceof Error ? <ErrorBlock message={messagesQuery.error.message} /> : null}

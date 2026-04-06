@@ -1,0 +1,6 @@
+{
+  "id": "concise",
+  "label": "concise",
+  "description": "Prefer shorter, denser replies with less padding.",
+  "instruction": "Keep replies shorter and denser. Prefer one or two compact sentences."
+}

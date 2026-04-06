@@ -1,5 +1,55 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProviderDefaultsFile {
+    endpoint: String,
+    model: String,
+    api_key: String,
+    mode: String,
+    api_style: String,
+}
+
+fn provider_defaults() -> ProviderDefaultsFile {
+    let mut defaults: ProviderDefaultsFile =
+        serde_json::from_str(include_str!("../../../config/provider-defaults.json"))
+            .expect("invalid provider defaults");
+
+    if let Ok(value) = std::env::var("YINJIE_PROVIDER_ENDPOINT") {
+        let normalized = value.trim();
+        if !normalized.is_empty() {
+            defaults.endpoint = normalized.to_string();
+        }
+    }
+
+    if let Ok(value) = std::env::var("YINJIE_PROVIDER_MODEL") {
+        let normalized = value.trim();
+        if !normalized.is_empty() {
+            defaults.model = normalized.to_string();
+        }
+    }
+
+    if let Ok(value) = std::env::var("YINJIE_PROVIDER_API_KEY") {
+        defaults.api_key = value.trim().to_string();
+    }
+
+    if let Ok(value) = std::env::var("YINJIE_PROVIDER_MODE") {
+        let normalized = value.trim();
+        if !normalized.is_empty() {
+            defaults.mode = normalized.to_string();
+        }
+    }
+
+    if let Ok(value) = std::env::var("YINJIE_PROVIDER_API_STYLE") {
+        let normalized = value.trim();
+        if !normalized.is_empty() {
+            defaults.api_style = normalized.to_string();
+        }
+    }
+
+    defaults
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserRecord {
@@ -15,6 +65,16 @@ pub struct UserRecord {
     pub created_at: String,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthSessionRecord {
+    pub token: String,
+    pub user_id: String,
+    pub created_at: String,
+    pub last_seen_at: String,
+    pub expires_at: String,
+}
+
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthSession {
@@ -22,6 +82,17 @@ pub struct AuthSession {
     pub user_id: String,
     pub username: String,
     pub onboarding_completed: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthSessionSummary {
+    pub session_id: String,
+    pub token_label: String,
+    pub created_at: String,
+    pub last_seen_at: String,
+    pub expires_at: String,
+    pub current: bool,
 }
 
 #[derive(Clone, Deserialize)]
@@ -64,15 +135,18 @@ pub struct ProviderConfigRecord {
     pub model: String,
     pub api_key: Option<String>,
     pub mode: String,
+    pub api_style: String,
 }
 
 impl Default for ProviderConfigRecord {
     fn default() -> Self {
+        let defaults = provider_defaults();
         Self {
-            endpoint: "http://127.0.0.1:11434/v1".into(),
-            model: "deepseek-chat".into(),
-            api_key: None,
-            mode: "local-compatible".into(),
+            endpoint: defaults.endpoint,
+            model: defaults.model,
+            api_key: Some(defaults.api_key),
+            mode: defaults.mode,
+            api_style: defaults.api_style,
         }
     }
 }
@@ -118,6 +192,7 @@ pub struct ProviderTestRequest {
     pub model: String,
     pub api_key: Option<String>,
     pub mode: Option<String>,
+    pub api_style: Option<String>,
 }
 
 #[derive(Clone, Serialize)]
@@ -136,6 +211,7 @@ pub struct UpdateProviderConfigRequest {
     pub model: String,
     pub api_key: Option<String>,
     pub mode: String,
+    pub api_style: Option<String>,
 }
 
 #[derive(Clone, Serialize)]
@@ -145,6 +221,7 @@ pub struct ProviderConfigResponse {
     pub model: String,
     pub api_key: Option<String>,
     pub mode: String,
+    pub api_style: String,
 }
 
 #[derive(Clone, Deserialize)]
@@ -321,14 +398,14 @@ pub struct CharacterRecord {
 impl CharacterRecord {
     pub fn from_patch(id: String, patch: CharacterPatch) -> Self {
         let name = patch.name.unwrap_or_else(|| "New Character".into());
-        let avatar = patch.avatar.unwrap_or_else(|| "avatar".into());
+        let avatar = patch.avatar.unwrap_or_default();
         let relationship = patch.relationship.unwrap_or_else(|| "friend".into());
         let expert_domains = patch.expert_domains.unwrap_or_default();
         let profile = patch.profile.unwrap_or_else(|| {
             PersonalityProfile::bootstrap(&id, &name, &relationship, &expert_domains)
         });
 
-        Self {
+        let mut record = Self {
             id,
             name,
             avatar,
@@ -351,7 +428,9 @@ impl CharacterRecord {
             ai_relationships: patch.ai_relationships,
             current_status: patch.current_status,
             current_activity: patch.current_activity,
-        }
+        };
+        record.synchronize_profile();
+        record
     }
 
     pub fn apply_patch(&mut self, patch: CharacterPatch) {
@@ -418,6 +497,14 @@ impl CharacterRecord {
         if let Some(current_activity) = patch.current_activity {
             self.current_activity = Some(current_activity);
         }
+        self.synchronize_profile();
+    }
+
+    fn synchronize_profile(&mut self) {
+        self.profile.character_id = self.id.clone();
+        self.profile.name = self.name.clone();
+        self.profile.relationship = self.relationship.clone();
+        self.profile.expert_domains = self.expert_domains.clone();
     }
 }
 
@@ -558,10 +645,58 @@ pub struct FriendListItemRecord {
     pub character: CharacterRecord,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockedCharacterRecord {
+    pub id: String,
+    pub user_id: String,
+    pub character_id: String,
+    pub reason: Option<String>,
+    pub created_at: String,
+}
+
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserScopedRequest {
     pub user_id: String,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BlockCharacterPayload {
+    pub user_id: String,
+    pub character_id: String,
+    pub reason: Option<String>,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UnblockCharacterPayload {
+    pub user_id: String,
+    pub character_id: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModerationReportRecord {
+    pub id: String,
+    pub user_id: String,
+    pub target_type: String,
+    pub target_id: String,
+    pub reason: String,
+    pub details: Option<String>,
+    pub status: String,
+    pub created_at: String,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateModerationReportPayload {
+    pub user_id: String,
+    pub target_type: String,
+    pub target_id: String,
+    pub reason: String,
+    pub details: Option<String>,
 }
 
 #[derive(Clone, Deserialize)]
@@ -684,7 +819,7 @@ pub struct GroupMemberRecord {
 pub struct AddGroupMemberPayload {
     pub member_id: String,
     pub member_type: String,
-    pub member_name: String,
+    pub member_name: Option<String>,
     pub member_avatar: Option<String>,
 }
 
@@ -707,7 +842,7 @@ pub struct GroupMessageRecord {
 pub struct SendGroupMessagePayload {
     pub sender_id: String,
     pub sender_type: String,
-    pub sender_name: String,
+    pub sender_name: Option<String>,
     pub sender_avatar: Option<String>,
     pub text: String,
 }
@@ -784,8 +919,8 @@ pub struct MomentRecord {
 #[serde(rename_all = "camelCase")]
 pub struct CreateUserMomentPayload {
     pub user_id: String,
-    pub author_name: String,
-    pub author_avatar: String,
+    pub author_name: Option<String>,
+    pub author_avatar: Option<String>,
     pub text: String,
 }
 
@@ -793,8 +928,8 @@ pub struct CreateUserMomentPayload {
 #[serde(rename_all = "camelCase")]
 pub struct CreateMomentCommentPayload {
     pub author_id: String,
-    pub author_name: String,
-    pub author_avatar: String,
+    pub author_name: Option<String>,
+    pub author_avatar: Option<String>,
     pub text: String,
 }
 
@@ -802,8 +937,8 @@ pub struct CreateMomentCommentPayload {
 #[serde(rename_all = "camelCase")]
 pub struct ToggleMomentLikePayload {
     pub author_id: String,
-    pub author_name: String,
-    pub author_avatar: String,
+    pub author_name: Option<String>,
+    pub author_avatar: Option<String>,
 }
 
 #[derive(Clone, Serialize)]
@@ -886,8 +1021,8 @@ pub struct FeedListResponse {
 #[serde(rename_all = "camelCase")]
 pub struct CreateFeedPostPayload {
     pub author_id: String,
-    pub author_name: String,
-    pub author_avatar: String,
+    pub author_name: Option<String>,
+    pub author_avatar: Option<String>,
     pub text: String,
 }
 
@@ -895,8 +1030,8 @@ pub struct CreateFeedPostPayload {
 #[serde(rename_all = "camelCase")]
 pub struct CreateFeedCommentPayload {
     pub author_id: String,
-    pub author_name: String,
-    pub author_avatar: String,
+    pub author_name: Option<String>,
+    pub author_avatar: Option<String>,
     pub text: String,
 }
 
@@ -917,6 +1052,8 @@ pub struct FeedQuery {
 #[serde(rename_all = "camelCase")]
 pub struct JoinConversationSocketPayload {
     pub conversation_id: String,
+    pub user_id: Option<String>,
+    pub token: Option<String>,
 }
 
 #[derive(Clone, Deserialize)]
@@ -926,11 +1063,13 @@ pub struct SendMessageSocketPayload {
     pub character_id: String,
     pub text: String,
     pub user_id: Option<String>,
+    pub token: Option<String>,
 }
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TypingEventPayload {
+    pub conversation_id: String,
     pub character_id: String,
 }
 

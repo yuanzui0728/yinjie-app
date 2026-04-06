@@ -1,0 +1,9 @@
+{
+  "id": "compressed",
+  "label": "compressed",
+  "description": "Use a shortened memory summary and a compact recent history window.",
+  "keepRecentTurns": 6,
+  "truncateMemoryChars": 80,
+  "dropMemory": false,
+  "promptInstruction": "Use memory sparingly and focus on compact, high-signal carryover only."
+}
