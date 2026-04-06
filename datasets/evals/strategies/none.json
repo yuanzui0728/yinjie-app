@@ -1,0 +1,9 @@
+{
+  "id": "none",
+  "label": "none",
+  "description": "Drop long-term memory and keep only the shortest immediate context.",
+  "keepRecentTurns": 2,
+  "truncateMemoryChars": 0,
+  "dropMemory": true,
+  "promptInstruction": "Do not rely on long-term memory. Respond only from the immediate exchange."
+}

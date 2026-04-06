@@ -36,6 +36,14 @@ pub fn eval_traces_dir(database_path: &Path) -> PathBuf {
     evals_dir(database_path).join("traces")
 }
 
+pub fn eval_comparisons_dir(database_path: &Path) -> PathBuf {
+    evals_dir(database_path).join("comparisons")
+}
+
+pub fn eval_reports_dir(database_path: &Path) -> PathBuf {
+    evals_dir(database_path).join("reports")
+}
+
 pub fn append_core_api_log(database_path: &Path, level: &str, message: &str) {
     let log_path = core_api_log_path(database_path);
 

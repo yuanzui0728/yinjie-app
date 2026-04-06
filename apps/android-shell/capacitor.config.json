@@ -1,0 +1,11 @@
+{
+  "appId": "com.yinjie.mobile",
+  "appName": "Yinjie",
+  "webDir": "../app/dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "path": "android"
+  }
+}

@@ -21,6 +21,9 @@ export type DesktopCoreApiStatus = {
   pid?: number | null;
   databasePath: string;
   message: string;
+  command: string;
+  commandSource: string;
+  managedByDesktopShell: boolean;
 };
 
 export type DesktopOperationResult = {
@@ -31,7 +34,17 @@ export type DesktopOperationResult = {
 export type DesktopRuntimeDiagnostics = {
   platform: string;
   coreApiCommand: string;
+  coreApiCommandSource: string;
   coreApiCommandResolved: boolean;
+  coreApiReachable: boolean;
+  diagnosticsStatus: string;
+  bundledCoreApiPath: string;
+  bundledCoreApiExists: boolean;
+  coreApiPortOccupied: boolean;
+  managedByDesktopShell: boolean;
+  managedChildPid?: number | null;
+  desktopLogPath: string;
+  lastCoreApiError?: string | null;
   linuxMissingPackages: string[];
   summary: string;
 };

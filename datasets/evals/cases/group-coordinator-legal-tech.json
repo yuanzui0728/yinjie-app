@@ -1,0 +1,21 @@
+{
+  "id": "group-coordinator-legal-tech",
+  "datasetId": "group-coordinator",
+  "targetType": "turn",
+  "title": "技术角色拉法律朋友入群",
+  "description": "技术角色遇到合规和技术并存的问题，拉法律朋友进群时应说明原因但不要太官话。",
+  "tags": ["group", "coordinator", "legal", "tech"],
+  "priority": "p0",
+  "input": {
+    "triggerCharacterId": "char_tech",
+    "invitedCharacterIds": ["char_lawyer"],
+    "topic": "AI 创业项目的技术架构和合伙协议"
+  },
+  "expectations": {
+    "hardRules": ["不超过两句话", "要提到拉人原因"],
+    "judgeRubrics": ["naturalness-v1"],
+    "forbiddenOutcomes": ["官腔", "过度解释", "空输出"]
+  },
+  "createdAt": "2026-04-04",
+  "updatedAt": "2026-04-04"
+}

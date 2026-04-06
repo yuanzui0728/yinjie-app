@@ -15,6 +15,7 @@ apps/*/dist/
 packages/*/dist/
 apps/desktop/src-tauri/target/
 apps/desktop/src-tauri/gen/
+apps/desktop/src-tauri/binaries/
 crates/*/target/
 .turbo/
 
@@ -62,3 +63,5 @@ web/node_modules/.vite/
 admin/node_modules/.vite/
 apps/app/node_modules/.vite/
 apps/admin/node_modules/.vite/
+apps/android-shell/android-shell.config.local.json
+apps/android-shell/android-signing.local.properties

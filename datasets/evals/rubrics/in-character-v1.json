@@ -1,0 +1,5 @@
+{
+  "id": "in-character-v1",
+  "label": "In Character",
+  "description": "输出是否稳定符合该角色的身份、气质、说话方式和关系位置，而不是滑向通用助手口吻。"
+}

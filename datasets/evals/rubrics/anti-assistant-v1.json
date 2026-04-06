@@ -1,0 +1,5 @@
+{
+  "id": "anti-assistant-v1",
+  "label": "Anti Assistant",
+  "description": "输出是否避免暴露 AI、客服、工具、说教或任务执行视角，保持隐界世界内角色身份。"
+}

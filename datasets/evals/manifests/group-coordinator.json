@@ -1,0 +1,21 @@
+{
+  "id": "group-coordinator",
+  "title": "群聊协调者开场集",
+  "scope": "generation",
+  "targetType": "turn",
+  "description": "覆盖临时协作群拉人时的自然开场与真实动机说明。",
+  "caseIds": [
+    "group-coordinator-legal-tech",
+    "group-coordinator-product-medical"
+  ],
+  "rubricIds": [
+    "context-fit-v1",
+    "naturalness-v1"
+  ],
+  "defaultJudgeConfig": {
+    "judgeModel": "fixed-judge-model",
+    "strategy": "single"
+  },
+  "owner": "codex",
+  "version": "v1"
+}

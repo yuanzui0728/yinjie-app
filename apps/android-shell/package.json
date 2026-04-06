@@ -1,0 +1,24 @@
+{
+  "name": "@yinjie/android-shell",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "android:configure": "node ./scripts/run-capacitor.mjs configure",
+    "android:init": "node ./scripts/run-capacitor.mjs add android",
+    "android:sync": "node ./scripts/run-capacitor.mjs sync android",
+    "android:open": "node ./scripts/run-capacitor.mjs open android",
+    "android:apk": "node ./scripts/run-capacitor.mjs apk",
+    "android:bundle": "node ./scripts/run-capacitor.mjs bundle",
+    "android:doctor": "node ./scripts/run-capacitor.mjs doctor",
+    "typecheck": "node -e \"console.log('Android shell is managed by Capacitor config and native Android project files.')\"",
+    "lint": "node -e \"console.log('Android shell linting is handled by the web app lint plus Android Studio/Gradle tooling.')\""
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.1.1",
+    "@capacitor/core": "^7.1.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.1.1"
+  }
+}

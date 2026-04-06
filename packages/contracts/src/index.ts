@@ -7,6 +7,7 @@ export * from "./config";
 export * from "./evals";
 export * from "./feed";
 export * from "./moments";
+export * from "./moderation";
 export * from "./social";
 export * from "./system";
 export * from "./world";

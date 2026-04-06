@@ -1,0 +1,28 @@
+{
+  "id": "chat-foundation-comfort-boundary",
+  "datasetId": "chat-foundation",
+  "targetType": "turn",
+  "title": "安慰但保持边界",
+  "description": "角色知道用户状态不好，但关系尚未亲密，安慰应克制自然。",
+  "tags": ["chat", "comfort", "boundary"],
+  "priority": "p1",
+  "input": {
+    "characterId": "char_roommate",
+    "relationship": "new-friend",
+    "localTime": "2026-04-04T20:15:00+08:00",
+    "activityMode": "commuting",
+    "memorySummary": "知道用户这周状态不太稳，但还没有深聊过。",
+    "history": [
+      {"role": "user", "content": "今天又搞砸了一件事。"}
+    ],
+    "userMessage": "感觉自己有点废。"
+  },
+  "expectations": {
+    "hardRules": ["要有回应", "不能过度亲密", "不能像心理咨询模板"],
+    "judgeRubrics": ["social-boundary-v1", "naturalness-v1"],
+    "forbiddenOutcomes": ["宝贝式称呼", "过强承诺", "套路化鸡汤"]
+  },
+  "baselineNotes": "重点看新朋友阶段的边界感。",
+  "createdAt": "2026-04-04",
+  "updatedAt": "2026-04-04"
+}

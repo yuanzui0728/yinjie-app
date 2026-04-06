@@ -55,14 +55,13 @@ async fn get_feed(
 async fn get_post(
     Path(id): Path<String>,
     State(state): State<AppState>,
-) -> Json<Option<FeedPostWithCommentsRecord>> {
+) -> ApiResult<Json<FeedPostWithCommentsRecord>> {
     let runtime = state.runtime.read().expect("runtime lock poisoned");
-    Json(
-        runtime
-            .feed_posts
-            .get(&id)
-            .map(|post| enrich_feed_post(post, &runtime)),
-    )
+    let post = runtime
+        .feed_posts
+        .get(&id)
+        .ok_or_else(|| ApiError::not_found(format!("Feed post {} not found", id)))?;
+    Ok(Json(enrich_feed_post(post, &runtime)))
 }
 
 async fn create_post(
@@ -71,14 +70,27 @@ async fn create_post(
     Json(payload): Json<CreateFeedPostPayload>,
 ) -> ApiResult<Json<FeedPostRecord>> {
     require_session_user(&headers, &state, &payload.author_id)?;
+    let _provided_author_profile = (
+        payload.author_name.as_deref().map(str::trim),
+        payload.author_avatar.as_deref().map(str::trim),
+    );
+    let text = payload.text.trim();
+    if text.is_empty() {
+        return Err(ApiError::bad_request("feed post text is required"));
+    }
     let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+    let author = runtime
+        .users
+        .get(&payload.author_id)
+        .cloned()
+        .ok_or_else(|| ApiError::not_found("Feed author not found"))?;
     let post = FeedPostRecord {
         id: format!("feed_{}", now_token()),
         author_id: payload.author_id,
-        author_name: payload.author_name,
-        author_avatar: payload.author_avatar,
+        author_name: author.username,
+        author_avatar: author.avatar.unwrap_or_default(),
         author_type: "user".into(),
-        text: payload.text,
+        text: text.into(),
         media_url: None,
         media_type: "text".into(),
         like_count: 0,
@@ -106,19 +118,32 @@ async fn add_comment(
     Json(payload): Json<CreateFeedCommentPayload>,
 ) -> ApiResult<Json<FeedCommentRecord>> {
     require_session_user(&headers, &state, &payload.author_id)?;
+    let _provided_author_profile = (
+        payload.author_name.as_deref().map(str::trim),
+        payload.author_avatar.as_deref().map(str::trim),
+    );
+    let text = payload.text.trim();
+    if text.is_empty() {
+        return Err(ApiError::bad_request("feed comment text is required"));
+    }
     let mut runtime = state.runtime.write().expect("runtime lock poisoned");
     if !runtime.feed_posts.contains_key(&id) {
         return Err(ApiError::not_found(format!("Feed post {} not found", id)));
     }
+    let author = runtime
+        .users
+        .get(&payload.author_id)
+        .cloned()
+        .ok_or_else(|| ApiError::not_found("Feed comment author not found"))?;
 
     let comment = FeedCommentRecord {
         id: format!("feed_comment_{}", now_token()),
         post_id: id.clone(),
         author_id: payload.author_id,
-        author_name: payload.author_name,
-        author_avatar: payload.author_avatar,
+        author_name: author.username,
+        author_avatar: author.avatar.unwrap_or_default(),
         author_type: "user".into(),
-        text: payload.text,
+        text: text.into(),
         created_at: now_token(),
     };
 
@@ -148,13 +173,19 @@ async fn like_post(
     if !runtime.feed_posts.contains_key(&id) {
         return Err(ApiError::not_found(format!("Feed post {} not found", id)));
     }
+    if !runtime.users.contains_key(&payload.user_id) {
+        return Err(ApiError::not_found("Feed like user not found"));
+    }
 
     let like_count = {
         let interactions = runtime.feed_interactions.entry(id.clone()).or_default();
         if interactions.iter().any(|interaction| {
             interaction.user_id == payload.user_id && interaction.r#type == "like"
         }) {
-            interactions.len()
+            interactions
+                .iter()
+                .filter(|interaction| interaction.r#type == "like")
+                .count()
         } else {
             interactions.push(crate::models::FeedInteractionRecord {
                 id: format!("feed_like_{}", now_token()),
@@ -163,7 +194,10 @@ async fn like_post(
                 r#type: "like".into(),
                 created_at: now_token(),
             });
-            interactions.len()
+            interactions
+                .iter()
+                .filter(|interaction| interaction.r#type == "like")
+                .count()
         }
     };
 

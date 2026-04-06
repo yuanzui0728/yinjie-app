@@ -67,14 +67,27 @@ async fn create_user_moment(
     Json(payload): Json<CreateUserMomentPayload>,
 ) -> ApiResult<Json<MomentRecord>> {
     require_session_user(&headers, &state, &payload.user_id)?;
+    let _provided_author_profile = (
+        payload.author_name.as_deref().map(str::trim),
+        payload.author_avatar.as_deref().map(str::trim),
+    );
+    let text = payload.text.trim();
+    if text.is_empty() {
+        return Err(ApiError::bad_request("moment text is required"));
+    }
     let mut runtime = state.runtime.write().expect("runtime lock poisoned");
+    let author = runtime
+        .users
+        .get(&payload.user_id)
+        .cloned()
+        .ok_or_else(|| ApiError::not_found("Moment author not found"))?;
     let post = MomentPostRecord {
         id: format!("moment_{}", now_token()),
         author_id: payload.user_id,
-        author_name: payload.author_name,
-        author_avatar: payload.author_avatar,
+        author_name: author.username,
+        author_avatar: author.avatar.unwrap_or_default(),
         author_type: "user".into(),
-        text: payload.text,
+        text: text.into(),
         location: None,
         posted_at: now_token(),
         like_count: 0,
@@ -94,14 +107,13 @@ async fn create_user_moment(
 async fn get_post(
     Path(id): Path<String>,
     State(state): State<AppState>,
-) -> Json<Option<MomentRecord>> {
+) -> ApiResult<Json<MomentRecord>> {
     let runtime = state.runtime.read().expect("runtime lock poisoned");
-    Json(
-        runtime
-            .moment_posts
-            .get(&id)
-            .map(|post| enrich_moment(post, &runtime)),
-    )
+    let post = runtime
+        .moment_posts
+        .get(&id)
+        .ok_or_else(|| ApiError::not_found(format!("Moment {} not found", id)))?;
+    Ok(Json(enrich_moment(post, &runtime)))
 }
 
 async fn generate_for_character(
@@ -187,19 +199,32 @@ async fn add_comment(
     Json(payload): Json<CreateMomentCommentPayload>,
 ) -> ApiResult<Json<MomentCommentRecord>> {
     require_session_user(&headers, &state, &payload.author_id)?;
+    let _provided_author_profile = (
+        payload.author_name.as_deref().map(str::trim),
+        payload.author_avatar.as_deref().map(str::trim),
+    );
+    let text = payload.text.trim();
+    if text.is_empty() {
+        return Err(ApiError::bad_request("moment comment text is required"));
+    }
     let mut runtime = state.runtime.write().expect("runtime lock poisoned");
     if !runtime.moment_posts.contains_key(&id) {
         return Err(ApiError::not_found(format!("Moment {} not found", id)));
     }
+    let author = runtime
+        .users
+        .get(&payload.author_id)
+        .cloned()
+        .ok_or_else(|| ApiError::not_found("Moment comment author not found"))?;
 
     let comment = MomentCommentRecord {
         id: format!("moment_comment_{}", now_token()),
         post_id: id.clone(),
         author_id: payload.author_id,
-        author_name: payload.author_name,
-        author_avatar: payload.author_avatar,
+        author_name: author.username,
+        author_avatar: author.avatar.unwrap_or_default(),
         author_type: "user".into(),
-        text: payload.text,
+        text: text.into(),
         created_at: now_token(),
     };
 
@@ -225,10 +250,19 @@ async fn toggle_like(
     Json(payload): Json<ToggleMomentLikePayload>,
 ) -> ApiResult<Json<ToggleMomentLikeResult>> {
     require_session_user(&headers, &state, &payload.author_id)?;
+    let _provided_author_profile = (
+        payload.author_name.as_deref().map(str::trim),
+        payload.author_avatar.as_deref().map(str::trim),
+    );
     let mut runtime = state.runtime.write().expect("runtime lock poisoned");
     if !runtime.moment_posts.contains_key(&id) {
         return Err(ApiError::not_found(format!("Moment {} not found", id)));
     }
+    let author = runtime
+        .users
+        .get(&payload.author_id)
+        .cloned()
+        .ok_or_else(|| ApiError::not_found("Moment like author not found"))?;
 
     let (liked, like_count) = {
         let likes = runtime.moment_likes.entry(id.clone()).or_default();
@@ -244,8 +278,8 @@ async fn toggle_like(
                 id: format!("moment_like_{}", now_token()),
                 post_id: id.clone(),
                 author_id: payload.author_id,
-                author_name: payload.author_name,
-                author_avatar: payload.author_avatar,
+                author_name: author.username.clone(),
+                author_avatar: author.avatar.clone().unwrap_or_default(),
                 author_type: "user".into(),
                 created_at: now_token(),
             });
@@ -299,6 +333,9 @@ fn enrich_moment(post: &MomentPostRecord, runtime: &RuntimeState) -> MomentRecor
         comment_text: Some(comment.text.clone()),
         created_at: comment.created_at.clone(),
     }));
+    interactions.sort_by(|left, right| {
+        parse_timestamp(&left.created_at).cmp(&parse_timestamp(&right.created_at))
+    });
 
     MomentRecord {
         id: post.id.clone(),

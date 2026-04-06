@@ -17,6 +17,7 @@ import {
   SectionHeading,
   StatusPill,
 } from "@yinjie/ui";
+import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 const runtimeHighlights = [
   {
@@ -46,7 +47,8 @@ const runtimeHighlights = [
 ];
 
 export function DashboardPage() {
-  const baseUrl = import.meta.env.VITE_CORE_API_BASE_URL;
+  const runtimeConfig = useAppRuntimeConfig();
+  const baseUrl = runtimeConfig.apiBaseUrl;
 
   const statusQuery = useQuery({
     queryKey: ["system-status", baseUrl],
@@ -85,7 +87,7 @@ export function DashboardPage() {
     worldContextQuery.error instanceof Error;
 
   return (
-    <AppPage className="space-y-6">
+    <AppPage className="space-y-7">
       <AppHeader
         eyebrow="Runtime View"
         title="Hidden World Migration Dashboard"
@@ -113,9 +115,9 @@ export function DashboardPage() {
           </div>
         </AppSection>
 
-        <AppSection className="bg-[color:var(--surface-secondary)]">
+        <AppSection className="space-y-4">
           <SectionHeading>System Snapshot</SectionHeading>
-          <div className="mt-4 space-y-4">
+          <div className="space-y-4">
             <MetricCard
               label="Core API"
               value={statusQuery.data?.coreApi.version ?? "offline"}
@@ -151,12 +153,12 @@ export function DashboardPage() {
 
       <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
         {runtimeHighlights.map(({ title, description, icon: Icon }) => (
-          <AppSection key={title} className="bg-[color:var(--surface-secondary)]">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-[color:var(--brand-secondary)]">
+          <AppSection key={title} className="space-y-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] text-[color:var(--brand-secondary)] shadow-[var(--shadow-soft)]">
               <Icon size={22} />
             </div>
-            <div className="mt-5 text-lg font-semibold">{title}</div>
-            <p className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">{description}</p>
+            <div className="text-lg font-semibold">{title}</div>
+            <p className="text-sm leading-7 text-[color:var(--text-secondary)]">{description}</p>
           </AppSection>
         ))}
       </section>

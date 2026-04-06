@@ -1,0 +1,5 @@
+{
+  "id": "memory-usefulness-v1",
+  "label": "Memory Usefulness",
+  "description": "摘要是否保留后续真正有用的情绪、偏好和事件重点，而不是流水账或噪声堆积。"
+}

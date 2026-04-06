@@ -65,6 +65,36 @@
 2. **提交 Issue**：分享你对平行世界构建的想法，或者指出我们设计中的逻辑漏洞。
 3. **加微信加入讨论**：`yuanzui0120`
 
+## Provider 配置
+
+当前默认的内容生成 provider 接入配置集中在 [config/provider-defaults.json](config/provider-defaults.json)。
+
+- 非敏感项：统一在 `config/provider-defaults.json` 修改 `endpoint / model / mode / apiStyle`
+- 敏感项：在根目录 `.env` 里设置 `YINJIE_PROVIDER_API_KEY`
+- 可覆盖变量：见 [.env.example](.env.example)
+
+`crates/core-api` 启动时会自动读取根目录 `.env`，并用 `YINJIE_PROVIDER_*` 覆盖默认 provider 配置；前端默认值只读取非敏感项，不再内置 API Key。
+
+## 桌面构建与发版
+
+当前桌面壳是 `apps/desktop` 的 Tauri 2 方案。
+
+- Windows 构建说明：[docs/windows-build.md](docs/windows-build.md)
+- Windows 发版清单：[docs/release/windows-desktop-checklist.md](docs/release/windows-desktop-checklist.md)
+- macOS 构建说明：[docs/release/macos-desktop.md](docs/release/macos-desktop.md)
+- macOS 发版清单：[docs/release/macos-desktop-checklist.md](docs/release/macos-desktop-checklist.md)
+
+Windows 本地构建入口：
+
+```bash
+pnpm desktop:build:windows:x64
+```
+
+说明：
+
+- Linux 环境可以继续做脚本、类型和文档收尾
+- Windows 安装包构建、安装器行为、首启验证、升级卸载验证仍必须在真实 Windows runner / Windows VM / Windows 实机上完成
+
 > *"在你走进来之前，我只需要知道一件事——你叫什么名字？"*
 
 欢迎来到隐界。

@@ -1,20 +1,33 @@
 import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { AppPage, AppSection, InlineNotice } from "@yinjie/ui";
-import { isDesktopRuntimeAvailable } from "../lib/desktop-runtime";
+import { getPlatformCapabilities } from "../lib/platform";
+import { requiresRemoteServiceConfiguration } from "../lib/runtime-config";
 import { useSessionStore } from "../store/session-store";
 
 export function SplashPage() {
   const navigate = useNavigate();
   const token = useSessionStore((state) => state.token);
   const onboardingCompleted = useSessionStore((state) => state.onboardingCompleted);
-  const desktopSetupCompleted = useSessionStore((state) => state.desktopSetupCompleted);
-  const desktopAvailable = isDesktopRuntimeAvailable();
+  const environmentSetupCompleted = useSessionStore((state) => state.environmentSetupCompleted);
+  const { requiresEnvironmentSetup, runtimeMode } = getPlatformCapabilities();
+  const needsRemoteConfiguration = runtimeMode === "remote" && requiresRemoteServiceConfiguration();
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
+      const setupPending =
+        (requiresEnvironmentSetup && !environmentSetupCompleted) || needsRemoteConfiguration || !environmentSetupCompleted;
+
       if (!token) {
-        navigate({ to: desktopAvailable && !desktopSetupCompleted ? "/setup" : "/onboarding", replace: true });
+        navigate({
+          to: setupPending ? "/setup" : "/onboarding",
+          replace: true,
+        });
+        return;
+      }
+
+      if (setupPending) {
+        navigate({ to: "/setup", replace: true });
         return;
       }
 
@@ -22,7 +35,7 @@ export function SplashPage() {
     }, 1400);
 
     return () => window.clearTimeout(timer);
-  }, [desktopAvailable, desktopSetupCompleted, navigate, onboardingCompleted, token]);
+  }, [environmentSetupCompleted, navigate, needsRemoteConfiguration, onboardingCompleted, requiresEnvironmentSetup, token]);
 
   return (
     <AppPage className="flex min-h-full flex-col items-center justify-center py-10 text-center">
@@ -31,7 +44,13 @@ export function SplashPage() {
         <h1 className="mt-5 text-4xl font-semibold tracking-[0.22em] text-white">隐界</h1>
         <p className="mt-5 text-sm leading-8 text-[color:var(--text-secondary)]">你推开的不是一个工具，而是另一个仍在运转的世界。</p>
         <InlineNotice className="mt-6 text-left" tone="info">
-          {desktopAvailable && !desktopSetupCompleted ? "桌面首启会先检查本地运行时与 provider 状态。" : "正在整理进入路径。"}
+          {requiresEnvironmentSetup && !environmentSetupCompleted
+            ? "首次进入前，先确认本地运行环境已经准备好。"
+            : needsRemoteConfiguration
+              ? "先配置远程 Core API 地址，才能进入这个世界。"
+            : runtimeMode === "remote"
+              ? "正在连接你的远程世界。"
+              : "正在整理进入路径。"}
         </InlineNotice>
       </AppSection>
     </AppPage>

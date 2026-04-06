@@ -625,6 +625,10 @@ async fn process_pending_feed_reactions_job(state: AppState) -> Result<String, S
     let mut generated_logs = Vec::new();
 
     for (post_id, comments) in generated {
+        if !runtime.feed_posts.contains_key(&post_id) {
+            continue;
+        }
+
         let added = comments.len();
         if added > 0 {
             generated_logs.extend(comments.iter().cloned());
@@ -724,18 +728,26 @@ async fn trigger_memory_proactive_messages_job(state: AppState) -> Result<String
         outbound_messages.push((conversation_id, proactive_message));
     }
 
-    let sent = outbound_messages.len();
     let mut runtime = state.runtime.write().expect("runtime lock poisoned");
-    for (conversation_id, proactive_message) in &outbound_messages {
+    let mut delivered_messages = Vec::with_capacity(outbound_messages.len());
+    for (conversation_id, proactive_message) in outbound_messages {
+        if !runtime.conversations.contains_key(&conversation_id) {
+            continue;
+        }
         runtime
             .messages
             .entry(conversation_id.clone())
             .or_default()
             .push(proactive_message.clone());
+        if let Some(conversation) = runtime.conversations.get_mut(&conversation_id) {
+            conversation.updated_at = proactive_message.created_at.clone();
+        }
+        delivered_messages.push((conversation_id, proactive_message));
     }
     drop(runtime);
 
-    for (conversation_id, message) in outbound_messages {
+    let sent = delivered_messages.len();
+    for (conversation_id, message) in delivered_messages {
         let _ = state
             .realtime_events
             .send(RealtimeCommand::EmitConversationMessage {

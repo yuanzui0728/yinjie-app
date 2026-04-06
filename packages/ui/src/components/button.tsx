@@ -3,17 +3,18 @@ import type { ButtonHTMLAttributes } from "react";
 import { cn } from "../cn";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-pill)] border text-sm font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)] disabled:pointer-events-none disabled:opacity-55",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-pill)] border text-sm font-medium transition-[background-color,border-color,color,box-shadow,transform,filter,opacity] duration-[var(--motion-fast)] ease-[var(--ease-standard)] active:translate-y-[1px] active:shadow-none disabled:pointer-events-none disabled:opacity-55",
   {
     variants: {
       variant: {
-        primary: "border-transparent bg-[var(--brand-gradient)] px-4 py-2.5 text-white shadow-[var(--shadow-card)] hover:brightness-105",
+        primary:
+          "border-transparent bg-[var(--brand-gradient)] px-4 py-2.5 text-white shadow-[var(--shadow-card)] hover:-translate-y-0.5 hover:brightness-105 hover:shadow-[var(--shadow-lift)]",
         secondary:
-          "border-[color:var(--border-subtle)] bg-[color:var(--surface-secondary)] px-4 py-2.5 text-[color:var(--text-primary)] hover:border-[color:var(--border-strong)] hover:bg-[color:var(--surface-tertiary)]",
+          "border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.045))] px-4 py-2.5 text-[color:var(--text-primary)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5 hover:bg-[linear-gradient(180deg,rgba(255,255,255,0.09),rgba(255,255,255,0.06))] hover:shadow-[var(--shadow-card)]",
         ghost:
-          "border-transparent bg-transparent px-3 py-2 text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-secondary)] hover:text-white",
+          "border-transparent bg-transparent px-3 py-2 text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-soft)] hover:text-white",
         danger:
-          "border-[color:var(--border-danger)] bg-[color:var(--state-danger-bg)] px-4 py-2.5 text-[color:var(--state-danger-text)] hover:bg-[rgba(239,68,68,0.22)]",
+          "border-[color:var(--border-danger)] bg-[linear-gradient(180deg,rgba(239,68,68,0.18),rgba(239,68,68,0.14))] px-4 py-2.5 text-[color:var(--state-danger-text)] shadow-[var(--shadow-soft)] hover:-translate-y-0.5 hover:bg-[rgba(239,68,68,0.22)]",
       },
       size: {
         sm: "min-h-9 px-3 py-2 text-xs",

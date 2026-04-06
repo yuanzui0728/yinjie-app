@@ -1,0 +1,22 @@
+{
+  "id": "chat-foundation",
+  "title": "聊天活人感基础集",
+  "scope": "generation",
+  "targetType": "turn",
+  "description": "覆盖不同时间、关系和忙碌状态下的基础聊天回复活人感评测。",
+  "caseIds": [
+    "chat-foundation-night-busy",
+    "chat-foundation-comfort-boundary"
+  ],
+  "rubricIds": [
+    "in-character-v1",
+    "naturalness-v1",
+    "social-boundary-v1"
+  ],
+  "defaultJudgeConfig": {
+    "judgeModel": "fixed-judge-model",
+    "strategy": "pairwise-preferred"
+  },
+  "owner": "codex",
+  "version": "v1"
+}

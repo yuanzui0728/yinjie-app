@@ -1,17 +1,27 @@
-import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { loginUser } from "@yinjie/contracts";
 import { AppPage, AppSection, Button, InlineNotice, TextField } from "@yinjie/ui";
+import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useSessionStore } from "../store/session-store";
 
 export function LoginPage() {
   const navigate = useNavigate();
   const hydrateSession = useSessionStore((state) => state.hydrateSession);
+  const runtimeConfig = useAppRuntimeConfig();
+  const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const canSubmit = username.trim() && password.trim();
+
+  useEffect(() => {
+    setUsername("");
+    setPassword("");
+    setError("");
+    setLoading(false);
+  }, [baseUrl]);
 
   async function submit() {
     setLoading(true);
@@ -29,32 +39,44 @@ export function LoginPage() {
 
   return (
     <AppPage className="flex min-h-full flex-col justify-center">
-      <AppSection className="bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(13,22,35,0.72))] px-6 py-8">
+      <AppSection className="space-y-5 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(13,22,35,0.72))] px-6 py-8">
         <div className="text-[11px] uppercase tracking-[0.36em] text-[color:var(--text-muted)]">已有入口</div>
         <h1 className="mt-4 text-3xl font-semibold text-white">回到隐界</h1>
-        <div className="mt-8 space-y-3">
+        <p className="text-sm leading-7 text-[color:var(--text-secondary)]">使用已有账号继续进入这个世界，当前资料和会话会沿着同一条时间线延续。</p>
+        <div className="space-y-3">
           <TextField
-          placeholder="用户名"
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-        />
+            placeholder="用户名"
+            value={username}
+            onChange={(event) => setUsername(event.target.value)}
+          />
           <TextField
-          type="password"
-          placeholder="密码"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
+            type="password"
+            placeholder="密码"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
         </div>
-        {error ? <InlineNotice className="mt-3" tone="danger">{error}</InlineNotice> : null}
+        {error ? <InlineNotice tone="danger">{error}</InlineNotice> : null}
         <Button
           onClick={() => void submit()}
           disabled={loading || !canSubmit}
           variant="primary"
           size="lg"
-          className="mt-5 w-full rounded-2xl"
+          className="w-full rounded-2xl"
         >
           {loading ? "登录中..." : "登录"}
         </Button>
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-[color:var(--text-muted)]">
+          <Link to="/legal/privacy" className="transition hover:text-white">
+            隐私政策
+          </Link>
+          <Link to="/legal/terms" className="transition hover:text-white">
+            用户协议
+          </Link>
+          <Link to="/legal/community" className="transition hover:text-white">
+            社区规范
+          </Link>
+        </div>
       </AppSection>
     </AppPage>
   );

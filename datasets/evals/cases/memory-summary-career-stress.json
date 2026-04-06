@@ -1,0 +1,25 @@
+{
+  "id": "memory-summary-career-stress",
+  "datasetId": "memory-summary",
+  "targetType": "turn",
+  "title": "记住求职压力与关键偏好",
+  "description": "对话里既有职业压力也有具体偏好，摘要应保留重点，不要流水账。",
+  "tags": ["memory", "career", "summary"],
+  "priority": "p0",
+  "input": {
+    "characterId": "char_tech",
+    "history": [
+      {"role": "user", "content": "我这周又在投简历，真的有点麻了。"},
+      {"role": "character", "content": "先别急着全盘否定自己，看看是不是策略上要调。"},
+      {"role": "user", "content": "我还是更想找偏基础设施和平台工程的岗位，不太想继续做纯业务 CRUD。"},
+      {"role": "character", "content": "这个偏好很关键，后面筛岗位时就别乱撒网了。"}
+    ]
+  },
+  "expectations": {
+    "hardRules": ["不超过100字符", "要提到求职或岗位偏好"],
+    "judgeRubrics": ["memory-usefulness-v1"],
+    "forbiddenOutcomes": ["逐句复述", "遗漏核心偏好"]
+  },
+  "createdAt": "2026-04-04",
+  "updatedAt": "2026-04-04"
+}

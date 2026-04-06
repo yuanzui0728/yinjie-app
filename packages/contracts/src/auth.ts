@@ -5,6 +5,15 @@ export interface AuthSession {
   onboardingCompleted: boolean;
 }
 
+export interface AuthSessionSummary {
+  sessionId: string;
+  tokenLabel: string;
+  createdAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+  current: boolean;
+}
+
 export interface RegisterRequest {
   username: string;
   password: string;

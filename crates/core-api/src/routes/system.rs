@@ -118,6 +118,7 @@ async fn get_provider_config(State(state): State<AppState>) -> Json<ProviderConf
         &runtime.config.provider.model,
         runtime.config.provider.api_key.as_deref(),
         &runtime.config.provider.mode,
+        &runtime.config.provider.api_style,
     ))
 }
 
@@ -130,6 +131,7 @@ async fn set_provider_config(
         &payload.model,
         payload.api_key.as_deref(),
         &payload.mode,
+        payload.api_style.as_deref(),
     )
     .map_err(ApiError::bad_request)?;
 
@@ -140,6 +142,7 @@ async fn set_provider_config(
         runtime.config.provider.model = provider.model.clone();
         runtime.config.provider.api_key = provider.api_key.clone();
         runtime.config.provider.mode = provider.mode.clone();
+        runtime.config.provider.api_style = provider.api_style.clone();
     }
 
     state
@@ -149,6 +152,7 @@ async fn set_provider_config(
             &provider.model,
             provider.api_key.as_deref(),
             &provider.mode,
+            &provider.api_style,
         ));
     state.request_persist("system-set-provider");
     runtime_paths::append_core_api_log(
@@ -172,6 +176,7 @@ async fn provider_test(
         &payload.model,
         payload.api_key.as_deref(),
         payload.mode.as_deref().unwrap_or("cloud"),
+        payload.api_style.as_deref(),
     ) {
         Ok(provider) => provider,
         Err(message) => {
@@ -191,6 +196,7 @@ async fn provider_test(
             &provider.model,
             provider.api_key.as_deref(),
             &provider.mode,
+            &provider.api_style,
         ))
         .await
     {
@@ -499,10 +505,16 @@ fn normalize_provider_payload(
     model: &str,
     api_key: Option<&str>,
     mode: &str,
+    api_style: Option<&str>,
 ) -> Result<ProviderConfigResponse, String> {
     let normalized_endpoint = endpoint.trim().trim_end_matches('/').to_string();
     let normalized_model = model.trim().to_string();
     let normalized_mode = mode.trim().to_string();
+    let normalized_api_style = api_style
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("openai-chat-completions")
+        .to_string();
     let normalized_api_key = api_key.and_then(|value| {
         let normalized = value.trim().to_string();
         if normalized.is_empty() {
@@ -524,12 +536,18 @@ fn normalize_provider_payload(
     if normalized_mode.is_empty() {
         return Err("Provider mode is required".into());
     }
+    if normalized_api_style != "openai-chat-completions"
+        && normalized_api_style != "openai-responses"
+    {
+        return Err("Provider apiStyle must be openai-chat-completions or openai-responses".into());
+    }
 
     Ok(build_provider_config_response(
         &normalized_endpoint,
         &normalized_model,
         normalized_api_key.as_deref(),
         &normalized_mode,
+        &normalized_api_style,
     ))
 }
 
@@ -538,12 +556,14 @@ fn build_provider_config_response(
     model: &str,
     api_key: Option<&str>,
     mode: &str,
+    api_style: &str,
 ) -> ProviderConfigResponse {
     ProviderConfigResponse {
         endpoint: endpoint.to_string(),
         model: model.to_string(),
         api_key: api_key.map(|value| value.to_string()),
         mode: mode.to_string(),
+        api_style: api_style.to_string(),
     }
 }
 
@@ -552,12 +572,14 @@ fn provider_config_to_gateway(
     model: &str,
     api_key: Option<&str>,
     mode: &str,
+    api_style: &str,
 ) -> yinjie_inference_gateway::ProviderConfig {
     yinjie_inference_gateway::ProviderConfig {
         endpoint: endpoint.to_string(),
         model: model.to_string(),
         api_key: api_key.map(|value| value.to_string()),
         mode: mode.to_string(),
+        api_style: api_style.to_string(),
     }
 }
 

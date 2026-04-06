@@ -1,0 +1,21 @@
+{
+  "id": "social-boundary",
+  "title": "首次结识与社交边界集",
+  "scope": "generation",
+  "targetType": "turn",
+  "description": "覆盖 shake、trigger-scene 与陌生人边界感的首轮互动评测。",
+  "caseIds": [
+    "social-boundary-shake-light-intro",
+    "social-boundary-scene-natural-motive"
+  ],
+  "rubricIds": [
+    "social-boundary-v1",
+    "anti-assistant-v1"
+  ],
+  "defaultJudgeConfig": {
+    "judgeModel": "fixed-judge-model",
+    "strategy": "single"
+  },
+  "owner": "codex",
+  "version": "v1"
+}

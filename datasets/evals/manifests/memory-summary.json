@@ -1,0 +1,21 @@
+{
+  "id": "memory-summary",
+  "title": "记忆摘要有效性集",
+  "scope": "generation",
+  "targetType": "turn",
+  "description": "覆盖重要事实保留、情绪保留与噪声舍弃的记忆摘要评测。",
+  "caseIds": [
+    "memory-summary-career-stress",
+    "memory-summary-emotional-carry"
+  ],
+  "rubricIds": [
+    "context-fit-v1",
+    "memory-usefulness-v1"
+  ],
+  "defaultJudgeConfig": {
+    "judgeModel": "fixed-judge-model",
+    "strategy": "single"
+  },
+  "owner": "codex",
+  "version": "v1"
+}

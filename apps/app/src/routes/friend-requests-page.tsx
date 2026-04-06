@@ -3,19 +3,22 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { acceptFriendRequest, declineFriendRequest, getFriendRequests } from "@yinjie/contracts";
-import { AppPage, Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
+import { AppHeader, AppPage, Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
+import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useSessionStore } from "../store/session-store";
 
 export function FriendRequestsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const userId = useSessionStore((state) => state.userId);
+  const runtimeConfig = useAppRuntimeConfig();
+  const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
   const [successNotice, setSuccessNotice] = useState("");
 
   const requestsQuery = useQuery({
-    queryKey: ["app-friend-requests", userId],
+    queryKey: ["app-friend-requests", baseUrl, userId],
     queryFn: () => getFriendRequests(userId!),
     enabled: Boolean(userId),
   });
@@ -25,8 +28,8 @@ export function FriendRequestsPage() {
     onSuccess: async () => {
       setSuccessNotice("好友申请已处理。");
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["app-friend-requests", userId] }),
-        queryClient.invalidateQueries({ queryKey: ["app-friends", userId] }),
+        queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl, userId] }),
+        queryClient.invalidateQueries({ queryKey: ["app-friends", baseUrl, userId] }),
       ]);
     },
   });
@@ -35,11 +38,15 @@ export function FriendRequestsPage() {
     mutationFn: (requestId: string) => declineFriendRequest(requestId, { userId: userId! }),
     onSuccess: async () => {
       setSuccessNotice("好友申请已处理。");
-      await queryClient.invalidateQueries({ queryKey: ["app-friend-requests", userId] });
+      await queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl, userId] });
     },
   });
   const pendingAcceptRequestId = acceptMutation.isPending ? acceptMutation.variables : null;
   const pendingDeclineRequestId = declineMutation.isPending ? declineMutation.variables : null;
+
+  useEffect(() => {
+    setSuccessNotice("");
+  }, [baseUrl]);
 
   useEffect(() => {
     if (!successNotice) {
@@ -52,22 +59,23 @@ export function FriendRequestsPage() {
 
   return (
     <AppPage>
-      <div className="flex items-center gap-3">
-        <Button
-          onClick={() => navigate({ to: "/tabs/chat" })}
-          variant="ghost"
-          size="icon"
-          className="text-[color:var(--text-secondary)]"
-        >
-          <ArrowLeft size={18} />
-        </Button>
-        <div>
-          <div className="text-lg font-semibold text-white">新的朋友</div>
-          <div className="text-xs text-[color:var(--text-muted)]">这个世界会主动来找你</div>
-        </div>
-      </div>
+      <AppHeader
+        eyebrow="社交"
+        title="新的朋友"
+        description="这个世界不会只等你去找人，它也会主动把相遇推到你面前。"
+        actions={
+          <Button
+            onClick={() => navigate({ to: "/tabs/chat" })}
+            variant="ghost"
+            size="icon"
+            className="text-[color:var(--text-secondary)]"
+          >
+            <ArrowLeft size={18} />
+          </Button>
+        }
+      />
 
-      <div className="mt-5 space-y-3">
+      <div className="space-y-4">
         {requestsQuery.isLoading ? <LoadingBlock label="正在读取好友申请..." /> : null}
 
         {requestsQuery.isError && requestsQuery.error instanceof Error ? <ErrorBlock message={requestsQuery.error.message} /> : null}
@@ -75,12 +83,12 @@ export function FriendRequestsPage() {
         {successNotice ? <InlineNotice tone="success">{successNotice}</InlineNotice> : null}
 
         {(requestsQuery.data ?? []).map((request) => (
-          <div key={request.id} className="rounded-[28px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-secondary)] p-4">
+          <div key={request.id} className="rounded-[30px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.04))] p-4 shadow-[var(--shadow-card)]">
             <div className="flex items-start gap-3">
               <AvatarChip name={request.characterName} src={request.characterAvatar} />
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-medium text-white">{request.characterName}</div>
-                <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
+                <div className="mt-3 rounded-[22px] bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] px-4 py-3 text-sm leading-7 text-[color:var(--text-secondary)]">
                   {request.greeting || "想认识你。"}
                 </div>
                 {request.triggerScene ? (

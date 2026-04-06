@@ -145,6 +145,10 @@ export function CharacterEditorPage() {
     },
   });
 
+  useEffect(() => {
+    saveMutation.reset();
+  }, [baseUrl, characterId]);
+
   const profile = draft.profile ?? emptyCharacterDraft.profile!;
   const canSave = Boolean(draft.name?.trim() && draft.relationship?.trim());
 
@@ -481,7 +485,7 @@ function normalizeDraft(draft: CharacterDraft, characterId: string, isNew: boole
     ...draft,
     id: normalizedId,
     name: draft.name?.trim(),
-    avatar: draft.avatar?.trim() || (draft.name?.trim().slice(0, 1) ?? "隐"),
+    avatar: draft.avatar?.trim() ?? "",
     relationship: draft.relationship?.trim(),
     bio: draft.bio?.trim(),
     expertDomains,

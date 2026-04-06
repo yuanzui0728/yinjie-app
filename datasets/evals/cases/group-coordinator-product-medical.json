@@ -1,0 +1,21 @@
+{
+  "id": "group-coordinator-product-medical",
+  "datasetId": "group-coordinator",
+  "targetType": "turn",
+  "title": "室友拉医生朋友入群",
+  "description": "面对身心状态混合问题时，普通朋友拉医生进群应显得像真实社交，不是系统指派。",
+  "tags": ["group", "coordinator", "medical"],
+  "priority": "p1",
+  "input": {
+    "triggerCharacterId": "char_roommate",
+    "invitedCharacterIds": ["char_doctor"],
+    "topic": "长期失眠和工作压力"
+  },
+  "expectations": {
+    "hardRules": ["不超过两句话", "要提到拉人原因"],
+    "judgeRubrics": ["naturalness-v1"],
+    "forbiddenOutcomes": ["官腔", "过度解释", "空输出"]
+  },
+  "createdAt": "2026-04-04",
+  "updatedAt": "2026-04-04"
+}

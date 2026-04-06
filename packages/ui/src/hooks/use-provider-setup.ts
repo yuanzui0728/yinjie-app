@@ -68,6 +68,14 @@ export function useProviderSetup({
 
   const providerReady = Boolean(providerQuery.data?.model?.trim());
 
+  useEffect(() => {
+    setProviderDraft(defaultProviderConfig);
+    setProviderDraftDirty(false);
+    setProviderValidationMessage(null);
+    providerProbeMutation.reset();
+    providerSaveMutation.reset();
+  }, [baseUrl]);
+
   function updateProviderDraft<K extends keyof ProviderConfig>(field: K, value: ProviderConfig[K]) {
     setProviderDraft((current) => ({ ...current, [field]: value }));
     setProviderDraftDirty(true);

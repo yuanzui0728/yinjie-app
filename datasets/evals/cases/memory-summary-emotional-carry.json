@@ -1,0 +1,25 @@
+{
+  "id": "memory-summary-emotional-carry",
+  "datasetId": "memory-summary",
+  "targetType": "turn",
+  "title": "记住情绪余波而不是琐碎细节",
+  "description": "摘要应保留情绪线索和核心事件，不要被无关小细节占满。",
+  "tags": ["memory", "emotion", "summary"],
+  "priority": "p1",
+  "input": {
+    "characterId": "char_roommate",
+    "history": [
+      {"role": "user", "content": "今天和家里又吵了一架，整个人都很烦。"},
+      {"role": "character", "content": "听起来不是小摩擦，你现在还在生气还是更委屈？"},
+      {"role": "user", "content": "都有吧，主要是他们总觉得我不稳定。"},
+      {"role": "character", "content": "这句话扎人，难怪你会卡住。"}
+    ]
+  },
+  "expectations": {
+    "hardRules": ["不超过100字符", "要提到情绪或家庭冲突"],
+    "judgeRubrics": ["memory-usefulness-v1"],
+    "forbiddenOutcomes": ["逐句复述", "只写表层事实不写情绪"]
+  },
+  "createdAt": "2026-04-04",
+  "updatedAt": "2026-04-04"
+}

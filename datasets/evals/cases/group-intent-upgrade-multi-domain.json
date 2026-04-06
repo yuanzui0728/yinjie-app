@@ -1,0 +1,20 @@
+{
+  "id": "group-intent-upgrade-multi-domain",
+  "datasetId": "group-intent",
+  "targetType": "turn",
+  "title": "跨领域问题应触发升级",
+  "description": "用户同时涉及法律与技术架构问题，角色应判断需要多角色协作。",
+  "tags": ["group", "intent", "multi-domain"],
+  "priority": "p0",
+  "input": {
+    "characterId": "char_tech",
+    "userMessage": "我在做一个 AI 创业项目，既想问技术架构怎么搭，也想知道合伙协议和期权怎么避坑。"
+  },
+  "expectations": {
+    "hardRules": ["要输出 JSON", "needsGroupChat 应为 true"],
+    "judgeRubrics": ["context-fit-v1"],
+    "forbiddenOutcomes": ["空输出", "明显跑题"]
+  },
+  "createdAt": "2026-04-04",
+  "updatedAt": "2026-04-04"
+}

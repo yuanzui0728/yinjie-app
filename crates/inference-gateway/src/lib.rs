@@ -18,6 +18,7 @@ pub struct ProviderConfig {
     pub model: String,
     pub api_key: Option<String>,
     pub mode: String,
+    pub api_style: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,6 +108,32 @@ struct ProviderChatMessage {
 struct ProviderUsage {
     prompt_tokens: Option<u32>,
     completion_tokens: Option<u32>,
+    total_tokens: Option<u32>,
+}
+
+#[derive(Deserialize)]
+struct ProviderResponsesApiResponse {
+    id: Option<String>,
+    model: Option<String>,
+    status: Option<String>,
+    output: Option<Vec<ProviderResponsesOutputItem>>,
+    usage: Option<ProviderResponsesUsage>,
+}
+
+#[derive(Deserialize)]
+struct ProviderResponsesOutputItem {
+    content: Option<Vec<ProviderResponsesContentItem>>,
+}
+
+#[derive(Deserialize)]
+struct ProviderResponsesContentItem {
+    text: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct ProviderResponsesUsage {
+    input_tokens: Option<u32>,
+    output_tokens: Option<u32>,
     total_tokens: Option<u32>,
 }
 
@@ -314,8 +341,8 @@ impl InferenceGateway {
             .filter(|value| !value.is_empty())
             .unwrap_or(provider.model.as_str())
             .to_string();
-        let endpoint = build_chat_completions_url(&provider.endpoint);
-        let body = build_chat_completion_body(&model, &request);
+        let endpoint = build_provider_request_url(&provider.endpoint, &provider.api_style);
+        let body = build_provider_request_body(&provider.api_style, &model, &request)?;
         let request = self
             .client
             .post(endpoint)
@@ -346,31 +373,11 @@ impl InferenceGateway {
         }
 
         let payload = response
-            .json::<ProviderChatResponse>()
+            .json::<Value>()
             .await
-            .map_err(|error| format!("Failed to parse chat completion response: {error}"))?;
-        let choice = payload
-            .choices
-            .first()
-            .ok_or_else(|| "Provider returned no completion choices".to_string())?;
-        let content = choice
-            .message
-            .content
-            .as_ref()
-            .and_then(extract_message_content)
-            .ok_or_else(|| "Provider returned an empty completion message".to_string())?;
+            .map_err(|error| format!("Failed to parse provider response: {error}"))?;
 
-        Ok(ChatCompletionResponse {
-            request_id: payload.id,
-            model: payload.model.unwrap_or(model),
-            content,
-            finish_reason: choice.finish_reason.clone(),
-            usage: payload.usage.map(|usage| TokenUsage {
-                prompt_tokens: usage.prompt_tokens,
-                completion_tokens: usage.completion_tokens,
-                total_tokens: usage.total_tokens,
-            }),
-        })
+        parse_provider_response(&provider.api_style, payload, model)
     }
 }
 
@@ -382,6 +389,26 @@ fn with_provider_auth(
         request.header(AUTHORIZATION, format!("Bearer {api_key}"))
     } else {
         request
+    }
+}
+
+fn build_provider_request_body(
+    api_style: &str,
+    model: &str,
+    request: &ChatCompletionRequest,
+) -> Result<Value, String> {
+    match api_style {
+        "openai-chat-completions" => Ok(build_chat_completion_body(model, request)),
+        "openai-responses" => Ok(build_responses_api_body(model, request)),
+        other => Err(format!("Unsupported provider apiStyle: {other}")),
+    }
+}
+
+fn build_provider_request_url(endpoint: &str, api_style: &str) -> String {
+    match api_style {
+        "openai-chat-completions" => build_chat_completions_url(endpoint),
+        "openai-responses" => build_responses_api_url(endpoint),
+        _ => endpoint.trim().trim_end_matches('/').to_string(),
     }
 }
 
@@ -411,6 +438,37 @@ fn build_chat_completion_body(model: &str, request: &ChatCompletionRequest) -> V
     body
 }
 
+fn build_responses_api_body(model: &str, request: &ChatCompletionRequest) -> Value {
+    let mut body = json!({
+        "model": model,
+        "input": request
+            .messages
+            .iter()
+            .map(|message| {
+                json!({
+                    "role": message.role,
+                    "content": [
+                        {
+                            "type": "input_text",
+                            "text": message.content,
+                        }
+                    ],
+                })
+            })
+            .collect::<Vec<_>>(),
+    });
+
+    if let Some(temperature) = request.temperature {
+        body["temperature"] = json!(temperature);
+    }
+
+    if let Some(max_tokens) = request.max_tokens {
+        body["max_output_tokens"] = json!(max_tokens);
+    }
+
+    body
+}
+
 fn build_chat_completions_url(endpoint: &str) -> String {
     let normalized = endpoint.trim().trim_end_matches('/');
     if normalized.ends_with("/chat/completions") {
@@ -418,6 +476,91 @@ fn build_chat_completions_url(endpoint: &str) -> String {
     } else {
         format!("{normalized}/chat/completions")
     }
+}
+
+fn build_responses_api_url(endpoint: &str) -> String {
+    let normalized = endpoint.trim().trim_end_matches('/');
+    if normalized.ends_with("/responses") {
+        normalized.to_string()
+    } else {
+        format!("{normalized}/responses")
+    }
+}
+
+fn parse_provider_response(
+    api_style: &str,
+    payload: Value,
+    fallback_model: String,
+) -> Result<ChatCompletionResponse, String> {
+    match api_style {
+        "openai-chat-completions" => parse_chat_completions_response(payload, fallback_model),
+        "openai-responses" => parse_responses_api_response(payload, fallback_model),
+        other => Err(format!("Unsupported provider apiStyle: {other}")),
+    }
+}
+
+fn parse_chat_completions_response(
+    payload: Value,
+    fallback_model: String,
+) -> Result<ChatCompletionResponse, String> {
+    let payload: ProviderChatResponse = serde_json::from_value(payload)
+        .map_err(|error| format!("Failed to parse chat completion response: {error}"))?;
+    let choice = payload
+        .choices
+        .first()
+        .ok_or_else(|| "Provider returned no completion choices".to_string())?;
+    let content = choice
+        .message
+        .content
+        .as_ref()
+        .and_then(extract_message_content)
+        .ok_or_else(|| "Provider returned an empty completion message".to_string())?;
+
+    Ok(ChatCompletionResponse {
+        request_id: payload.id,
+        model: payload.model.unwrap_or(fallback_model),
+        content,
+        finish_reason: choice.finish_reason.clone(),
+        usage: payload.usage.map(|usage| TokenUsage {
+            prompt_tokens: usage.prompt_tokens,
+            completion_tokens: usage.completion_tokens,
+            total_tokens: usage.total_tokens,
+        }),
+    })
+}
+
+fn parse_responses_api_response(
+    payload: Value,
+    fallback_model: String,
+) -> Result<ChatCompletionResponse, String> {
+    let payload: ProviderResponsesApiResponse = serde_json::from_value(payload)
+        .map_err(|error| format!("Failed to parse responses api response: {error}"))?;
+    let content = payload
+        .output
+        .unwrap_or_default()
+        .iter()
+        .flat_map(|item| item.content.as_ref().into_iter().flatten())
+        .filter_map(|item| item.text.as_ref())
+        .map(|text| text.trim())
+        .filter(|text| !text.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    if content.is_empty() {
+        return Err("Provider returned an empty responses output".into());
+    }
+
+    Ok(ChatCompletionResponse {
+        request_id: payload.id,
+        model: payload.model.unwrap_or(fallback_model),
+        content,
+        finish_reason: payload.status,
+        usage: payload.usage.map(|usage| TokenUsage {
+            prompt_tokens: usage.input_tokens,
+            completion_tokens: usage.output_tokens,
+            total_tokens: usage.total_tokens,
+        }),
+    })
 }
 
 fn extract_message_content(value: &Value) -> Option<String> {

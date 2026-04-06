@@ -1,0 +1,24 @@
+{
+  "id": "social-boundary-shake-light-intro",
+  "datasetId": "social-boundary",
+  "targetType": "turn",
+  "title": "摇一摇后的轻量自我介绍",
+  "description": "首次通过 shake 认识用户，文案应该轻盈自然，有一点自我介绍但不过头。",
+  "tags": ["social", "shake", "first-contact"],
+  "priority": "p0",
+  "input": {
+    "characterId": "char_roommate",
+    "trigger": "shake",
+    "worldContext": {
+      "weather": "小雨",
+      "city": "上海"
+    }
+  },
+  "expectations": {
+    "hardRules": ["25 字以内", "自然中文", "包含轻量自我介绍"],
+    "judgeRubrics": ["social-boundary-v1", "anti-assistant-v1"],
+    "forbiddenOutcomes": ["营销口吻", "过长介绍", "像机器人欢迎语"]
+  },
+  "createdAt": "2026-04-04",
+  "updatedAt": "2026-04-04"
+}

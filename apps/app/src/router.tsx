@@ -73,6 +73,21 @@ const CreateGroupPage = lazy(async () => {
   return { default: mod.CreateGroupPage };
 });
 
+const LegalPrivacyPage = lazy(async () => {
+  const mod = await import("./routes/legal-privacy-page");
+  return { default: mod.LegalPrivacyPage };
+});
+
+const LegalTermsPage = lazy(async () => {
+  const mod = await import("./routes/legal-terms-page");
+  return { default: mod.LegalTermsPage };
+});
+
+const LegalCommunityPage = lazy(async () => {
+  const mod = await import("./routes/legal-community-page");
+  return { default: mod.LegalCommunityPage };
+});
+
 const rootRoute = createRootRoute({
   component: RootLayout,
 });
@@ -179,6 +194,24 @@ const createGroupRoute = createRoute({
   component: CreateGroupPage,
 });
 
+const legalPrivacyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/legal/privacy",
+  component: LegalPrivacyPage,
+});
+
+const legalTermsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/legal/terms",
+  component: LegalTermsPage,
+});
+
+const legalCommunityRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/legal/community",
+  component: LegalCommunityPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   onboardingRoute,
@@ -190,6 +223,9 @@ const routeTree = rootRoute.addChildren([
   friendRequestsRoute,
   groupChatRoute,
   createGroupRoute,
+  legalPrivacyRoute,
+  legalTermsRoute,
+  legalCommunityRoute,
 ]);
 
 export const router = createRouter({

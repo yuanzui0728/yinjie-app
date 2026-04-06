@@ -28,14 +28,14 @@ export function DesktopRuntimeActions({
   onStop,
 }: DesktopRuntimeActionsProps) {
   return (
-    <section className="rounded-[28px] border border-white/10 bg-white/5 p-5">
+    <section className="rounded-[28px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.04))] p-5 shadow-[var(--shadow-section)]">
       <div className="text-sm font-medium text-white">{title}</div>
       <div className="mt-4 flex flex-wrap gap-3">
         <button
           type="button"
           onClick={onProbe}
           disabled={busy}
-          className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           {probeLabel}
         </button>
@@ -43,7 +43,7 @@ export function DesktopRuntimeActions({
           type="button"
           onClick={onStart}
           disabled={busy}
-          className="rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full bg-[var(--brand-gradient)] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           {startLabel}
         </button>
@@ -51,7 +51,7 @@ export function DesktopRuntimeActions({
           type="button"
           onClick={onRestart}
           disabled={busy}
-          className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] px-4 py-2 text-sm text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           {restartLabel}
         </button>

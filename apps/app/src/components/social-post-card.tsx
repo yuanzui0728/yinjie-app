@@ -23,19 +23,21 @@ export function SocialPostCard({
   composer,
 }: SocialPostCardProps) {
   return (
-    <article className="rounded-[28px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-secondary)] p-4">
+    <article className="overflow-hidden rounded-[30px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.04))] p-5 shadow-[var(--shadow-card)] backdrop-blur-xl">
       <div className="flex items-center gap-3">
         <AvatarChip name={authorName} src={authorAvatar} />
         <div className="min-w-0 flex-1">
           <div className="text-sm font-medium text-white">{authorName}</div>
-          {meta ? <div className="text-xs text-[color:var(--text-muted)]">{meta}</div> : null}
+          {meta ? <div className="mt-1 text-xs text-[color:var(--text-muted)]">{meta}</div> : null}
         </div>
       </div>
-      <div className="mt-4 text-sm leading-7 text-[color:var(--text-primary)]">{body}</div>
-      {summary ? <div className="mt-4 text-xs text-[color:var(--text-muted)]">{summary}</div> : null}
+      <div className="mt-5 rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.025))] px-4 py-4 text-sm leading-7 text-[color:var(--text-primary)]">
+        {body}
+      </div>
+      {summary ? <div className="mt-4 text-xs leading-6 text-[color:var(--text-muted)]">{summary}</div> : null}
       {actions ? <div className="mt-4 flex gap-2">{actions}</div> : null}
       {secondary ? <div className="mt-4">{secondary}</div> : null}
-      {composer ? <div className="mt-3 flex items-center gap-2">{composer}</div> : null}
+      {composer ? <div className="mt-4 flex items-center gap-2 rounded-[24px] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.025))] p-2.5">{composer}</div> : null}
     </article>
   );
 }

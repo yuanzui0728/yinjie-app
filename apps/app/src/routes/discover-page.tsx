@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { addFeedComment, createFeedPost, getFeed, likeFeedPost, sendFriendRequest, shake, triggerSceneFriendRequest } from "@yinjie/contracts";
+import { addFeedComment, createFeedPost, getBlockedCharacters, getFeed, likeFeedPost, sendFriendRequest, shake, triggerSceneFriendRequest } from "@yinjie/contracts";
 import { AppHeader, AppPage, AppSection, Button, ErrorBlock, InlineNotice, LoadingBlock, TextAreaField, TextField } from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
 import { SocialPostCard } from "../components/social-post-card";
+import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useSessionStore } from "../store/session-store";
 
 const scenes = [
@@ -16,8 +17,8 @@ const scenes = [
 export function DiscoverPage() {
   const queryClient = useQueryClient();
   const userId = useSessionStore((state) => state.userId);
-  const username = useSessionStore((state) => state.username);
-  const avatar = useSessionStore((state) => state.avatar);
+  const runtimeConfig = useAppRuntimeConfig();
+  const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
   const [text, setText] = useState("");
   const [shakeMessage, setShakeMessage] = useState<string>("");
   const [sceneMessage, setSceneMessage] = useState<string>("");
@@ -25,22 +26,25 @@ export function DiscoverPage() {
   const [successNotice, setSuccessNotice] = useState("");
 
   const feedQuery = useQuery({
-    queryKey: ["app-feed"],
+    queryKey: ["app-feed", baseUrl],
     queryFn: () => getFeed(1, 20),
+  });
+  const blockedQuery = useQuery({
+    queryKey: ["app-discover-blocked-characters", baseUrl, userId],
+    queryFn: () => getBlockedCharacters(userId!),
+    enabled: Boolean(userId),
   });
 
   const createPostMutation = useMutation({
     mutationFn: () =>
       createFeedPost({
         authorId: userId!,
-        authorName: username ?? "我",
-        authorAvatar: avatar,
         text: text.trim(),
       }),
     onSuccess: async () => {
       setText("");
       setSuccessNotice("发现页动态已发布。");
-      await queryClient.invalidateQueries({ queryKey: ["app-feed"] });
+      await queryClient.invalidateQueries({ queryKey: ["app-feed", baseUrl] });
     },
   });
 
@@ -67,7 +71,7 @@ export function DiscoverPage() {
 
       setSuccessNotice("新的好友申请已发送。");
       setShakeMessage(`${result.character.name} 向你发来了好友申请：${result.greeting}`);
-      void queryClient.invalidateQueries({ queryKey: ["app-friend-requests", userId] });
+      void queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl, userId] });
     },
   });
 
@@ -91,7 +95,7 @@ export function DiscoverPage() {
       setSceneMessage(
         `${request.characterName} 在${sceneLabel}里注意到了你：${request.greeting ?? "对你产生了兴趣。"}`
       );
-      void queryClient.invalidateQueries({ queryKey: ["app-friend-requests", userId] });
+      void queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl, userId] });
     },
   });
 
@@ -99,7 +103,7 @@ export function DiscoverPage() {
     mutationFn: (postId: string) => likeFeedPost(postId, { userId: userId! }),
     onSuccess: async () => {
       setSuccessNotice("发现页互动已更新。");
-      await queryClient.invalidateQueries({ queryKey: ["app-feed"] });
+      await queryClient.invalidateQueries({ queryKey: ["app-feed", baseUrl] });
     },
   });
 
@@ -107,18 +111,28 @@ export function DiscoverPage() {
     mutationFn: (postId: string) =>
       addFeedComment(postId, {
         authorId: userId!,
-        authorName: username ?? "我",
-        authorAvatar: avatar,
         text: commentDrafts[postId].trim(),
       }),
     onSuccess: async (_, postId) => {
       setCommentDrafts((current) => ({ ...current, [postId]: "" }));
       setSuccessNotice("发现页互动已更新。");
-      await queryClient.invalidateQueries({ queryKey: ["app-feed"] });
+      await queryClient.invalidateQueries({ queryKey: ["app-feed", baseUrl] });
     },
   });
   const pendingLikePostId = likeMutation.isPending ? likeMutation.variables : null;
   const pendingCommentPostId = commentMutation.isPending ? commentMutation.variables : null;
+  const blockedCharacterIds = new Set((blockedQuery.data ?? []).map((item) => item.characterId));
+  const visiblePosts = (feedQuery.data?.posts ?? []).filter(
+    (post) => post.authorType !== "character" || !blockedCharacterIds.has(post.authorId),
+  );
+
+  useEffect(() => {
+    setText("");
+    setShakeMessage("");
+    setSceneMessage("");
+    setCommentDrafts({});
+    setSuccessNotice("");
+  }, [baseUrl]);
 
   useEffect(() => {
     if (!successNotice) {
@@ -132,8 +146,12 @@ export function DiscoverPage() {
   return (
     <AppPage>
       <AppHeader eyebrow="发现" title="试着摇一摇" description="这个世界不会把所有人直接摆在你面前，相遇需要一点偶然。" />
-      <AppSection className="bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(249,115,22,0.14))]">
-        <div className="mt-4 flex items-center gap-3">
+      <AppSection className="space-y-4 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(249,115,22,0.16),rgba(255,255,255,0.035))]">
+        <div>
+          <div className="text-sm font-medium text-white">随机相遇</div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">轻轻推动世界一次，看看今天会从哪里有人靠近你。</div>
+        </div>
+        <div className="flex items-center gap-3">
           <Button
             onClick={() => shakeMutation.mutate()}
             disabled={shakeMutation.isPending}
@@ -162,32 +180,38 @@ export function DiscoverPage() {
         {sceneMutation.isError && sceneMutation.error instanceof Error ? <ErrorBlock className="mt-3" message={sceneMutation.error.message} /> : null}
       </AppSection>
 
-      <AppSection>
-        <div className="text-sm font-medium text-white">发一条发现页动态</div>
+      <AppSection className="space-y-4">
+        <div>
+          <div className="text-sm font-medium text-white">发一条发现页动态</div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">这里更像公共广场，动态会等待熟人和角色来回应。</div>
+        </div>
         <TextAreaField
           value={text}
           onChange={(event) => setText(event.target.value)}
           placeholder="分享你的想法..."
-          className="mt-3 min-h-28 resize-none"
+          className="min-h-28 resize-none"
         />
         <Button
           disabled={!text.trim() || createPostMutation.isPending}
           onClick={() => createPostMutation.mutate()}
           variant="primary"
-          className="mt-3"
         >
           {createPostMutation.isPending ? "正在发布..." : "发布"}
         </Button>
-        {createPostMutation.isError && createPostMutation.error instanceof Error ? <ErrorBlock className="mt-3" message={createPostMutation.error.message} /> : null}
+        {createPostMutation.isError && createPostMutation.error instanceof Error ? <ErrorBlock message={createPostMutation.error.message} /> : null}
       </AppSection>
 
-      <section className="space-y-3">
+      <AppSection className="space-y-4">
+        <div>
+          <div className="text-sm font-medium text-white">广场动态</div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">先看内容，再做互动，避免控件把注意力从正文上抢走。</div>
+        </div>
         {successNotice ? <InlineNotice tone="success">{successNotice}</InlineNotice> : null}
         {feedQuery.isLoading ? <LoadingBlock label="正在读取发现页动态..." /> : null}
 
         {feedQuery.isError && feedQuery.error instanceof Error ? <ErrorBlock message={feedQuery.error.message} /> : null}
 
-        {(feedQuery.data?.posts ?? []).map((post) => (
+        {visiblePosts.map((post) => (
           <SocialPostCard
             key={post.id}
             authorName={post.authorName}
@@ -230,10 +254,10 @@ export function DiscoverPage() {
 
         {commentMutation.isError && commentMutation.error instanceof Error ? <ErrorBlock message={commentMutation.error.message} /> : null}
 
-        {!feedQuery.isLoading && !feedQuery.isError && !(feedQuery.data?.posts.length ?? 0) ? (
+        {!feedQuery.isLoading && !feedQuery.isError && !visiblePosts.length ? (
           <EmptyState title="发现页还没有新动态" description="你先发一条，或者再摇一摇看看会遇到谁。" />
         ) : null}
-      </section>
+      </AppSection>
     </AppPage>
   );
 }

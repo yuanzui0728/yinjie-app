@@ -11,7 +11,7 @@ type MetricCardProps = HTMLAttributes<HTMLDivElement> & {
 export function MetricCard({ className, label, value, detail, meta, ...props }: MetricCardProps) {
   return (
     <div
-      className={cn("rounded-2xl border border-white/10 bg-black/20 p-4", className)}
+      className={cn("rounded-2xl border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.035))] p-4 shadow-[var(--shadow-soft)]", className)}
       {...props}
     >
       <div className="flex items-start justify-between gap-3">

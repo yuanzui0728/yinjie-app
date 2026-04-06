@@ -1,0 +1,9 @@
+{
+  "id": "recent-only",
+  "label": "recent-only",
+  "description": "Prefer the recent summary and keep only the latest turns in replay context.",
+  "keepRecentTurns": 4,
+  "truncateMemoryChars": 120,
+  "dropMemory": false,
+  "promptInstruction": "Prioritize the freshest interaction context over older long-term memory."
+}

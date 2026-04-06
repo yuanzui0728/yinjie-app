@@ -1,38 +1,42 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { addMomentComment, createUserMoment, getMoments, toggleMomentLike } from "@yinjie/contracts";
+import { addMomentComment, createUserMoment, getBlockedCharacters, getMoments, toggleMomentLike } from "@yinjie/contracts";
 import { AppHeader, AppPage, AppSection, Button, ErrorBlock, InlineNotice, LoadingBlock, TextAreaField, TextField } from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
 import { SocialPostCard } from "../components/social-post-card";
 import { formatTimestamp } from "../lib/format";
+import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useSessionStore } from "../store/session-store";
 
 export function MomentsPage() {
   const queryClient = useQueryClient();
   const userId = useSessionStore((state) => state.userId);
-  const username = useSessionStore((state) => state.username);
-  const avatar = useSessionStore((state) => state.avatar);
+  const runtimeConfig = useAppRuntimeConfig();
+  const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
   const [text, setText] = useState("");
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [successNotice, setSuccessNotice] = useState("");
 
   const momentsQuery = useQuery({
-    queryKey: ["app-moments"],
+    queryKey: ["app-moments", baseUrl],
     queryFn: () => getMoments(),
+  });
+  const blockedQuery = useQuery({
+    queryKey: ["app-moments-blocked-characters", baseUrl, userId],
+    queryFn: () => getBlockedCharacters(userId!),
+    enabled: Boolean(userId),
   });
 
   const createMutation = useMutation({
     mutationFn: () =>
       createUserMoment({
         userId: userId!,
-        authorName: username ?? "我",
-        authorAvatar: avatar,
         text: text.trim(),
       }),
     onSuccess: async () => {
       setText("");
       setSuccessNotice("朋友圈已发布。");
-      await queryClient.invalidateQueries({ queryKey: ["app-moments"] });
+      await queryClient.invalidateQueries({ queryKey: ["app-moments", baseUrl] });
     },
   });
 
@@ -40,12 +44,10 @@ export function MomentsPage() {
     mutationFn: (momentId: string) =>
       toggleMomentLike(momentId, {
         authorId: userId!,
-        authorName: username ?? "我",
-        authorAvatar: avatar,
       }),
     onSuccess: async () => {
       setSuccessNotice("朋友圈互动已更新。");
-      await queryClient.invalidateQueries({ queryKey: ["app-moments"] });
+      await queryClient.invalidateQueries({ queryKey: ["app-moments", baseUrl] });
     },
   });
 
@@ -53,18 +55,26 @@ export function MomentsPage() {
     mutationFn: (momentId: string) =>
       addMomentComment(momentId, {
         authorId: userId!,
-        authorName: username ?? "我",
-        authorAvatar: avatar,
         text: commentDrafts[momentId].trim(),
       }),
     onSuccess: async (_, momentId) => {
       setCommentDrafts((current) => ({ ...current, [momentId]: "" }));
       setSuccessNotice("朋友圈互动已更新。");
-      await queryClient.invalidateQueries({ queryKey: ["app-moments"] });
+      await queryClient.invalidateQueries({ queryKey: ["app-moments", baseUrl] });
     },
   });
   const pendingLikeMomentId = likeMutation.isPending ? likeMutation.variables : null;
   const pendingCommentMomentId = commentMutation.isPending ? commentMutation.variables : null;
+  const blockedCharacterIds = new Set((blockedQuery.data ?? []).map((item) => item.characterId));
+  const visibleMoments = (momentsQuery.data ?? []).filter(
+    (moment) => moment.authorType !== "character" || !blockedCharacterIds.has(moment.authorId),
+  );
+
+  useEffect(() => {
+    setText("");
+    setCommentDrafts({});
+    setSuccessNotice("");
+  }, [baseUrl]);
 
   useEffect(() => {
     if (!successNotice) {
@@ -78,32 +88,38 @@ export function MomentsPage() {
   return (
     <AppPage>
       <AppHeader eyebrow="朋友圈" title="把这一刻留在世界里" description="更偏生活感的动态会留在这里，等待熟人和角色回应。" />
-      <AppSection>
-        <div className="text-sm font-medium text-white">发一条朋友圈</div>
+      <AppSection className="space-y-4">
+        <div>
+          <div className="text-sm font-medium text-white">发一条朋友圈</div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">这里更偏向熟人视角，适合留住细一点、慢一点的生活片段。</div>
+        </div>
         <TextAreaField
           value={text}
           onChange={(event) => setText(event.target.value)}
           placeholder="这一刻的想法..."
-          className="mt-3 min-h-28 resize-none"
+          className="min-h-28 resize-none"
         />
         <Button
           disabled={!text.trim() || createMutation.isPending}
           onClick={() => createMutation.mutate()}
           variant="primary"
-          className="mt-3"
         >
           {createMutation.isPending ? "正在发布..." : "发布"}
         </Button>
-        {createMutation.isError && createMutation.error instanceof Error ? <ErrorBlock className="mt-3" message={createMutation.error.message} /> : null}
+        {createMutation.isError && createMutation.error instanceof Error ? <ErrorBlock message={createMutation.error.message} /> : null}
       </AppSection>
 
-      <section className="space-y-3">
+      <AppSection className="space-y-4">
+        <div>
+          <div className="text-sm font-medium text-white">最近动态</div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">生活流内容应该更轻一点，评论和互动只做辅助，不压过正文。</div>
+        </div>
         {successNotice ? <InlineNotice tone="success">{successNotice}</InlineNotice> : null}
         {momentsQuery.isLoading ? <LoadingBlock label="正在读取朋友圈..." /> : null}
 
         {momentsQuery.isError && momentsQuery.error instanceof Error ? <ErrorBlock message={momentsQuery.error.message} /> : null}
 
-        {(momentsQuery.data ?? []).map((moment) => (
+        {visibleMoments.map((moment) => (
           <SocialPostCard
             key={moment.id}
             authorName={moment.authorName}
@@ -118,7 +134,7 @@ export function MomentsPage() {
             }
             secondary={
               moment.comments.length > 0 ? (
-                <div className="space-y-2 rounded-[22px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-input)] p-3">
+                <div className="space-y-2 rounded-[22px] bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-3">
                   {moment.comments.slice(-3).map((comment) => (
                     <div key={comment.id} className="text-xs leading-6 text-[color:var(--text-secondary)]">
                       <span className="text-white">{comment.authorName}</span>
@@ -158,10 +174,10 @@ export function MomentsPage() {
 
         {commentMutation.isError && commentMutation.error instanceof Error ? <ErrorBlock message={commentMutation.error.message} /> : null}
 
-        {!momentsQuery.isLoading && !momentsQuery.isError && !momentsQuery.data?.length ? (
+        {!momentsQuery.isLoading && !momentsQuery.isError && !visibleMoments.length ? (
           <EmptyState title="朋友圈还很安静" description="你先发一条，或者等世界里的其他人先开口。" />
         ) : null}
-      </section>
+      </AppSection>
     </AppPage>
   );
 }

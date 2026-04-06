@@ -1,0 +1,5 @@
+{
+  "id": "naturalness-v1",
+  "label": "Naturalness",
+  "description": "输出是否像真实中文社交对话，简洁自然，没有模板感、营销感或硬拗的文艺感。"
+}

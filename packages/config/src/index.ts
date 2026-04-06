@@ -1,10 +1,14 @@
 import { z } from "zod";
+import providerDefaults from "../../../config/provider-defaults.json";
+
+const providerApiStyleSchema = z.enum(["openai-chat-completions", "openai-responses"]);
 
 export const providerConfigSchema = z.object({
   endpoint: z.string().url(),
   model: z.string().min(1),
   apiKey: z.string().optional(),
   mode: z.enum(["cloud", "local-compatible"]).default("cloud"),
+  apiStyle: providerApiStyleSchema.default("openai-chat-completions"),
 });
 
 export const storageConfigSchema = z.object({
@@ -29,5 +33,38 @@ export type ProviderConfig = z.infer<typeof providerConfigSchema>;
 export type RuntimeConfig = z.infer<typeof runtimeConfigSchema>;
 export type StorageConfig = z.infer<typeof storageConfigSchema>;
 export type AppConfig = z.infer<typeof appConfigSchema>;
+export type ProviderApiStyle = z.infer<typeof providerApiStyleSchema>;
 
 export const defaultRuntimeConfig = runtimeConfigSchema.parse({});
+
+export const defaultProviderConfig: ProviderConfig = providerConfigSchema.parse(providerDefaults);
+
+export function normalizeProviderConfig(values: {
+  endpoint: string;
+  model: string;
+  mode: string;
+  apiKey?: string;
+  apiStyle?: string;
+}): ProviderConfig {
+  return {
+    endpoint: values.endpoint,
+    model: values.model,
+    mode: values.mode === "cloud" ? "cloud" : "local-compatible",
+    apiKey: values.apiKey ?? "",
+    apiStyle: values.apiStyle === "openai-responses" ? "openai-responses" : "openai-chat-completions",
+  };
+}
+
+export function buildProviderConfigPayload(values: ProviderConfig): ProviderConfig {
+  return {
+    endpoint: values.endpoint.trim(),
+    model: values.model.trim(),
+    mode: values.mode,
+    apiKey: values.apiKey?.trim() ? values.apiKey.trim() : undefined,
+    apiStyle: values.apiStyle,
+  };
+}
+
+export function validateProviderConfig(values: ProviderConfig) {
+  return providerConfigSchema.safeParse(values);
+}

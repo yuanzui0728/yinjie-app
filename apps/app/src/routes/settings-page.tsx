@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { LEGACY_HTTP_SURFACE, LEGACY_MIGRATED_MODULES, getAiModel, getAvailableModels } from "@yinjie/contracts";
 import { AppHeader, AppPage, AppSection, InlineNotice, MetricCard, SectionHeading, StatusPill } from "@yinjie/ui";
+import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 const deliveryTargets = [
   "Signed desktop installer with auto-update",
@@ -10,7 +11,8 @@ const deliveryTargets = [
 ];
 
 export function SettingsPage() {
-  const baseUrl = import.meta.env.VITE_CORE_API_BASE_URL;
+  const runtimeConfig = useAppRuntimeConfig();
+  const baseUrl = runtimeConfig.apiBaseUrl;
 
   const aiModelQuery = useQuery({
     queryKey: ["settings-ai-model", baseUrl],
@@ -34,29 +36,29 @@ export function SettingsPage() {
         />
       </div>
 
-      <AppSection>
+      <AppSection className="space-y-5">
         <SectionHeading>Default Decisions</SectionHeading>
-        <div className="mt-4 flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3">
           <StatusPill tone="healthy">Cross-platform Desktop</StatusPill>
           <StatusPill>Rust-first Runtime</StatusPill>
           <StatusPill>OpenAI-compatible Providers</StatusPill>
           <StatusPill>Self-hosted Single User</StatusPill>
         </div>
-        <p className="mt-5 text-sm leading-7 text-[color:var(--text-secondary)]">
+        <p className="text-sm leading-7 text-[color:var(--text-secondary)]">
           This refactor only upgrades structure, runtime, language boundaries, UI, and UX. Product rules stay frozen
           while the delivery path becomes installable, diagnosable, and maintainable.
         </p>
 
-        {loadingCount > 0 ? <InlineNotice className="mt-5" tone="info">正在同步运行时配置与模型目录。</InlineNotice> : null}
+        {loadingCount > 0 ? <InlineNotice tone="info">正在同步运行时配置与模型目录。</InlineNotice> : null}
         {aiModelQuery.error instanceof Error || modelsQuery.error instanceof Error ? (
-          <InlineNotice className="mt-5" tone="warning">
+          <InlineNotice tone="warning">
             {aiModelQuery.error instanceof Error ? `当前模型读取失败：${aiModelQuery.error.message}` : null}
             {aiModelQuery.error instanceof Error && modelsQuery.error instanceof Error ? " " : null}
             {modelsQuery.error instanceof Error ? `模型目录读取失败：${modelsQuery.error.message}` : null}
           </InlineNotice>
         ) : null}
 
-        <div className="mt-5 grid gap-3">
+        <div className="grid gap-3">
           <MetricCard label="Active AI Model" value={aiModelQuery.data?.model ?? "pending"} />
           <MetricCard label="Available Catalog" value={modelsQuery.data?.models.length ?? 0} />
           <MetricCard
@@ -67,20 +69,20 @@ export function SettingsPage() {
         </div>
       </AppSection>
 
-      <AppSection className="bg-[color:var(--surface-secondary)]">
+      <AppSection className="space-y-5">
         <SectionHeading>Delivery Surface</SectionHeading>
-        <div className="mt-4 grid gap-3">
+        <div className="grid gap-3">
           {deliveryTargets.map((item) => (
             <div
               key={item}
-              className="rounded-2xl border border-white/10 bg-black/10 px-4 py-3 text-sm text-[color:var(--text-secondary)]"
+              className="rounded-2xl border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.03))] px-4 py-3 text-sm text-[color:var(--text-secondary)]"
             >
               {item}
             </div>
           ))}
         </div>
 
-        <div className="mt-6 rounded-2xl border border-white/10 bg-black/10 p-4">
+        <div className="rounded-2xl border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.03))] p-4">
           <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-muted)]">Legacy Compatibility</div>
           <ul className="mt-4 space-y-2 text-sm leading-7 text-[color:var(--text-secondary)]">
             {LEGACY_HTTP_SURFACE.map((route) => (
