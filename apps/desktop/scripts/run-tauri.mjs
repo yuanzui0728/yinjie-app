@@ -16,8 +16,12 @@ const env = {
   CARGO_TARGET_DIR: process.env.CARGO_TARGET_DIR ?? cargoTargetDir,
   CARGO_BUILD_JOBS: process.env.CARGO_BUILD_JOBS ?? "1",
 };
+const hostTargetTriple = resolveHostTargetTriple();
 
 const explicitTarget = readTargetArg(forwardedArgs);
+const effectiveTarget = normalizeRequestedTarget(explicitTarget, hostTargetTriple);
+const tauriArgs = replaceTargetArg(forwardedArgs, effectiveTarget);
+
 if (explicitTarget) {
   env.CARGO_BUILD_TARGET = explicitTarget;
   env.YINJIE_DESKTOP_TARGET_TRIPLE = explicitTarget;
@@ -156,7 +160,7 @@ function ensureWindowsDesktopDependencies() {
 function prepareCoreApiSidecar() {
   const result = spawnSync(
     "node",
-    ["./scripts/prepare-core-api-sidecar.mjs", mode, ...forwardedArgs],
+    ["./scripts/prepare-core-api-sidecar.mjs", mode, ...tauriArgs],
     {
       stdio: "inherit",
       shell: true,
@@ -189,7 +193,7 @@ prepareCoreApiSidecar();
 const maxAttempts = mode === "build" ? 6 : 1;
 
 for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-  const result = spawnSync("pnpm", ["exec", "tauri", mode, ...forwardedArgs], {
+  const result = spawnSync("pnpm", ["exec", "tauri", mode, ...tauriArgs], {
     stdio: "pipe",
     shell: true,
     env,
@@ -243,4 +247,56 @@ function readTargetArg(args) {
   }
 
   return null;
+}
+
+function replaceTargetArg(args, target) {
+  const nextArgs = [];
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === "--target") {
+      index += 1;
+      if (target) {
+        nextArgs.push("--target", target);
+      }
+      continue;
+    }
+
+    if (arg.startsWith("--target=")) {
+      if (target) {
+        nextArgs.push(`--target=${target}`);
+      }
+      continue;
+    }
+
+    nextArgs.push(arg);
+  }
+
+  return nextArgs;
+}
+
+function normalizeRequestedTarget(target, hostTarget) {
+  if (!target) {
+    return null;
+  }
+
+  return target;
+}
+
+function resolveHostTargetTriple() {
+  const rustcVersion = spawnSync("rustc", ["-vV"], {
+    stdio: "pipe",
+    shell: true,
+    env,
+    encoding: "utf8",
+  });
+
+  if ((rustcVersion.status ?? 1) !== 0) {
+    return null;
+  }
+
+  const hostLine = rustcVersion.stdout
+    .split(/\r?\n/u)
+    .find((line) => line.startsWith("host:"));
+  return hostLine?.split(":")[1]?.trim() ?? null;
 }

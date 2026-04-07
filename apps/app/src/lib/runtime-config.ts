@@ -28,6 +28,10 @@ export function resolveAppCoreApiBaseUrl() {
     return runtimeConfig.apiBaseUrl;
   }
 
+  if (runtimeConfig.appPlatform === "desktop") {
+    return DEFAULT_CORE_API_BASE_URL;
+  }
+
   return fallbackBrowserBaseUrl() ?? DEFAULT_CORE_API_BASE_URL;
 }
 

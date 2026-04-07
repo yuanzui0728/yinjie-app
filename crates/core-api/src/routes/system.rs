@@ -507,7 +507,7 @@ fn normalize_provider_payload(
     mode: &str,
     api_style: Option<&str>,
 ) -> Result<ProviderConfigResponse, String> {
-    let normalized_endpoint = endpoint.trim().trim_end_matches('/').to_string();
+    let normalized_endpoint = normalize_provider_endpoint(endpoint);
     let normalized_model = model.trim().to_string();
     let normalized_mode = mode.trim().to_string();
     let normalized_api_style = api_style
@@ -549,6 +549,18 @@ fn normalize_provider_payload(
         &normalized_mode,
         &normalized_api_style,
     ))
+}
+
+fn normalize_provider_endpoint(endpoint: &str) -> String {
+    let normalized = endpoint.trim().trim_end_matches('/').to_string();
+    if let Some(value) = normalized.strip_suffix("/chat/completions") {
+        return value.to_string();
+    }
+    if let Some(value) = normalized.strip_suffix("/responses") {
+        return value.to_string();
+    }
+
+    normalized
 }
 
 fn build_provider_config_response(

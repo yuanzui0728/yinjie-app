@@ -23,6 +23,20 @@
 pnpm --filter @yinjie/desktop build:windows:x64
 ```
 
+如果当前 Windows 环境会拦截仓库内 `target/` 目录里的 Rust build script，可先把 `CARGO_TARGET_DIR` 指到仓库外的 ASCII 路径，再执行相同命令。例如：
+
+```powershell
+$env:CARGO_TARGET_DIR = 'C:\cargo-target\yinjie-desktop'
+pnpm dev:desktop
+```
+
+或：
+
+```powershell
+$env:CARGO_TARGET_DIR = 'C:\cargo-target\yinjie-desktop'
+pnpm desktop:build:windows:x64
+```
+
 桌面脚本会在 Windows 下自动执行：
 
 1. 构建 `crates/core-api`

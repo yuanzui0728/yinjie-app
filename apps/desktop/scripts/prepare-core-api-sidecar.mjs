@@ -11,12 +11,20 @@ const sidecarDir = resolve(desktopRoot, "src-tauri/binaries");
 const mode = process.argv[2] ?? "build";
 const forwardedArgs = process.argv.slice(3);
 const profile = mode === "dev" ? "debug" : "release";
+const configuredCargoTargetDir = process.env.CARGO_TARGET_DIR
+  ? resolve(process.env.CARGO_TARGET_DIR)
+  : null;
 
 if (process.platform !== "win32") {
   process.exit(0);
 }
 
-const targetTriple = readTargetArg(forwardedArgs) ?? resolveHostTargetTriple();
+const hostTargetTriple = resolveHostTargetTriple();
+const requestedTarget = readTargetArg(forwardedArgs);
+const envTargetTriple = process.env.CARGO_BUILD_TARGET?.trim() || null;
+const targetTriple = requestedTarget ?? envTargetTriple ?? hostTargetTriple;
+const shouldPassCargoTarget = (requestedTarget ?? envTargetTriple) && targetTriple !== hostTargetTriple;
+const shouldUseTargetSubdir = Boolean(requestedTarget ?? envTargetTriple);
 
 if (!targetTriple) {
   console.error("Could not determine the Rust host target triple.");
@@ -30,22 +38,22 @@ if (!targetTriple.includes("windows")) {
   process.exit(1);
 }
 
-const cargoArgs = ["build", "--manifest-path", "crates/core-api/Cargo.toml", "--target", targetTriple];
+const cargoArgs = ["build", "--manifest-path", "crates/core-api/Cargo.toml"];
+if (shouldPassCargoTarget) {
+  cargoArgs.push("--target", targetTriple);
+}
 if (profile === "release") {
   cargoArgs.push("--release");
 }
 
-const buildResult = spawnSync("cargo", cargoArgs, {
-  cwd: repoRoot,
-  env: process.env,
-  stdio: "inherit",
+runCargoBuildWithRetry();
+
+const builtBinary = resolveBuiltBinaryPath({
+  cargoTargetDir: configuredCargoTargetDir,
+  targetTriple,
+  profile,
+  shouldUseTargetSubdir,
 });
-
-if ((buildResult.status ?? 1) !== 0) {
-  process.exit(buildResult.status ?? 1);
-}
-
-const builtBinary = join(coreApiRoot, "target", targetTriple, profile, "yinjie-core-api.exe");
 if (!existsSync(builtBinary)) {
   console.error(`Expected Windows Core API binary was not produced: ${builtBinary}`);
   process.exit(1);
@@ -56,6 +64,57 @@ const bundledBinary = join(sidecarDir, `yinjie-core-api-${targetTriple}.exe`);
 copyFileSync(builtBinary, bundledBinary);
 
 console.log(`Prepared Windows Core API sidecar: ${bundledBinary}`);
+
+function runCargoBuildWithRetry() {
+  const maxAttempts = mode === "build" ? 6 : 1;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const buildResult = spawnSync("cargo", cargoArgs, {
+      cwd: repoRoot,
+      env: process.env,
+      stdio: "pipe",
+      encoding: "utf8",
+    });
+
+    if (buildResult.stdout) {
+      process.stdout.write(buildResult.stdout);
+    }
+
+    if (buildResult.stderr) {
+      process.stderr.write(buildResult.stderr);
+    }
+
+    if ((buildResult.status ?? 1) === 0) {
+      return;
+    }
+
+    const combinedOutput = `${buildResult.stdout ?? ""}\n${buildResult.stderr ?? ""}`;
+    const retryableWindowsBuildScriptError =
+      attempt < maxAttempts &&
+      /build-script-build/i.test(combinedOutput) &&
+      /os error 5/i.test(combinedOutput);
+
+    if (!retryableWindowsBuildScriptError) {
+      process.exit(buildResult.status ?? 1);
+    }
+
+    console.error(
+      `Detected transient Windows Core API sidecar build failure (attempt ${attempt}/${maxAttempts}). Retrying...`,
+    );
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 3000);
+  }
+
+  process.exit(1);
+}
+
+function resolveBuiltBinaryPath({ cargoTargetDir, targetTriple, profile, shouldUseTargetSubdir }) {
+  const targetRoot = cargoTargetDir ?? join(coreApiRoot, "target");
+  if (shouldUseTargetSubdir) {
+    return join(targetRoot, targetTriple, profile, "yinjie-core-api.exe");
+  }
+
+  return join(targetRoot, profile, "yinjie-core-api.exe");
+}
 
 function resolveHostTargetTriple() {
   const rustcVersion = spawnSync("rustc", ["-vV"], {
