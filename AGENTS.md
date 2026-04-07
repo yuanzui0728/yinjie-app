@@ -20,6 +20,7 @@
 - `apps/admin/`：新本地后台前端，由本地服务托管或浏览器访问，已接入 Dashboard、Characters 列表、Character 编辑页、Evals 页面、`/setup` 统一运行时配置页，以及桌面运行时 Core API 启停/探活控制；在桌面壳内若 Core API 未就绪，会先显示全局启动引导层
 - `apps/admin` 当前已把 runtime/provider 的写操作从 Dashboard 收敛到 `/setup`：Dashboard 以状态概览、评测入口和跳转为主，避免与 `/setup` 重复维护同一套控制逻辑
 - `apps/desktop/`：Tauri 2 桌面壳，已接入 runtime 路径解析、Core API 生命周期命令、桌面侧 health probe、桌面运行时诊断，并在桌面启动时自动探测/拉起 Core API；当前支持 start / stop / restart / probe 命令
+- `scripts/`：仓库级自动化脚本目录；当前已加入 `build-windows-installers.mjs`，统一负责 Windows 安装包环境检查、MSVC 初始化、Tauri 打包，以及 `.exe/.msi` 产物收集；同时支持按 `tauri.conf.json` 的 `productName/version` 输出版本归档目录与 `release-manifest.json`，供命令行、双击脚本与后续 CI 复用
 - `apps/ios-shell/`：iOS 原生壳骨架，当前采用 Capacitor 方向，已补 `package.json`、`capacitor.config.ts` 与基础 sync/open 脚本，后续承接 Xcode 工程、签名、Keychain、Push 与 Privacy 文案
 - `apps/ios-shell/plugins/`：iOS native plugin 规范与 Swift stub 目录，当前已补 `YinjieRuntime` / `YinjieSecureStorage` 的桥接说明与占位实现，供后续接入真实 Xcode plugin
 - `apps/ios-shell/xcode-template/`：Xcode 工程占位模板，当前已补 `Info.plist`、`PrivacyInfo.xcprivacy`、`App.entitlements`、`Podfile` 和 Capabilities 样例
@@ -374,6 +375,30 @@
 - 运行配置进入本地 app data 目录
 - SQLite 文件迁移到桌面运行时数据目录
 ## Current Migration Notes
+
+### Latest App 2C Notes (Corrected 2026-04-07)
+
+- `apps/app` 已按 2C 产品面收敛：`Splash -> Onboarding/Login -> 业务页` 成为唯一用户主路径，不再把 runtime / provider / Core API 配置暴露给终端用户。
+- `/setup` 现仅保留兼容重定向职责：未登录跳转到 `/onboarding`，已登录跳转到 `/tabs/chat`，不再承载任何用户可见的配置与运维界面。
+- `apps/app` 全局启动守卫现统一为品牌化“暂时无法进入隐界”遮罩：桌面壳仍可在后台自动拉起本地服务，但前台不再显示诊断、路径、地址、provider、日志等后台信息。
+- `apps/app` 的 `Profile` 已移除运行时控制、服务地址、provider 状态、多会话管理、历史会话撤销、logout-all 与显式切换账号入口，仅保留资料编辑、好友申请、安全治理、法务页、退出当前账号与删除账号。
+- `apps/app/src/routes/dashboard-page.tsx` 与 `apps/app/src/routes/settings-page.tsx` 已从 consumer 端清理，避免后台/迁移视图再次回流到 2C 产品面。
+
+### Latest App 2C Notes (Corrected 2026-04-07)
+
+- `apps/app` 已按 2C 产品面收敛：`Splash -> Onboarding/Login -> 业务页` 成为唯一用户主路径，不再把 runtime / provider / Core API 配置暴露给终端用户。
+- `/setup` 现仅保留兼容重定向职责：未登录跳转到 `/onboarding`，已登录跳转到 `/tabs/chat`，不再承载任何用户可见的配置与运维界面。
+- `apps/app` 全局启动守卫现统一为品牌化“暂时无法进入隐界”遮罩：桌面壳仍可在后台自动拉起本地服务，但前台不再显示诊断、路径、地址、provider、日志等后台信息。
+- `apps/app` 的 `Profile` 已移除运行时控制、服务地址、provider 状态、多会话管理、历史会话撤销、logout-all 与显式切换账号入口，仅保留资料编辑、好友申请、安全治理、法务页、退出当前账号与删除账号。
+- `apps/app/src/routes/dashboard-page.tsx` 与 `apps/app/src/routes/settings-page.tsx` 已从 consumer 端清理，避免后台/迁移视图再次回流到 2C 产品面。
+
+### Latest App 2C Notes (2026-04-07)
+
+- `apps/app` 已按 2C 产品面收敛：`Splash -> Onboarding/Login -> 业务页` 成为唯一用户主路径，不再把 runtime / provider / Core API 配置暴露给终端用户。
+- `/setup` 现仅保留兼容重定向职责：未登录跳转到 `/onboarding`，已登录跳转到 `/tabs/chat`，不再承载任何用户可见的配置与运维界面。
+- `apps/app` 全局启动守卫现统一为品牌化“暂时无法进入隐界”遮罩：桌面壳仍可在后台自动拉起本地服务，但前台不再显示诊断、路径、地址、provider、日志等后台信息。
+- `apps/app` 的 `Profile` 已移除运行时控制、服务地址、provider 状态、多会话管理、历史会话撤销、logout-all 与显式切换账号入口，仅保留资料编辑、好友申请、安全治理、法务页、退出当前账号与删除账号。
+- `apps/app/src/routes/dashboard-page.tsx` 与 `apps/app/src/routes/settings-page.tsx` 已从 consumer 端清理，避免后台/迁移视图再次回流到 2C 产品面。
 
 - Realtime `/chat` replies now have a gateway-backed execution path in `crates/core-api/src/realtime.rs`.
 - Chat reply prompt assembly lives in `crates/core-api/src/generation.rs` and uses recent message history, character memory, current activity, and optional world context.

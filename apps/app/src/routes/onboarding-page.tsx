@@ -1,30 +1,17 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { initUser, completeOnboarding } from "@yinjie/contracts";
+import { completeOnboarding, initUser } from "@yinjie/contracts";
 import { AppPage, AppSection, Button, InlineNotice, TextField } from "@yinjie/ui";
-import { getPlatformCapabilities } from "../lib/platform";
-import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useSessionStore } from "../store/session-store";
 
 export function OnboardingPage() {
   const navigate = useNavigate();
   const hydrateSession = useSessionStore((state) => state.hydrateSession);
   const markOnboardingComplete = useSessionStore((state) => state.completeOnboarding);
-  const environmentSetupCompleted = useSessionStore((state) => state.environmentSetupCompleted);
-  const providerReady = useSessionStore((state) => state.providerReady);
-  const { runtimeMode } = getPlatformCapabilities();
-  const runtimeConfig = useAppRuntimeConfig();
-  const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const canSubmit = name.trim();
-
-  useEffect(() => {
-    setName("");
-    setError("");
-    setLoading(false);
-  }, [baseUrl]);
 
   async function submit() {
     const username = name.trim();
@@ -55,27 +42,6 @@ export function OnboardingPage() {
         <div className="text-[11px] uppercase tracking-[0.36em] text-[color:var(--brand-secondary)]">我是引路人</div>
         <h1 className="mt-6 text-3xl font-semibold tracking-[0.16em] text-white">告诉我，你叫什么名字？</h1>
         <p className="mt-4 text-sm leading-7 text-[color:var(--text-secondary)]">这里暂时只有你。很快，会有人主动认识你。</p>
-
-        {environmentSetupCompleted ? (
-          <InlineNotice className="mt-6 text-left" tone={providerReady ? "success" : "warning"}>
-            <div className="flex items-center justify-between gap-3">
-              <div className="text-sm font-medium text-white">{runtimeMode === "remote" ? "远程世界已连接" : "本地世界已准备"}</div>
-              <div className="rounded-full border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.04))] px-3 py-1 text-[11px] uppercase tracking-[0.14em] text-white/80">
-                {providerReady ? "provider ready" : runtimeMode === "remote" ? "service only" : "fallback mode"}
-              </div>
-            </div>
-            <div className="mt-2 text-xs leading-6">
-              {providerReady
-                ? "当前聊天和动态会优先走真实推理链。"
-                : runtimeMode === "remote"
-                  ? "你已经连上远程服务，但 provider 状态仍需服务端继续配置。"
-                  : "你已经可以进入，但聊天和动态暂时会使用 fallback 文案。"}
-            </div>
-            <Link to="/setup" className="mt-3 inline-block text-xs text-[color:var(--brand-secondary)]">
-              返回环境页查看当前状态
-            </Link>
-          </InlineNotice>
-        ) : null}
 
         <div className="mt-8 rounded-[28px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.04))] p-5 text-left shadow-[var(--shadow-section)]">
           <TextField

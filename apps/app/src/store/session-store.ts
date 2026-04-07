@@ -8,20 +8,16 @@ type SessionState = {
   userId: string | null;
   username: string | null;
   onboardingCompleted: boolean;
-  environmentSetupCompleted: boolean;
-  providerReady: boolean;
-  runtimeMode: "self-hosted" | "remote";
   avatar: string;
   signature: string;
   hydrateSession: (session: AuthSession) => void;
   updateProfile: (input: { username?: string; avatar?: string; signature?: string }) => void;
   completeOnboarding: () => void;
-  completeEnvironmentSetup: (input?: { providerReady?: boolean; runtimeMode?: "self-hosted" | "remote" }) => void;
   logout: () => void;
 };
 
 const defaultAvatar = "";
-const defaultSignature = "在现实之外，进入另一个世界。";
+const defaultSignature = "在现实之外，进入另一片世界。";
 
 export const useSessionStore = create<SessionState>()(
   persist(
@@ -30,9 +26,6 @@ export const useSessionStore = create<SessionState>()(
       userId: null,
       username: null,
       onboardingCompleted: false,
-      environmentSetupCompleted: false,
-      providerReady: false,
-      runtimeMode: "remote",
       avatar: defaultAvatar,
       signature: defaultSignature,
       hydrateSession: (session) =>
@@ -55,21 +48,12 @@ export const useSessionStore = create<SessionState>()(
           signature: input.signature ?? state.signature,
         })),
       completeOnboarding: () => set({ onboardingCompleted: true }),
-      completeEnvironmentSetup: (input) =>
-        set((state) => ({
-          environmentSetupCompleted: true,
-          providerReady: input?.providerReady ?? state.providerReady,
-          runtimeMode: input?.runtimeMode ?? state.runtimeMode,
-        })),
       logout: () =>
         set({
           token: null,
           userId: null,
           username: null,
           onboardingCompleted: false,
-          environmentSetupCompleted: false,
-          providerReady: false,
-          runtimeMode: "remote",
           avatar: defaultAvatar,
           signature: defaultSignature,
         }),

@@ -289,27 +289,46 @@ impl RuntimeState {
         self.prune_expired_sessions();
 
         let default_provider = ProviderConfigRecord::default();
-        let resolved_model = if self.config.ai_model.trim().is_empty() {
-            self.config.provider.model.trim().to_string()
-        } else {
-            self.config.ai_model.trim().to_string()
-        };
+        let resolved_endpoint = normalize_provider_endpoint(self.config.provider.endpoint.trim());
+        let resolved_mode = self.config.provider.mode.trim().to_string();
+        let resolved_api_style = self.config.provider.api_style.trim().to_string();
+        let resolved_model = self.config.ai_model.trim().to_string();
+        let provider_model = self.config.provider.model.trim().to_string();
+        let resolved_api_key = self.config.provider.api_key.as_ref().and_then(|value| {
+            let normalized = value.trim().to_string();
+            if normalized.is_empty() { None } else { Some(normalized) }
+        });
 
-        // Provider access wiring is centrally managed by repo defaults so future
-        // endpoint/auth/protocol changes only need one update.
-        self.config.provider.endpoint = default_provider.endpoint.clone();
-        self.config.provider.mode = default_provider.mode.clone();
-        self.config.provider.api_style = default_provider.api_style.clone();
+        self.config.provider.endpoint = if resolved_endpoint.is_empty() {
+            default_provider.endpoint.clone()
+        } else {
+            resolved_endpoint
+        };
+        self.config.provider.mode = if resolved_mode.is_empty() {
+            default_provider.mode.clone()
+        } else {
+            resolved_mode
+        };
+        self.config.provider.api_style = if resolved_api_style.is_empty() {
+            default_provider.api_style.clone()
+        } else {
+            resolved_api_style
+        };
         self.config.provider.model = if resolved_model.is_empty() {
-            default_provider.model.clone()
+            if provider_model.is_empty() {
+                default_provider.model.clone()
+            } else {
+                provider_model
+            }
         } else {
             resolved_model.clone()
         };
         self.config.ai_model = self.config.provider.model.clone();
-
-        self.config.provider.api_key = default_provider.api_key.as_ref().and_then(|value| {
-            let normalized = value.trim().to_string();
-            if normalized.is_empty() { None } else { Some(normalized) }
+        self.config.provider.api_key = resolved_api_key.or_else(|| {
+            default_provider.api_key.as_ref().and_then(|value| {
+                let normalized = value.trim().to_string();
+                if normalized.is_empty() { None } else { Some(normalized) }
+            })
         });
     }
 
@@ -323,6 +342,18 @@ impl RuntimeState {
                 .unwrap_or(false)
         });
     }
+}
+
+fn normalize_provider_endpoint(value: &str) -> String {
+    let normalized = value.trim().trim_end_matches('/').to_string();
+    if let Some(value) = normalized.strip_suffix("/chat/completions") {
+        return value.to_string();
+    }
+    if let Some(value) = normalized.strip_suffix("/responses") {
+        return value.to_string();
+    }
+
+    normalized
 }
 
 impl ProviderConfigRecord {

@@ -39,6 +39,18 @@ export const defaultRuntimeConfig = runtimeConfigSchema.parse({});
 
 export const defaultProviderConfig: ProviderConfig = providerConfigSchema.parse(providerDefaults);
 
+function normalizeProviderEndpoint(value: string) {
+  const normalized = value.trim().replace(/\/+$/, "");
+  if (normalized.endsWith("/chat/completions")) {
+    return normalized.slice(0, -"/chat/completions".length);
+  }
+  if (normalized.endsWith("/responses")) {
+    return normalized.slice(0, -"/responses".length);
+  }
+
+  return normalized;
+}
+
 export function normalizeProviderConfig(values: {
   endpoint: string;
   model: string;
@@ -47,7 +59,7 @@ export function normalizeProviderConfig(values: {
   apiStyle?: string;
 }): ProviderConfig {
   return {
-    endpoint: values.endpoint,
+    endpoint: normalizeProviderEndpoint(values.endpoint),
     model: values.model,
     mode: values.mode === "cloud" ? "cloud" : "local-compatible",
     apiKey: values.apiKey ?? "",
@@ -57,7 +69,7 @@ export function normalizeProviderConfig(values: {
 
 export function buildProviderConfigPayload(values: ProviderConfig): ProviderConfig {
   return {
-    endpoint: values.endpoint.trim(),
+    endpoint: normalizeProviderEndpoint(values.endpoint),
     model: values.model.trim(),
     mode: values.mode,
     apiKey: values.apiKey?.trim() ? values.apiKey.trim() : undefined,
