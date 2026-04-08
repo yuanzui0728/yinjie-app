@@ -1,5 +1,4 @@
 import { z } from "zod";
-import providerDefaults from "../../../config/provider-defaults.json";
 
 const providerApiStyleSchema = z.enum(["openai-chat-completions", "openai-responses"]);
 
@@ -19,7 +18,7 @@ export const storageConfigSchema = z.object({
 
 export const runtimeConfigSchema = z.object({
   appMode: z.enum(["development", "desktop", "production"]).default("development"),
-  coreApiPort: z.number().int().min(1024).max(65535).default(39091),
+  coreApiPort: z.number().int().min(1024).max(65535).default(3000),
   adminPath: z.string().default("/admin"),
 });
 
@@ -36,8 +35,13 @@ export type AppConfig = z.infer<typeof appConfigSchema>;
 export type ProviderApiStyle = z.infer<typeof providerApiStyleSchema>;
 
 export const defaultRuntimeConfig = runtimeConfigSchema.parse({});
-
-export const defaultProviderConfig: ProviderConfig = providerConfigSchema.parse(providerDefaults);
+export const defaultProviderConfig: ProviderConfig = providerConfigSchema.parse({
+  endpoint: "https://api.deepseek.com",
+  model: "deepseek-chat",
+  apiKey: "",
+  mode: "cloud",
+  apiStyle: "openai-chat-completions",
+});
 
 function normalizeProviderEndpoint(value: string) {
   const normalized = value.trim().replace(/\/+$/, "");

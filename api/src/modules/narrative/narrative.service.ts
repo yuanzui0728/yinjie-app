@@ -2,9 +2,9 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { NarrativeArcEntity } from './narrative-arc.entity';
+import { WorldOwnerService } from '../auth/world-owner.service';
 
 type RecordConversationTurnInput = {
-  userId: string;
   characterId: string;
   characterName?: string;
   messageCount: number;
@@ -15,22 +15,24 @@ export class NarrativeService {
   constructor(
     @InjectRepository(NarrativeArcEntity)
     private readonly narrativeRepo: Repository<NarrativeArcEntity>,
+    private readonly worldOwnerService: WorldOwnerService,
   ) {}
 
-  async getByUser(userId: string): Promise<NarrativeArcEntity[]> {
+  async getForCurrentWorld(): Promise<NarrativeArcEntity[]> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
     return this.narrativeRepo.find({
-      where: { userId },
+      where: { userId: owner.id },
       order: { createdAt: 'DESC' },
     });
   }
 
   async ensureArc(
-    userId: string,
     characterId: string,
     characterName?: string,
   ): Promise<NarrativeArcEntity> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
     const existing = await this.narrativeRepo.findOne({
-      where: { userId, characterId, status: 'active' },
+      where: { userId: owner.id, characterId, status: 'active' },
       order: { createdAt: 'DESC' },
     });
 
@@ -39,7 +41,7 @@ export class NarrativeService {
     }
 
     const arc = this.narrativeRepo.create({
-      userId,
+      userId: owner.id,
       characterId,
       title: `${characterName ?? characterId} relationship arc`,
       status: 'active',
@@ -55,7 +57,7 @@ export class NarrativeService {
       return null;
     }
 
-    const arc = await this.ensureArc(input.userId, input.characterId, input.characterName);
+    const arc = await this.ensureArc(input.characterId, input.characterName);
     const nextProgress = this.getProgressFromMessageCount(input.messageCount);
     const nextMilestones = this.mergeMilestones(arc.milestones ?? [], input.messageCount);
 

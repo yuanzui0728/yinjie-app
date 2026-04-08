@@ -34,19 +34,9 @@ export interface FeedListResponse {
 }
 
 export interface CreateFeedPostRequest {
-  authorId: string;
-  authorName?: string;
-  authorAvatar?: string;
   text: string;
 }
 
 export interface CreateFeedCommentRequest {
-  authorId: string;
-  authorName?: string;
-  authorAvatar?: string;
   text: string;
-}
-
-export interface LikeFeedPostRequest {
-  userId: string;
 }

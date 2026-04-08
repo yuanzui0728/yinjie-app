@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { adminApi } from "../lib/admin-api";
-import { SectionHeading, LoadingBlock, ErrorBlock, Button, InlineNotice } from "@yinjie/ui";
+import { Button, ErrorBlock, InlineNotice, LoadingBlock, SectionHeading } from "@yinjie/ui";
 
 export function UsersPage() {
   const [page, setPage] = useState(1);
@@ -23,29 +23,30 @@ export function UsersPage() {
   });
 
   const { data, isLoading, error } = usersQuery;
+  const totalPages = data ? Math.max(1, Math.ceil(data.total / data.limit)) : 1;
 
   return (
     <div className="space-y-6">
       <section className="rounded-[30px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-console)] p-6 shadow-[var(--shadow-card)]">
-        <SectionHeading
-          title="用户管理"
-          description={data ? `共 ${data.total} 名用户` : "用户列表"}
-        />
+        <SectionHeading>Users</SectionHeading>
+        <div className="mt-2 text-sm text-[color:var(--text-muted)]">
+          {data ? `Total users: ${data.total}` : "User list"}
+        </div>
 
-        {isLoading && <LoadingBlock />}
-        {error && <ErrorBlock message={error instanceof Error ? error.message : "加载失败"} />}
+        {isLoading ? <LoadingBlock className="mt-4" /> : null}
+        {error ? <ErrorBlock message={error instanceof Error ? error.message : "Failed to load users"} /> : null}
 
-        {data && (
+        {data ? (
           <>
             <div className="mt-4 overflow-hidden rounded-2xl border border-[color:var(--border-faint)]">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[color:var(--border-faint)] text-left text-xs uppercase tracking-[0.2em] text-[color:var(--text-muted)]">
-                    <th className="px-4 py-3">用户名</th>
+                    <th className="px-4 py-3">Username</th>
                     <th className="px-4 py-3">ID</th>
-                    <th className="px-4 py-3">注册时间</th>
-                    <th className="px-4 py-3">引导完成</th>
-                    <th className="px-4 py-3">操作</th>
+                    <th className="px-4 py-3">Created</th>
+                    <th className="px-4 py-3">Onboarding</th>
+                    <th className="px-4 py-3">Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -56,7 +57,7 @@ export function UsersPage() {
                     >
                       <td className="px-4 py-3 font-medium text-white">{user.username}</td>
                       <td className="px-4 py-3 font-mono text-xs text-[color:var(--text-muted)]">
-                        {user.id.slice(0, 8)}…
+                        {user.id.slice(0, 8)}...
                       </td>
                       <td className="px-4 py-3 text-[color:var(--text-secondary)]">
                         {new Date(user.createdAt).toLocaleDateString("zh-CN")}
@@ -69,33 +70,33 @@ export function UsersPage() {
                               : "bg-yellow-500/15 text-yellow-400"
                           }`}
                         >
-                          {user.onboardingCompleted ? "是" : "否"}
+                          {user.onboardingCompleted ? "Yes" : "No"}
                         </span>
                       </td>
                       <td className="px-4 py-3">
                         {deletingId === user.id ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-xs text-[color:var(--text-muted)]">确认删除？</span>
+                            <span className="text-xs text-[color:var(--text-muted)]">Confirm delete?</span>
                             <button
                               className="text-xs text-red-400 hover:text-red-300"
                               onClick={() => deleteMutation.mutate(user.id)}
                               disabled={deleteMutation.isPending}
                             >
-                              {deleteMutation.isPending ? "删除中…" : "确认"}
+                              {deleteMutation.isPending ? "Deleting..." : "Confirm"}
                             </button>
                             <button
                               className="text-xs text-[color:var(--text-muted)] hover:text-white"
                               onClick={() => setDeletingId(null)}
                             >
-                              取消
+                              Cancel
                             </button>
                           </div>
                         ) : (
                           <button
-                            className="text-xs text-[color:var(--text-muted)] hover:text-red-400 transition"
+                            className="text-xs text-[color:var(--text-muted)] transition hover:text-red-400"
                             onClick={() => setDeletingId(user.id)}
                           >
-                            删除
+                            Delete
                           </button>
                         )}
                       </td>
@@ -105,37 +106,37 @@ export function UsersPage() {
               </table>
             </div>
 
-            {data.total > data.limit && (
+            {data.total > data.limit ? (
               <div className="mt-4 flex items-center gap-3">
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  onClick={() => setPage((current) => Math.max(1, current - 1))}
                   disabled={page === 1}
                 >
-                  上一页
+                  Previous
                 </Button>
                 <span className="text-sm text-[color:var(--text-muted)]">
-                  第 {page} 页 / 共 {Math.ceil(data.total / data.limit)} 页
+                  Page {page} / {totalPages}
                 </span>
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => setPage((p) => p + 1)}
-                  disabled={page >= Math.ceil(data.total / data.limit)}
+                  onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                  disabled={page >= totalPages}
                 >
-                  下一页
+                  Next
                 </Button>
               </div>
-            )}
+            ) : null}
 
-            {deleteMutation.error && (
-              <InlineNotice tone="error" className="mt-4">
-                {deleteMutation.error instanceof Error ? deleteMutation.error.message : "删除失败"}
+            {deleteMutation.error ? (
+              <InlineNotice tone="danger" className="mt-4">
+                {deleteMutation.error instanceof Error ? deleteMutation.error.message : "Delete failed"}
               </InlineNotice>
-            )}
+            ) : null}
           </>
-        )}
+        ) : null}
       </section>
     </div>
   );

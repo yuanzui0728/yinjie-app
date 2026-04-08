@@ -24,11 +24,6 @@ export function resolveAppCoreApiBaseUrl() {
     return runtimeConfig.apiBaseUrl;
   }
 
-  const runtimeContext = resolveAppRuntimeContext(runtimeConfig.appPlatform);
-  if (runtimeContext.deploymentMode === "local-hosted") {
-    return DEFAULT_CORE_API_BASE_URL;
-  }
-
   const browserBaseUrl = fallbackBrowserBaseUrl();
   if (browserBaseUrl) {
     return browserBaseUrl;

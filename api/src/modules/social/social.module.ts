@@ -8,12 +8,14 @@ import { AIRelationshipEntity } from './ai-relationship.entity';
 import { CharacterEntity } from '../characters/character.entity';
 import { AiModule } from '../ai/ai.module';
 import { NarrativeModule } from '../narrative/narrative.module';
+import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([FriendshipEntity, FriendRequestEntity, AIRelationshipEntity, CharacterEntity]),
     AiModule,
     NarrativeModule,
+    AuthModule,
   ],
   providers: [SocialService],
   controllers: [SocialController],

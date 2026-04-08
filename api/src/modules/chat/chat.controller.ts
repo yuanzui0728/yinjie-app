@@ -10,13 +10,13 @@ export class ChatController {
   ) {}
 
   @Get()
-  getConversations(@Query('userId') userId: string) {
-    return this.chatService.getConversationsByUser(userId);
+  getConversations() {
+    return this.chatService.getConversations();
   }
 
   @Post()
-  getOrCreate(@Body() body: { userId: string; characterId: string }) {
-    return this.chatService.getOrCreateConversation(body.userId, body.characterId);
+  getOrCreate(@Body() body: { characterId: string }) {
+    return this.chatService.getOrCreateConversation(body.characterId);
   }
 
   @Get(':id/messages')
@@ -28,6 +28,24 @@ export class ChatController {
   markRead(@Param('id') id: string) {
     return this.chatService.markConversationRead(id);
   }
+
+  @Post(':id/pin')
+  setPinned(
+    @Param('id') id: string,
+    @Body() body: { pinned: boolean },
+  ) {
+    return this.chatService.setConversationPinned(id, body.pinned);
+  }
+
+  @Post(':id/hide')
+  hideConversation(@Param('id') id: string) {
+    return this.chatService.hideConversation(id);
+  }
+
+  @Post(':id/clear')
+  clearConversation(@Param('id') id: string) {
+    return this.chatService.clearConversationHistory(id);
+  }
 }
 
 @Controller('groups')
@@ -37,8 +55,6 @@ export class GroupController {
   @Post()
   createGroup(@Body() body: {
     name: string;
-    creatorId: string;
-    creatorType: 'user' | 'character';
     memberIds: string[];
   }) {
     return this.groupService.createGroup(body);
@@ -78,12 +94,10 @@ export class GroupController {
   @Post(':id/messages')
   async sendGroupMessage(
     @Param('id') id: string,
-    @Body() body: { senderId: string; senderType: 'user' | 'character'; senderName: string; senderAvatar?: string; text: string },
+    @Body() body: { text: string },
   ) {
-    const message = await this.groupService.sendMessage(id, body.senderId, body.senderType, body.senderName, body.text, body.senderAvatar);
-    if (body.senderType === 'user') {
-      this.groupService.triggerAiReplies(id, body.text, body.senderName);
-    }
+    const message = await this.groupService.sendOwnerMessage(id, body.text);
+    this.groupService.triggerAiReplies(id, body.text, message.senderName);
     return message;
   }
 }

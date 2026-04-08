@@ -7,13 +7,11 @@ OUTPUT_DIR="${2:?output directory is required}"
 mkdir -p "$OUTPUT_DIR"
 
 BUNDLE_DIR="apps/desktop/src-tauri/target/${TARGET_TRIPLE}/release/bundle"
-SIDECAR_DIR="apps/desktop/src-tauri/binaries"
 CORE_TARGET_DIR="${CARGO_TARGET_DIR:-$HOME/.cargo-target/yinjie-desktop}"
 
 {
   echo "target=${TARGET_TRIPLE}"
   echo "bundle_dir=${BUNDLE_DIR}"
-  echo "sidecar_dir=${SIDECAR_DIR}"
   echo "core_target_dir=${CORE_TARGET_DIR}"
   echo "pwd=$(pwd)"
   echo "timestamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -21,10 +19,6 @@ CORE_TARGET_DIR="${CARGO_TARGET_DIR:-$HOME/.cargo-target/yinjie-desktop}"
 
 if [[ -d "$BUNDLE_DIR" ]]; then
   find "$BUNDLE_DIR" -maxdepth 4 -type f | sort > "${OUTPUT_DIR}/bundle-files.txt"
-fi
-
-if [[ -d "$SIDECAR_DIR" ]]; then
-  find "$SIDECAR_DIR" -maxdepth 2 -type f | sort > "${OUTPUT_DIR}/sidecar-files.txt"
 fi
 
 if [[ -d "$CORE_TARGET_DIR" ]]; then

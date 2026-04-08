@@ -1,8 +1,29 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { deleteUser, getBlockedCharacters, listCharacters, listModerationReports, logoutCurrentSession, unblockCharacter, updateUser } from "@yinjie/contracts";
-import { AppHeader, AppPage, AppSection, Button, ErrorBlock, InlineNotice, LoadingBlock, TextAreaField, TextField } from "@yinjie/ui";
+import {
+  clearUserApiKey,
+  deleteUser,
+  getBlockedCharacters,
+  getCurrentUser,
+  listCharacters,
+  listModerationReports,
+  logoutCurrentSession,
+  setUserApiKey,
+  unblockCharacter,
+  updateUser,
+} from "@yinjie/contracts";
+import {
+  AppHeader,
+  AppPage,
+  AppSection,
+  Button,
+  ErrorBlock,
+  InlineNotice,
+  LoadingBlock,
+  TextAreaField,
+  TextField,
+} from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { DesktopRuntimePanel } from "../features/profile/desktop-runtime-panel";
 import { disconnectChatSocket } from "../lib/socket";
@@ -26,7 +47,9 @@ export function ProfilePage() {
 
   const [draftName, setDraftName] = useState(username ?? "");
   const [draftSignature, setDraftSignature] = useState(signature);
-  const canSave = draftName.trim().length > 0;
+  const [apiKeyDraft, setApiKeyDraft] = useState("");
+  const [apiBaseDraft, setApiBaseDraft] = useState("");
+  const canSaveProfile = draftName.trim().length > 0;
   const softListCardClassName =
     "rounded-2xl border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.055),rgba(255,255,255,0.03))] px-4 py-3 shadow-[var(--shadow-soft)]";
 
@@ -38,18 +61,74 @@ export function ProfilePage() {
     setDraftSignature(signature);
   }, [signature]);
 
-  const saveMutation = useMutation({
+  const currentUserQuery = useQuery({
+    queryKey: ["current-user", baseUrl, userId, token],
+    queryFn: () => getCurrentUser(),
+    enabled: Boolean(userId && token),
+  });
+
+  useEffect(() => {
+    if (!currentUserQuery.data) {
+      return;
+    }
+
+    updateProfile({
+      username: currentUserQuery.data.username,
+      avatar: currentUserQuery.data.avatar,
+      signature: currentUserQuery.data.signature,
+    });
+    setApiBaseDraft(currentUserQuery.data.customApiBase ?? "");
+  }, [currentUserQuery.data, updateProfile]);
+
+  const saveProfileMutation = useMutation({
     mutationFn: async () => {
       if (!userId) {
         return;
       }
-      await updateUser(userId, { username: draftName.trim(), signature: draftSignature.trim() });
+
+      await updateUser(userId, {
+        username: draftName.trim(),
+        signature: draftSignature.trim(),
+      });
       updateProfile({
         username: draftName.trim(),
         signature: draftSignature.trim(),
       });
     },
   });
+
+  const saveApiKeyMutation = useMutation({
+    mutationFn: async () => {
+      if (!userId) {
+        throw new Error("missing user session");
+      }
+
+      await setUserApiKey(userId, {
+        apiKey: apiKeyDraft.trim(),
+        apiBase: apiBaseDraft.trim() || undefined,
+      });
+    },
+    onSuccess: async () => {
+      setApiKeyDraft("");
+      await currentUserQuery.refetch();
+    },
+  });
+
+  const clearApiKeyMutation = useMutation({
+    mutationFn: async () => {
+      if (!userId) {
+        throw new Error("missing user session");
+      }
+
+      await clearUserApiKey(userId);
+    },
+    onSuccess: async () => {
+      setApiKeyDraft("");
+      setApiBaseDraft("");
+      await currentUserQuery.refetch();
+    },
+  });
+
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await logoutCurrentSession();
@@ -60,20 +139,24 @@ export function ProfilePage() {
       void navigate({ to: "/onboarding", replace: true });
     },
   });
+
   const blockedCharactersQuery = useQuery({
     queryKey: ["blocked-characters", baseUrl, userId, token],
     queryFn: () => getBlockedCharacters(userId!),
     enabled: Boolean(userId && token),
   });
+
   const charactersQuery = useQuery({
     queryKey: ["profile-characters", baseUrl],
     queryFn: () => listCharacters(),
   });
+
   const reportsQuery = useQuery({
     queryKey: ["moderation-reports", baseUrl, userId, token],
     queryFn: () => listModerationReports(userId!),
     enabled: Boolean(userId && token),
   });
+
   const unblockMutation = useMutation({
     mutationFn: async (characterId: string) => {
       if (!userId) {
@@ -97,6 +180,7 @@ export function ProfilePage() {
       ]);
     },
   });
+
   const deleteAccountMutation = useMutation({
     mutationFn: async () => {
       if (!userId) {
@@ -111,15 +195,17 @@ export function ProfilePage() {
       void navigate({ to: "/onboarding", replace: true });
     },
   });
+
   const accountMutationBusy =
-    logoutMutation.isPending ||
-    deleteAccountMutation.isPending ||
-    unblockMutation.isPending;
+    logoutMutation.isPending || deleteAccountMutation.isPending || unblockMutation.isPending;
+  const aiSettingsBusy = saveApiKeyMutation.isPending || clearApiKeyMutation.isPending;
 
   useEffect(() => {
     setDraftName(username ?? "");
     setDraftSignature(signature);
-    saveMutation.reset();
+    saveProfileMutation.reset();
+    saveApiKeyMutation.reset();
+    clearApiKeyMutation.reset();
     unblockMutation.reset();
     deleteAccountMutation.reset();
   }, [baseUrl, signature, username]);
@@ -129,7 +215,9 @@ export function ProfilePage() {
       return;
     }
 
-    const confirmed = window.confirm("删除账号会让当前账号立即失效，并清空当前设备上的登录状态。确定继续吗？");
+    const confirmed = window.confirm(
+      "Deleting this account will immediately sign out the current device. Continue?",
+    );
     if (!confirmed) {
       return;
     }
@@ -139,14 +227,20 @@ export function ProfilePage() {
 
   return (
     <AppPage>
-      <AppHeader eyebrow="我" title={username ?? "未登录"} description="你的世界，只由你自己拥有。" />
+      <AppHeader
+        eyebrow="My Profile"
+        title={username ?? "Guest"}
+        description="This world belongs only to you."
+      />
 
       <AppSection className="space-y-5 p-6">
         <div className="flex items-center gap-4">
           <AvatarChip name={draftName} src={avatar} size="lg" />
           <div>
-            <div className="text-xl font-semibold text-white">{username ?? "未登录"}</div>
-            <div className="mt-1 text-sm text-[color:var(--text-secondary)]">你的世界，只由你自己拥有</div>
+            <div className="text-xl font-semibold text-white">{username ?? "Guest"}</div>
+            <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
+              Edit your identity and personal AI settings here.
+            </div>
           </div>
         </div>
 
@@ -154,31 +248,116 @@ export function ProfilePage() {
           <TextField
             value={draftName}
             onChange={(event) => setDraftName(event.target.value)}
-            placeholder="昵称"
+            placeholder="Display name"
           />
           <TextAreaField
             value={draftSignature}
             onChange={(event) => setDraftSignature(event.target.value)}
             className="min-h-24 resize-none"
-            placeholder="签名"
+            placeholder="Signature"
           />
         </div>
 
         <Button
-          onClick={() => saveMutation.mutate()}
-          disabled={!canSave || saveMutation.isPending}
+          onClick={() => saveProfileMutation.mutate()}
+          disabled={!canSaveProfile || saveProfileMutation.isPending}
           variant="primary"
         >
-          {saveMutation.isPending ? "正在保存..." : "保存资料"}
+          {saveProfileMutation.isPending ? "Saving..." : "Save profile"}
         </Button>
-        {saveMutation.isError && saveMutation.error instanceof Error ? <ErrorBlock message={saveMutation.error.message} /> : null}
-        {saveMutation.isSuccess ? <InlineNotice tone="success">资料已更新。</InlineNotice> : null}
+        {saveProfileMutation.isError && saveProfileMutation.error instanceof Error ? (
+          <ErrorBlock message={saveProfileMutation.error.message} />
+        ) : null}
+        {saveProfileMutation.isSuccess ? (
+          <InlineNotice tone="success">Profile updated.</InlineNotice>
+        ) : null}
       </AppSection>
 
       <AppSection className="space-y-4 p-5">
         <div>
-          <div className="text-sm font-medium text-white">安全与治理</div>
-          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">你对隐界的屏蔽和举报记录会保存在这里。</div>
+          <div className="text-sm font-medium text-white">My AI Settings</div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
+            By default, your requests use the instance provider. You can optionally override only your
+            own inference requests with a personal API Key.
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <TextField
+            type="password"
+            value={apiKeyDraft}
+            onChange={(event) => setApiKeyDraft(event.target.value)}
+            placeholder={
+              currentUserQuery.data?.hasCustomApiKey
+                ? "A personal API Key is already saved. Enter a new one to replace it."
+                : "Enter your own API Key"
+            }
+          />
+          <TextField
+            value={apiBaseDraft}
+            onChange={(event) => setApiBaseDraft(event.target.value)}
+            placeholder="Optional compatible base URL, e.g. https://api.openai.com/v1"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <Button
+            onClick={() => saveApiKeyMutation.mutate()}
+            disabled={aiSettingsBusy || !apiKeyDraft.trim()}
+            variant="primary"
+          >
+            {saveApiKeyMutation.isPending ? "Saving..." : "Save personal API Key"}
+          </Button>
+          <Button
+            onClick={() => clearApiKeyMutation.mutate()}
+            disabled={aiSettingsBusy || !currentUserQuery.data?.hasCustomApiKey}
+            variant="secondary"
+          >
+            {clearApiKeyMutation.isPending ? "Clearing..." : "Clear personal API Key"}
+          </Button>
+        </div>
+
+        {currentUserQuery.isLoading ? (
+          <LoadingBlock className="px-0 py-0 text-left" label="Loading AI settings..." />
+        ) : null}
+        {currentUserQuery.isError && currentUserQuery.error instanceof Error ? (
+          <ErrorBlock message={currentUserQuery.error.message} />
+        ) : null}
+        {saveApiKeyMutation.isError && saveApiKeyMutation.error instanceof Error ? (
+          <ErrorBlock message={saveApiKeyMutation.error.message} />
+        ) : null}
+        {clearApiKeyMutation.isError && clearApiKeyMutation.error instanceof Error ? (
+          <ErrorBlock message={clearApiKeyMutation.error.message} />
+        ) : null}
+        {saveApiKeyMutation.isSuccess ? (
+          <InlineNotice tone="success">
+            Personal API Key saved. Future inference requests from this account will use it.
+          </InlineNotice>
+        ) : null}
+        {clearApiKeyMutation.isSuccess ? (
+          <InlineNotice tone="success">
+            Personal API Key cleared. This account now falls back to the instance provider.
+          </InlineNotice>
+        ) : null}
+        {currentUserQuery.data ? (
+          <InlineNotice tone={currentUserQuery.data.hasCustomApiKey ? "success" : "muted"}>
+            {currentUserQuery.data.hasCustomApiKey
+              ? `A personal API Key is active for this account${
+                  currentUserQuery.data.customApiBase
+                    ? ` with base URL ${currentUserQuery.data.customApiBase}`
+                    : ""
+                }.`
+              : "No personal API Key is configured. This account is using the instance provider."}
+          </InlineNotice>
+        ) : null}
+      </AppSection>
+
+      <AppSection className="space-y-4 p-5">
+        <div>
+          <div className="text-sm font-medium text-white">Safety</div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
+            Your blocked characters and moderation records are listed here.
+          </div>
         </div>
         <div className="space-y-3">
           {(blockedCharactersQuery.data ?? []).map((item) => {
@@ -190,10 +369,10 @@ export function ProfilePage() {
                   <div className="min-w-0">
                     <div className="text-sm text-white">{character?.name ?? item.characterId}</div>
                     <div className="mt-2 text-xs leading-6 text-[color:var(--text-secondary)]">
-                      已屏蔽：{formatSessionTime(item.createdAt)}
+                      Blocked at: {formatSessionTime(item.createdAt)}
                     </div>
                     <div className="text-xs leading-6 text-[color:var(--text-muted)]">
-                      原因：{item.reason?.trim() || "未填写"}
+                      Reason: {item.reason?.trim() || "Not provided"}
                     </div>
                   </div>
                   <Button
@@ -202,60 +381,82 @@ export function ProfilePage() {
                     variant="secondary"
                     size="sm"
                   >
-                    {unblockMutation.isPending && unblockMutation.variables === item.characterId ? "解除中..." : "解除屏蔽"}
+                    {unblockMutation.isPending && unblockMutation.variables === item.characterId
+                      ? "Unblocking..."
+                      : "Unblock"}
                   </Button>
                 </div>
               </div>
             );
           })}
-          {blockedCharactersQuery.isLoading ? <LoadingBlock className="px-4 py-3 text-left" label="正在读取屏蔽名单..." /> : null}
-          {blockedCharactersQuery.isError && blockedCharactersQuery.error instanceof Error ? <ErrorBlock message={blockedCharactersQuery.error.message} /> : null}
-          {unblockMutation.isError && unblockMutation.error instanceof Error ? <ErrorBlock message={unblockMutation.error.message} /> : null}
-          {!blockedCharactersQuery.isLoading && !blockedCharactersQuery.isError && !blockedCharactersQuery.data?.length ? (
-            <InlineNotice tone="muted">当前没有屏蔽中的角色。</InlineNotice>
+          {blockedCharactersQuery.isLoading ? (
+            <LoadingBlock className="px-4 py-3 text-left" label="Loading blocked list..." />
+          ) : null}
+          {blockedCharactersQuery.isError && blockedCharactersQuery.error instanceof Error ? (
+            <ErrorBlock message={blockedCharactersQuery.error.message} />
+          ) : null}
+          {unblockMutation.isError && unblockMutation.error instanceof Error ? (
+            <ErrorBlock message={unblockMutation.error.message} />
+          ) : null}
+          {!blockedCharactersQuery.isLoading &&
+          !blockedCharactersQuery.isError &&
+          !blockedCharactersQuery.data?.length ? (
+            <InlineNotice tone="muted">No blocked characters.</InlineNotice>
           ) : null}
         </div>
 
         <div className="space-y-3 border-t border-[color:var(--border-faint)] pt-4">
           {(reportsQuery.data ?? []).slice(0, 6).map((report) => (
             <div key={report.id} className={softListCardClassName}>
-              <div className="text-sm text-white">{report.targetType} 路 {report.reason}</div>
-              <div className="mt-2 text-xs leading-6 text-[color:var(--text-secondary)]">提交：{formatSessionTime(report.createdAt)}</div>
-              <div className="text-xs leading-6 text-[color:var(--text-muted)]">状态：{report.status}</div>
+              <div className="text-sm text-white">
+                {report.targetType} - {report.reason}
+              </div>
+              <div className="mt-2 text-xs leading-6 text-[color:var(--text-secondary)]">
+                Submitted at: {formatSessionTime(report.createdAt)}
+              </div>
+              <div className="text-xs leading-6 text-[color:var(--text-muted)]">
+                Status: {report.status}
+              </div>
             </div>
           ))}
-          {reportsQuery.isLoading ? <LoadingBlock className="px-4 py-3 text-left" label="正在读取举报记录..." /> : null}
-          {reportsQuery.isError && reportsQuery.error instanceof Error ? <ErrorBlock message={reportsQuery.error.message} /> : null}
+          {reportsQuery.isLoading ? (
+            <LoadingBlock className="px-4 py-3 text-left" label="Loading moderation reports..." />
+          ) : null}
+          {reportsQuery.isError && reportsQuery.error instanceof Error ? (
+            <ErrorBlock message={reportsQuery.error.message} />
+          ) : null}
           {!reportsQuery.isLoading && !reportsQuery.isError && !reportsQuery.data?.length ? (
-            <InlineNotice tone="muted">你提交的举报会显示在这里。</InlineNotice>
+            <InlineNotice tone="muted">No moderation reports yet.</InlineNotice>
           ) : null}
         </div>
       </AppSection>
 
       <AppSection className="space-y-4 p-5">
         <div>
-          <div className="text-sm font-medium text-white">常用入口</div>
-          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">常用页面集中在这里，账号操作放在最后。</div>
+          <div className="text-sm font-medium text-white">Shortcuts</div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
+            Common pages and account actions are grouped here.
+          </div>
         </div>
         <div className="space-y-3 text-sm text-[color:var(--text-secondary)]">
           <Link to="/friend-requests" className="block">
             <Button variant="secondary" size="lg" className="w-full justify-start rounded-2xl">
-              新的朋友
+              Friend requests
             </Button>
           </Link>
           <Link to="/legal/privacy" className="block">
             <Button variant="secondary" size="lg" className="w-full justify-start rounded-2xl">
-              隐私政策
+              Privacy policy
             </Button>
           </Link>
           <Link to="/legal/terms" className="block">
             <Button variant="secondary" size="lg" className="w-full justify-start rounded-2xl">
-              用户协议
+              Terms of service
             </Button>
           </Link>
           <Link to="/legal/community" className="block">
             <Button variant="secondary" size="lg" className="w-full justify-start rounded-2xl">
-              社区与安全说明
+              Community rules
             </Button>
           </Link>
           <Button
@@ -265,7 +466,7 @@ export function ProfilePage() {
             size="lg"
             className="w-full justify-start rounded-2xl"
           >
-            {logoutMutation.isPending ? "正在退出..." : "退出当前账号"}
+            {logoutMutation.isPending ? "Signing out..." : "Sign out"}
           </Button>
           <Button
             onClick={handleDeleteAccount}
@@ -274,14 +475,15 @@ export function ProfilePage() {
             size="lg"
             className="w-full justify-start rounded-2xl"
           >
-            {deleteAccountMutation.isPending ? "正在删除账号..." : "删除账号"}
+            {deleteAccountMutation.isPending ? "Deleting account..." : "Delete account"}
           </Button>
         </div>
         {deleteAccountMutation.isError && deleteAccountMutation.error instanceof Error ? (
           <ErrorBlock className="mt-3" message={deleteAccountMutation.error.message} />
         ) : null}
         <InlineNotice className="mt-3" tone="warning">
-          删除账号会立即让当前账号和所有历史会话失效。后续将继续收口动态、好友和会话数据的完整清理策略。
+          Deleting the account will immediately remove the current login session. Conversation cleanup is
+          still being tightened in follow-up work.
         </InlineNotice>
       </AppSection>
 
@@ -297,7 +499,7 @@ export function ProfilePage() {
 function formatSessionTime(value: string) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    return "未知";
+    return "Unknown";
   }
 
   return new Date(parsed).toLocaleString("zh-CN", {

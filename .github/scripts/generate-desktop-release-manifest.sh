@@ -41,8 +41,8 @@ lines.extend(
         "",
         "## Notes",
         "",
-        "- Each target artifact contains the built bundle directory plus bundled core-api sidecars.",
-        "- Each diagnostics artifact contains CI context, bundle file list, sidecar file list, and collected artifact metadata.",
+        "- Each target artifact contains the built desktop bundle only.",
+        "- Each diagnostics artifact contains CI context, bundle file list, and collected artifact metadata.",
     ]
 )
 

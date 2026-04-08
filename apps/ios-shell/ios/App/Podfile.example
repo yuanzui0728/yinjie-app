@@ -1,0 +1,15 @@
+platform :ios, '15.0'
+use_frameworks!
+
+target 'App' do
+  capacitor_pods
+
+  # Native plugins:
+  # - YinjieRuntimePlugin
+  # - YinjieSecureStoragePlugin
+  # - YinjieMobileBridgePlugin
+end
+
+post_install do |installer|
+  assertDeploymentTarget(installer)
+end

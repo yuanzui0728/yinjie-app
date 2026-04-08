@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>隐界</string>
+  <key>CFBundleIdentifier</key>
+  <string>com.yinjie.ios</string>
+  <key>CFBundleName</key>
+  <string>Yinjie</string>
+  <key>YinjieApiBaseUrl</key>
+  <string>https://api.example.yinjie.app</string>
+  <key>YinjieSocketBaseUrl</key>
+  <string>https://api.example.yinjie.app</string>
+  <key>YinjieEnvironment</key>
+  <string>production</string>
+  <key>YinjiePublicAppName</key>
+  <string>Yinjie</string>
+  <key>LSRequiresIPhoneOS</key>
+  <true/>
+  <key>NSCameraUsageDescription</key>
+  <string>用于拍摄头像或动态图片。</string>
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>用于从相册选择头像或动态图片。</string>
+  <key>NSPhotoLibraryAddUsageDescription</key>
+  <string>用于将导出图片保存到相册。</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>用于语音输入或语音互动功能。</string>
+  <key>UIBackgroundModes</key>
+  <array>
+    <string>remote-notification</string>
+  </array>
+</dict>
+</plist>

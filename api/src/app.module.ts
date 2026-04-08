@@ -15,6 +15,7 @@ import { WorldModule } from './modules/world/world.module';
 import { SchedulerModule } from './modules/scheduler/scheduler.module';
 import { NarrativeModule } from './modules/narrative/narrative.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { SystemModule } from './modules/system/system.module';
 
 // Entities
 import { CharacterEntity } from './modules/characters/character.entity';
@@ -69,6 +70,7 @@ import { UserFeedInteractionEntity } from './modules/analytics/user-feed-interac
     SchedulerModule,
     NarrativeModule,
     AdminModule,
+    SystemModule,
   ],
 })
 export class AppModule {}

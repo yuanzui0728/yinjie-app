@@ -1,104 +1,68 @@
-# 隐界双产品线说明
+# 隐界多端产品线说明
 
 日期：2026-04-08
 
-## 结论
+## 当前结论
 
-隐界后续不再按 Windows、macOS、iOS、Android 四端并列推进，而是按两条产品线推进：
+隐界不再区分“桌面宿主端”和“移动连接端”两种不同运行模型。
 
-- `Desktop Host`
-  - Windows
-  - macOS
-- `Mobile Client`
-  - iOS
-  - Android
+当前统一口径是：
+- Windows / macOS：Tauri 客户端
+- iOS / Android：Capacitor 客户端
+- Web：浏览器客户端
 
-这两条线进入的是同一个隐界实例，但承担的职责不同。
+它们都连接同一个远程 NestJS 实例，无论该实例部署在官方云还是用户自己的服务器。
 
-## Desktop Host
+## 统一原则
 
-定位：
+- 所有端都是 remote-connected client
+- 不在本地拉起 Core API
+- 不在客户端本地保存用户 API Key 明文副本作为服务端配置来源
+- 登录、聊天、社交、个人 API Key 设置共用 `apps/app` 业务前端
+- 原生壳只负责窗口、深链、安全存储、诊断和平台桥接
 
-- 桌面原生壳，提供更好的窗口体验和系统集成
-- 连接远程 NestJS 服务端（官方云端或自建）
-- 诊断、外部链接等桌面专属能力的承载端
+## 代码落点
 
-代码落点：
-
-- `apps/desktop`
-- `apps/app/src/features/desktop`
-- `apps/app/src/features/profile/desktop-runtime-panel.tsx`
-- `packages/ui/src/runtime/desktop-runtime.ts`
-
-运行模式：
-
-- 桌面壳以 remote-connected 模式启动
-- 首次启动进入 Setup 页，填入服务器地址后使用
-- 不再在本地拉起 core-api 进程
-
-## Mobile Client
-
-定位：
-
-- 世界连接端
-- 高使用频率的聊天与社交入口
-- 推送、媒体选择、安全存储、深链接的主要承载端
-
-代码落点：
-
-- `apps/android-shell`
-- `apps/ios-shell`
-- `apps/app/src/features/mobile`
-- `apps/app/src/runtime/mobile-bridge.ts`
-- `apps/app/src/runtime/native-secure-storage.ts`
-
-运行模式：
-
-- 连接远程 Core API
-- 不在手机本地拉起 `core-api`
-- 配置优先来自原生注入，失败时回退到 `runtime-config.json`
-
-## 共享层
-
-以下层对两条产品线共享：
-
-- `apps/app` 的共享业务页面
+### 共享前端
+- `apps/app`
 - `packages/contracts`
 - `packages/config`
 - `packages/ui`
 
-共享原则：
+### 桌面壳
+- `apps/desktop`
 
-- 共享业务语义和接口契约
-- 不共享本地宿主假设
-- 不把桌面能力直接暴露到手机版
+### Android 壳
+- `apps/android-shell`
 
-## 入口规则
+### iOS 壳
+- `apps/ios-shell`
 
-当前入口规则固定为：
+### 管理后台
+- `apps/admin`
+
+## 首次启动流程
 
 1. `Splash`
-   - 先识别 runtime context
-   - 再判断是否缺配置
 2. `Setup`
-   - Desktop Host 进入本地世界 setup
-   - Mobile Client 进入远程连接 setup
-3. `Profile`
-   - Desktop Host 才显示桌面运行时区块
+3. 填写服务器地址
+4. 登录或进入 Onboarding
+5. 进入聊天与社交流程
 
-## 当前执行状态
+## 管理职责
 
-截至 2026-04-08：
+### 普通用户
+- 只使用 App 或桌面端
+- 登录自己的实例
+- 可选配置自己的 API Key
 
-- runtime context 已支持 `channel / deploymentMode / hostRole`
-- `/setup` 已拆成 `DesktopSetupPanel / MobileSetupPanel`
-- `DesktopRuntimeGuard` 已补桌面诊断摘要
-- Mobile Setup 已开始感知安全存储模式、bootstrap 来源和原生桥状态
-- Mobile Client 已开始收口推送点击落点合同，通知可回到聊天列表、单聊或群聊
+### 实例拥有者
+- 部署后端
+- 配置实例默认 Provider
+- 使用管理后台查看系统状态、用户列表和诊断信息
 
-## 相关阅读
+## 后续约束
 
-- `docs/release/desktop-host-regression.md`
-- `docs/release/mobile-client-regression.md`
-- `docs/release/mobile-bridge-runbook.md`
-- `docs/release/mobile-push-payload-contract.md`
+- 新功能默认按远程实例接入设计
+- 不再新增任何本地宿主依赖
+- 文档、发布流程、回归清单统一以远程接入为基准

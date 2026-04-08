@@ -11,11 +11,15 @@ export interface Message {
 
 export interface Conversation {
   id: string;
-  userId: string;
   type: 'direct' | 'group';
   title: string;
   participants: string[]; // character ids
   messages: Message[];
+  isPinned: boolean;
+  pinnedAt?: Date;
+  lastReadAt?: Date;
+  lastClearedAt?: Date;
+  lastActivityAt: Date;
   createdAt: Date;
   updatedAt: Date;
 }

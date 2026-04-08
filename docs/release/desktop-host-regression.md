@@ -1,75 +1,49 @@
-# Desktop Host Regression Checklist
+# Desktop Client Regression Checklist
 
-日期：2026-04-08
+日期：2026-04-08  
 范围：Windows、macOS
 
 ## 目标
 
-验证 Desktop Host 作为“世界宿主端”是否闭环，而不是只验证桌面壳能否打开。
+验证桌面端作为远程客户端是否完整可用，而不是验证本地宿主能力。
 
 ## 安装与启动
 
-- 安装包可正常安装
-- 首次打开桌面壳成功
-- 桌面壳进入 `Splash -> Setup`
-- `DesktopRuntimeGuard` 不会卡死在无信息状态
+- 安装包可以正常安装
+- 首次启动进入 `Splash -> Setup`
+- 未配置服务器地址时不会误连 `localhost`
+- 保存服务器地址后可继续登录或 Onboarding
 
-## 本地 Core API
+## 远程连接
 
-- 桌面壳能自动尝试拉起本地 `core-api`
-- `Setup` 可读到 Core API 状态
-- `Profile` 的桌面运行时区块可读到状态
-- 启动、停止、重启、探测按钮可用
-- Core API 不依赖用户机器 PATH
-
-## Runtime Data
-
-- runtime data 路径可读
-- 数据库路径可读
-- 日志路径可定位
-- 诊断状态可读
-
-## Provider
-
-- Desktop Setup 可读取 provider 当前配置
-- 测试连接可执行
-- 保存 provider 可执行
-- provider 保存后再次打开应用仍可恢复
+- API 地址可保存并在重启后恢复
+- Socket 地址可留空或与 API 地址一致
+- `/health` 可通过反向代理访问
+- WebSocket 可以连接、断线重连和恢复聊天刷新
 
 ## 业务入口
 
-- 未登录时：
-  - `Setup -> Onboarding/Login` 路径正确
-- 已登录时：
-  - `Setup -> Tabs/Chat` 路径正确
-- 聊天列表、聊天页、朋友圈、联系人、发现页可进入
+- 聊天列表可打开
+- 单聊、群聊可正常进入
+- 朋友圈、联系人、发现页、个人页可正常进入
+- 个人页可读取当前用户资料与自定义 API Key 状态
 
-## 错误诊断
+## 用户 API Key
 
-- sidecar 缺失时文案明确
-- 端口占用时文案明确
-- 最近错误可在 guard 或 profile 中看到
-- diagnostics summary 可显示
+- 可设置个人 API Key
+- 可设置可选 API Base URL
+- 可清除个人 API Key
+- 不回显明文 Key
 
-## 平台专项
+## 桌面专属能力
 
-### Windows
+- 原生壳可以提供运行时诊断
+- 深链不会破坏登录态
+- 本地存储可恢复服务器地址与会话信息
+- 不再要求桌面端具备 start/stop/restart 本地 Core API 能力
 
-- 安装、升级、卸载链路可跑通
-- Defender / SmartScreen 风险可说明
-- `%AppData%` 下 runtime-data 行为符合预期
+## 发布验收
 
-### macOS
-
-- `.app/.dmg` 首启行为符合预期
-- Gatekeeper / 签名 / 公证状态明确
-- Apple Silicon 机器可跑通
-
-## 验收结论
-
-满足以下条件才算 Desktop Host 可用：
-
-- 世界可在本地被托管
-- provider 可配置
-- 运行时状态可诊断
-- 用户无需理解 PATH、Cargo 或手工命令
+- Tauri bundle 可产出
+- 打包产物中不包含 `yinjie-core-api` sidecar
+- 安装后只需要服务器地址即可使用

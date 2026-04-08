@@ -174,9 +174,6 @@ jobs:
             echo "- signed secrets present: \`${{ secrets.APPLE_CERTIFICATE != '' && secrets.APPLE_SIGNING_IDENTITY != '' }}\`"
             echo "- notarization key present: \`${{ secrets.APPLE_API_KEY != '' && secrets.APPLE_API_ISSUER != '' }}\`"
             echo ""
-            echo "### Bundled Sidecars"
-            find apps/desktop/src-tauri/binaries -maxdepth 1 -type f | sed 's/^/- /'
-            echo ""
             echo "### Bundle Files"
             find "${{ steps.artifacts.outputs.artifact_dir }}" -maxdepth 3 -type f | sed 's/^/- /'
             echo ""
@@ -188,9 +185,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.release_meta.outputs.artifact_prefix }}
-          path: |
-            ${{ steps.artifacts.outputs.artifact_dir }}
-            apps/desktop/src-tauri/binaries/yinjie-core-api-*
+          path: ${{ steps.artifacts.outputs.artifact_dir }}
           if-no-files-found: error
 
       - name: Upload diagnostics artifact

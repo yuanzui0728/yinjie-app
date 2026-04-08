@@ -18,7 +18,28 @@ export class ConversationEntity {
   participants: string[];
 
   @Column({ nullable: true })
-  lastReadAt?: Date;
+  lastReadAt?: Date | null;
+
+  @Column({ default: false })
+  isPinned: boolean;
+
+  @Column({ nullable: true })
+  pinnedAt?: Date | null;
+
+  @Column({ default: false })
+  isHidden: boolean;
+
+  @Column({ nullable: true })
+  hiddenAt?: Date | null;
+
+  @Column({ nullable: true })
+  lastClearedAt?: Date | null;
+
+  @Column({
+    type: 'datetime',
+    default: () => 'CURRENT_TIMESTAMP',
+  })
+  lastActivityAt: Date;
 
   @CreateDateColumn()
   createdAt: Date;

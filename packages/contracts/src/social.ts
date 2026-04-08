@@ -2,7 +2,6 @@ import type { Character, CharacterDraft } from "./characters";
 
 export interface FriendRequest {
   id: string;
-  userId: string;
   characterId: string;
   characterName: string;
   characterAvatar: string;
@@ -15,7 +14,6 @@ export interface FriendRequest {
 
 export interface Friendship {
   id: string;
-  userId: string;
   characterId: string;
   intimacyLevel: number;
   status: string;
@@ -30,33 +28,18 @@ export interface FriendListItem {
 
 export interface BlockedCharacter {
   id: string;
-  userId: string;
   characterId: string;
   reason?: string;
   createdAt: string;
 }
 
-export interface AcceptFriendRequestRequest {
-  userId: string;
-}
-
-export interface DeclineFriendRequestRequest {
-  userId: string;
-}
-
 export interface SendFriendRequestRequest {
-  userId: string;
   characterId: string;
   greeting: string;
 }
 
 export interface TriggerSceneRequest {
-  userId: string;
   scene: string;
-}
-
-export interface ShakeRequest {
-  userId: string;
 }
 
 export interface ShakePreviewCharacter extends Pick<CharacterDraft, "id" | "name" | "avatar" | "relationship" | "expertDomains"> {
@@ -73,12 +56,10 @@ export interface ShakeResult {
 }
 
 export interface BlockCharacterRequest {
-  userId: string;
   characterId: string;
   reason?: string;
 }
 
 export interface UnblockCharacterRequest {
-  userId: string;
   characterId: string;
 }

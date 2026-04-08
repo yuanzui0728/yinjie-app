@@ -73,14 +73,9 @@ function normalizeBootstrapSource(value?: string | null): AppRuntimeBootstrapSou
 
 function normalizeConfigStatus(
   value: string | null | undefined,
-  platform: AppPlatform,
+  _platform: AppPlatform,
   apiBaseUrl?: string,
 ): AppRuntimeConfigStatus {
-  const runtimeContext = resolveAppRuntimeContext(platform);
-  if (runtimeContext.deploymentMode === "local-hosted") {
-    return value === "validated" ? "validated" : "configured";
-  }
-
   if (!apiBaseUrl) {
     return "unconfigured";
   }
