@@ -135,3 +135,26 @@
 - notification action buttons
 
 应在这份文档上增量扩展，而不是另起一套字段。
+
+## 共享 helper
+
+仓库内已提供共享 helper：
+
+- `@yinjie/contracts`
+- `buildMobilePushPayload(...)`
+- `normalizeMobilePushLaunchTarget(...)`
+
+发送侧示例：
+
+```ts
+import { buildMobilePushPayload } from "@yinjie/contracts";
+
+const payload = buildMobilePushPayload({
+  kind: "conversation",
+  conversationId: "user_123_char_doctor",
+  title: "林医生",
+  body: "我刚想到一件事，想先和你确认。",
+});
+```
+
+如果输入字段不完整或不合法，helper 会返回 `null`，发送侧应直接拒绝发出，而不是把脏 payload 交给移动端兜底。
