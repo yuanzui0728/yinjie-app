@@ -115,6 +115,8 @@
 
 - Java 11 或更高版本
 - `ANDROID_HOME` 或 `ANDROID_SDK_ROOT`
+- `google-services.json`
+- Firebase Cloud Messaging 已在 Firebase Console 中为 Android App 启用
 
 接线顺序：
 
@@ -122,7 +124,8 @@
 2. 确认 `apps/app/public/runtime-config.json` 已写入 fallback 配置
 3. 在 Android 原生层补 `YinjieSecureStorage`
 4. 在 Android 原生层补 `YinjieMobileBridge`
-5. 补 FCM token 与媒体选择
+5. 配置 `YinjieFirebaseMessagingService` 与 FCM token 缓存
+6. 补媒体选择与通知展示
 
 建议优先级：
 
