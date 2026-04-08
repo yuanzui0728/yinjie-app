@@ -111,6 +111,11 @@
 - `apps/android-shell/android-shell.config.json`
 - `apps/android-shell/README.md`
 
+前置要求：
+
+- Java 11 或更高版本
+- `ANDROID_HOME` 或 `ANDROID_SDK_ROOT`
+
 接线顺序：
 
 1. `pnpm android:configure`
