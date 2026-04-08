@@ -7,6 +7,7 @@ import {
   GenerateMomentOptions,
   ChatMessage,
   PersonalityProfile,
+  AiKeyOverride,
 } from './ai.types';
 import { PromptBuilderService } from './prompt-builder.service';
 import { SystemConfigService } from '../config/config.service';
@@ -29,8 +30,19 @@ export class AiOrchestratorService {
     });
   }
 
+  private getClient(override?: AiKeyOverride): OpenAI {
+    if (override?.apiKey) {
+      return new OpenAI({
+        apiKey: override.apiKey,
+        baseURL: override.apiBase ?? this.config.get<string>('OPENAI_BASE_URL') ?? 'https://api.deepseek.com',
+      });
+    }
+    return this.client;
+  }
+
   async generateReply(options: GenerateReplyOptions): Promise<GenerateReplyResult> {
-    const { profile, conversationHistory, userMessage, isGroupChat, otherParticipants, chatContext } = options;
+    const { profile, conversationHistory, userMessage, isGroupChat, otherParticipants, chatContext, aiKeyOverride } = options;
+    const client = this.getClient(aiKeyOverride);
 
     let systemPrompt = profile.systemPrompt
       ?? this.promptBuilder.buildChatSystemPrompt(profile, isGroupChat, chatContext);
@@ -71,7 +83,7 @@ export class AiOrchestratorService {
 
     try {
       const model = await this.configService.getAiModel();
-      const response = await this.client.chat.completions.create({
+      const response = await client.chat.completions.create({
         model,
         messages,
         max_tokens: 500,

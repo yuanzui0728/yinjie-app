@@ -65,38 +65,46 @@
 2. **提交 Issue**：分享你对平行世界构建的想法，或者指出我们设计中的逻辑漏洞。
 3. **加微信加入讨论**：`yuanzui0120`
 
+## 快速部署（自建服务器）
+
+服务端基于 NestJS，支持 Docker 一键部署：
+
+```bash
+cp api/.env.example api/.env  # 填入 API Key 和 JWT_SECRET
+docker compose up -d
+```
+
+详细步骤见 [DEPLOY.md](DEPLOY.md)。
+
 ## Provider 配置
 
-当前默认的内容生成 provider 接入配置集中在 [config/provider-defaults.json](config/provider-defaults.json)。
+AI APIKey 在 `api/.env` 中配置：
 
-- 非敏感项：统一在 `config/provider-defaults.json` 修改 `endpoint / model / mode / apiStyle`
-- 敏感项：在根目录 `.env` 里设置 `YINJIE_PROVIDER_API_KEY`
-- 可覆盖变量：见 [.env.example](.env.example)
+```env
+DEEPSEEK_API_KEY=sk-xxxxx          # 支持 DeepSeek / OpenAI 兼容接口
+OPENAI_BASE_URL=https://api.deepseek.com
+AI_MODEL=deepseek-chat
+```
 
-`crates/core-api` 启动时会自动读取根目录 `.env`，并用 `YINJIE_PROVIDER_*` 覆盖默认 provider 配置；前端默认值只读取非敏感项，不再内置 API Key。
+用户也可以在 App 的个人资料页设置自己的 APIKey，优先级高于服务器配置。
 
-## 多端产品线
+## 多端客户端
 
-当前仓库已经按两条产品线收敛：
+所有客户端均通过网络连接至同一 NestJS 后端（官方云端或自建）：
 
-- `Desktop Host`
-  - Windows
-  - macOS
-- `Mobile Client`
-  - iOS
-  - Android
+| 客户端 | 平台 | 构建方式 |
+|--------|------|----------|
+| Desktop | Windows / macOS | Tauri（`apps/desktop/`） |
+| Mobile | iOS / Android | Capacitor（`apps/android-shell/` · `apps/ios-shell/`） |
+| Web | 浏览器 | `apps/app/` 直接部署 |
 
-说明文档：
+首次启动 → Setup 页面 → 填入服务器地址 → 登录使用。
 
-- 双产品线总览：[docs/product-lines.md](docs/product-lines.md)
-- Desktop Host 回归清单：[docs/release/desktop-host-regression.md](docs/release/desktop-host-regression.md)
-- Mobile Client 回归清单：[docs/release/mobile-client-regression.md](docs/release/mobile-client-regression.md)
-- 移动桥接与壳层接线执行单：[docs/release/mobile-bridge-runbook.md](docs/release/mobile-bridge-runbook.md)
+更多说明：
 
-当前定位：
-
-- Desktop Host 负责本地世界托管、provider、runtime、diagnostics
-- Mobile Client 负责远程连接、登录态恢复、推送、媒体与系统集成
+- [DEPLOY.md](DEPLOY.md) — 服务端部署指南
+- [docs/product-lines.md](docs/product-lines.md) — 多端架构说明
+- [docs/release/](docs/release/) — 各端回归测试清单
 
 > *"在你走进来之前，我只需要知道一件事——你叫什么名字？"*
 

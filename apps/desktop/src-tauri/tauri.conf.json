@@ -28,7 +28,7 @@
     "active": true,
     "targets": "all",
     "icon": ["icons/icon.ico", "icons/icon.png", "icons/icon.icns"],
-    "externalBin": ["binaries/yinjie-core-api"]
+    "externalBin": []
   },
   "plugins": {
     "updater": {

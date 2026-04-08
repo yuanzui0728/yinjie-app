@@ -53,9 +53,6 @@ jobs:
       - name: Build shared frontend packages
         run: pnpm build
 
-      - name: Check Core API
-        run: cargo check --manifest-path crates/core-api/Cargo.toml --target x86_64-pc-windows-msvc
-
       - name: Build desktop installer
         run: pnpm --filter @yinjie/desktop build:windows:x64
 

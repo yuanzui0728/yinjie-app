@@ -102,10 +102,8 @@ fn main() {
             if let Err(error) = ensure_runtime_dirs(&handle) {
                 return Err(Box::new(io::Error::new(io::ErrorKind::Other, error)));
             }
-            if let Err(error) = attempt_core_api_autostart(&handle) {
-                append_desktop_log(&handle, "ERROR", &error).ok();
-                eprintln!("desktop core api autostart skipped: {error}");
-            }
+            // Sidecar autostart disabled — desktop now connects to a remote NestJS server.
+            // attempt_core_api_autostart(&handle);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

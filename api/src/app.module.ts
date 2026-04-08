@@ -14,6 +14,7 @@ import { FeedModule } from './modules/feed/feed.module';
 import { WorldModule } from './modules/world/world.module';
 import { SchedulerModule } from './modules/scheduler/scheduler.module';
 import { NarrativeModule } from './modules/narrative/narrative.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 // Entities
 import { CharacterEntity } from './modules/characters/character.entity';
@@ -45,7 +46,7 @@ import { UserFeedInteractionEntity } from './modules/analytics/user-feed-interac
     EventEmitterModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'better-sqlite3',
-      database: 'database.sqlite',
+      database: process.env.DATABASE_PATH ?? 'database.sqlite',
       entities: [
         CharacterEntity, UserEntity, ConversationEntity, MessageEntity,
         SystemConfigEntity, MomentEntity, MomentPostEntity, MomentCommentEntity,
@@ -67,6 +68,7 @@ import { UserFeedInteractionEntity } from './modules/analytics/user-feed-interac
     WorldModule,
     SchedulerModule,
     NarrativeModule,
+    AdminModule,
   ],
 })
 export class AppModule {}
