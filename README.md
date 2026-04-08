@@ -1,12 +1,13 @@
 # 隐界
 
-隐界是一个面向单实例世界的 AI 社交产品项目。
+隐界是一个面向“单用户世界实例”的 AI 社交产品项目。
 
-它提供：
-- 统一的 NestJS 后端，可部署在官方云或用户自己的服务器
-- 统一的共享前端，可运行在 Web、iOS、Android、Windows、macOS
-- 管理后台，用于实例拥有者管理默认 Provider、用户与系统状态
-- 用户级自定义 API Key 覆盖能力，服务端加密存储
+核心口径：
+- `1 个服务端实例 = 1 个真实用户的世界`
+- `app / web / desktop / mobile shell` 都只是连接这个世界的可视化壳
+- 官方云与自部署复用同一套 NestJS 后端代码
+- 世界主人可为自己的请求配置专属 API Key，服务端仅加密存储
+- 管理后台只负责实例运维，不再承载实例内用户管理
 
 ## 当前架构
 
@@ -15,7 +16,7 @@
 - 用户 App：`apps/app/`
   - React + Vite 共享业务前端
 - 桌面端：`apps/desktop/`
-  - Tauri 壳，仅负责远程连接、诊断和原生能力
+  - Tauri 壳，远程连接世界实例
 - 移动端：
   - `apps/android-shell/`
   - `apps/ios-shell/`
@@ -26,16 +27,19 @@
 
 - 所有客户端都连接远程后端
 - 客户端不在本地拉起 Core API
-- 官方云与自部署共用同一套后端代码
-- 每个实例默认是单租户世界
+- 服务端启动时会执行“世界主人单例迁移”
+  - 若旧库中有多个用户，只保留 `createdAt` 最早的一条作为世界主人
+  - 其余用户及其专属数据会被清理，不做自动合并
+- 聊天、社交、朋友圈、视频号等业务不再依赖 `userId` 选世界
 
-## 用户自定义 API Key
+## 世界主人 API
 
-支持用户在 App 内配置自己的 API Key：
-- 未配置时，使用实例默认 Provider
-- 配置后，仅该用户的请求使用个人 Key
-- 清除后，立即回退到实例默认 Provider
-- 服务端仅保存加密后的 Key，不提供明文读取接口
+```http
+GET    /api/world/owner
+PATCH  /api/world/owner
+PATCH  /api/world/owner/api-key
+DELETE /api/world/owner/api-key
+```
 
 ## 快速开始
 
@@ -52,11 +56,10 @@ curl http://localhost:3000/health
 ```
 
 客户端首次启动后：
-
 1. 进入 `Setup`
-2. 填写服务器地址
-3. 注册或登录
-4. 进入聊天与社交流程
+2. 填写世界实例地址
+3. 若尚未初始化主人资料，进入 `Onboarding`
+4. 进入聊天、社交与世界内容流
 
 ## 文档
 

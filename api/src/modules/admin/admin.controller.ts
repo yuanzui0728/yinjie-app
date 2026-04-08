@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Patch, Delete,
-  Param, Body, Query, UseGuards,
+  Param, Body, UseGuards,
 } from '@nestjs/common';
 import { AdminGuard } from './admin.guard';
 import { AdminService } from './admin.service';
@@ -14,19 +14,6 @@ export class AdminController {
   @Get('stats')
   getStats() {
     return this.adminService.getStats();
-  }
-
-  @Get('users')
-  getUsers(
-    @Query('page') page = '1',
-    @Query('limit') limit = '50',
-  ) {
-    return this.adminService.getUsers(Number(page), Number(limit));
-  }
-
-  @Delete('users/:id')
-  deleteUser(@Param('id') id: string) {
-    return this.adminService.deleteUser(id);
   }
 
   @Get('system')

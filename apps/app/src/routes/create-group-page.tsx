@@ -7,41 +7,38 @@ import { AppHeader, AppPage, AppSection, Button, ErrorBlock, LoadingBlock, TextF
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
-import { useSessionStore } from "../store/session-store";
 
 export function CreateGroupPage() {
   const navigate = useNavigate();
-  const userId = useSessionStore((state) => state.userId);
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
   const [name, setName] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const friendsQuery = useQuery({
-    queryKey: ["app-group-friends", baseUrl, userId],
-    queryFn: () => getFriends(userId!),
-    enabled: Boolean(userId),
+    queryKey: ["app-group-friends", baseUrl],
+    queryFn: () => getFriends(baseUrl),
   });
 
   const createMutation = useMutation({
     mutationFn: () =>
-      createGroup({
-        name: name.trim() || "临时群聊",
-        creatorId: userId!,
-        creatorType: "user",
-        memberIds: selectedIds,
-      }),
+      createGroup(
+        {
+          name: name.trim() || "临时群聊",
+          memberIds: selectedIds,
+        },
+        baseUrl,
+      ),
     onSuccess: (group) => {
-      navigate({ to: "/group/$groupId", params: { groupId: group.id } });
+      void navigate({ to: "/group/$groupId", params: { groupId: group.id } });
     },
   });
-  const canCreate = selectedIds.length > 0 && Boolean(userId);
 
   useEffect(() => {
     setName("");
     setSelectedIds([]);
     createMutation.reset();
-  }, [baseUrl, userId]);
+  }, [baseUrl]);
 
   return (
     <AppPage>
@@ -77,17 +74,17 @@ export function CreateGroupPage() {
       <AppSection className="space-y-4">
         <div>
           <div className="text-sm font-medium text-white">选择成员</div>
-          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">至少选择一位已经建立关系的人，才能开始一个新的临时群聊。</div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
+            至少选择一位已经建立关系的人，才能开始一个新的群聊。
+          </div>
         </div>
-        {friendsQuery.isLoading ? <LoadingBlock className="text-left" label="正在读取你已经认识的人..." /> : null}
-
-        {friendsQuery.isError && friendsQuery.error instanceof Error ? <ErrorBlock message={friendsQuery.error.message} /> : null}
+        {friendsQuery.isLoading ? <LoadingBlock className="text-left" label="正在读取联系人..." /> : null}
+        {friendsQuery.isError && friendsQuery.error instanceof Error ? (
+          <ErrorBlock message={friendsQuery.error.message} />
+        ) : null}
 
         {!friendsQuery.isLoading && !friendsQuery.isError && !(friendsQuery.data?.length ?? 0) ? (
-          <EmptyState
-            title="还没有可拉进群的人"
-            description="先去通讯录里建立一些关系，再回来创建群聊。"
-          />
+          <EmptyState title="还没有可拉进群的人" description="先去通讯录里建立一些关系，再回来创建群聊。" />
         ) : null}
 
         {(friendsQuery.data ?? []).map(({ character }) => {
@@ -125,11 +122,13 @@ export function CreateGroupPage() {
         })}
       </AppSection>
 
-      {createMutation.isError && createMutation.error instanceof Error ? <ErrorBlock className="mt-4" message={createMutation.error.message} /> : null}
+      {createMutation.isError && createMutation.error instanceof Error ? (
+        <ErrorBlock className="mt-4" message={createMutation.error.message} />
+      ) : null}
 
       <Button
         onClick={() => createMutation.mutate()}
-        disabled={!canCreate || createMutation.isPending}
+        disabled={!selectedIds.length || createMutation.isPending}
         variant="primary"
         size="lg"
         className="mt-5 w-full rounded-2xl"

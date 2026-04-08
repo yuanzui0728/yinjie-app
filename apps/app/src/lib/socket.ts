@@ -10,7 +10,6 @@ import {
   type TypingPayload,
 } from "@yinjie/contracts";
 import { resolveAppSocketBaseUrl } from "./runtime-config";
-import { useSessionStore } from "../store/session-store";
 
 let socket: Socket | null = null;
 
@@ -42,17 +41,11 @@ export function disconnectChatSocket() {
 }
 
 export function joinConversationRoom(payload: JoinConversationPayload) {
-  getChatSocket().emit(CHAT_EVENTS.joinConversation, {
-    ...payload,
-    token: payload.token ?? useSessionStore.getState().token ?? undefined,
-  });
+  getChatSocket().emit(CHAT_EVENTS.joinConversation, payload);
 }
 
 export function emitChatMessage(payload: SendMessagePayload) {
-  getChatSocket().emit(CHAT_EVENTS.sendMessage, {
-    ...payload,
-    token: payload.token ?? useSessionStore.getState().token ?? undefined,
-  });
+  getChatSocket().emit(CHAT_EVENTS.sendMessage, payload);
 }
 
 export function onChatMessage(handler: (payload: Message) => void) {

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { clearPendingNativeLaunchTarget, getPendingNativeLaunchTarget, isNativeMobileBridgeAvailable } from "../../runtime/mobile-bridge";
-import { useSessionStore } from "../../store/session-store";
+import { useWorldOwnerStore } from "../../store/world-owner-store";
 
 type ResolvedNavigationTarget =
   | {
@@ -58,11 +58,11 @@ function resolveNavigationTarget(
 export function MobileNotificationLaunchBridge() {
   const navigate = useNavigate();
   const location = useLocation();
-  const token = useSessionStore((state) => state.token);
+  const onboardingCompleted = useWorldOwnerStore((state) => state.onboardingCompleted);
   const pollingRef = useRef(false);
 
   useEffect(() => {
-    if (!token || !isNativeMobileBridgeAvailable()) {
+    if (!onboardingCompleted || !isNativeMobileBridgeAvailable()) {
       return;
     }
 
@@ -109,7 +109,7 @@ export function MobileNotificationLaunchBridge() {
       window.removeEventListener("focus", syncPendingLaunchTarget);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [location.pathname, navigate, token]);
+  }, [location.pathname, navigate, onboardingCompleted]);
 
   return null;
 }

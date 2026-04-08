@@ -1,17 +1,7 @@
+import { useProviderSetup, Button, InlineNotice, ProviderSetupForm, SetupScaffold, SetupStatusCard, SetupStepList } from "@yinjie/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { getSystemStatus } from "@yinjie/contracts";
-import {
-  Button,
-  InlineNotice,
-  DesktopRuntimeActions,
-  ProviderSetupForm,
-  SetupScaffold,
-  SetupStatusCard,
-  SetupStepList,
-  useDesktopRuntime,
-  useProviderSetup,
-} from "@yinjie/ui";
 
 export function SetupPage() {
   const baseUrl = import.meta.env.VITE_CORE_API_BASE_URL;
@@ -22,42 +12,9 @@ export function SetupPage() {
     retry: false,
   });
 
-  const {
-    desktopAvailable,
-    desktopStatusQuery,
-    probeMutation,
-    restartMutation,
-    runtimeContextQuery,
-    runtimeDiagnosticsQuery,
-    startMutation,
-    stopMutation,
-  } = useDesktopRuntime({
-    queryKeyPrefix: "admin-setup-desktop",
-    invalidateOnAction: [
-      ["admin-setup-system-status", baseUrl],
-      ["admin-system-status", baseUrl],
-    ],
-  });
-
-  const desktopCoreApiReachable = Boolean(desktopStatusQuery.data?.reachable);
-  const coreApiReady = desktopAvailable
-    ? desktopCoreApiReachable
-    : Boolean(systemStatusQuery.data?.coreApi.healthy);
-
-  const {
-    availableModelsQuery,
-    providerDraft,
-    providerProbeMutation,
-    providerQuery,
-    providerReady,
-    providerSaveMutation,
-    providerValidationMessage,
-    submitProviderProbe,
-    submitProviderSave,
-    updateProviderDraft,
-  } = useProviderSetup({
+  const providerSetup = useProviderSetup({
     baseUrl,
-    enabled: coreApiReady || !desktopAvailable,
+    enabled: Boolean(systemStatusQuery.data?.coreApi.healthy),
     queryKeyPrefix: "admin-setup",
     invalidateOnSave: [
       ["admin-setup-system-status", baseUrl],
@@ -65,249 +22,145 @@ export function SetupPage() {
       ["admin-system-status", baseUrl],
     ],
   });
-  const runtimeDataReady = desktopAvailable ? Boolean(runtimeContextQuery.data?.runtimeDataDir) : true;
-  const desktopRuntimeBusy =
-    probeMutation.isPending || startMutation.isPending || restartMutation.isPending || stopMutation.isPending;
-  const desktopRuntimeError =
-    (probeMutation.error instanceof Error && probeMutation.error.message) ||
-    (startMutation.error instanceof Error && startMutation.error.message) ||
-    (restartMutation.error instanceof Error && restartMutation.error.message) ||
-    (stopMutation.error instanceof Error && stopMutation.error.message) ||
-    null;
-  const providerLoadError =
-    (providerQuery.error instanceof Error && providerQuery.error.message) ||
-    (availableModelsQuery.error instanceof Error && availableModelsQuery.error.message) ||
-    null;
-  const providerActionError =
-    (providerProbeMutation.error instanceof Error && providerProbeMutation.error.message) ||
-    (providerSaveMutation.error instanceof Error && providerSaveMutation.error.message) ||
-    null;
+
+  const coreApiReady = Boolean(systemStatusQuery.data?.coreApi.healthy);
+  const providerReady = providerSetup.providerReady;
   const setupSteps = [
     {
-      label: "Core API",
+      label: "Remote API",
       ok: coreApiReady,
-      hint: coreApiReady ? "运行时可达" : "本地服务尚未恢复",
-    },
-    {
-      label: "Runtime Data",
-      ok: runtimeDataReady,
-      hint: runtimeDataReady ? "目录已解析" : "等待桌面壳返回路径",
+      hint: coreApiReady ? "world instance reachable" : "remote world API not reachable yet",
     },
     {
       label: "Provider",
       ok: providerReady,
-      hint: providerReady ? "真实生成链已可用" : "当前仍会回退到 fallback 文案",
+      hint: providerReady ? "inference provider configured" : "save a provider to enable real generation",
+    },
+    {
+      label: "Admin ready",
+      ok: coreApiReady && providerReady,
+      hint: coreApiReady && providerReady ? "instance ops ready" : "finish API + provider setup first",
     },
   ];
 
+  const providerLoadError =
+    (providerSetup.providerQuery.error instanceof Error && providerSetup.providerQuery.error.message) ||
+    (providerSetup.availableModelsQuery.error instanceof Error &&
+      providerSetup.availableModelsQuery.error.message) ||
+    null;
+
+  const providerActionError =
+    (providerSetup.providerProbeMutation.error instanceof Error &&
+      providerSetup.providerProbeMutation.error.message) ||
+    (providerSetup.providerSaveMutation.error instanceof Error &&
+      providerSetup.providerSaveMutation.error.message) ||
+    null;
+
   return (
     <SetupScaffold
-      badge="Runtime Setup"
-      title="把本地控制面准备成可运维状态"
-      description="这里集中处理桌面运行时恢复、provider 校验和首轮配置，不需要再从 Dashboard 各个卡片里找入口。"
-      heroAside={
-        <InlineNotice tone={coreApiReady ? (providerReady ? "success" : "warning") : "info"}>
-          {coreApiReady
-            ? providerReady
-              ? "Core API、runtime data 和 provider 都已就绪，可以直接进入评测或回 Dashboard。"
-              : "Core API 已恢复，但 provider 还未准备好，当前仍会回退到 fallback 文案。"
-            : "先恢复 Core API，再继续配置 provider 和验证推理链。"}
-        </InlineNotice>
-      }
+      badge="Admin Setup"
+      title="Prepare this world instance for operations"
+      description="The admin console now manages a single-user world instance. Verify the remote API, then configure the provider used by this world."
+      heroAside={<SetupStepList steps={setupSteps} />}
       left={
-        <>
-          <section className="rounded-[30px] border border-white/10 bg-[color:var(--surface-console)] p-6 shadow-[var(--shadow-card)]">
-            <SetupStepList steps={setupSteps} />
+        <section className="space-y-4 rounded-[30px] border border-white/10 bg-[color:var(--surface-console)] p-6 shadow-[var(--shadow-card)]">
+          <div className="grid gap-4 md:grid-cols-2">
+            <SetupStatusCard
+              title="Remote API"
+              value={systemStatusQuery.data?.coreApi.version ?? "offline"}
+              detail={
+                systemStatusQuery.data?.coreApi.message ??
+                "The admin console connects to a remote world instance rather than managing a local Core API."
+              }
+              ok={coreApiReady}
+            />
+            <SetupStatusCard
+              title="Database"
+              value={systemStatusQuery.data?.database.path ?? "unknown"}
+              detail={
+                systemStatusQuery.data
+                  ? `connected=${systemStatusQuery.data.database.connected} wal=${systemStatusQuery.data.database.walEnabled}`
+                  : "Waiting for instance status."
+              }
+              ok={Boolean(systemStatusQuery.data?.database.connected)}
+            />
+            <SetupStatusCard
+              title="Scheduler"
+              value={systemStatusQuery.data?.scheduler.mode ?? "unknown"}
+              detail={
+                systemStatusQuery.data
+                  ? `${systemStatusQuery.data.scheduler.jobs.length} jobs · snapshots=${systemStatusQuery.data.scheduler.worldSnapshots}`
+                  : "Waiting for scheduler status."
+              }
+              ok={Boolean(systemStatusQuery.data?.scheduler.healthy)}
+            />
+            <SetupStatusCard
+              title="Legacy Surface"
+              value={String(systemStatusQuery.data?.legacySurface.usersCount ?? 0)}
+              detail="After single-world migration, this should converge to one owner and legacy user semantics should disappear from runtime."
+              ok={(systemStatusQuery.data?.legacySurface.usersCount ?? 0) <= 1}
+            />
+          </div>
 
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <SetupStatusCard
-                title="Core API"
-                value={desktopAvailable ? desktopStatusQuery.data?.baseUrl ?? "loading" : systemStatusQuery.data?.coreApi.version ?? "offline"}
-                detail={
-                  desktopAvailable
-                    ? desktopStatusQuery.data?.message ?? "桌面壳会托管本地 Core API。"
-                    : systemStatusQuery.data?.coreApi.message ?? "浏览器模式下直接探测 Core API。"
-                }
-                ok={coreApiReady}
-              />
-              <SetupStatusCard
-                title="Runtime Data"
-                value={runtimeContextQuery.data?.runtimeDataDir ?? "runtime-data"}
-                detail={runtimeContextQuery.data?.databasePath ?? "桌面模式会把日志、数据库和备份落到本地 app data 目录。"}
-                ok={runtimeDataReady}
-              />
-              {desktopAvailable ? (
-                <SetupStatusCard
-                  title="Desktop Diagnostics"
-                  value={runtimeDiagnosticsQuery.data?.platform ?? "desktop"}
-                  detail={
-                    runtimeDiagnosticsQuery.data
-                      ? formatDesktopDiagnostics(runtimeDiagnosticsQuery.data)
-                      : "正在读取桌面运行时诊断..."
-                  }
-                  ok={
-                    runtimeDiagnosticsQuery.data?.diagnosticsStatus === "ready" &&
-                    (runtimeDiagnosticsQuery.data?.linuxMissingPackages.length ?? 0) === 0
-                  }
-                />
-              ) : null}
-            </div>
+          {systemStatusQuery.isError && systemStatusQuery.error instanceof Error ? (
+            <InlineNotice tone="warning">{systemStatusQuery.error.message}</InlineNotice>
+          ) : null}
 
-            {desktopAvailable ? (
-              <div className="mt-6">
-                <DesktopRuntimeActions
-                  title="桌面恢复动作"
-                  probeLabel={probeMutation.isPending ? "Probing..." : "Probe Core API"}
-                  startLabel={startMutation.isPending ? "Starting..." : "Start Core API"}
-                  restartLabel={restartMutation.isPending ? "Restarting..." : "Restart Core API"}
-                  stopLabel={stopMutation.isPending ? "Stopping..." : "Stop Core API"}
-                  onProbe={() => probeMutation.mutate()}
-                  onStart={() => startMutation.mutate()}
-                  onRestart={() => restartMutation.mutate()}
-                  onStop={() => stopMutation.mutate()}
-                  busy={desktopRuntimeBusy}
-                  errorMessage={desktopRuntimeError}
-                  message={
-                    probeMutation.data?.message ??
-                    startMutation.data?.message ??
-                    restartMutation.data?.message ??
-                    stopMutation.data?.message ??
-                    desktopStatusQuery.data?.message ??
-                    "桌面环境会优先自动拉起 Core API，这里保留集中恢复入口。"
-                  }
-                />
-              </div>
-            ) : null}
-          </section>
-        </>
+          <InlineNotice tone={coreApiReady ? "success" : "warning"}>
+            {coreApiReady
+              ? providerReady
+                ? "Remote API and provider are ready. This world can now run chats, feed, moments, and scheduler flows."
+                : "Remote API is reachable. Configure the provider next."
+              : "The admin console has not reached the remote world API yet."}
+          </InlineNotice>
+        </section>
       }
       right={
         <ProviderSetupForm
           className="rounded-[30px] border border-white/10 bg-[color:var(--surface-console)] p-6 shadow-[var(--shadow-card)]"
-          title="Provider 配置"
-          description="配好之后，聊天、动态、scheduler 和评测链都会优先走真实 provider。"
+          title="Provider Setup"
+          description="Save the instance-level provider used by this world when the owner has not configured a personal API Key."
           statusLabel={providerReady ? "configured" : "pending"}
           endpointLabel="Endpoint"
           modeLabel="Mode"
           modelLabel="Model"
           apiKeyLabel="API Key"
-          endpointPlaceholder="http://127.0.0.1:11434/v1"
-          modelPlaceholder="deepseek-chat"
-          apiKeyPlaceholder="可选；本地兼容 provider 通常可留空"
+          endpointPlaceholder="https://api.openai.com/v1"
+          modelPlaceholder="gpt-4.1-mini"
+          apiKeyPlaceholder="Enter the instance provider API Key"
           probeLabel="Test Provider"
           saveLabel="Save Provider"
-          draft={providerDraft}
-          availableModels={availableModelsQuery.data?.models ?? []}
+          draft={providerSetup.providerDraft}
+          availableModels={providerSetup.availableModelsQuery.data?.models ?? []}
           availableModelsId="admin-setup-available-models"
           disabled={!coreApiReady}
-          validationMessage={providerValidationMessage}
+          validationMessage={providerSetup.providerValidationMessage}
           errorMessage={providerLoadError}
           actionErrorMessage={providerActionError}
           footerMessage={
             !coreApiReady
-              ? "先恢复 Core API，再测试或保存 provider。"
-              : providerLoadError
-                ? "Provider 配置或模型目录读取失败，先恢复本地 runtime 再继续。"
-              : providerProbeMutation.data
-                ? formatProbeMessage(providerProbeMutation.data)
-                : providerSaveMutation.data
-                  ? formatProviderSavedMessage(providerSaveMutation.data)
-                  : "保存后，Dashboard 与主产品页面会自动使用新的 provider 运行状态。"
+              ? "Reach the remote world API first."
+              : providerSetup.providerProbeMutation.data
+                ? providerSetup.providerProbeMutation.data.message
+                : providerSetup.providerSaveMutation.data
+                  ? `Saved provider ${providerSetup.providerSaveMutation.data.model} (${providerSetup.providerSaveMutation.data.mode})`
+                  : "Saving here updates the instance-level provider for this world."
           }
-          onSubmit={submitProviderSave}
-          onProbe={submitProviderProbe}
-          onChange={updateProviderDraft}
-          probePending={providerProbeMutation.isPending}
-          savePending={providerSaveMutation.isPending}
+          onSubmit={providerSetup.submitProviderSave}
+          onProbe={providerSetup.submitProviderProbe}
+          onChange={providerSetup.updateProviderDraft}
+          probePending={providerSetup.providerProbeMutation.isPending}
+          savePending={providerSetup.providerSaveMutation.isPending}
         />
       }
       footer={
         <section className="flex flex-wrap gap-3">
           <Link to="/">
-            <Button variant="secondary">返回 Dashboard</Button>
-          </Link>
-          <Link to="/evals">
-            <Button variant="secondary">去 Evals 验证</Button>
+            <Button variant="secondary">Back to Dashboard</Button>
           </Link>
         </section>
       }
       className="px-0 py-0"
     />
   );
-}
-
-function formatProviderSavedMessage(values: {
-  endpoint: string;
-  model: string;
-  mode: string;
-}) {
-  return `Saved provider ${values.model} (${values.mode}) at ${values.endpoint}.`;
-}
-
-function formatProbeMessage(values: {
-  message: string;
-  normalizedEndpoint?: string;
-  statusCode?: number;
-}) {
-  if (values.normalizedEndpoint && typeof values.statusCode === "number") {
-    return `${values.message} normalized=${values.normalizedEndpoint} status=${values.statusCode}`;
-  }
-
-  if (values.normalizedEndpoint) {
-    return `${values.message} normalized=${values.normalizedEndpoint}`;
-  }
-
-  return values.message;
-}
-
-function formatDesktopDiagnostics(values: {
-  coreApiCommand: string;
-  diagnosticsStatus?: string;
-  coreApiCommandSource?: string;
-  coreApiCommandResolved: boolean;
-  coreApiPortOccupied?: boolean;
-  bundledCoreApiExists?: boolean;
-  managedByDesktopShell?: boolean;
-  managedChildPid?: number | null;
-  desktopLogPath?: string;
-  lastCoreApiError?: string | null;
-  linuxMissingPackages: string[];
-  summary: string;
-}) {
-  const commandStatus = values.coreApiCommandResolved ? "command ok" : "command missing";
-  const packageStatus = values.linuxMissingPackages.length
-    ? `missing=${values.linuxMissingPackages.join(", ")}`
-    : "linux deps ok";
-  const sidecarStatus = formatCommandSource(values.coreApiCommandSource, values.bundledCoreApiExists);
-  const failureStatus =
-    values.diagnosticsStatus === "port-occupied"
-      ? "port occupied"
-      : values.diagnosticsStatus === "bundled-sidecar-missing"
-        ? "bundled sidecar missing"
-        : values.diagnosticsStatus === "spawn-failed"
-          ? "spawn failed"
-          : values.diagnosticsStatus === "health-probe-failed"
-            ? "health probe failed"
-            : values.diagnosticsStatus ?? "unknown";
-  const managedStatus = values.managedByDesktopShell
-    ? `managed${values.managedChildPid ? ` pid=${values.managedChildPid}` : ""}`
-    : "unmanaged";
-  const logPath = values.desktopLogPath ? ` · log=${values.desktopLogPath}` : "";
-  const lastError = values.lastCoreApiError ? ` · last-error=${values.lastCoreApiError}` : "";
-
-  return `${values.summary} · ${commandStatus} · ${sidecarStatus} · ${failureStatus} · ${managedStatus} · ${packageStatus} · ${values.coreApiCommand}${values.coreApiPortOccupied ? " · port-in-use" : ""}${logPath}${lastError}`;
-}
-
-function formatCommandSource(source?: string, bundledExists?: boolean) {
-  if (source === "bundled" || source === "bundled-sidecar") {
-    return "bundled sidecar";
-  }
-  if (source === "env" || source === "env-override") {
-    return "env override";
-  }
-  if (source === "path" || source === "path-lookup") {
-    return bundledExists ? "path lookup (bundled missing)" : "path lookup";
-  }
-
-  return bundledExists ? "sidecar ready" : "sidecar missing";
 }

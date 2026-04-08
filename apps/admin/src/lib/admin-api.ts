@@ -32,25 +32,10 @@ async function adminFetch<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export type AdminStats = {
-  userCount: number;
+  ownerCount: number;
   characterCount: number;
   totalMessages: number;
   aiMessages: number;
-};
-
-export type AdminUser = {
-  id: string;
-  username: string;
-  onboardingCompleted: boolean;
-  createdAt: string;
-  avatar?: string;
-};
-
-export type AdminUsersResult = {
-  users: AdminUser[];
-  total: number;
-  page: number;
-  limit: number;
 };
 
 export type AdminSystemInfo = {
@@ -63,8 +48,6 @@ export type AdminSystemInfo = {
 
 export const adminApi = {
   getStats: () => adminFetch<AdminStats>('/stats'),
-  getUsers: (page = 1) => adminFetch<AdminUsersResult>(`/users?page=${page}`),
-  deleteUser: (id: string) => adminFetch<{ success: boolean }>(`/users/${id}`, { method: 'DELETE' }),
   getSystem: () => adminFetch<AdminSystemInfo>('/system'),
   getConfig: () => adminFetch<Record<string, string>>('/config'),
   setConfig: (key: string, value: string) =>

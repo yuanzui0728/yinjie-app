@@ -10,13 +10,11 @@ import { ChatMessageList } from "../components/chat-message-list";
 import { EmptyState } from "../components/empty-state";
 import { useScrollAnchor } from "../hooks/use-scroll-anchor";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
-import { useSessionStore } from "../store/session-store";
 
 export function GroupChatPage() {
   const { groupId } = useParams({ from: "/group/$groupId" });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const userId = useSessionStore((state) => state.userId);
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
   const [text, setText] = useState("");
@@ -44,11 +42,7 @@ export function GroupChatPage() {
 
   const sendMutation = useMutation({
     mutationFn: () =>
-      sendGroupMessage(groupId, {
-        senderId: userId!,
-        senderType: "user",
-        text: text.trim(),
-      }),
+      sendGroupMessage(groupId, { text: text.trim() }, baseUrl),
     onSuccess: async () => {
       setText("");
       await queryClient.invalidateQueries({ queryKey: ["app-group-messages", baseUrl, groupId] });

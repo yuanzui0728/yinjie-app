@@ -70,9 +70,6 @@ export function RootLayout() {
             <Link to="/characters" className={NAV_LINK} activeProps={{ className: NAV_LINK_ACTIVE }}>
               Characters
             </Link>
-            <Link to="/users" className={NAV_LINK} activeProps={{ className: NAV_LINK_ACTIVE }}>
-              Users
-            </Link>
             <Link to="/setup" className={NAV_LINK} activeProps={{ className: NAV_LINK_ACTIVE }}>
               Setup
             </Link>

@@ -1,7 +1,7 @@
 import { lazy } from "react";
 import { createRootRoute, createRoute, createRouter, redirect } from "@tanstack/react-router";
 import { RootLayout } from "./features/shell/root-layout";
-import { useSessionStore } from "./store/session-store";
+import { useWorldOwnerStore } from "./store/world-owner-store";
 
 const SplashPage = lazy(async () => {
   const mod = await import("./routes/splash-page");
@@ -11,11 +11,6 @@ const SplashPage = lazy(async () => {
 const OnboardingPage = lazy(async () => {
   const mod = await import("./routes/onboarding-page");
   return { default: mod.OnboardingPage };
-});
-
-const LoginPage = lazy(async () => {
-  const mod = await import("./routes/login-page");
-  return { default: mod.LoginPage };
 });
 
 const SetupPage = lazy(async () => {
@@ -92,9 +87,9 @@ const rootRoute = createRootRoute({
   component: RootLayout,
 });
 
-function requireAuth() {
-  const state = useSessionStore.getState();
-  if (!state.token) {
+function requireWorldReady() {
+  const state = useWorldOwnerStore.getState();
+  if (!state.onboardingCompleted) {
     throw redirect({ to: "/onboarding" });
   }
 }
@@ -111,12 +106,6 @@ const onboardingRoute = createRoute({
   component: OnboardingPage,
 });
 
-const loginRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/login",
-  component: LoginPage,
-});
-
 const setupRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/setup",
@@ -126,7 +115,7 @@ const setupRoute = createRoute({
 const tabsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/tabs",
-  beforeLoad: requireAuth,
+  beforeLoad: requireWorldReady,
 });
 
 const chatListRoute = createRoute({
@@ -162,35 +151,35 @@ const profileRoute = createRoute({
 const chatRoomRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/chat/$conversationId",
-  beforeLoad: requireAuth,
+  beforeLoad: requireWorldReady,
   component: ChatRoomPage,
 });
 
 const characterDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/character/$characterId",
-  beforeLoad: requireAuth,
+  beforeLoad: requireWorldReady,
   component: CharacterDetailPage,
 });
 
 const friendRequestsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/friend-requests",
-  beforeLoad: requireAuth,
+  beforeLoad: requireWorldReady,
   component: FriendRequestsPage,
 });
 
 const groupChatRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/group/$groupId",
-  beforeLoad: requireAuth,
+  beforeLoad: requireWorldReady,
   component: GroupChatPage,
 });
 
 const createGroupRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/group/new",
-  beforeLoad: requireAuth,
+  beforeLoad: requireWorldReady,
   component: CreateGroupPage,
 });
 
@@ -215,7 +204,6 @@ const legalCommunityRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   onboardingRoute,
-  loginRoute,
   setupRoute,
   tabsRoute.addChildren([chatListRoute, momentsRoute, discoverRoute, contactsRoute, profileRoute]),
   chatRoomRoute,
