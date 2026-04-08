@@ -34,6 +34,10 @@ public class YinjieRuntimePlugin extends Plugin {
             putIfPresent(result, "apiBaseUrl", readMetaValue(metaData, "yinjie.api_base_url"));
             putIfPresent(result, "socketBaseUrl", readMetaValue(metaData, "yinjie.socket_base_url"));
             putIfPresent(result, "environment", readMetaValue(metaData, "yinjie.environment"));
+            if (result.has("apiBaseUrl")) {
+                result.put("worldAccessMode", "local");
+                result.put("configStatus", "configured");
+            }
 
             call.resolve(result);
         } catch (PackageManager.NameNotFoundException exception) {
