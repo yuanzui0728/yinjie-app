@@ -76,7 +76,7 @@ pnpm android:run
 
 这个命令会自动：
 - 补全 `ANDROID_SDK_ROOT`
-- 检查并在本地下载 JDK 17（当系统 Java 低于 11 时）
+- 检查并在本地下载 JDK 21（当系统 Java 低于 21 时）
 - 连接现有模拟器，或自动启动第一个可用 AVD
 - 构建 Web 包、同步 Capacitor、安装 Debug 包并拉起 App
 
