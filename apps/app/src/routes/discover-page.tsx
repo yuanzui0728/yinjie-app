@@ -4,6 +4,7 @@ import { addFeedComment, createFeedPost, getBlockedCharacters, getFeed, likeFeed
 import { AppHeader, AppPage, AppSection, Button, ErrorBlock, InlineNotice, LoadingBlock, TextAreaField, TextField } from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
 import { SocialPostCard } from "../components/social-post-card";
+import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useSessionStore } from "../store/session-store";
 
@@ -15,6 +16,7 @@ const scenes = [
 ];
 
 export function DiscoverPage() {
+  const isDesktopLayout = useDesktopLayout();
   const queryClient = useQueryClient();
   const userId = useSessionStore((state) => state.userId);
   const runtimeConfig = useAppRuntimeConfig();
@@ -142,6 +144,118 @@ export function DiscoverPage() {
     const timer = window.setTimeout(() => setSuccessNotice(""), 2400);
     return () => window.clearTimeout(timer);
   }, [successNotice]);
+
+  if (isDesktopLayout) {
+    return (
+      <AppPage className="space-y-5 px-6 py-6">
+        <AppHeader eyebrow="发现" title="在更大的画布里安排相遇" description="随机相遇、场景相遇和广场动态拆开排布，不再堆在一条手机长页里。" />
+
+        <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
+          <div className="space-y-5">
+            <AppSection className="space-y-4 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(249,115,22,0.16),rgba(255,255,255,0.035))]">
+              <div>
+                <div className="text-sm font-medium text-white">随机相遇</div>
+                <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">把偶遇、场景和反馈放在同一块桌面面板中。</div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button onClick={() => shakeMutation.mutate()} disabled={shakeMutation.isPending} variant="primary">
+                  {shakeMutation.isPending ? "正在寻找..." : "摇一摇"}
+                </Button>
+                <div className="text-xs text-[color:var(--text-muted)]">随机相遇会从不同场景里发生。</div>
+              </div>
+              {shakeMessage ? <InlineNotice className="mt-3" tone="success">{shakeMessage}</InlineNotice> : null}
+              {shakeMutation.isError && shakeMutation.error instanceof Error ? <ErrorBlock className="mt-3" message={shakeMutation.error.message} /> : null}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {scenes.map((scene) => (
+                  <Button
+                    key={scene.id}
+                    onClick={() => sceneMutation.mutate(scene.id)}
+                    disabled={sceneMutation.isPending}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    {sceneMutation.isPending && sceneMutation.variables === scene.id ? `正在前往${scene.label}...` : scene.label}
+                  </Button>
+                ))}
+              </div>
+              {sceneMessage ? <InlineNotice className="mt-3" tone="info">{sceneMessage}</InlineNotice> : null}
+              {sceneMutation.isError && sceneMutation.error instanceof Error ? <ErrorBlock className="mt-3" message={sceneMutation.error.message} /> : null}
+            </AppSection>
+
+            <AppSection className="space-y-4">
+              <div>
+                <div className="text-sm font-medium text-white">发一条发现页动态</div>
+                <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">左侧负责动作和发布，右侧专注内容流。</div>
+              </div>
+              <TextAreaField
+                value={text}
+                onChange={(event) => setText(event.target.value)}
+                placeholder="分享你的想法..."
+                className="min-h-36 resize-none"
+              />
+              <Button disabled={!text.trim() || createPostMutation.isPending} onClick={() => createPostMutation.mutate()} variant="primary">
+                {createPostMutation.isPending ? "正在发布..." : "发布"}
+              </Button>
+              {createPostMutation.isError && createPostMutation.error instanceof Error ? <ErrorBlock message={createPostMutation.error.message} /> : null}
+            </AppSection>
+          </div>
+
+          <AppSection className="space-y-4">
+            <div>
+              <div className="text-sm font-medium text-white">广场动态</div>
+              <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">在桌面端保留更宽正文和更清晰的互动区。</div>
+            </div>
+            {successNotice ? <InlineNotice tone="success">{successNotice}</InlineNotice> : null}
+            {feedQuery.isLoading ? <LoadingBlock label="正在读取发现页动态..." /> : null}
+            {feedQuery.isError && feedQuery.error instanceof Error ? <ErrorBlock message={feedQuery.error.message} /> : null}
+            {visiblePosts.map((post) => (
+              <SocialPostCard
+                key={post.id}
+                authorName={post.authorName}
+                authorAvatar={post.authorAvatar}
+                meta={post.aiReacted ? "AI 已响应" : "等待 AI 互动"}
+                body={post.text}
+                summary={`${post.likeCount} 赞 · ${post.commentCount} 评论`}
+                actions={
+                  <Button disabled={likeMutation.isPending} onClick={() => likeMutation.mutate(post.id)} variant="secondary" size="sm">
+                    {pendingLikePostId === post.id ? "处理中..." : "点赞"}
+                  </Button>
+                }
+                composer={
+                  <>
+                    <TextField
+                      value={commentDrafts[post.id] ?? ""}
+                      onChange={(event) =>
+                        setCommentDrafts((current) => ({
+                          ...current,
+                          [post.id]: event.target.value,
+                        }))
+                      }
+                      placeholder="写评论..."
+                      className="min-w-0 flex-1 rounded-full py-2 text-xs"
+                    />
+                    <Button
+                      disabled={!(commentDrafts[post.id] ?? "").trim() || commentMutation.isPending}
+                      onClick={() => commentMutation.mutate(post.id)}
+                      variant="primary"
+                      size="sm"
+                    >
+                      {pendingCommentPostId === post.id ? "发送中..." : "发送"}
+                    </Button>
+                  </>
+                }
+              />
+            ))}
+            {likeMutation.isError && likeMutation.error instanceof Error ? <ErrorBlock message={likeMutation.error.message} /> : null}
+            {commentMutation.isError && commentMutation.error instanceof Error ? <ErrorBlock message={commentMutation.error.message} /> : null}
+            {!feedQuery.isLoading && !feedQuery.isError && !visiblePosts.length ? (
+              <EmptyState title="发现页还没有新动态" description="你先发一条，或者再摇一摇看看会遇到谁。" />
+            ) : null}
+          </AppSection>
+        </div>
+      </AppPage>
+    );
+  }
 
   return (
     <AppPage>
