@@ -386,7 +386,7 @@ if (command === "doctor") {
     ["apps/app/dist", existsSync(resolve(appDir, "dist"))],
     ["android project", existsSync(androidProjectDir)],
     ["java runtime", hasCommand("java", ["-version"])],
-    ["java runtime >= 11", javaMajorVersion !== null && javaMajorVersion >= 11],
+    ["java runtime >= 21", javaMajorVersion !== null && javaMajorVersion >= 21],
     ["ANDROID_HOME or ANDROID_SDK_ROOT", Boolean(process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT)],
   ];
 

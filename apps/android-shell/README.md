@@ -17,7 +17,7 @@ This package hosts the Capacitor-based Android container for `apps/app`.
 
 - `pnpm android:run` is the default local development entrypoint for Android.
 - It will auto-detect `ANDROID_SDK_ROOT`, reuse a connected device or start the first available emulator, and install-launch the debug app.
-- If the current Java runtime is lower than 11, it downloads a local JDK 17 into `.cache/tools/jdk-17` and uses it only for this repository.
+- If the current Java runtime is lower than 21, it downloads a local JDK 21 into `.cache/tools/jdk-21` and uses it only for this repository.
 
 - The Android shell targets remote Core API mode.
 - `apps/app/dist` is used as the web bundle source.
@@ -26,10 +26,10 @@ This package hosts the Capacitor-based Android container for `apps/app`.
 - Machine-local overrides can be placed in `apps/android-shell/android-shell.config.local.json`.
 - A local override example is provided in `apps/android-shell/android-shell.config.local.example.json`.
 - Release signing placeholders can be provided through `apps/android-shell/android-signing.local.properties`.
-- Android Gradle Plugin 8.x requires Java 11 or newer.
+- The current Capacitor Android dependency graph compiles with Java 21.
 - `android:configure` writes app id, app name, version, manifest runtime metadata, and `apps/app/public/runtime-config.json`.
 - `pnpm android:doctor` will fail the production endpoint check until `runtime.apiBaseUrl` is configured.
-- `pnpm android:doctor` now also checks whether the active Java runtime is at least 11.
+- `pnpm android:doctor` now also checks whether the active Java runtime is at least 21.
 - Production defaults disable cleartext traffic; local debugging can override it in `android-shell.config.local.json`.
 - Android backup and device-transfer extraction are explicitly disabled in the generated manifest resources.
 

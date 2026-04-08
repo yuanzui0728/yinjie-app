@@ -6,7 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ANDROID_SHELL_DIR="$ROOT_DIR/apps/android-shell"
 ANDROID_PROJECT_DIR="$ANDROID_SHELL_DIR/android"
 LOCAL_TOOLS_DIR="$ROOT_DIR/.cache/tools"
-LOCAL_JDK_DIR="$LOCAL_TOOLS_DIR/jdk-17"
+LOCAL_JDK_DIR="$LOCAL_TOOLS_DIR/jdk-21"
 LOCAL_JDK_DOWNLOAD_DIR="$LOCAL_TOOLS_DIR/downloads"
 APP_ID="$(node -e "const fs=require('fs'); const path=require('path'); const cfg=JSON.parse(fs.readFileSync(path.join(process.argv[1], 'apps/android-shell/capacitor.config.json'),'utf8')); process.stdout.write(cfg.appId);" "$ROOT_DIR")"
 
@@ -49,18 +49,18 @@ current_java_major() {
 download_local_jdk() {
   mkdir -p "$LOCAL_JDK_DOWNLOAD_DIR"
 
-  local archive_path="$LOCAL_JDK_DOWNLOAD_DIR/temurin-17.tar.gz"
+  local archive_path="$LOCAL_JDK_DOWNLOAD_DIR/temurin-21.tar.gz"
   local temp_extract_dir="$LOCAL_TOOLS_DIR/jdk-extract"
 
   if [[ ! -x "$LOCAL_JDK_DIR/bin/java" ]]; then
-    log "Downloading JDK 17 to $LOCAL_JDK_DIR"
+    log "Downloading JDK 21 to $LOCAL_JDK_DIR"
     rm -rf "$temp_extract_dir"
     mkdir -p "$temp_extract_dir"
-    curl -fsSL "https://api.adoptium.net/v3/binary/latest/17/ga/linux/x64/jdk/hotspot/normal/eclipse?project=jdk" -o "$archive_path"
+    curl -fsSL "https://api.adoptium.net/v3/binary/latest/21/ga/linux/x64/jdk/hotspot/normal/eclipse?project=jdk" -o "$archive_path"
     tar -xzf "$archive_path" -C "$temp_extract_dir"
     local extracted_dir
     extracted_dir="$(find "$temp_extract_dir" -mindepth 1 -maxdepth 1 -type d | head -n 1)"
-    [[ -n "$extracted_dir" ]] || fail "Failed to extract JDK 17 archive."
+    [[ -n "$extracted_dir" ]] || fail "Failed to extract JDK 21 archive."
     rm -rf "$LOCAL_JDK_DIR"
     mv "$extracted_dir" "$LOCAL_JDK_DIR"
     rm -rf "$temp_extract_dir"
@@ -77,14 +77,14 @@ ensure_java() {
     java_major="$(current_java_major)"
   fi
 
-  if [[ "$java_major" -ge 11 ]]; then
+  if [[ "$java_major" -ge 21 ]]; then
     return
   fi
 
   download_local_jdk
 
   java_major="$(current_java_major)"
-  [[ "$java_major" -ge 11 ]] || fail "Java 11+ is required, but no usable JDK was found."
+  [[ "$java_major" -ge 21 ]] || fail "Java 21+ is required, but no usable JDK was found."
 }
 
 first_online_device() {
