@@ -1,5 +1,4 @@
 import type {
-  SessionPayload,
   SuccessResponse,
 } from "./auth";
 import type {
@@ -257,94 +256,6 @@ export function getLatestMyCloudWorldRequest(accessToken: string, baseUrl?: stri
 
 export function getSchedulerStatus(baseUrl?: string) {
   return requestLegacyApi<SchedulerStatus>("/system/scheduler", undefined, baseUrl);
-}
-
-export function loginUser(payload: { username: string; password: string }, baseUrl?: string) {
-  return requestLegacyApi<SessionPayload>(
-    "/auth/login",
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    },
-    baseUrl,
-  );
-}
-
-export function initUser(payload: { username: string }, baseUrl?: string) {
-  return requestLegacyApi<SessionPayload>(
-    "/auth/init",
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    },
-    baseUrl,
-  );
-}
-
-export function completeOnboarding(userId: string, baseUrl?: string) {
-  return requestLegacyApi<SuccessResponse>(
-    `/auth/users/${encodeURIComponent(userId)}/onboarding-complete`,
-    {
-      method: "PATCH",
-    },
-    baseUrl,
-  );
-}
-
-export function getCurrentUser(baseUrl?: string) {
-  return requestLegacyApi<WorldOwner>("/auth/me", undefined, baseUrl);
-}
-
-export function updateUser(userId: string, payload: UpdateWorldOwnerRequest, baseUrl?: string) {
-  return requestLegacyApi<SuccessResponse>(
-    `/auth/users/${encodeURIComponent(userId)}`,
-    {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-    },
-    baseUrl,
-  );
-}
-
-export function setUserApiKey(userId: string, payload: UpdateWorldOwnerApiKeyRequest, baseUrl?: string) {
-  return requestLegacyApi<SuccessResponse>(
-    `/auth/users/${encodeURIComponent(userId)}/api-key`,
-    {
-      method: "PATCH",
-      body: JSON.stringify(payload),
-    },
-    baseUrl,
-  );
-}
-
-export function clearUserApiKey(userId: string, baseUrl?: string) {
-  return requestLegacyApi<SuccessResponse>(
-    `/auth/users/${encodeURIComponent(userId)}/api-key`,
-    {
-      method: "DELETE",
-    },
-    baseUrl,
-  );
-}
-
-export function deleteUser(userId: string, baseUrl?: string) {
-  return requestLegacyApi<SuccessResponse>(
-    `/auth/users/${encodeURIComponent(userId)}`,
-    {
-      method: "DELETE",
-    },
-    baseUrl,
-  );
-}
-
-export function logoutCurrentSession(baseUrl?: string) {
-  return requestLegacyApi<SuccessResponse>(
-    "/auth/logout",
-    {
-      method: "POST",
-    },
-    baseUrl,
-  );
 }
 
 export function runSchedulerJob(id: string, baseUrl?: string) {
