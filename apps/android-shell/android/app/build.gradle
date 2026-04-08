@@ -64,6 +64,7 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation "androidx.security:security-crypto:1.1.0-alpha06"
+    implementation "com.google.firebase:firebase-messaging:24.1.0"
     implementation project(':capacitor-android')
     implementation project(':capacitor-cordova-android-plugins')
 }

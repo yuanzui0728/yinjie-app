@@ -52,7 +52,10 @@ Current Android-side implementation status:
   - `openExternalUrl` is wired
   - `share` is wired
   - `pickImages` opens Android document picker and returns URI assets
-  - `getPushToken` currently reads a cached token slot and still needs real FCM registration wiring
+  - `getPushToken` reads the cached token slot used by `YinjieFirebaseMessagingService`
+- `YinjieFirebaseMessagingService`
+  - persists the latest FCM registration token into the bridge cache
+  - does not render notifications yet; notification UX remains a later milestone
 
 Expected `YinjieMobileBridge` methods:
 
