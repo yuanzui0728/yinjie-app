@@ -2,7 +2,6 @@ export type ModerationTargetType = "character" | "message" | "moment" | "feedPos
 
 export interface ModerationReport {
   id: string;
-  userId: string;
   targetType: ModerationTargetType;
   targetId: string;
   reason: string;
@@ -12,7 +11,6 @@ export interface ModerationReport {
 }
 
 export interface CreateModerationReportRequest {
-  userId: string;
   targetType: ModerationTargetType;
   targetId: string;
   reason: string;

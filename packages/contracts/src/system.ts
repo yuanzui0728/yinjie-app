@@ -24,10 +24,10 @@ export interface InferenceStatus {
   lastError?: string;
 }
 
-export interface LegacySurfaceStatus {
+export interface WorldSurfaceStatus {
   apiPrefix: string;
   migratedModules: string[];
-  usersCount: number;
+  ownerCount: number;
   charactersCount: number;
   narrativeArcsCount: number;
   behaviorLogsCount: number;
@@ -81,7 +81,7 @@ export interface SystemStatus {
   desktopShell: ServiceHealth;
   database: DatabaseStatus;
   inferenceGateway: InferenceStatus;
-  legacySurface: LegacySurfaceStatus;
+  worldSurface: WorldSurfaceStatus;
   scheduler: SchedulerStatus;
   appMode: "development" | "desktop" | "production";
 }

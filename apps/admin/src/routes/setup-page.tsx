@@ -95,10 +95,10 @@ export function SetupPage() {
               ok={Boolean(systemStatusQuery.data?.scheduler.healthy)}
             />
             <SetupStatusCard
-              title="Legacy Surface"
-              value={String(systemStatusQuery.data?.legacySurface.usersCount ?? 0)}
-              detail="After single-world migration, this should converge to one owner and legacy user semantics should disappear from runtime."
-              ok={(systemStatusQuery.data?.legacySurface.usersCount ?? 0) <= 1}
+              title="World Owner"
+              value={String(systemStatusQuery.data?.worldSurface.ownerCount ?? 0)}
+              detail="A healthy single-world instance should expose exactly one owner at runtime."
+              ok={(systemStatusQuery.data?.worldSurface.ownerCount ?? 0) === 1}
             />
           </div>
 

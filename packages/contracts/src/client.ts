@@ -32,18 +32,11 @@ import type {
   ToggleMomentLikeResult,
 } from "./moments";
 import type {
-  CreateModerationReportRequest,
-  ModerationReport,
-} from "./moderation";
-import type {
-  BlockCharacterRequest,
-  BlockedCharacter,
   FriendListItem,
   FriendRequest,
   SendFriendRequestRequest,
   ShakeResult,
   TriggerSceneRequest,
-  UnblockCharacterRequest,
 } from "./social";
 import type {
   InferencePreviewRequest,
@@ -624,47 +617,6 @@ export function declineFriendRequest(id: string, baseUrl?: string) {
 
 export function getFriends(baseUrl?: string) {
   return requestLegacyApi<FriendListItem[]>("/social/friends", undefined, baseUrl);
-}
-
-export function getBlockedCharacters(baseUrl?: string) {
-  return requestLegacyApi<BlockedCharacter[]>("/social/blocks", undefined, baseUrl);
-}
-
-export function blockCharacter(payload: BlockCharacterRequest, baseUrl?: string) {
-  return requestLegacyApi<BlockedCharacter>(
-    "/social/block",
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    },
-    baseUrl,
-  );
-}
-
-export function unblockCharacter(payload: UnblockCharacterRequest, baseUrl?: string) {
-  return requestLegacyApi<SuccessResponse>(
-    "/social/unblock",
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    },
-    baseUrl,
-  );
-}
-
-export function listModerationReports(baseUrl?: string) {
-  return requestLegacyApi<ModerationReport[]>("/moderation/reports", undefined, baseUrl);
-}
-
-export function createModerationReport(payload: CreateModerationReportRequest, baseUrl?: string) {
-  return requestLegacyApi<ModerationReport>(
-    "/moderation/reports",
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    },
-    baseUrl,
-  );
 }
 
 export function getMoments(authorId?: string, baseUrl?: string) {
