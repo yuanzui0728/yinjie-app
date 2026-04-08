@@ -91,7 +91,7 @@ export class SystemService {
   }
 
   async getStatus() {
-    const [usersCount, charactersCount, narrativeArcsCount, behaviorLogsCount, providerConfig] =
+    const [ownerCount, charactersCount, narrativeArcsCount, behaviorLogsCount, providerConfig] =
       await Promise.all([
         this.userRepo.count(),
         this.characterRepo.count(),
@@ -133,10 +133,10 @@ export class SystemService {
         successfulRequests: 0,
         failedRequests: 0,
       },
-      legacySurface: {
+      worldSurface: {
         apiPrefix: '/api',
-        migratedModules: ['config', 'auth', 'characters', 'world', 'social', 'chat', 'moments', 'feed'],
-        usersCount,
+        migratedModules: ['config', 'characters', 'world', 'social', 'chat', 'moments', 'feed'],
+        ownerCount,
         charactersCount,
         narrativeArcsCount,
         behaviorLogsCount,

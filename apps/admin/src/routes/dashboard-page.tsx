@@ -403,19 +403,19 @@ export function DashboardPage() {
 
             <MetricCard
               label="Characters"
-              value={charactersQuery.data?.length ?? statusQuery.data?.legacySurface.charactersCount ?? 0}
-              detail={`migrated modules: ${statusQuery.data?.legacySurface.migratedModules.join(", ") ?? "pending"}`}
+              value={charactersQuery.data?.length ?? statusQuery.data?.worldSurface.charactersCount ?? 0}
+              detail={`migrated modules: ${statusQuery.data?.worldSurface.migratedModules.join(", ") ?? "pending"}`}
             />
 
             <MetricCard
               label="Narrative Arcs"
-              value={statusQuery.data?.legacySurface.narrativeArcsCount ?? 0}
+              value={statusQuery.data?.worldSurface.narrativeArcsCount ?? 0}
               detail="accepted friendships now ensure runtime-compatible arc records"
             />
 
             <MetricCard
               label="Behavior Logs"
-              value={statusQuery.data?.legacySurface.behaviorLogsCount ?? 0}
+              value={statusQuery.data?.worldSurface.behaviorLogsCount ?? 0}
               detail="tracks AI-generated moments, friend requests, feed reactions, and group replies"
             />
 
@@ -454,7 +454,7 @@ export function DashboardPage() {
 
           <div className="mt-6 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm leading-7 text-[color:var(--text-secondary)]">
             This control plane is now aligned with the shared contract layer. The migrated compatibility surface covers
-            config, auth, characters, social, chat, moments, feed, and world context. Scheduler parity now has a live
+            config, characters, social, chat, moments, feed, and world context. Scheduler parity now has a live
             Rust execution slice with runtime stats and manual triggers wired into this dashboard. Narrative arcs and AI
             behavior logs are now also tracked in the new runtime for migration parity.
           </div>
