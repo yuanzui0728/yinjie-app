@@ -6,6 +6,8 @@ import { getBlockedCharacters, getConversations, getFriends, getOrCreateConversa
 import { AppHeader, AppPage, AppSection, Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
+import { DesktopChatWorkspace } from "../features/desktop/chat/desktop-chat-workspace";
+import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { formatTimestamp } from "../lib/format";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useSessionStore } from "../store/session-store";
@@ -16,6 +18,16 @@ type NoticeState = {
 };
 
 export function ChatListPage() {
+  const isDesktopLayout = useDesktopLayout();
+
+  if (isDesktopLayout) {
+    return <DesktopChatWorkspace />;
+  }
+
+  return <MobileChatListPage />;
+}
+
+function MobileChatListPage() {
   const navigate = useNavigate();
   const userId = useSessionStore((state) => state.userId);
   const runtimeConfig = useAppRuntimeConfig();
