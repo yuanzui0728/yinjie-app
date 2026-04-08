@@ -151,6 +151,7 @@ Android 通知点击 payload 约定：
 - `conversationId`: 单聊落点
 - `groupId`: 群聊落点
 - Web 层会在根布局里读取 pending launch target，并在登录态存在时自动跳转
+- 推送发送侧字段示例与禁忌见 `docs/release/mobile-push-payload-contract.md`
 
 建议优先级：
 

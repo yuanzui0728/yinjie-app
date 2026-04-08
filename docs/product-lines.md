@@ -94,9 +94,11 @@
 - `/setup` 已拆成 `DesktopSetupPanel / MobileSetupPanel`
 - `DesktopRuntimeGuard` 已补桌面诊断摘要
 - Mobile Setup 已开始感知安全存储模式、bootstrap 来源和原生桥状态
+- Mobile Client 已开始收口推送点击落点合同，通知可回到聊天列表、单聊或群聊
 
 ## 相关阅读
 
 - `docs/release/desktop-host-regression.md`
 - `docs/release/mobile-client-regression.md`
 - `docs/release/mobile-bridge-runbook.md`
+- `docs/release/mobile-push-payload-contract.md`
