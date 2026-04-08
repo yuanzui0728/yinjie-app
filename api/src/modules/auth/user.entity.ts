@@ -29,6 +29,13 @@ export class UserEntity {
   @Column({ nullable: true })
   locationName?: string;
 
+  // 用户自定义 AI APIKey（优先于服务器配置）
+  @Column({ nullable: true, type: 'text' })
+  customApiKey: string | null;
+
+  @Column({ nullable: true, type: 'text' })
+  customApiBase: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 }

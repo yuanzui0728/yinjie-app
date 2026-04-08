@@ -8,6 +8,7 @@ import { Conversation, Message } from './chat.types';
 import { ConversationEntity } from './conversation.entity';
 import { MessageEntity } from './message.entity';
 import { NarrativeService } from '../narrative/narrative.service';
+import { AuthService } from '../auth/auth.service';
 
 @Injectable()
 export class ChatService {
@@ -19,6 +20,7 @@ export class ChatService {
     private readonly ai: AiOrchestratorService,
     private readonly characters: CharactersService,
     private readonly narrativeService: NarrativeService,
+    private readonly authService: AuthService,
     @InjectRepository(ConversationEntity)
     private convRepo: Repository<ConversationEntity>,
     @InjectRepository(MessageEntity)
@@ -123,6 +125,8 @@ export class ChatService {
     const entity = await this.convRepo.findOneBy({ id: convId });
     if (!entity) throw new Error(`Conversation ${convId} not found`);
 
+    const aiKeyOverride = await this.authService.getUserAiConfig(userId) ?? undefined;
+
     // Save user message to DB
     const userMsgEntity = this.msgRepo.create({
       id: `msg_${Date.now()}`,
@@ -181,7 +185,7 @@ export class ChatService {
           await this.convRepo.save(entity);
 
           const coordPrompt = `你是${profile.name}，你觉得用户的问题"${text}"超出了你的专长，需要${invitedChars.map((c) => c.name).join('和')}的帮助。用一句自然的话说你要拉群，不超过30字。`;
-          const coordReply = await this.ai.generateReply({ profile, conversationHistory: history, userMessage: coordPrompt });
+          const coordReply = await this.ai.generateReply({ profile, conversationHistory: history, userMessage: coordPrompt, aiKeyOverride });
           const coordEntity = this.msgRepo.create({ id: `msg_${Date.now()}_coord`, conversationId: convId, senderType: 'character', senderId: charId, senderName: profile.name, type: 'text', text: coordReply.text });
           await this.msgRepo.save(coordEntity);
           results.push(this._entityToMessage(coordEntity));
@@ -195,7 +199,7 @@ export class ChatService {
           for (const invited of invitedChars) {
             const invitedProfile = await this.characters.getProfile(invited.id);
             if (!invitedProfile) continue;
-            const reply = await this.ai.generateReply({ profile: invitedProfile, conversationHistory: history, userMessage: text, isGroupChat: true });
+            const reply = await this.ai.generateReply({ profile: invitedProfile, conversationHistory: history, userMessage: text, isGroupChat: true, aiKeyOverride });
             const aiEntity = this.msgRepo.create({ id: `msg_${Date.now()}_${invited.id}`, conversationId: convId, senderType: 'character', senderId: invited.id, senderName: invited.name, type: 'text', text: reply.text });
             await this.msgRepo.save(aiEntity);
             history.push({ role: 'assistant', content: reply.text, characterId: invited.id });
@@ -214,7 +218,7 @@ export class ChatService {
         currentActivity: charEntity?.currentActivity,
         lastChatAt: lastMsg?.createdAt,
       };
-      const reply = await this.ai.generateReply({ profile, conversationHistory: history, userMessage: text, chatContext });
+      const reply = await this.ai.generateReply({ profile, conversationHistory: history, userMessage: text, chatContext, aiKeyOverride });
       const aiEntity = this.msgRepo.create({ id: `msg_${Date.now()}_ai`, conversationId: convId, senderType: 'character', senderId: charId, senderName: profile.name, type: 'text', text: reply.text });
       await this.msgRepo.save(aiEntity);
       history.push({ role: 'assistant', content: reply.text });
@@ -225,7 +229,7 @@ export class ChatService {
       for (const charId of entity.participants) {
         const profile = await this.characters.getProfile(charId);
         if (!profile) continue;
-        const reply = await this.ai.generateReply({ profile, conversationHistory: history, userMessage: text, isGroupChat: true });
+        const reply = await this.ai.generateReply({ profile, conversationHistory: history, userMessage: text, isGroupChat: true, aiKeyOverride });
         const aiEntity = this.msgRepo.create({ id: `msg_${Date.now()}_${charId}`, conversationId: convId, senderType: 'character', senderId: charId, senderName: profile.name, type: 'text', text: reply.text });
         await this.msgRepo.save(aiEntity);
         history.push({ role: 'assistant', content: reply.text, characterId: charId });

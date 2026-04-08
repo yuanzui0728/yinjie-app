@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { adminApi } from "../lib/admin-api";
 import { Link } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import {
@@ -47,6 +48,18 @@ type InferencePreviewForm = {
 export function DashboardPage() {
   const baseUrl = import.meta.env.VITE_CORE_API_BASE_URL;
   const queryClient = useQueryClient();
+
+  const adminStatsQuery = useQuery({
+    queryKey: ["admin-stats"],
+    queryFn: () => adminApi.getStats(),
+    retry: false,
+  });
+
+  const adminSystemQuery = useQuery({
+    queryKey: ["admin-system"],
+    queryFn: () => adminApi.getSystem(),
+    retry: false,
+  });
   const [successNotice, setSuccessNotice] = useState("");
   const { desktopAvailable, desktopStatusQuery, runtimeContextQuery, runtimeDiagnosticsQuery } = useDesktopRuntime({
     queryKeyPrefix: "admin-desktop",
@@ -234,6 +247,31 @@ export function DashboardPage() {
         }
       />
       {successNotice ? <InlineNotice tone="success">{successNotice}</InlineNotice> : null}
+
+      {/* NestJS 后端统计 */}
+      {(adminStatsQuery.data || adminSystemQuery.data) && (
+        <section className="rounded-[30px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-console)] p-6 shadow-[var(--shadow-card)]">
+          <div className="mb-4 text-xs uppercase tracking-[0.24em] text-[color:var(--text-muted)]">隐界后端 (NestJS)</div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {adminStatsQuery.data && (
+              <>
+                <MetricCard label="用户" value={String(adminStatsQuery.data.userCount)} meta={<StatusPill tone="healthy">active</StatusPill>} />
+                <MetricCard label="角色" value={String(adminStatsQuery.data.characterCount)} meta={<StatusPill tone="healthy">characters</StatusPill>} />
+                <MetricCard label="消息总数" value={String(adminStatsQuery.data.totalMessages)} meta={<StatusPill tone="healthy">messages</StatusPill>} />
+                <MetricCard label="AI 回复" value={String(adminStatsQuery.data.aiMessages)} meta={<StatusPill tone="healthy">ai</StatusPill>} />
+              </>
+            )}
+          </div>
+          {adminSystemQuery.data && (
+            <div className="mt-4 flex flex-wrap gap-4 text-xs text-[color:var(--text-muted)]">
+              <span>版本 {adminSystemQuery.data.version}</span>
+              <span>运行 {Math.floor(adminSystemQuery.data.uptimeSeconds / 3600)}h {Math.floor((adminSystemQuery.data.uptimeSeconds % 3600) / 60)}m</span>
+              <span>DB {(adminSystemQuery.data.dbSizeBytes / 1024 / 1024).toFixed(1)} MB</span>
+              <span>Node {adminSystemQuery.data.nodeVersion}</span>
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-4">
         <Card className="bg-[color:var(--surface-console)]">

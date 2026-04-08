@@ -19,9 +19,9 @@
 
 定位：
 
-- 世界宿主端
-- 本地自托管入口
-- provider、runtime、diagnostics、backup 的控制端
+- 桌面原生壳，提供更好的窗口体验和系统集成
+- 连接远程 NestJS 服务端（官方云端或自建）
+- 诊断、外部链接等桌面专属能力的承载端
 
 代码落点：
 
@@ -32,8 +32,9 @@
 
 运行模式：
 
-- 桌面壳拉起本地 `core-api`
-- `runtime-data`、数据库、日志、诊断都在宿主机本地
+- 桌面壳以 remote-connected 模式启动
+- 首次启动进入 Setup 页，填入服务器地址后使用
+- 不再在本地拉起 core-api 进程
 
 ## Mobile Client
 
@@ -65,7 +66,6 @@
 - `packages/contracts`
 - `packages/config`
 - `packages/ui`
-- `crates/core-api`
 
 共享原则：
 

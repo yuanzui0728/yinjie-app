@@ -7,15 +7,15 @@ export function isDesktopPlatform() {
 
 export function getDesktopRuntimeCapabilities(): AppRuntimeCapabilities {
   return {
-    canManageLocalCoreApi: true,
-    canResolveLocalRuntimeData: true,
-    canConfigureProviderLocally: true,
+    canManageLocalCoreApi: false,
+    canResolveLocalRuntimeData: false,
+    canConfigureProviderLocally: false,
     canUseSecureStorage: false,
     canReceivePush: false,
     canPickImages: false,
-    canConfigureRemoteService: false,
+    canConfigureRemoteService: true,
     canExportDiagnostics: true,
-    canManageProvider: true,
+    canManageProvider: false,
     canScanBootstrapCode: false,
     canOpenExternalLinks: true,
   };

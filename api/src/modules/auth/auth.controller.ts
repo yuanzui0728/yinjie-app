@@ -1,4 +1,4 @@
-import { Controller, Post, Patch, Body, Param } from '@nestjs/common';
+import { Controller, Post, Patch, Delete, Body, Param } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -31,5 +31,18 @@ export class AuthController {
     @Body() body: { username?: string; avatar?: string; signature?: string },
   ) {
     return this.authService.updateUser(id, body);
+  }
+
+  @Patch('users/:id/api-key')
+  setApiKey(
+    @Param('id') id: string,
+    @Body() body: { apiKey: string; apiBase?: string },
+  ) {
+    return this.authService.setUserApiKey(id, body.apiKey, body.apiBase);
+  }
+
+  @Delete('users/:id/api-key')
+  clearApiKey(@Param('id') id: string) {
+    return this.authService.clearUserApiKey(id);
   }
 }

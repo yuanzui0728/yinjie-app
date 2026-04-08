@@ -5,6 +5,7 @@ import { ChatService } from './chat.service';
 import { ChatController, GroupController } from './chat.controller';
 import { GroupService } from './group.service';
 import { AiModule } from '../ai/ai.module';
+import { AuthModule } from '../auth/auth.module';
 import { CharactersModule } from '../characters/characters.module';
 import { NarrativeModule } from '../narrative/narrative.module';
 import { ConversationEntity } from './conversation.entity';
@@ -16,6 +17,7 @@ import { GroupMessageEntity } from './group-message.entity';
 @Module({
   imports: [
     AiModule,
+    AuthModule,
     CharactersModule,
     NarrativeModule,
     TypeOrmModule.forFeature([

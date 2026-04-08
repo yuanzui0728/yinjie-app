@@ -13,18 +13,21 @@
 | 主 App | React + Vite，iOS/Android/Web（apps/app/） | 5180 |
 | **管理后台** | React + Vite + @yinjie/ui（apps/admin/） | 5181 |
 | 桌面端 | Tauri 壳，远程连接后端（apps/desktop/） | - |
+| Android | Capacitor 壳（apps/android-shell/） | - |
+| iOS | Capacitor 壳（apps/ios-shell/） | - |
 
 ## 后端模块（api/src/modules/）
-`ai` · `auth` · `characters` · `chat` · `config` · `import` · `moments` · `social` · `feed` · `world` · `scheduler` · `events` · `narrative` · `analytics` · `admin`
+`ai` · `admin` · `auth` · `characters` · `chat` · `config` · `import` · `moments` · `social` · `feed` · `world` · `scheduler` · `events` · `narrative` · `analytics`
 
-## 前端结构（web/src/）
-`pages/` · `store/` · `services/` · `components/` · `theme/`
+## 主 App 结构（apps/app/src/）
+`routes/` · `features/desktop/` · `features/mobile/` · `features/shell/` · `runtime/` · `lib/` · `components/` · `store/`
 
-## 前端页面（web/src/pages/）
-- `Onboarding.tsx` — 5幕叙事入场流程
-- `Login.tsx` — 传统登录（已有账号）
-- `FriendRequests.tsx` — 好友申请列表
-- `tabs/ChatList` · `Moments` · `Contacts` · `Discover` · `Profile`
+## 主 App 页面（apps/app/src/routes/）
+- `splash-page.tsx` — 启动屏，识别运行时环境
+- `setup-page.tsx` — 服务器配置（Desktop/Mobile 均为远程连接模式）
+- `onboarding-page.tsx` — 叙事入场流程
+- `login-page.tsx` — 传统登录
+- `tabs/chat-list-page` · `moments-page` · `contacts-page` · `discover-page` · `profile-page`
 
 ## 数据库实体（21个）
 **核心**: User · Character · Conversation · Message · SystemConfig
@@ -41,3 +44,11 @@
 
 ## 环境变量（api/.env）
 `DEEPSEEK_API_KEY` · `OPENAI_BASE_URL` · `JWT_SECRET` · `ADMIN_SECRET` · `DATABASE_PATH`
+
+## 共享包（packages/）
+`@yinjie/ui` · `@yinjie/contracts` · `@yinjie/config` · `@yinjie/tooling`
+
+## 部署
+- 云端：`docker compose up`（api/ + SQLite 数据卷）
+- 客户端首次启动 → Setup 页填入服务器地址（官方或自建）
+- 管理后台：访问 apps/admin，输入 `ADMIN_SECRET` 鉴权

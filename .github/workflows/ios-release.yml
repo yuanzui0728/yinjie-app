@@ -1,0 +1,76 @@
+name: iOS Release
+
+on:
+  push:
+    tags:
+      - 'app-v*'
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    name: Build iOS IPA
+    runs-on: macos-14
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web app
+        run: pnpm --filter @yinjie/app build
+
+      - name: Install Capacitor CLI
+        run: pnpm add -g @capacitor/cli
+
+      - name: Sync Capacitor iOS
+        working-directory: apps/ios-shell
+        run: npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        working-directory: apps/ios-shell/ios/App
+        run: pod install
+
+      # Code signing — requires Apple Developer certificate stored in GitHub Secrets
+      # Set up secrets: APPLE_CERTIFICATE (base64 p12), APPLE_CERTIFICATE_PASSWORD,
+      # APPLE_PROVISIONING_PROFILE (base64), KEYCHAIN_PASSWORD
+      - name: Import certificate
+        if: env.APPLE_CERTIFICATE != ''
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+
+      - name: Build IPA (unsigned / simulator)
+        working-directory: apps/ios-shell/ios
+        run: |
+          xcodebuild \
+            -workspace App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -sdk iphonesimulator \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yinjie-ios-build
+          path: apps/ios-shell/ios/build/Build/Products/Release-iphonesimulator/App.app

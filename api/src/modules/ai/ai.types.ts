@@ -56,6 +56,11 @@ export interface ChatMessage {
   characterId?: string; // 群聊中标识是哪个 AI 说的
 }
 
+export interface AiKeyOverride {
+  apiKey: string;
+  apiBase?: string;
+}
+
 export interface GenerateReplyOptions {
   profile: PersonalityProfile;
   conversationHistory: ChatMessage[];
@@ -63,6 +68,7 @@ export interface GenerateReplyOptions {
   isGroupChat?: boolean;
   otherParticipants?: PersonalityProfile[]; // 群聊中其他 AI
   chatContext?: { currentActivity?: string; lastChatAt?: Date };
+  aiKeyOverride?: AiKeyOverride;
 }
 
 export interface GenerateReplyResult {

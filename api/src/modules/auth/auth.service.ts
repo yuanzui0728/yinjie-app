@@ -62,4 +62,20 @@ export class AuthService {
     await this.userRepo.update(userId, data);
     return { success: true };
   }
+
+  async setUserApiKey(userId: string, apiKey: string, apiBase?: string) {
+    await this.userRepo.update(userId, { customApiKey: apiKey, customApiBase: apiBase ?? null });
+    return { success: true };
+  }
+
+  async clearUserApiKey(userId: string) {
+    await this.userRepo.update(userId, { customApiKey: null, customApiBase: null });
+    return { success: true };
+  }
+
+  async getUserAiConfig(userId: string): Promise<{ apiKey?: string; apiBase?: string } | null> {
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user?.customApiKey) return null;
+    return { apiKey: user.customApiKey, apiBase: user.customApiBase ?? undefined };
+  }
 }

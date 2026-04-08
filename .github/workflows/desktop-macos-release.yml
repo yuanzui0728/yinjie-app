@@ -124,9 +124,6 @@ jobs:
       - name: Build shared frontend packages
         run: pnpm build
 
-      - name: Check Core API
-        run: cargo check --manifest-path crates/core-api/Cargo.toml --target $YINJIE_DESKTOP_TARGET_TRIPLE
-
       - name: Resolve release metadata
         id: release_meta
         shell: bash
