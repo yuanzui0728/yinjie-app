@@ -1,10 +1,13 @@
 import Foundation
 import Capacitor
+import PhotosUI
 import UIKit
 import UserNotifications
 
 @objc(YinjieMobileBridgePlugin)
-public class YinjieMobileBridgePlugin: CAPPlugin {
+public class YinjieMobileBridgePlugin: CAPPlugin, PHPickerViewControllerDelegate {
+    private var pendingImagePickerCall: CAPPluginCall?
+
     @objc func openExternalUrl(_ call: CAPPluginCall) {
         guard let rawUrl = call.getString("url"),
               let url = URL(string: rawUrl.trimmingCharacters(in: .whitespacesAndNewlines)) else {
@@ -57,9 +60,23 @@ public class YinjieMobileBridgePlugin: CAPPlugin {
     }
 
     @objc func pickImages(_ call: CAPPluginCall) {
-        call.resolve([
-            "assets": []
-        ])
+        guard let presenter = bridge?.viewController else {
+            call.reject("missing presenter for image picker")
+            return
+        }
+
+        pendingImagePickerCall = call
+
+        var configuration = PHPickerConfiguration(photoLibrary: .shared())
+        configuration.filter = .images
+        configuration.selectionLimit = call.getBool("multiple", false) ? 0 : 1
+
+        let picker = PHPickerViewController(configuration: configuration)
+        picker.delegate = self
+
+        DispatchQueue.main.async {
+            presenter.present(picker, animated: true)
+        }
     }
 
     @objc func getPushToken(_ call: CAPPluginCall) {
@@ -106,6 +123,110 @@ public class YinjieMobileBridgePlugin: CAPPlugin {
             return "prompt"
         @unknown default:
             return "unknown"
+        }
+    }
+
+    public func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        let call = pendingImagePickerCall
+        pendingImagePickerCall = nil
+
+        DispatchQueue.main.async {
+            picker.dismiss(animated: true)
+        }
+
+        guard let call else {
+            return
+        }
+
+        if results.isEmpty {
+            call.resolve([
+                "assets": []
+            ])
+            return
+        }
+
+        let group = DispatchGroup()
+        let lock = NSLock()
+        var assets: [[String: Any]] = []
+
+        for result in results {
+            group.enter()
+            loadImageAsset(from: result) { asset in
+                if let asset {
+                    lock.lock()
+                    assets.append(asset)
+                    lock.unlock()
+                }
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) {
+            call.resolve([
+                "assets": assets
+            ])
+        }
+    }
+
+    private func loadImageAsset(from result: PHPickerResult, completion: @escaping ([String: Any]?) -> Void) {
+        let provider = result.itemProvider
+        guard provider.hasItemConformingToTypeIdentifier("public.image") else {
+            completion(nil)
+            return
+        }
+
+        provider.loadFileRepresentation(forTypeIdentifier: "public.image") { url, _ in
+            guard let url else {
+                completion(nil)
+                return
+            }
+
+            let fileManager = FileManager.default
+            let tempDir = fileManager.temporaryDirectory.appendingPathComponent("yinjie-picker", isDirectory: true)
+
+            do {
+                try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
+                let ext = url.pathExtension.isEmpty ? "jpg" : url.pathExtension
+                let fileName = "\(UUID().uuidString).\(ext)"
+                let destination = tempDir.appendingPathComponent(fileName)
+
+                if fileManager.fileExists(atPath: destination.path) {
+                    try fileManager.removeItem(at: destination)
+                }
+
+                try fileManager.copyItem(at: url, to: destination)
+
+                var asset: [String: Any] = [
+                    "path": destination.path,
+                    "webPath": destination.absoluteString,
+                    "fileName": fileName
+                ]
+
+                if let mimeType = mimeType(forExtension: ext) {
+                    asset["mimeType"] = mimeType
+                }
+
+                completion(asset)
+            } catch {
+                completion(nil)
+            }
+        }
+    }
+
+    private func mimeType(forExtension ext: String) -> String? {
+        switch ext.lowercased() {
+        case "jpg", "jpeg":
+            return "image/jpeg"
+        case "png":
+            return "image/png"
+        case "gif":
+            return "image/gif"
+        case "heic":
+            return "image/heic"
+        case "webp":
+            return "image/webp"
+        default:
+            return nil
         }
     }
 }
