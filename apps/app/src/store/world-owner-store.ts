@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { SessionPayload, WorldOwner } from "@yinjie/contracts";
+import type { WorldOwner } from "@yinjie/contracts";
 import { createSessionStateStorage } from "../runtime/session-storage";
 
 type WorldOwnerState = {
@@ -14,7 +14,6 @@ type WorldOwnerState = {
   hasCustomApiKey: boolean;
   customApiBase: string | null;
   createdAt: string | null;
-  hydrateSession: (session: SessionPayload) => void;
   hydrateOwner: (owner: WorldOwner) => void;
   updateOwner: (input: {
     username?: string;
@@ -29,7 +28,6 @@ type WorldOwnerState = {
     avatar?: string;
     signature?: string;
   }) => void;
-  completeOnboarding: () => void;
   logout: () => void;
   clearOwner: () => void;
 };
@@ -50,18 +48,6 @@ export const useWorldOwnerStore = create<WorldOwnerState>()(
       hasCustomApiKey: false,
       customApiBase: null,
       createdAt: null,
-      hydrateSession: (session) =>
-        set({
-          id: session.userId,
-          userId: session.userId,
-          token: session.token,
-          username: session.username,
-          onboardingCompleted: session.onboardingCompleted,
-          avatar: session.avatar ?? defaultAvatar,
-          signature: session.signature ?? defaultSignature,
-          hasCustomApiKey: session.hasCustomApiKey,
-          customApiBase: session.customApiBase ?? null,
-        }),
       hydrateOwner: (owner) =>
         set({
           id: owner.id,
@@ -90,7 +76,6 @@ export const useWorldOwnerStore = create<WorldOwnerState>()(
           avatar: input.avatar ?? state.avatar,
           signature: input.signature ?? state.signature,
         })),
-      completeOnboarding: () => set({ onboardingCompleted: true }),
       logout: () =>
         set({
           id: null,
