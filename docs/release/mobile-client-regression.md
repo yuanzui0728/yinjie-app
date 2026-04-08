@@ -47,6 +47,8 @@
 ## 推送与媒体
 
 - push token 可被原生层读取或返回 `null`
+- 通知点击后可落到聊天列表、单聊或群聊
+- 发送侧 payload 与客户端消费字段遵循 `docs/release/mobile-push-payload-contract.md`
 - 图片选择接口未接通时返回空数组，不阻塞主流程
 - 外链打开接口未接通时能回退浏览器行为
 

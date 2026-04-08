@@ -57,6 +57,7 @@ Current Android-side implementation status:
 - `YinjieFirebaseMessagingService`
   - persists the latest FCM registration token into the bridge cache
   - creates a basic notification channel and shows fallback notifications for incoming FCM messages
+  - forwards push tap targets through `Intent extras` so the web layer can resume into chat list, direct chat, or group chat
 
 Expected `YinjieMobileBridge` methods:
 
@@ -64,5 +65,11 @@ Expected `YinjieMobileBridge` methods:
 - `share({ title?, text?, url? })`
 - `pickImages({ multiple? })`
 - `getPushToken()`
+- `getNotificationPermissionState()`
+- `requestNotificationPermission()`
+- `getPendingLaunchTarget()`
+- `clearPendingLaunchTarget()`
 
 The web layer will gracefully fall back when the bridge is not wired yet, but Android release builds should eventually connect these methods to platform-native implementations.
+
+Push payload examples and field rules are documented in `docs/release/mobile-push-payload-contract.md`.
