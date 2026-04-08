@@ -7,44 +7,39 @@ import { AppHeader, AppPage, Button, ErrorBlock, InlineNotice, LoadingBlock } fr
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
-import { useSessionStore } from "../store/session-store";
 
 export function FriendRequestsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const userId = useSessionStore((state) => state.userId);
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
   const [successNotice, setSuccessNotice] = useState("");
 
   const requestsQuery = useQuery({
-    queryKey: ["app-friend-requests", baseUrl, userId],
-    queryFn: () => getFriendRequests(userId!),
-    enabled: Boolean(userId),
+    queryKey: ["app-friend-requests", baseUrl],
+    queryFn: () => getFriendRequests(baseUrl),
   });
 
   const acceptMutation = useMutation({
-    mutationFn: (requestId: string) => acceptFriendRequest(requestId, { userId: userId! }),
+    mutationFn: (requestId: string) => acceptFriendRequest(requestId, baseUrl),
     onSuccess: async () => {
-      setSuccessNotice("好友申请已处理。");
+      setSuccessNotice("好友请求已处理。");
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl, userId] }),
-        queryClient.invalidateQueries({ queryKey: ["app-friends", baseUrl, userId] }),
-        queryClient.invalidateQueries({ queryKey: ["app-friends-quick-start", baseUrl, userId] }),
-        queryClient.invalidateQueries({ queryKey: ["app-group-friends", baseUrl, userId] }),
+        queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl] }),
+        queryClient.invalidateQueries({ queryKey: ["app-friends", baseUrl] }),
+        queryClient.invalidateQueries({ queryKey: ["app-friends-quick-start", baseUrl] }),
+        queryClient.invalidateQueries({ queryKey: ["app-group-friends", baseUrl] }),
       ]);
     },
   });
 
   const declineMutation = useMutation({
-    mutationFn: (requestId: string) => declineFriendRequest(requestId, { userId: userId! }),
+    mutationFn: (requestId: string) => declineFriendRequest(requestId, baseUrl),
     onSuccess: async () => {
-      setSuccessNotice("好友申请已处理。");
-      await queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl, userId] });
+      setSuccessNotice("好友请求已处理。");
+      await queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl] });
     },
   });
-  const pendingAcceptRequestId = acceptMutation.isPending ? acceptMutation.variables : null;
-  const pendingDeclineRequestId = declineMutation.isPending ? declineMutation.variables : null;
 
   useEffect(() => {
     setSuccessNotice("");
@@ -78,14 +73,17 @@ export function FriendRequestsPage() {
       />
 
       <div className="space-y-4">
-        {requestsQuery.isLoading ? <LoadingBlock label="正在读取好友申请..." /> : null}
-
-        {requestsQuery.isError && requestsQuery.error instanceof Error ? <ErrorBlock message={requestsQuery.error.message} /> : null}
-
+        {requestsQuery.isLoading ? <LoadingBlock label="正在读取好友请求..." /> : null}
+        {requestsQuery.isError && requestsQuery.error instanceof Error ? (
+          <ErrorBlock message={requestsQuery.error.message} />
+        ) : null}
         {successNotice ? <InlineNotice tone="success">{successNotice}</InlineNotice> : null}
 
         {(requestsQuery.data ?? []).map((request) => (
-          <div key={request.id} className="rounded-[30px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.04))] p-4 shadow-[var(--shadow-card)]">
+          <div
+            key={request.id}
+            className="rounded-[30px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.04))] p-4 shadow-[var(--shadow-card)]"
+          >
             <div className="flex items-start gap-3">
               <AvatarChip name={request.characterName} src={request.characterAvatar} />
               <div className="min-w-0 flex-1">
@@ -109,7 +107,7 @@ export function FriendRequestsPage() {
                 size="lg"
                 className="rounded-2xl"
               >
-                {pendingAcceptRequestId === request.id ? "接受中..." : "接受"}
+                {acceptMutation.isPending && acceptMutation.variables === request.id ? "接受中..." : "接受"}
               </Button>
               <Button
                 disabled={acceptMutation.isPending || declineMutation.isPending}
@@ -118,18 +116,21 @@ export function FriendRequestsPage() {
                 size="lg"
                 className="rounded-2xl"
               >
-                {pendingDeclineRequestId === request.id ? "处理中..." : "拒绝"}
+                {declineMutation.isPending && declineMutation.variables === request.id ? "处理中..." : "拒绝"}
               </Button>
             </div>
           </div>
         ))}
 
-        {acceptMutation.isError && acceptMutation.error instanceof Error ? <ErrorBlock message={acceptMutation.error.message} /> : null}
-
-        {declineMutation.isError && declineMutation.error instanceof Error ? <ErrorBlock message={declineMutation.error.message} /> : null}
+        {acceptMutation.isError && acceptMutation.error instanceof Error ? (
+          <ErrorBlock message={acceptMutation.error.message} />
+        ) : null}
+        {declineMutation.isError && declineMutation.error instanceof Error ? (
+          <ErrorBlock message={declineMutation.error.message} />
+        ) : null}
 
         {!requestsQuery.isLoading && !requestsQuery.isError && !requestsQuery.data?.length ? (
-          <EmptyState title="暂时没有新的好友申请" description="去发现页摇一摇，或等待场景触发新的相遇。" />
+          <EmptyState title="暂时没有新的好友请求" description="去发现页摇一摇，或等待场景触发新的相遇。" />
         ) : null}
       </div>
     </AppPage>

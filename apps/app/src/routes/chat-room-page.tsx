@@ -19,14 +19,13 @@ import {
   onTypingStop,
 } from "../lib/socket";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
-import { useSessionStore } from "../store/session-store";
+import { useWorldOwnerStore } from "../store/world-owner-store";
 
 export function ChatRoomPage() {
   const { conversationId } = useParams({ from: "/chat/$conversationId" });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const userId = useSessionStore((state) => state.userId);
-  const username = useSessionStore((state) => state.username);
+  const username = useWorldOwnerStore((state) => state.username);
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
   const [text, setText] = useState("");
@@ -44,9 +43,8 @@ export function ChatRoomPage() {
   });
 
   const conversationsQuery = useQuery({
-    queryKey: ["app-conversations", baseUrl, userId],
-    queryFn: () => getConversations(userId!, baseUrl),
-    enabled: Boolean(userId),
+    queryKey: ["app-conversations", baseUrl],
+    queryFn: () => getConversations(baseUrl),
   });
 
   useEffect(() => {
@@ -71,9 +69,9 @@ export function ChatRoomPage() {
 
     setSocketError(null);
     setTypingCharacterId(null);
-    joinConversationRoom({ conversationId, userId: userId ?? undefined });
+    joinConversationRoom({ conversationId });
     void markConversationRead(conversationId, baseUrl).then(() => {
-      void queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl, userId] });
+      void queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl] });
     });
 
     const offMessage = onChatMessage((payload) => {
@@ -84,7 +82,7 @@ export function ChatRoomPage() {
       setSocketError(null);
       setMessages((current) => {
         const withoutPendingEcho =
-          payload.senderType === "user" && payload.senderId === userId
+          payload.senderType === "user" && payload.senderName === (username ?? "You")
             ? removePendingUserEcho(current, payload)
             : current;
 
@@ -94,7 +92,7 @@ export function ChatRoomPage() {
 
         return [...withoutPendingEcho, payload];
       });
-      void queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl, userId] });
+      void queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl] });
     });
 
     const offTypingStart = onTypingStart((payload) => {
@@ -117,7 +115,7 @@ export function ChatRoomPage() {
       setConversationTitle(payload.title);
       setConversationType(payload.type);
       setParticipants(payload.participants);
-      void queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl, userId] });
+      void queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl] });
     });
 
     const offError = onChatError((message) => {
@@ -132,18 +130,17 @@ export function ChatRoomPage() {
       offConversationUpdated();
       offError();
     };
-  }, [baseUrl, conversationId, queryClient, userId]);
+  }, [baseUrl, conversationId, queryClient, username]);
 
   const sendMutation = useMutation({
     mutationFn: async () => {
       const trimmed = text.trim();
-      if (!trimmed || !userId) {
+      if (!trimmed) {
         return;
       }
 
       const targetCharacterId = resolveTargetCharacterId({
         conversationId,
-        userId,
         messages,
         participants,
       });
@@ -156,7 +153,6 @@ export function ChatRoomPage() {
         conversationId,
         characterId: targetCharacterId,
         text: trimmed,
-        userId,
       });
 
       setSocketError(null);
@@ -166,7 +162,7 @@ export function ChatRoomPage() {
           id: `local_${Date.now()}`,
           conversationId,
           senderType: "user",
-          senderId: userId,
+          senderId: "world-owner",
           senderName: username ?? "You",
           type: "text",
           text: trimmed,
@@ -269,7 +265,6 @@ function removePendingUserEcho(current: Message[], incoming: Message) {
 
 function resolveTargetCharacterId(input: {
   conversationId: string;
-  userId: string;
   messages: Message[];
   participants: string[];
 }) {
@@ -283,7 +278,7 @@ function resolveTargetCharacterId(input: {
     return fromParticipants;
   }
 
-  const directPrefix = `${input.userId}_`;
+  const directPrefix = "direct_";
   if (input.conversationId.startsWith(directPrefix)) {
     const inferred = input.conversationId.slice(directPrefix.length).trim();
     if (inferred) {

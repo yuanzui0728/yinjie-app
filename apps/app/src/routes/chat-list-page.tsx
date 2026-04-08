@@ -2,13 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { MessagesSquare } from "lucide-react";
-import { getBlockedCharacters, getConversations, getFriends, getOrCreateConversation } from "@yinjie/contracts";
+import { getConversations, getFriends, getOrCreateConversation } from "@yinjie/contracts";
 import { AppHeader, AppPage, AppSection, Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
 import { formatTimestamp } from "../lib/format";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
-import { useSessionStore } from "../store/session-store";
 
 type NoticeState = {
   tone: "success" | "danger";
@@ -17,37 +16,22 @@ type NoticeState = {
 
 export function ChatListPage() {
   const navigate = useNavigate();
-  const userId = useSessionStore((state) => state.userId);
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
   const [notice, setNotice] = useState<NoticeState | null>(null);
 
   const conversationsQuery = useQuery({
-    queryKey: ["app-conversations", baseUrl, userId],
-    queryFn: () => getConversations(userId!, baseUrl),
-    enabled: Boolean(userId),
+    queryKey: ["app-conversations", baseUrl],
+    queryFn: () => getConversations(baseUrl),
   });
 
   const friendsQuery = useQuery({
-    queryKey: ["app-friends-quick-start", baseUrl, userId],
-    queryFn: () => getFriends(userId!, baseUrl),
-    enabled: Boolean(userId),
-  });
-
-  const blockedQuery = useQuery({
-    queryKey: ["app-chat-blocked-characters", baseUrl, userId],
-    queryFn: () => getBlockedCharacters(userId!, baseUrl),
-    enabled: Boolean(userId),
+    queryKey: ["app-friends-quick-start", baseUrl],
+    queryFn: () => getFriends(baseUrl),
   });
 
   const startChatMutation = useMutation({
-    mutationFn: async (characterId: string) => {
-      if (!userId) {
-        throw new Error("Missing user session.");
-      }
-
-      return getOrCreateConversation({ userId, characterId }, baseUrl);
-    },
+    mutationFn: (characterId: string) => getOrCreateConversation({ characterId }, baseUrl),
     onSuccess: (conversation) => {
       navigate({ to: "/chat/$conversationId", params: { conversationId: conversation.id } });
     },
@@ -59,32 +43,17 @@ export function ChatListPage() {
     },
   });
 
-  const blockedCharacterIds = useMemo(
-    () => new Set((blockedQuery.data ?? []).map((item) => item.characterId)),
-    [blockedQuery.data],
-  );
-
-  const conversations = useMemo(
-    () =>
-      (conversationsQuery.data ?? []).filter(
-        (conversation) =>
-          conversation.type !== "direct" || !conversation.participants.some((id) => blockedCharacterIds.has(id)),
-      ),
-    [blockedCharacterIds, conversationsQuery.data],
-  );
+  const conversations = useMemo(() => conversationsQuery.data ?? [], [conversationsQuery.data]);
 
   const quickStart = useMemo(
-    () =>
-      (friendsQuery.data ?? [])
-        .filter(({ character }) => !blockedCharacterIds.has(character.id))
-        .slice(0, 3),
-    [blockedCharacterIds, friendsQuery.data],
+    () => (friendsQuery.data ?? []).slice(0, 3),
+    [friendsQuery.data],
   );
 
   useEffect(() => {
     setNotice(null);
     startChatMutation.reset();
-  }, [baseUrl, userId]);
+  }, [baseUrl]);
 
   return (
     <AppPage>

@@ -1,43 +1,29 @@
 import { useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { getBlockedCharacters, getFriends, getOrCreateConversation, listCharacters } from "@yinjie/contracts";
+import { getFriends, getOrCreateConversation, listCharacters } from "@yinjie/contracts";
 import { AppHeader, AppPage, AppSection, Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
-import { useSessionStore } from "../store/session-store";
 
 export function ContactsPage() {
   const navigate = useNavigate();
-  const userId = useSessionStore((state) => state.userId);
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
 
   const friendsQuery = useQuery({
-    queryKey: ["app-friends", baseUrl, userId],
-    queryFn: () => getFriends(userId!),
-    enabled: Boolean(userId),
+    queryKey: ["app-friends", baseUrl],
+    queryFn: () => getFriends(baseUrl),
   });
 
   const charactersQuery = useQuery({
-    queryKey: ["app-characters", baseUrl, userId],
-    queryFn: () => listCharacters(),
-  });
-  const blockedQuery = useQuery({
-    queryKey: ["app-blocked-characters", baseUrl, userId],
-    queryFn: () => getBlockedCharacters(userId!),
-    enabled: Boolean(userId),
+    queryKey: ["app-characters", baseUrl],
+    queryFn: () => listCharacters(baseUrl),
   });
 
   const startChatMutation = useMutation({
-    mutationFn: async (characterId: string) => {
-      if (!userId) {
-        return;
-      }
-
-      return getOrCreateConversation({ userId, characterId });
-    },
+    mutationFn: (characterId: string) => getOrCreateConversation({ characterId }, baseUrl),
     onSuccess: (conversation) => {
       if (!conversation) {
         return;
@@ -46,12 +32,11 @@ export function ContactsPage() {
     },
   });
   const pendingCharacterId = startChatMutation.isPending ? startChatMutation.variables : null;
-  const blockedCharacterIds = new Set((blockedQuery.data ?? []).map((item) => item.characterId));
-  const visibleCharacters = (charactersQuery.data ?? []).filter((character) => !blockedCharacterIds.has(character.id));
+  const visibleCharacters = charactersQuery.data ?? [];
 
   useEffect(() => {
     startChatMutation.reset();
-  }, [baseUrl, userId]);
+  }, [baseUrl]);
 
   return (
     <AppPage>

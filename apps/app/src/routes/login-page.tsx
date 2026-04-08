@@ -1,80 +1,27 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { loginUser } from "@yinjie/contracts";
-import { AppPage, AppSection, Button, InlineNotice, TextField } from "@yinjie/ui";
-import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
-import { useSessionStore } from "../store/session-store";
+import { Link } from "@tanstack/react-router";
+import { AppPage, AppSection, Button } from "@yinjie/ui";
 
 export function LoginPage() {
-  const navigate = useNavigate();
-  const hydrateSession = useSessionStore((state) => state.hydrateSession);
-  const runtimeConfig = useAppRuntimeConfig();
-  const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const canSubmit = username.trim() && password.trim();
-
-  useEffect(() => {
-    setUsername("");
-    setPassword("");
-    setError("");
-    setLoading(false);
-  }, [baseUrl]);
-
-  async function submit() {
-    setLoading(true);
-    setError("");
-    try {
-      const session = await loginUser({ username, password });
-      hydrateSession(session);
-      navigate({ to: "/tabs/chat", replace: true });
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "登录失败");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
-    <AppPage className="flex min-h-full flex-col justify-center">
-      <AppSection className="space-y-5 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(13,22,35,0.72))] px-6 py-8">
-        <div className="text-[11px] uppercase tracking-[0.36em] text-[color:var(--text-muted)]">已有入口</div>
-        <h1 className="mt-4 text-3xl font-semibold text-white">回到隐界</h1>
-        <p className="text-sm leading-7 text-[color:var(--text-secondary)]">使用已有账号继续进入这个世界，当前资料和会话会沿着同一条时间线延续。</p>
-        <div className="space-y-3">
-          <TextField
-            placeholder="用户名"
-            value={username}
-            onChange={(event) => setUsername(event.target.value)}
-          />
-          <TextField
-            type="password"
-            placeholder="密码"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-          />
+    <AppPage className="flex min-h-full flex-col items-center justify-center py-8 text-center">
+      <AppSection className="w-full max-w-md space-y-4 px-6 py-8">
+        <div className="text-[11px] uppercase tracking-[0.36em] text-[color:var(--brand-secondary)]">
+          Single World
         </div>
-        {error ? <InlineNotice tone="danger">{error}</InlineNotice> : null}
-        <Button
-          onClick={() => void submit()}
-          disabled={loading || !canSubmit}
-          variant="primary"
-          size="lg"
-          className="w-full rounded-2xl"
-        >
-          {loading ? "登录中..." : "登录"}
-        </Button>
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-[color:var(--text-muted)]">
-          <Link to="/legal/privacy" className="transition hover:text-white">
-            隐私政策
+        <h1 className="text-3xl font-semibold tracking-[0.16em] text-white">这个版本不再使用登录</h1>
+        <p className="text-sm leading-7 text-[color:var(--text-secondary)]">
+          每个服务端实例只对应一个真实用户的世界。先连接你的世界实例，再完成主人资料初始化即可进入。
+        </p>
+        <div className="flex flex-col gap-3">
+          <Link to="/setup">
+            <Button variant="primary" size="lg" className="w-full rounded-2xl">
+              去配置服务端
+            </Button>
           </Link>
-          <Link to="/legal/terms" className="transition hover:text-white">
-            用户协议
-          </Link>
-          <Link to="/legal/community" className="transition hover:text-white">
-            社区规范
+          <Link to="/onboarding">
+            <Button variant="secondary" size="lg" className="w-full rounded-2xl">
+              去初始化主人资料
+            </Button>
           </Link>
         </div>
       </AppSection>

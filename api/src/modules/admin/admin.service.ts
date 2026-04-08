@@ -26,29 +26,14 @@ export class AdminService {
   ) {}
 
   async getStats() {
-    const [userCount, characterCount, totalMessages, aiMessages] = await Promise.all([
+    const [ownerCount, characterCount, totalMessages, aiMessages] = await Promise.all([
       this.userRepo.count(),
       this.characterRepo.count(),
       this.messageRepo.count(),
       this.messageRepo.count({ where: { senderType: 'character' } }),
     ]);
 
-    return { userCount, characterCount, totalMessages, aiMessages };
-  }
-
-  async getUsers(page = 1, limit = 50) {
-    const [users, total] = await this.userRepo.findAndCount({
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-      select: ['id', 'username', 'onboardingCompleted', 'createdAt', 'avatar'],
-    });
-    return { users, total, page, limit };
-  }
-
-  async deleteUser(userId: string) {
-    await this.userRepo.delete(userId);
-    return { success: true };
+    return { ownerCount, characterCount, totalMessages, aiMessages };
   }
 
   async getSystemInfo() {

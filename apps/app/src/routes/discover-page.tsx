@@ -1,11 +1,28 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { addFeedComment, createFeedPost, getBlockedCharacters, getFeed, likeFeedPost, sendFriendRequest, shake, triggerSceneFriendRequest } from "@yinjie/contracts";
-import { AppHeader, AppPage, AppSection, Button, ErrorBlock, InlineNotice, LoadingBlock, TextAreaField, TextField } from "@yinjie/ui";
+import {
+  addFeedComment,
+  createFeedPost,
+  getFeed,
+  likeFeedPost,
+  sendFriendRequest,
+  shake,
+  triggerSceneFriendRequest,
+} from "@yinjie/contracts";
+import {
+  AppHeader,
+  AppPage,
+  AppSection,
+  Button,
+  ErrorBlock,
+  InlineNotice,
+  LoadingBlock,
+  TextAreaField,
+  TextField,
+} from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
 import { SocialPostCard } from "../components/social-post-card";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
-import { useSessionStore } from "../store/session-store";
 
 const scenes = [
   { id: "coffee_shop", label: "咖啡馆" },
@@ -16,31 +33,21 @@ const scenes = [
 
 export function DiscoverPage() {
   const queryClient = useQueryClient();
-  const userId = useSessionStore((state) => state.userId);
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
   const [text, setText] = useState("");
-  const [shakeMessage, setShakeMessage] = useState<string>("");
-  const [sceneMessage, setSceneMessage] = useState<string>("");
+  const [shakeMessage, setShakeMessage] = useState("");
+  const [sceneMessage, setSceneMessage] = useState("");
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
   const [successNotice, setSuccessNotice] = useState("");
 
   const feedQuery = useQuery({
     queryKey: ["app-feed", baseUrl],
-    queryFn: () => getFeed(1, 20),
-  });
-  const blockedQuery = useQuery({
-    queryKey: ["app-discover-blocked-characters", baseUrl, userId],
-    queryFn: () => getBlockedCharacters(userId!),
-    enabled: Boolean(userId),
+    queryFn: () => getFeed(1, 20, baseUrl),
   });
 
   const createPostMutation = useMutation({
-    mutationFn: () =>
-      createFeedPost({
-        authorId: userId!,
-        text: text.trim(),
-      }),
+    mutationFn: () => createFeedPost({ text: text.trim() }, baseUrl),
     onSuccess: async () => {
       setText("");
       setSuccessNotice("发现页动态已发布。");
@@ -50,17 +57,19 @@ export function DiscoverPage() {
 
   const shakeMutation = useMutation({
     mutationFn: async () => {
-      const result = await shake({ userId: userId! });
+      const result = await shake(baseUrl);
       if (!result) {
         return null;
       }
+
       await sendFriendRequest(
         {
-          userId: userId!,
           characterId: result.character.id,
           greeting: result.greeting,
         },
+        baseUrl,
       );
+
       return result;
     },
     onSuccess: (result) => {
@@ -69,19 +78,16 @@ export function DiscoverPage() {
         return;
       }
 
-      setSuccessNotice("新的好友申请已发送。");
-      setShakeMessage(`${result.character.name} 向你发来了好友申请：${result.greeting}`);
-      void queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl, userId] });
+      setSuccessNotice("新的好友请求已发送。");
+      setShakeMessage(`${result.character.name} 向你发来了一句问候：${result.greeting}`);
+      void queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl] });
     },
   });
 
   const sceneMutation = useMutation({
     mutationFn: async (scene: string) => {
-      const result = await triggerSceneFriendRequest({
-        userId: userId!,
-        scene,
-      });
-      return { request: result, scene };
+      const request = await triggerSceneFriendRequest({ scene }, baseUrl);
+      return { request, scene };
     },
     onSuccess: ({ request, scene }) => {
       const sceneLabel = scenes.find((item) => item.id === scene)?.label ?? scene;
@@ -91,16 +97,16 @@ export function DiscoverPage() {
         return;
       }
 
-      setSuccessNotice("场景相遇已写入好友申请列表。");
+      setSuccessNotice("场景相遇已写入好友请求列表。");
       setSceneMessage(
-        `${request.characterName} 在${sceneLabel}里注意到了你：${request.greeting ?? "对你产生了兴趣。"}`
+        `${request.characterName} 在${sceneLabel}里注意到了你：${request.greeting ?? "想和你认识一下。"}`
       );
-      void queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl, userId] });
+      void queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl] });
     },
   });
 
   const likeMutation = useMutation({
-    mutationFn: (postId: string) => likeFeedPost(postId, { userId: userId! }),
+    mutationFn: (postId: string) => likeFeedPost(postId, baseUrl),
     onSuccess: async () => {
       setSuccessNotice("发现页互动已更新。");
       await queryClient.invalidateQueries({ queryKey: ["app-feed", baseUrl] });
@@ -109,22 +115,19 @@ export function DiscoverPage() {
 
   const commentMutation = useMutation({
     mutationFn: (postId: string) =>
-      addFeedComment(postId, {
-        authorId: userId!,
-        text: commentDrafts[postId].trim(),
-      }),
+      addFeedComment(
+        postId,
+        {
+          text: commentDrafts[postId].trim(),
+        },
+        baseUrl,
+      ),
     onSuccess: async (_, postId) => {
       setCommentDrafts((current) => ({ ...current, [postId]: "" }));
       setSuccessNotice("发现页互动已更新。");
       await queryClient.invalidateQueries({ queryKey: ["app-feed", baseUrl] });
     },
   });
-  const pendingLikePostId = likeMutation.isPending ? likeMutation.variables : null;
-  const pendingCommentPostId = commentMutation.isPending ? commentMutation.variables : null;
-  const blockedCharacterIds = new Set((blockedQuery.data ?? []).map((item) => item.characterId));
-  const visiblePosts = (feedQuery.data?.posts ?? []).filter(
-    (post) => post.authorType !== "character" || !blockedCharacterIds.has(post.authorId),
-  );
 
   useEffect(() => {
     setText("");
@@ -143,26 +146,35 @@ export function DiscoverPage() {
     return () => window.clearTimeout(timer);
   }, [successNotice]);
 
+  const pendingLikePostId = likeMutation.isPending ? likeMutation.variables : null;
+  const pendingCommentPostId = commentMutation.isPending ? commentMutation.variables : null;
+  const visiblePosts = feedQuery.data?.posts ?? [];
+
   return (
     <AppPage>
-      <AppHeader eyebrow="发现" title="试着摇一摇" description="这个世界不会把所有人直接摆在你面前，相遇需要一点偶然。" />
+      <AppHeader
+        eyebrow="发现"
+        title="试着摇一摇"
+        description="这个世界不会把所有人直接摆在你面前，相遇需要一点偶然。"
+      />
+
       <AppSection className="space-y-4 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(249,115,22,0.16),rgba(255,255,255,0.035))]">
         <div>
           <div className="text-sm font-medium text-white">随机相遇</div>
-          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">轻轻推动世界一次，看看今天会从哪里有人靠近你。</div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
+            轻轻推动世界一次，看看今天会从哪里有人靠近你。
+          </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button
-            onClick={() => shakeMutation.mutate()}
-            disabled={shakeMutation.isPending}
-            variant="primary"
-          >
+          <Button onClick={() => shakeMutation.mutate()} disabled={shakeMutation.isPending} variant="primary">
             {shakeMutation.isPending ? "正在寻找..." : "摇一摇"}
           </Button>
           <div className="text-xs text-[color:var(--text-muted)]">随机相遇会从不同场景里发生。</div>
         </div>
         {shakeMessage ? <InlineNotice className="mt-3" tone="success">{shakeMessage}</InlineNotice> : null}
-        {shakeMutation.isError && shakeMutation.error instanceof Error ? <ErrorBlock className="mt-3" message={shakeMutation.error.message} /> : null}
+        {shakeMutation.isError && shakeMutation.error instanceof Error ? (
+          <ErrorBlock className="mt-3" message={shakeMutation.error.message} />
+        ) : null}
         <div className="mt-4 flex flex-wrap gap-2">
           {scenes.map((scene) => (
             <Button
@@ -172,18 +184,24 @@ export function DiscoverPage() {
               variant="secondary"
               size="sm"
             >
-              {sceneMutation.isPending && sceneMutation.variables === scene.id ? `正在前往${scene.label}...` : scene.label}
+              {sceneMutation.isPending && sceneMutation.variables === scene.id
+                ? `正在前往${scene.label}...`
+                : scene.label}
             </Button>
           ))}
         </div>
         {sceneMessage ? <InlineNotice className="mt-3" tone="info">{sceneMessage}</InlineNotice> : null}
-        {sceneMutation.isError && sceneMutation.error instanceof Error ? <ErrorBlock className="mt-3" message={sceneMutation.error.message} /> : null}
+        {sceneMutation.isError && sceneMutation.error instanceof Error ? (
+          <ErrorBlock className="mt-3" message={sceneMutation.error.message} />
+        ) : null}
       </AppSection>
 
       <AppSection className="space-y-4">
         <div>
           <div className="text-sm font-medium text-white">发一条发现页动态</div>
-          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">这里更像公共广场，动态会等待熟人和角色来回应。</div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
+            这里更像公共广场，内容会等待熟人和角色来回应。
+          </div>
         </div>
         <TextAreaField
           value={text}
@@ -198,17 +216,20 @@ export function DiscoverPage() {
         >
           {createPostMutation.isPending ? "正在发布..." : "发布"}
         </Button>
-        {createPostMutation.isError && createPostMutation.error instanceof Error ? <ErrorBlock message={createPostMutation.error.message} /> : null}
+        {createPostMutation.isError && createPostMutation.error instanceof Error ? (
+          <ErrorBlock message={createPostMutation.error.message} />
+        ) : null}
       </AppSection>
 
       <AppSection className="space-y-4">
         <div>
           <div className="text-sm font-medium text-white">广场动态</div>
-          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">先看内容，再做互动，避免控件把注意力从正文上抢走。</div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
+            先看内容，再做互动，避免控件把注意力从正文上抢走。
+          </div>
         </div>
         {successNotice ? <InlineNotice tone="success">{successNotice}</InlineNotice> : null}
         {feedQuery.isLoading ? <LoadingBlock label="正在读取发现页动态..." /> : null}
-
         {feedQuery.isError && feedQuery.error instanceof Error ? <ErrorBlock message={feedQuery.error.message} /> : null}
 
         {visiblePosts.map((post) => (
@@ -220,7 +241,12 @@ export function DiscoverPage() {
             body={post.text}
             summary={`${post.likeCount} 赞 · ${post.commentCount} 评论`}
             actions={
-              <Button disabled={likeMutation.isPending} onClick={() => likeMutation.mutate(post.id)} variant="secondary" size="sm">
+              <Button
+                disabled={likeMutation.isPending}
+                onClick={() => likeMutation.mutate(post.id)}
+                variant="secondary"
+                size="sm"
+              >
                 {pendingLikePostId === post.id ? "处理中..." : "点赞"}
               </Button>
             }
@@ -251,7 +277,6 @@ export function DiscoverPage() {
         ))}
 
         {likeMutation.isError && likeMutation.error instanceof Error ? <ErrorBlock message={likeMutation.error.message} /> : null}
-
         {commentMutation.isError && commentMutation.error instanceof Error ? <ErrorBlock message={commentMutation.error.message} /> : null}
 
         {!feedQuery.isLoading && !feedQuery.isError && !visiblePosts.length ? (

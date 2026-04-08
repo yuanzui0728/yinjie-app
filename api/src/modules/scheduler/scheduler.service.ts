@@ -128,19 +128,12 @@ export class SchedulerService {
       // Only trigger with 40% probability each run
       if (Math.random() > 0.4) return;
 
-      const users = await this.userRepo.find();
-      if (users.length === 0) return;
-
       const scenes = ['coffee_shop', 'gym', 'library', 'bookstore', 'park', 'restaurant', 'cafe'];
       const scene = scenes[Math.floor(Math.random() * scenes.length)];
 
-      // Pick 1-2 random users to receive friend requests
-      const targetUsers = users.sort(() => Math.random() - 0.5).slice(0, Math.min(2, users.length));
-      for (const user of targetUsers) {
-        const req = await this.socialService.triggerSceneFriendRequest(user.id, scene);
-        if (req) {
-          this.logger.debug(`Triggered scene friend request for user ${user.id} from scene ${scene}`);
-        }
+      const req = await this.socialService.triggerSceneFriendRequest(scene);
+      if (req) {
+        this.logger.debug(`Triggered scene friend request from scene ${scene}`);
       }
     } catch (err) {
       this.logger.error('Failed to trigger scene friend requests', err);

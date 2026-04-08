@@ -255,7 +255,7 @@ export function DashboardPage() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {adminStatsQuery.data && (
               <>
-                <MetricCard label="用户" value={String(adminStatsQuery.data.userCount)} meta={<StatusPill tone="healthy">active</StatusPill>} />
+          <MetricCard label="世界主人" value={String(adminStatsQuery.data.ownerCount)} meta={<StatusPill tone="healthy">single</StatusPill>} />
                 <MetricCard label="角色" value={String(adminStatsQuery.data.characterCount)} meta={<StatusPill tone="healthy">characters</StatusPill>} />
                 <MetricCard label="消息总数" value={String(adminStatsQuery.data.totalMessages)} meta={<StatusPill tone="healthy">messages</StatusPill>} />
                 <MetricCard label="AI 回复" value={String(adminStatsQuery.data.aiMessages)} meta={<StatusPill tone="healthy">ai</StatusPill>} />
