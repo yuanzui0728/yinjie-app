@@ -16,7 +16,7 @@ export function MobileShell({ children }: PropsWithChildren) {
   const showTabs = pathname.startsWith("/tabs/");
 
   return (
-    <div className="min-h-screen overflow-hidden bg-transparent text-[color:var(--text-primary)]">
+    <div className="h-dvh min-h-dvh overflow-hidden bg-transparent text-[color:var(--text-primary)]">
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 opacity-45"
@@ -36,7 +36,7 @@ export function MobileShell({ children }: PropsWithChildren) {
       />
 
       <div
-        className="relative mx-auto flex min-h-screen w-full max-w-[460px] flex-col px-3 sm:px-4"
+        className="relative mx-auto flex h-full min-h-0 w-full max-w-[460px] flex-col px-3 sm:px-4"
         style={{
           paddingTop: "max(1rem, var(--safe-area-inset-top))",
           paddingRight: "calc(0.75rem + var(--safe-area-inset-right))",
@@ -44,11 +44,11 @@ export function MobileShell({ children }: PropsWithChildren) {
           paddingLeft: "calc(0.75rem + var(--safe-area-inset-left))",
         }}
       >
-        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[38px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(10,14,24,0.94),rgba(13,22,35,0.86)_48%,rgba(8,12,22,0.94))] shadow-[var(--shadow-shell)] before:pointer-events-none before:absolute before:inset-x-8 before:top-0 before:h-px before:bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.16),transparent)] before:content-['']">
-          <div className="min-h-0 flex-1 overflow-auto">{children}</div>
+        <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[38px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(10,14,24,0.94),rgba(13,22,35,0.86)_48%,rgba(8,12,22,0.94))] shadow-[var(--shadow-shell)] before:pointer-events-none before:absolute before:inset-x-8 before:top-0 before:h-px before:bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.16),transparent)] before:content-['']">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
           {showTabs ? (
             <nav
-              className="grid grid-cols-5 border-t border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(7,12,20,0.62),rgba(7,12,20,0.82))] px-2 pt-2 backdrop-blur-xl"
+              className="shrink-0 grid grid-cols-5 border-t border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(7,12,20,0.62),rgba(7,12,20,0.82))] px-2 pt-2 backdrop-blur-xl"
               style={{ paddingBottom: "max(0.5rem, var(--safe-area-inset-bottom))" }}
             >
               {tabs.map(({ to, label, icon: Icon }) => {
