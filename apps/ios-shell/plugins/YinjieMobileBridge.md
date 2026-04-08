@@ -70,6 +70,11 @@
 4. Push token：已注册到 APNs 后缓存于原生层
 5. 通知权限：`UNUserNotificationCenter`
 
+当前 stub 行为：
+
+- `pickImages` 会通过 `PHPickerViewController` 选择图片
+- 选中的资源会复制到临时目录，再以 `path / webPath / fileName / mimeType` 返回给 Web 层
+
 ## 失败策略
 
 如果 plugin 未接通，Web 层会自动回退到：
