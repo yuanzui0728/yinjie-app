@@ -228,6 +228,8 @@ function updateAppRuntimeConfig(config) {
 
   if (config.runtime.apiBaseUrl) {
     nextRuntimeConfig.apiBaseUrl = config.runtime.apiBaseUrl;
+    nextRuntimeConfig.worldAccessMode = "local";
+    nextRuntimeConfig.configStatus = "configured";
   }
 
   const socketBaseUrl = config.runtime.socketBaseUrl || config.runtime.apiBaseUrl;
