@@ -45,6 +45,32 @@ function hasCommand(commandName, args = ["--version"]) {
   return result.status === 0;
 }
 
+function readJavaMajorVersion() {
+  const result = spawnSync("java", ["-version"], {
+    cwd: shellDir,
+    encoding: "utf8",
+  });
+
+  if (result.status !== 0) {
+    return null;
+  }
+
+  const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+  const match = output.match(/version "(?<version>\d+(?:\.\d+)?)/);
+  const rawVersion = match?.groups?.version;
+  if (!rawVersion) {
+    return null;
+  }
+
+  if (rawVersion.startsWith("1.")) {
+    const legacyVersion = Number(rawVersion.split(".")[1]);
+    return Number.isFinite(legacyVersion) ? legacyVersion : null;
+  }
+
+  const majorVersion = Number(rawVersion.split(".")[0]);
+  return Number.isFinite(majorVersion) ? majorVersion : null;
+}
+
 function ensureAndroidProject(action) {
   if (action === "add" || action === "configure" || action === "doctor") {
     return;
@@ -331,6 +357,7 @@ if (command === "doctor") {
   let shellConfig = null;
   let shellConfigError = null;
   let signingProperties = null;
+  const javaMajorVersion = readJavaMajorVersion();
 
   try {
     shellConfig = loadShellConfig();
@@ -353,6 +380,7 @@ if (command === "doctor") {
     ["apps/app/dist", existsSync(resolve(appDir, "dist"))],
     ["android project", existsSync(androidProjectDir)],
     ["java runtime", hasCommand("java", ["-version"])],
+    ["java runtime >= 11", javaMajorVersion !== null && javaMajorVersion >= 11],
     ["ANDROID_HOME or ANDROID_SDK_ROOT", Boolean(process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT)],
   ];
 
@@ -383,6 +411,10 @@ if (command === "doctor") {
 
   if (shellConfigError) {
     console.log(`error  ${shellConfigError}`);
+  }
+
+  if (javaMajorVersion !== null) {
+    console.log(`info  detected java major version: ${javaMajorVersion}`);
   }
 
   if (!existsSync(androidProjectDir)) {
