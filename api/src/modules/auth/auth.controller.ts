@@ -1,4 +1,4 @@
-import { Controller, Post, Patch, Delete, Body, Param } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Headers, Param, Patch, Post } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
 @Controller('auth')
@@ -20,6 +20,31 @@ export class AuthController {
     return this.authService.initUser(body.username);
   }
 
+  @Get('me')
+  getCurrentUser(@Headers('authorization') authorization?: string) {
+    return this.authService.getCurrentUser(authorization);
+  }
+
+  @Get('sessions')
+  listSessions(@Headers('authorization') authorization?: string) {
+    return this.authService.listSessions(authorization);
+  }
+
+  @Post('logout')
+  logout() {
+    return this.authService.logout();
+  }
+
+  @Post('logout-all')
+  logoutAll() {
+    return this.authService.logoutAll();
+  }
+
+  @Post('sessions/:sessionId/revoke')
+  revokeSession(@Param('sessionId') _sessionId: string) {
+    return this.authService.revokeSession();
+  }
+
   @Patch('users/:id/onboarding-complete')
   completeOnboarding(@Param('id') id: string) {
     return this.authService.completeOnboarding(id);
@@ -29,20 +54,35 @@ export class AuthController {
   updateUser(
     @Param('id') id: string,
     @Body() body: { username?: string; avatar?: string; signature?: string },
+    @Headers('authorization') authorization?: string,
   ) {
-    return this.authService.updateUser(id, body);
+    return this.authService
+      .ensureAuthorizedUser(id, authorization)
+      .then(() => this.authService.updateUser(id, body));
   }
 
   @Patch('users/:id/api-key')
   setApiKey(
     @Param('id') id: string,
     @Body() body: { apiKey: string; apiBase?: string },
+    @Headers('authorization') authorization?: string,
   ) {
-    return this.authService.setUserApiKey(id, body.apiKey, body.apiBase);
+    return this.authService
+      .ensureAuthorizedUser(id, authorization)
+      .then(() => this.authService.setUserApiKey(id, body.apiKey, body.apiBase));
   }
 
   @Delete('users/:id/api-key')
-  clearApiKey(@Param('id') id: string) {
-    return this.authService.clearUserApiKey(id);
+  clearApiKey(@Param('id') id: string, @Headers('authorization') authorization?: string) {
+    return this.authService
+      .ensureAuthorizedUser(id, authorization)
+      .then(() => this.authService.clearUserApiKey(id));
+  }
+
+  @Delete('users/:id')
+  deleteUser(@Param('id') id: string, @Headers('authorization') authorization?: string) {
+    return this.authService
+      .ensureAuthorizedUser(id, authorization)
+      .then(() => this.authService.deleteUser(id));
   }
 }

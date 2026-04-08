@@ -7,6 +7,7 @@ import { MomentEntity } from './moment.entity';
 import { MomentPostEntity } from './moment-post.entity';
 import { MomentCommentEntity } from './moment-comment.entity';
 import { MomentLikeEntity } from './moment-like.entity';
+import { WorldOwnerService } from '../auth/world-owner.service';
 
 export interface MomentInteraction {
   characterId: string;
@@ -40,6 +41,7 @@ export class MomentsService {
   constructor(
     private readonly ai: AiOrchestratorService,
     private readonly characters: CharactersService,
+    private readonly worldOwnerService: WorldOwnerService,
     @InjectRepository(MomentEntity)
     private momentRepo: Repository<MomentEntity>,
     @InjectRepository(MomentPostEntity)
@@ -50,11 +52,12 @@ export class MomentsService {
     private likeRepo: Repository<MomentLikeEntity>,
   ) {}
 
-  async createUserMoment(userId: string, authorName: string, authorAvatar: string, text: string): Promise<Moment> {
+  async createUserMoment(text: string): Promise<Moment> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
     const post = this.postRepo.create({
-      authorId: userId,
-      authorName,
-      authorAvatar,
+      authorId: owner.id,
+      authorName: owner.username?.trim() || 'You',
+      authorAvatar: owner.avatar ?? '',
       authorType: 'user',
       text,
     });
@@ -78,6 +81,29 @@ export class MomentsService {
     const post = await this.postRepo.findOneBy({ id: postId });
     if (!post) return null;
     return this._enrichPost(post);
+  }
+
+  async addOwnerComment(postId: string, text: string): Promise<MomentCommentEntity> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
+    return this.addComment(
+      postId,
+      owner.id,
+      owner.username?.trim() || 'You',
+      owner.avatar ?? '',
+      text,
+      'user',
+    );
+  }
+
+  async toggleOwnerLike(postId: string): Promise<{ liked: boolean }> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
+    return this.toggleLike(
+      postId,
+      owner.id,
+      owner.username?.trim() || 'You',
+      owner.avatar ?? '',
+      'user',
+    );
   }
 
   async addComment(postId: string, authorId: string, authorName: string, authorAvatar: string, text: string, authorType = 'user'): Promise<MomentCommentEntity> {

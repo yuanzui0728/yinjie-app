@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Query, Body } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body } from '@nestjs/common';
 import { SocialService } from './social.service';
 
 @Controller('social')
@@ -6,37 +6,37 @@ export class SocialController {
   constructor(private readonly socialService: SocialService) {}
 
   @Get('friend-requests')
-  getPendingRequests(@Query('userId') userId: string) {
-    return this.socialService.getPendingRequests(userId);
+  getPendingRequests() {
+    return this.socialService.getPendingRequests();
   }
 
   @Post('friend-requests/:id/accept')
-  acceptRequest(@Param('id') id: string, @Body() body: { userId: string }) {
-    return this.socialService.acceptRequest(id, body.userId);
+  acceptRequest(@Param('id') id: string) {
+    return this.socialService.acceptRequest(id);
   }
 
   @Post('friend-requests/:id/decline')
-  declineRequest(@Param('id') id: string, @Body() body: { userId: string }) {
-    return this.socialService.declineRequest(id, body.userId);
+  declineRequest(@Param('id') id: string) {
+    return this.socialService.declineRequest(id);
   }
 
   @Get('friends')
-  getFriends(@Query('userId') userId: string) {
-    return this.socialService.getFriends(userId);
+  getFriends() {
+    return this.socialService.getFriends();
   }
 
   @Post('shake')
-  shake(@Body() body: { userId: string }) {
-    return this.socialService.shake(body.userId);
+  shake() {
+    return this.socialService.shake();
   }
 
   @Post('friend-requests/send')
-  sendFriendRequest(@Body() body: { userId: string; characterId: string; greeting: string }) {
-    return this.socialService.sendFriendRequest(body.userId, body.characterId, body.greeting);
+  sendFriendRequest(@Body() body: { characterId: string; greeting: string }) {
+    return this.socialService.sendFriendRequest(body.characterId, body.greeting);
   }
 
   @Post('trigger-scene')
-  triggerScene(@Body() body: { userId: string; scene: string }) {
-    return this.socialService.triggerSceneFriendRequest(body.userId, body.scene);
+  triggerScene(@Body() body: { scene: string }) {
+    return this.socialService.triggerSceneFriendRequest(body.scene);
   }
 }

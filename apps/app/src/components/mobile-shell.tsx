@@ -44,19 +44,6 @@ export function MobileShell({ children }: PropsWithChildren) {
           paddingLeft: "calc(0.75rem + var(--safe-area-inset-left))",
         }}
       >
-        <div className="mb-3 flex items-center justify-between rounded-[30px] border border-[color:var(--border-faint)] bg-[linear-gradient(135deg,rgba(255,255,255,0.1),rgba(255,255,255,0.04))] px-5 py-4 shadow-[var(--shadow-soft)] backdrop-blur-xl">
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.34em] text-[color:var(--text-muted)]">隐界</div>
-            <div className="mt-1 text-xl font-semibold tracking-[0.18em] text-white">Hidden World</div>
-          </div>
-          <Link
-            to="/friend-requests"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.11),rgba(255,255,255,0.05))] text-[color:var(--text-secondary)] shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:text-white hover:shadow-[var(--shadow-card)]"
-          >
-            <BellDot size={18} />
-          </Link>
-        </div>
-
         <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[38px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(10,14,24,0.94),rgba(13,22,35,0.86)_48%,rgba(8,12,22,0.94))] shadow-[var(--shadow-shell)] before:pointer-events-none before:absolute before:inset-x-8 before:top-0 before:h-px before:bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.16),transparent)] before:content-['']">
           <div className="min-h-0 flex-1 overflow-auto">{children}</div>
           {showTabs ? (

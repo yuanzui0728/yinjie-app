@@ -157,23 +157,6 @@ function ensureWindowsDesktopDependencies() {
   }
 }
 
-function prepareCoreApiSidecar() {
-  const result = spawnSync(
-    "node",
-    ["./scripts/prepare-core-api-sidecar.mjs", mode, ...tauriArgs],
-    {
-      stdio: "inherit",
-      shell: true,
-      env,
-      cwd: desktopDir,
-    },
-  );
-
-  if ((result.status ?? 1) !== 0) {
-    process.exit(result.status ?? 1);
-  }
-}
-
 if (!hasCommand("rustc") || !hasCommand("cargo")) {
   console.error(
     [
@@ -188,7 +171,6 @@ if (!hasCommand("rustc") || !hasCommand("cargo")) {
 ensureLinuxDesktopDependencies();
 ensureMacDesktopAssets();
 ensureWindowsDesktopDependencies();
-prepareCoreApiSidecar();
 
 const maxAttempts = mode === "build" ? 6 : 1;
 

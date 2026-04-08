@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { FeedService } from './feed.service';
 
 @Controller('feed')
@@ -16,20 +16,20 @@ export class FeedController {
   }
 
   @Post()
-  createPost(@Body() body: { authorId: string; authorName: string; authorAvatar: string; text: string }) {
-    return this.feedService.createPost(body.authorId, body.authorName, body.authorAvatar, body.text, 'user');
+  createPost(@Body() body: { text: string }) {
+    return this.feedService.createOwnerPost(body.text);
   }
 
   @Post(':id/comment')
   addComment(
     @Param('id') postId: string,
-    @Body() body: { authorId: string; authorName: string; authorAvatar: string; text: string },
+    @Body() body: { text: string },
   ) {
-    return this.feedService.addComment(postId, body.authorId, body.authorName, body.authorAvatar, body.text, 'user');
+    return this.feedService.addOwnerComment(postId, body.text);
   }
 
   @Post(':id/like')
-  likePost(@Param('id') postId: string, @Body() body: { userId: string }) {
-    return this.feedService.likePost(postId, body.userId);
+  likePost(@Param('id') postId: string) {
+    return this.feedService.likeOwnerPost(postId);
   }
 }

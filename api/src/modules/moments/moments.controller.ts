@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { MomentsService } from './moments.service';
 
 @Controller('moments')
@@ -12,8 +12,8 @@ export class MomentsController {
   }
 
   @Post('user-post')
-  createUserMoment(@Body() body: { userId: string; authorName: string; authorAvatar: string; text: string }) {
-    return this.momentsService.createUserMoment(body.userId, body.authorName, body.authorAvatar, body.text);
+  createUserMoment(@Body() body: { text: string }) {
+    return this.momentsService.createUserMoment(body.text);
   }
 
   @Get(':id')
@@ -34,16 +34,13 @@ export class MomentsController {
   @Post(':id/comment')
   addComment(
     @Param('id') postId: string,
-    @Body() body: { authorId: string; authorName: string; authorAvatar: string; text: string },
+    @Body() body: { text: string },
   ) {
-    return this.momentsService.addComment(postId, body.authorId, body.authorName, body.authorAvatar, body.text, 'user');
+    return this.momentsService.addOwnerComment(postId, body.text);
   }
 
   @Post(':id/like')
-  toggleLike(
-    @Param('id') postId: string,
-    @Body() body: { authorId: string; authorName: string; authorAvatar: string },
-  ) {
-    return this.momentsService.toggleLike(postId, body.authorId, body.authorName, body.authorAvatar, 'user');
+  toggleLike(@Param('id') postId: string) {
+    return this.momentsService.toggleOwnerLike(postId);
   }
 }

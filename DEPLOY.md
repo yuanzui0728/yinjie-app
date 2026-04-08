@@ -1,52 +1,53 @@
-# 隐界 — 自部署指南
+# 隐界部署指南
 
-## 快速部署（Docker Compose）
+## 架构说明
+- 官方云与自部署共用同一套后端代码
+- 每个实例都是单租户世界，数据库默认使用 SQLite
+- iOS、Android、Windows、macOS、Web 全部作为远程客户端接入
+- 客户端只需要填写服务器地址，不在本地启动 Core API
+- 用户可选配置自己的 API Key，服务端仅保存加密后的密文
 
-### 前提条件
-- Docker 20.10+
-- Docker Compose v2+
-- 一台可访问的云服务器（VPS / 云主机）
+## 快速部署
 
-### 步骤
-
-**1. 克隆代码**
+### 1. 克隆仓库
 ```bash
 git clone https://github.com/your-org/yinjieAPP.git
 cd yinjieAPP
 ```
 
-**2. 配置环境变量**
+### 2. 配置环境变量
 ```bash
 cp api/.env.example api/.env
 ```
 
-编辑 `api/.env`，填入你的 AI API Key 和 JWT 密钥：
+至少需要配置这些值：
+
 ```env
-DEEPSEEK_API_KEY=sk-xxxxx          # 必填：你的 AI API Key
-OPENAI_BASE_URL=https://api.deepseek.com  # 可换成 OpenAI 或其他兼容接口
+DEEPSEEK_API_KEY=sk-xxxxx
+OPENAI_BASE_URL=https://api.deepseek.com
 AI_MODEL=deepseek-chat
-JWT_SECRET=your-random-secret-here  # 必填：随机长字符串
-PORT=3000
+JWT_SECRET=replace-with-a-long-random-secret
 DATABASE_PATH=/app/data/database.sqlite
+CORS_ALLOWED_ORIGINS=https://app.your-domain.com,https://admin.your-domain.com
+PUBLIC_API_BASE_URL=https://api.your-domain.com
+USER_API_KEY_ENCRYPTION_SECRET=replace-with-a-second-long-random-secret
 ```
 
-**3. 启动服务**
+### 3. 启动服务
 ```bash
 docker compose up -d
 ```
 
-服务启动后，API 运行在 `http://服务器IP:3000`。
-
-**4. 验证部署**
+### 4. 验证服务
 ```bash
-curl http://localhost:3000/api/characters
+curl http://localhost:3000/health
 ```
 
----
+如果返回健康状态，说明后端已经可用。
 
-## Nginx 反向代理（推荐）
+## 反向代理
 
-将 API 部署在域名下（支持 HTTPS），在 App 中填入域名地址。
+推荐为后端单独配置 HTTPS 域名，例如 `https://api.your-domain.com`。
 
 ```nginx
 server {
@@ -62,56 +63,61 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";  # 支持 WebSocket
+        proxy_set_header Connection "upgrade";
     }
 }
 ```
 
----
+## 客户端接入
 
-## 在 App / 桌面端连接你的服务器
+所有客户端流程一致：
 
-### 移动端 App（iOS / Android）
-1. 打开 App 后进入 **Setup 页面**
-2. 在 "Core API URL" 中填入你的服务器地址，例如：`https://api.your-domain.com`
-3. Socket URL 留空（自动使用 Core API 地址）
-4. 点击 **Save remote config** 后继续注册/登录
+1. 首次启动进入 `Setup`
+2. 填写服务器地址，例如 `https://api.your-domain.com`
+3. 如未单独暴露 Socket 服务，Socket 地址留空或与 API 地址一致
+4. 保存配置后继续注册或登录
 
-### 桌面端（Windows / Mac）
-桌面端默认在本地启动后端（local-hosted 模式）。  
-如需连接远程服务器，在 Setup 页面切换到 Remote 模式并填入服务器地址。
+适用端：
+- iOS
+- Android
+- Windows
+- macOS
+- Web
 
----
+## 用户自定义 API Key
 
-## 用户自定义 AI APIKey
+普通用户可在 App 的个人设置中配置自己的 API Key 和可选 Base URL。
 
-每个用户可以在 App 的个人资料页面设置自己的 AI APIKey，使用自己的 AI 额度。  
-设置后，该用户的所有对话将优先使用其自定义 Key，不会消耗服务器配置的 Key。
+行为规则：
+- 未配置个人 Key 时，走实例默认 Provider
+- 配置个人 Key 后，仅该用户的请求使用该 Key
+- 清除个人 Key 后，立即回退到实例默认 Provider
+- 任何读取接口都不会返回 Key 明文
 
-API 接口：
-```
+接口：
+
+```http
+GET /api/auth/me
 PATCH /api/auth/users/:id/api-key
-Body: { "apiKey": "sk-xxx", "apiBase": "https://api.openai.com/v1" }
-
 DELETE /api/auth/users/:id/api-key
 ```
 
----
-
-## 环境变量完整说明
+## 环境变量
 
 | 变量名 | 必填 | 说明 |
 |--------|------|------|
-| `DEEPSEEK_API_KEY` | 是 | AI API Key（支持 DeepSeek / OpenAI / Anthropic 等） |
-| `OPENAI_BASE_URL` | 否 | AI API 接口地址，默认 `https://api.deepseek.com` |
-| `AI_MODEL` | 否 | 默认 AI 模型，默认 `deepseek-chat` |
-| `JWT_SECRET` | 是 | JWT 签名密钥，生产环境必须使用随机字符串 |
+| `DEEPSEEK_API_KEY` | 是 | 实例默认 Provider 的 API Key |
+| `OPENAI_BASE_URL` | 否 | 默认 Provider 的 OpenAI 兼容地址 |
+| `AI_MODEL` | 否 | 默认模型 |
+| `JWT_SECRET` | 是 | 登录签名密钥 |
+| `ADMIN_SECRET` | 否 | 管理后台鉴权密钥 |
 | `PORT` | 否 | 服务端口，默认 `3000` |
-| `DATABASE_PATH` | 否 | SQLite 数据库路径，默认 `database.sqlite` |
+| `DATABASE_PATH` | 否 | SQLite 文件路径 |
+| `CORS_ALLOWED_ORIGINS` | 建议 | 允许访问的客户端域名，逗号分隔 |
+| `PUBLIC_API_BASE_URL` | 建议 | 对外公开访问的 API 地址 |
+| `USER_API_KEY_ENCRYPTION_SECRET` | 强烈建议 | 用户自定义 API Key 的加密密钥 |
 
----
-
-## 升级更新
+## 升级
 
 ```bash
 git pull
@@ -120,17 +126,4 @@ docker compose build --no-cache
 docker compose up -d
 ```
 
-数据库文件存储在 `./data/database.sqlite`，升级不会丢失数据。
-
----
-
-## 常见问题
-
-**Q: 支持哪些 AI 模型？**  
-A: 支持所有 OpenAI Chat Completions 兼容接口，包括 DeepSeek、OpenAI、Anthropic (via proxy)、Google Gemini (via proxy)、Qwen 等。在管理后台可切换模型。
-
-**Q: 数据存储在哪里？**  
-A: 使用 SQLite，数据库文件在 `./data/database.sqlite`。建议定期备份该文件。
-
-**Q: 多用户支持吗？**  
-A: 支持。每个用户有独立账号，可各自设置自己的 AI APIKey。
+默认数据库位于 `./data/database.sqlite`，升级不会自动清空数据。

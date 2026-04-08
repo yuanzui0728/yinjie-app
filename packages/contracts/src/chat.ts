@@ -16,14 +16,17 @@ export interface Message {
 
 export interface Conversation {
   id: string;
-  userId: string;
   type: ConversationType;
   title: string;
   participants: string[];
   messages: Message[];
+  isPinned: boolean;
+  pinnedAt?: string;
   createdAt: string;
   updatedAt: string;
   lastReadAt?: string;
+  lastClearedAt?: string;
+  lastActivityAt: string;
 }
 
 export interface ConversationListItem extends Conversation {
@@ -32,8 +35,11 @@ export interface ConversationListItem extends Conversation {
 }
 
 export interface GetOrCreateConversationRequest {
-  userId: string;
   characterId: string;
+}
+
+export interface SetConversationPinnedRequest {
+  pinned: boolean;
 }
 
 export interface Group {
@@ -47,8 +53,6 @@ export interface Group {
 
 export interface CreateGroupRequest {
   name: string;
-  creatorId: string;
-  creatorType: GroupMemberType;
   memberIds: string[];
 }
 
@@ -83,9 +87,5 @@ export interface GroupMessage {
 }
 
 export interface SendGroupMessageRequest {
-  senderId: string;
-  senderType: GroupMemberType;
-  senderName?: string;
-  senderAvatar?: string;
   text: string;
 }

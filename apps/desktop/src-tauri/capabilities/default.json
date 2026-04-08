@@ -3,18 +3,5 @@
   "identifier": "default",
   "description": "Default desktop capability for the Yinjie runtime shell.",
   "windows": ["main"],
-  "permissions": [
-    "core:default",
-    {
-      "identifier": "shell:allow-spawn",
-      "allow": [
-        {
-          "name": "yinjie-core-api",
-          "sidecar": true
-        }
-      ]
-    },
-    "shell:allow-kill",
-    "shell:allow-stdin-write"
-  ]
+  "permissions": ["core:default"]
 }

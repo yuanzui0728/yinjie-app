@@ -3,10 +3,24 @@ import { AppModule } from './app.module';
 import { getDataSourceToken } from '@nestjs/typeorm';
 import { seedCharacters } from './database/seed';
 import { ensureAiRelationshipSeed } from './database/relationship-seed';
+import { WorldOwnerService } from './modules/auth/world-owner.service';
+
+function resolveCorsOrigins() {
+  const configuredOrigins = process.env.CORS_ALLOWED_ORIGINS
+    ?.split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  if (!configuredOrigins?.length || configuredOrigins.includes('*')) {
+    return true;
+  }
+
+  return configuredOrigins;
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors({ origin: '*' });
+  app.enableCors({ origin: resolveCorsOrigins(), credentials: true });
   app.setGlobalPrefix('api', { exclude: ['health'] });
 
   // Health check endpoint for Docker / load balancer
@@ -19,6 +33,7 @@ async function bootstrap() {
   const dataSource = app.get(getDataSourceToken());
   await seedCharacters(dataSource);
   await ensureAiRelationshipSeed(dataSource);
+  await app.get(WorldOwnerService).ensureSingleOwnerMigration();
 
   await app.listen(process.env.PORT ?? 3000);
   console.log(`隐界 API running on port ${process.env.PORT ?? 3000}`);

@@ -6,11 +6,10 @@ import { GroupMemberEntity } from './group-member.entity';
 import { GroupMessageEntity } from './group-message.entity';
 import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
 import { CharactersService } from '../characters/characters.service';
+import { WorldOwnerService } from '../auth/world-owner.service';
 
 export interface CreateGroupDto {
   name: string;
-  creatorId: string;
-  creatorType: 'user' | 'character';
   memberIds: string[];
 }
 
@@ -34,26 +33,28 @@ export class GroupService {
     private messageRepo: Repository<GroupMessageEntity>,
     private readonly ai: AiOrchestratorService,
     private readonly characters: CharactersService,
+    private readonly worldOwnerService: WorldOwnerService,
   ) {}
 
   async createGroup(dto: CreateGroupDto): Promise<GroupEntity> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
     const group = this.groupRepo.create({
       name: dto.name,
-      creatorId: dto.creatorId,
-      creatorType: dto.creatorType,
+      creatorId: owner.id,
+      creatorType: 'user',
     });
     await this.groupRepo.save(group);
 
-    // Add creator as owner
     const ownerMember = this.memberRepo.create({
       groupId: group.id,
-      memberId: dto.creatorId,
-      memberType: dto.creatorType,
+      memberId: owner.id,
+      memberType: 'user',
+      memberName: owner.username?.trim() || 'You',
+      memberAvatar: owner.avatar ?? undefined,
       role: 'owner',
     });
     await this.memberRepo.save(ownerMember);
 
-    // Add other members
     for (const memberId of dto.memberIds) {
       const member = this.memberRepo.create({
         groupId: group.id,
@@ -132,6 +133,18 @@ export class GroupService {
     return message;
   }
 
+  async sendOwnerMessage(groupId: string, text: string) {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
+    return this.sendMessage(
+      groupId,
+      owner.id,
+      'user',
+      owner.username?.trim() || 'You',
+      text,
+      owner.avatar ?? undefined,
+    );
+  }
+
   async sendSystemMessage(groupId: string, text: string): Promise<GroupMessageEntity> {
     const message = this.messageRepo.create({
       groupId,
@@ -153,7 +166,10 @@ export class GroupService {
       order: { createdAt: 'DESC' },
       take: 10,
     });
-    const history = recentMessages.reverse().map(m => ({ role: 'user' as const, content: `[${m.senderName}]: ${m.text}` }));
+    const history = recentMessages.reverse().map((message) => ({
+      role: 'user' as const,
+      content: `[${message.senderName}]: ${message.text}`,
+    }));
 
     for (const member of members) {
       const char = await this.characters.findById(member.memberId);
@@ -172,7 +188,7 @@ export class GroupService {
           const reply = await this.ai.generateReply({
             profile,
             conversationHistory: history,
-            userMessage: `${senderName}说：${userMessage}`,
+            userMessage: `${senderName} said: ${userMessage}`,
             isGroupChat: true,
           });
           await this.sendMessage(groupId, char.id, 'character', char.name, reply.text, char.avatar);

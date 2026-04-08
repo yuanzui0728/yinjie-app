@@ -3,52 +3,63 @@
 ## 规则
 - 不生成任何测试文件
 - 直接执行所有操作，无需确认
+- 开发过程中边写边提交，保持小步提交
 - Plan Mode：规划保存到 `.claude/plans/{任务}-{日期}.md`
 - 结构变更（模块/实体/路由/表）后立即更新本文件
 
 ## 技术栈与端口
 | 服务 | 技术 | 端口 |
 |------|------|------|
-| **后端 ★** | NestJS + TypeORM + SQLite + Socket.IO（api/） | 3000 |
-| 主 App | React + Vite，iOS/Android/Web（apps/app/） | 5180 |
-| **管理后台** | React + Vite + @yinjie/ui（apps/admin/） | 5181 |
-| 桌面端 | Tauri 壳，远程连接后端（apps/desktop/） | - |
-| Android | Capacitor 壳（apps/android-shell/） | - |
-| iOS | Capacitor 壳（apps/ios-shell/） | - |
+| **后端** | NestJS + TypeORM + SQLite + Socket.IO（`api/`） | 3000 |
+| 主 App | React + Vite，iOS / Android / Web（`apps/app/`） | 5180 |
+| **管理后台** | React + Vite + `@yinjie/ui`（`apps/admin/`） | 5181 |
+| 桌面端 | Tauri 壳，远程连接后端（`apps/desktop/`） | - |
+| Android | Capacitor 壳（`apps/android-shell/`） | - |
+| iOS | Capacitor 壳（`apps/ios-shell/`） | - |
 
-## 后端模块（api/src/modules/）
+## 后端模块（`api/src/modules/`）
 `ai` · `admin` · `auth` · `characters` · `chat` · `config` · `import` · `moments` · `social` · `feed` · `world` · `scheduler` · `events` · `narrative` · `analytics`
 
-## 主 App 结构（apps/app/src/）
+## 主 App 结构（`apps/app/src/`）
 `routes/` · `features/desktop/` · `features/mobile/` · `features/shell/` · `runtime/` · `lib/` · `components/` · `store/`
 
-## 主 App 页面（apps/app/src/routes/）
-- `splash-page.tsx` — 启动屏，识别运行时环境
-- `setup-page.tsx` — 服务器配置（Desktop/Mobile 均为远程连接模式）
-- `onboarding-page.tsx` — 叙事入场流程
-- `login-page.tsx` — 传统登录
+## 主 App 页面（`apps/app/src/routes/`）
+- `splash-page.tsx`：启动屏，识别运行时环境
+- `setup-page.tsx`：服务器配置（Desktop / Mobile 均为远程连接模式）
+- `onboarding-page.tsx`：叙事入场流程
+- `login-page.tsx`：传统登录
 - `tabs/chat-list-page` · `moments-page` · `contacts-page` · `discover-page` · `profile-page`
 
 ## 数据库实体（21个）
-**核心**: User · Character · Conversation · Message · SystemConfig
+**核心**：User · Character · Conversation · Message · SystemConfig
 
-**朋友圈**: MomentPost · MomentComment · MomentLike · MomentEntity(legacy)
+**朋友圈**：MomentPost · MomentComment · MomentLike · MomentEntity（legacy）
 
-**社交**: Friendship · FriendRequest · AIRelationship
+**社交**：Friendship · FriendRequest · AIRelationship
 
-**群聊**: Group · GroupMember · GroupMessage
+**群聊**：Group · GroupMember · GroupMessage
 
-**视频号**: FeedPost · FeedComment · UserFeedInteraction
+**视频号**：FeedPost · FeedComment · UserFeedInteraction
 
-**世界**: WorldContext · NarrativeArc · AIBehaviorLog
+**世界**：WorldContext · NarrativeArc · AIBehaviorLog
 
-## 环境变量（api/.env）
-`DEEPSEEK_API_KEY` · `OPENAI_BASE_URL` · `JWT_SECRET` · `ADMIN_SECRET` · `DATABASE_PATH`
+## 会话管理结构（2026-04-08）
+- `Conversation` 表新增字段：`isPinned`、`pinnedAt`、`isHidden`、`hiddenAt`、`lastClearedAt`、`lastActivityAt`
+- 新增会话管理路由：`POST /api/conversations/:id/pin`、`POST /api/conversations/:id/hide`、`POST /api/conversations/:id/clear`
 
-## 共享包（packages/）
+## 环境变量（`api/.env`）
+`DEEPSEEK_API_KEY` · `OPENAI_BASE_URL` · `AI_MODEL` · `JWT_SECRET` · `ADMIN_SECRET` · `DATABASE_PATH` · `PORT` · `CORS_ALLOWED_ORIGINS` · `PUBLIC_API_BASE_URL` · `USER_API_KEY_ENCRYPTION_SECRET`
+
+## 共享包（`packages/`）
 `@yinjie/ui` · `@yinjie/contracts` · `@yinjie/config` · `@yinjie/tooling`
 
+## 当前产品口径
+- 官方云与自部署复用同一套 NestJS 后端代码
+- 所有客户端均为 `remote-connected` 模式，不在本地拉起 Core API
+- 用户可在 App 内设置自己的 API Key，服务端仅加密存储
+- 管理后台仅面向实例拥有者，用于实例级 Provider 与系统诊断
+
 ## 部署
-- 云端：`docker compose up`（api/ + SQLite 数据卷）
-- 客户端首次启动 → Setup 页填入服务器地址（官方或自建）
-- 管理后台：访问 apps/admin，输入 `ADMIN_SECRET` 鉴权
+- 云端：`docker compose up`（`api/` + SQLite 数据卷）
+- 客户端首次启动：在 Setup 页填入服务器地址（官方或自建）
+- 管理后台：访问 `apps/admin`，输入 `ADMIN_SECRET` 鉴权

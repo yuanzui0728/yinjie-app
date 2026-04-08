@@ -15,10 +15,23 @@ interface SendMessagePayload {
   conversationId: string;
   characterId: string;
   text: string;
-  userId?: string;
 }
 
-@WebSocketGateway({ cors: { origin: '*' }, namespace: '/chat' })
+const configuredSocketOrigins = process.env.CORS_ALLOWED_ORIGINS
+  ?.split(',')
+  .map((value) => value.trim())
+  .filter(Boolean);
+
+@WebSocketGateway({
+  cors: {
+    origin:
+      !configuredSocketOrigins?.length || configuredSocketOrigins.includes('*')
+        ? true
+        : configuredSocketOrigins,
+    credentials: true,
+  },
+  namespace: '/chat',
+})
 export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(ChatGateway.name);
@@ -47,29 +60,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: SendMessagePayload,
     @ConnectedSocket() client: Socket,
   ) {
-    const { conversationId, characterId, text, userId } = payload;
-
-    if (!userId) {
-      client.emit('error', { message: '未登录，请先登录' });
-      return;
-    }
+    const { conversationId, characterId, text } = payload;
 
     try {
       let convId = conversationId;
       const existing = await this.chatService.getConversation(convId);
       if (!existing) {
-        const conv = await this.chatService.getOrCreateConversation(userId, characterId, conversationId);
+        const conv = await this.chatService.getOrCreateConversation(characterId, conversationId);
         convId = conv.id;
       }
 
-      // Activity-based interception
       const activity = await this.chatService.getCharacterActivity(characterId);
 
       if (activity === 'sleeping') {
         const sleepReplies = [
-          '（消息已送达，对方正在睡觉 💤）',
-          '（深夜了，对方已入睡，明天再聊吧）',
-          '（对方睡着了，消息明天才能看到）',
+          '锛堟秷鎭凡閫佽揪锛屽鏂规鍦ㄧ潯瑙?馃挙锛?,
+          '锛堟繁澶滀簡锛屽鏂瑰凡鍏ョ潯锛屾槑澶╁啀鑱婂惂锛?,
+          '锛堝鏂圭潯鐫€浜嗭紝娑堟伅鏄庡ぉ鎵嶈兘鐪嬪埌锛?,
         ];
         this.server.to(convId).emit('new_message', {
           id: `msg_${Date.now()}_sys`,
@@ -82,14 +89,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return { event: 'message_sent', data: { conversationId: convId } };
       }
 
-      // Busy state: show "read" hint, delay reply by 10-30 min (simulated as 8-15s in dev)
       const busyActivities = ['working', 'commuting'];
       if (busyActivities.includes(activity ?? '')) {
         const busyHints: Record<string, string[]> = {
-          working: ['（对方正在上班，稍后回复）', '（工作中，消息已读，等会儿回）', '（忙着呢，一会儿回你）'],
-          commuting: ['（对方在路上，稍后回复）', '（通勤中，消息已读）', '（在地铁上，信号不好，等会儿回）'],
+          working: ['锛堝鏂规鍦ㄤ笂鐝紝绋嶅悗鍥炲锛?, '锛堝伐浣滀腑锛屾秷鎭凡璇伙紝绛変細鍎垮洖锛?, '锛堝繖鐫€鍛紝涓€浼氬効鍥炰綘锛?],
+          commuting: ['锛堝鏂瑰湪璺笂锛岀◢鍚庡洖澶嶏級', '锛堥€氬嫟涓紝娑堟伅宸茶锛?, '锛堝湪鍦伴搧涓婏紝淇″彿涓嶅ソ锛岀瓑浼氬児鍥烇級'],
         };
-        const hints = busyHints[activity!] ?? ['（对方正忙，稍后回复）'];
+        const hints = busyHints[activity!] ?? ['锛堝鏂规蹇欙紝绋嶅悗鍥炲锛?];
         this.server.to(convId).emit('new_message', {
           id: `msg_${Date.now()}_sys`,
           conversationId: convId,
@@ -99,12 +105,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           createdAt: new Date(),
         });
 
-        // Async delayed reply (8-15s simulating real busy delay)
         const delay = 8000 + Math.random() * 7000;
         setTimeout(async () => {
           try {
             this.server.to(convId).emit('typing_start', { characterId });
-            const messages = await this.chatService.sendMessage(convId, userId!, text);
+            const messages = await this.chatService.sendMessage(convId, text);
             const aiReply = messages.find((m) => m.senderType === 'character');
             if (aiReply) {
               const typingDelay = Math.min(Math.max(aiReply.text.length * 16, 400), 3000);
@@ -124,13 +129,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.server.to(convId).emit('typing_start', { characterId });
 
-      const messages = await this.chatService.sendMessage(convId, userId, text);
+      const messages = await this.chatService.sendMessage(convId, text);
 
-      // Simulate realistic typing delay based on reply length
       const aiReply = messages.find((m) => m.senderType === 'character');
       if (aiReply) {
         const charCount = aiReply.text.length;
-        // ~60 chars/sec typing speed, capped at 3s
         const delay = Math.min(Math.max(charCount * 16, 400), 3000);
         await new Promise((r) => setTimeout(r, delay));
       }
@@ -154,7 +157,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return { event: 'message_sent', data: { conversationId: convId } };
     } catch (err) {
       this.logger.error('Error handling message', err);
-      client.emit('error', { message: '消息发送失败，请重试' });
+      client.emit('error', { message: '娑堟伅鍙戦€佸け璐ワ紝璇烽噸璇? });
     }
   }
 

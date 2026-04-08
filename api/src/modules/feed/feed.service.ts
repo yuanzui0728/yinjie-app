@@ -6,6 +6,7 @@ import { FeedCommentEntity } from './feed-comment.entity';
 import { UserFeedInteractionEntity } from '../analytics/user-feed-interaction.entity';
 import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
 import { CharactersService } from '../characters/characters.service';
+import { WorldOwnerService } from '../auth/world-owner.service';
 
 @Injectable()
 export class FeedService {
@@ -20,6 +21,7 @@ export class FeedService {
     private interactionRepo: Repository<UserFeedInteractionEntity>,
     private readonly ai: AiOrchestratorService,
     private readonly characters: CharactersService,
+    private readonly worldOwnerService: WorldOwnerService,
   ) {}
 
   async getFeed(page = 1, limit = 20): Promise<{ posts: FeedPostEntity[]; total: number }> {
@@ -41,9 +43,32 @@ export class FeedService {
     return { ...post, comments };
   }
 
+  async createOwnerPost(text: string): Promise<FeedPostEntity> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
+    return this.createPost(
+      owner.id,
+      owner.username?.trim() || 'You',
+      owner.avatar ?? '',
+      text,
+      'user',
+    );
+  }
+
   async createPost(authorId: string, authorName: string, authorAvatar: string, text: string, authorType = 'user'): Promise<FeedPostEntity> {
     const post = this.postRepo.create({ authorId, authorName, authorAvatar, authorType, text });
     return this.postRepo.save(post);
+  }
+
+  async addOwnerComment(postId: string, text: string): Promise<FeedCommentEntity> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
+    return this.addComment(
+      postId,
+      owner.id,
+      owner.username?.trim() || 'You',
+      owner.avatar ?? '',
+      text,
+      'user',
+    );
   }
 
   async addComment(postId: string, authorId: string, authorName: string, authorAvatar: string, text: string, authorType = 'user'): Promise<FeedCommentEntity> {
@@ -51,6 +76,11 @@ export class FeedService {
     const saved = await this.commentRepo.save(comment);
     await this.postRepo.increment({ id: postId }, 'commentCount', 1);
     return saved;
+  }
+
+  async likeOwnerPost(postId: string): Promise<void> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
+    await this.likePost(postId, owner.id);
   }
 
   async likePost(postId: string, userId: string): Promise<void> {

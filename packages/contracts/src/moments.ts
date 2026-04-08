@@ -44,23 +44,11 @@ export interface Moment {
 }
 
 export interface CreateUserMomentRequest {
-  userId: string;
-  authorName?: string;
-  authorAvatar?: string;
   text: string;
 }
 
 export interface CreateMomentCommentRequest {
-  authorId: string;
-  authorName?: string;
-  authorAvatar?: string;
   text: string;
-}
-
-export interface ToggleMomentLikeRequest {
-  authorId: string;
-  authorName?: string;
-  authorAvatar?: string;
 }
 
 export interface ToggleMomentLikeResult {

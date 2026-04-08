@@ -7,6 +7,7 @@ import { AIRelationshipEntity } from './ai-relationship.entity';
 import { CharacterEntity } from '../characters/character.entity';
 import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
 import { NarrativeService } from '../narrative/narrative.service';
+import { WorldOwnerService } from '../auth/world-owner.service';
 
 @Injectable()
 export class SocialService {
@@ -23,83 +24,84 @@ export class SocialService {
     private characterRepo: Repository<CharacterEntity>,
     private readonly ai: AiOrchestratorService,
     private readonly narrativeService: NarrativeService,
+    private readonly worldOwnerService: WorldOwnerService,
   ) {}
 
-  async getPendingRequests(userId: string): Promise<FriendRequestEntity[]> {
+  async getPendingRequests(): Promise<FriendRequestEntity[]> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
     return this.friendRequestRepo.find({
-      where: { userId, status: 'pending' },
+      where: { userId: owner.id, status: 'pending' },
       order: { createdAt: 'DESC' },
     });
   }
 
-  async acceptRequest(requestId: string, userId: string): Promise<FriendshipEntity> {
-    const req = await this.friendRequestRepo.findOneBy({ id: requestId, userId });
+  async acceptRequest(requestId: string): Promise<FriendshipEntity> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
+    const req = await this.friendRequestRepo.findOneBy({ id: requestId, userId: owner.id });
     if (!req) throw new Error('Request not found');
 
     req.status = 'accepted';
     await this.friendRequestRepo.save(req);
 
-    // Create friendship
-    const existing = await this.friendshipRepo.findOneBy({ userId, characterId: req.characterId });
+    const existing = await this.friendshipRepo.findOneBy({ userId: owner.id, characterId: req.characterId });
     if (existing) {
-      await this.narrativeService.ensureArc(userId, req.characterId, req.characterName);
+      await this.narrativeService.ensureArc(req.characterId, req.characterName);
       return existing;
     }
 
     const friendship = this.friendshipRepo.create({
-      userId,
+      userId: owner.id,
       characterId: req.characterId,
       intimacyLevel: 10,
     });
     const saved = await this.friendshipRepo.save(friendship);
-    await this.narrativeService.ensureArc(userId, req.characterId, req.characterName);
+    await this.narrativeService.ensureArc(req.characterId, req.characterName);
     return saved;
   }
 
-  async declineRequest(requestId: string, userId: string): Promise<void> {
-    await this.friendRequestRepo.update({ id: requestId, userId }, { status: 'declined' });
+  async declineRequest(requestId: string): Promise<void> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
+    await this.friendRequestRepo.update({ id: requestId, userId: owner.id }, { status: 'declined' });
   }
 
-  async getFriends(userId: string): Promise<{ friendship: FriendshipEntity; character: CharacterEntity | null }[]> {
-    const friendships = await this.friendshipRepo.find({ where: { userId } });
+  async getFriends(): Promise<{ friendship: FriendshipEntity; character: CharacterEntity | null }[]> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
+    const friendships = await this.friendshipRepo.find({ where: { userId: owner.id } });
     const result = await Promise.all(
-      friendships.map(async (f) => ({
-        friendship: f,
-        character: await this.characterRepo.findOneBy({ id: f.characterId }),
+      friendships.map(async (friendship) => ({
+        friendship,
+        character: await this.characterRepo.findOneBy({ id: friendship.characterId }),
       })),
     );
-    return result.filter((r) => r.character !== null);
+    return result.filter((entry) => entry.character !== null);
   }
 
-  async triggerSceneFriendRequest(userId: string, scene: string): Promise<FriendRequestEntity | null> {
-    // Find characters whose trigger_scenes match the current scene
+  async triggerSceneFriendRequest(scene: string): Promise<FriendRequestEntity | null> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
     const chars = await this.characterRepo.find();
-    const candidates = chars.filter((c) => c.triggerScenes?.includes(scene));
+    const candidates = chars.filter((character) => character.triggerScenes?.includes(scene));
     if (candidates.length === 0) return null;
 
-    // Pick a random candidate that isn't already a friend
-    const existingFriendships = await this.friendshipRepo.find({ where: { userId } });
-    const existingIds = new Set(existingFriendships.map((f) => f.characterId));
-    const available = candidates.filter((c) => !existingIds.has(c.id));
+    const existingFriendships = await this.friendshipRepo.find({ where: { userId: owner.id } });
+    const existingIds = new Set(existingFriendships.map((friendship) => friendship.characterId));
+    const available = candidates.filter((character) => !existingIds.has(character.id));
     if (available.length === 0) return null;
 
     const char = available[Math.floor(Math.random() * available.length)];
 
-    // Check no pending request already exists
-    const existing = await this.friendRequestRepo.findOneBy({ userId, characterId: char.id, status: 'pending' });
+    const existing = await this.friendRequestRepo.findOneBy({ userId: owner.id, characterId: char.id, status: 'pending' });
     if (existing) return null;
 
-    // Generate greeting via AI
-    let greeting = `嗨，我是${char.name}，我们在${scene}遇到了，加个好友吧？`;
+    let greeting = `Hi, I'm ${char.name}. We crossed paths at ${scene}. Want to connect?`;
     try {
       const result = await this.ai.generateReply({
         profile: char.profile,
         conversationHistory: [],
-        userMessage: `你在${scene}偶遇了一个陌生人，想主动加对方好友，发一句简短的自我介绍和加好友的理由，不超过30字。`,
+        userMessage: `Write a short friend request greeting after meeting someone in ${scene}. Keep it under 30 words.`,
       });
       greeting = result.text;
     } catch {
-      // use default greeting
+      this.logger.debug('Falling back to default scene greeting');
     }
 
     const tomorrow = new Date();
@@ -107,7 +109,7 @@ export class SocialService {
     tomorrow.setHours(23, 59, 59, 999);
 
     const req = this.friendRequestRepo.create({
-      userId,
+      userId: owner.id,
       characterId: char.id,
       characterName: char.name,
       characterAvatar: char.avatar,
@@ -119,35 +121,37 @@ export class SocialService {
     return this.friendRequestRepo.save(req);
   }
 
-  async shake(userId: string): Promise<{ character: CharacterEntity; greeting: string } | null> {
+  async shake(): Promise<{ character: CharacterEntity; greeting: string } | null> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
     const all = await this.characterRepo.find();
-    const existingFriendships = await this.friendshipRepo.find({ where: { userId } });
-    const existingIds = new Set(existingFriendships.map((f) => f.characterId));
-    const available = all.filter((c) => !existingIds.has(c.id));
+    const existingFriendships = await this.friendshipRepo.find({ where: { userId: owner.id } });
+    const existingIds = new Set(existingFriendships.map((friendship) => friendship.characterId));
+    const available = all.filter((character) => !existingIds.has(character.id));
     if (available.length === 0) return null;
 
     const char = available[Math.floor(Math.random() * available.length)];
 
-    let greeting = `嗨，我是${char.name}，我们在隐界相遇了！`;
+    let greeting = `Hi, I'm ${char.name}. We just met in Yinjie.`;
     try {
       const result = await this.ai.generateReply({
         profile: char.profile,
         conversationHistory: [],
-        userMessage: `你通过"摇一摇"功能和一个陌生人相遇了，发一句简短的自我介绍，不超过25字，要有你的个性。`,
+        userMessage: 'Write a short, warm self-introduction after a random encounter. Keep it under 25 words.',
       });
       greeting = result.text;
     } catch {
-      // use default
+      this.logger.debug('Falling back to default shake greeting');
     }
 
     return { character: char, greeting };
   }
 
-  async sendFriendRequest(userId: string, characterId: string, greeting: string): Promise<FriendRequestEntity> {
+  async sendFriendRequest(characterId: string, greeting: string): Promise<FriendRequestEntity> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
     const char = await this.characterRepo.findOneBy({ id: characterId });
     if (!char) throw new Error('Character not found');
 
-    const existing = await this.friendRequestRepo.findOneBy({ userId, characterId, status: 'pending' });
+    const existing = await this.friendRequestRepo.findOneBy({ userId: owner.id, characterId, status: 'pending' });
     if (existing) return existing;
 
     const tomorrow = new Date();
@@ -155,7 +159,7 @@ export class SocialService {
     tomorrow.setHours(23, 59, 59, 999);
 
     const req = this.friendRequestRepo.create({
-      userId,
+      userId: owner.id,
       characterId,
       characterName: char.name,
       characterAvatar: char.avatar,
@@ -167,8 +171,9 @@ export class SocialService {
     return this.friendRequestRepo.save(req);
   }
 
-  async updateIntimacy(userId: string, characterId: string, delta: number): Promise<void> {
-    let friendship = await this.friendshipRepo.findOneBy({ userId, characterId });
+  async updateIntimacy(characterId: string, delta: number): Promise<void> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
+    const friendship = await this.friendshipRepo.findOneBy({ userId: owner.id, characterId });
     if (!friendship) return;
     friendship.intimacyLevel = Math.min(100, Math.max(0, friendship.intimacyLevel + delta));
     friendship.lastInteractedAt = new Date();
