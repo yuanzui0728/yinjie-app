@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { MomentsService } from './moments.service';
 
 @Controller('moments')
@@ -6,8 +6,7 @@ export class MomentsController {
   constructor(private readonly momentsService: MomentsService) {}
 
   @Get()
-  getFeed(@Query('authorId') authorId?: string) {
-    if (authorId) return this.momentsService.getFeedByAuthor(authorId);
+  getFeed() {
     return this.momentsService.getFeed();
   }
 
