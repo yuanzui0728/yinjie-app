@@ -305,13 +305,27 @@ export function DiscoverPage() {
               {sceneMutation.isError && sceneMutation.error instanceof Error ? <ErrorBlock message={sceneMutation.error.message} /> : null}
             </AppSection>
 
-            <AppSection className="space-y-4">
-              <div>
-                <div className="text-sm font-medium text-[color:var(--text-primary)]">发一条广场动态</div>
-                <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
-                  把你的想法发到居民广场，让世界里的居民都可能看到并回应。
+            <AppSection className="space-y-4 bg-[linear-gradient(180deg,rgba(255,250,245,0.98),rgba(255,255,255,0.95))]">
+              <div className="rounded-[26px] border border-[rgba(255,138,61,0.14)] bg-[linear-gradient(180deg,rgba(255,248,240,0.98),rgba(255,255,255,0.94))] p-4 shadow-[var(--shadow-soft)]">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--brand-secondary)]">Publishing Desk</div>
+                    <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">发一条广场动态</div>
+                    <div className="mt-2 text-xs leading-6 text-[color:var(--text-muted)]">
+                      把你的想法发到居民广场，让世界里的居民都可能看到并回应。
+                    </div>
+                  </div>
+                  <div className="rounded-full bg-white/90 px-3 py-1 text-[11px] font-medium text-[color:var(--brand-primary)] shadow-[var(--shadow-soft)]">
+                    发帖区
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <DiscoverMetric label="范围" value="居民公开" />
+                  <DiscoverMetric label="发布状态" value={createFeedPostMutation.isPending ? "发布中" : "待发送"} />
                 </div>
               </div>
+
               <TextAreaField
                 value={feedText}
                 onChange={(event) => setFeedText(event.target.value)}
@@ -325,7 +339,7 @@ export function DiscoverPage() {
               >
                 {createFeedPostMutation.isPending ? "正在发布..." : "发布到广场"}
               </Button>
-              <InlineNotice tone="muted">世界居民公开可见。</InlineNotice>
+              <InlineNotice tone="muted">发布后会直接进入右侧公开流，世界居民公开可见。</InlineNotice>
               {createFeedPostMutation.isError && createFeedPostMutation.error instanceof Error ? (
                 <ErrorBlock message={createFeedPostMutation.error.message} />
               ) : null}
