@@ -174,11 +174,7 @@ export function DesktopShell({ children }: PropsWithChildren) {
     };
   }, [nativeDesktopShell]);
 
-  const shellInsetClass = nativeDesktopShell
-    ? isMaximized
-      ? "rounded-none"
-      : "rounded-[30px]"
-    : "m-2 rounded-[30px]";
+  const shellInsetClass = nativeDesktopShell ? "rounded-none" : "m-2 rounded-[30px]";
 
   const handleTitleBarMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
     if (event.button !== 0 || !desktopWindow) {
