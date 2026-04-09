@@ -3,6 +3,8 @@ import { cn } from "@yinjie/ui";
 
 type TabPageTopBarProps = HTMLAttributes<HTMLDivElement> & {
   title: string;
+  eyebrow?: string;
+  subtitle?: string;
   leftActions?: ReactNode;
   rightActions?: ReactNode;
   titleAlign?: "left" | "center";
@@ -12,6 +14,8 @@ type TabPageTopBarProps = HTMLAttributes<HTMLDivElement> & {
 export function TabPageTopBar({
   className,
   title,
+  eyebrow,
+  subtitle,
   leftActions,
   rightActions,
   titleAlign = "left",
@@ -22,22 +26,32 @@ export function TabPageTopBar({
   return (
     <div
       className={cn(
-        "sticky top-0 z-20 -mx-4 -mt-6 mb-5 border-b border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(8,12,22,0.96),rgba(8,12,22,0.84))] px-4 py-3 backdrop-blur-xl sm:-mx-5 sm:px-5",
+        "sticky top-0 z-20 -mx-4 -mt-6 mb-5 overflow-hidden border-b border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,248,239,0.92))] px-4 py-3 backdrop-blur-xl sm:-mx-5 sm:px-5",
         className,
       )}
       {...props}
     >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(180deg,rgba(255,255,255,0.56),rgba(255,255,255,0))]" />
       <div className="relative flex min-h-11 items-center justify-between gap-3">
         {leftActions ? <div className="shrink-0">{leftActions}</div> : titleAlign === "center" ? <div className="w-9 shrink-0" aria-hidden="true" /> : null}
-        <h1
+        <div
           className={cn(
-            "truncate text-xl font-semibold tracking-[0.01em] text-current",
-            titleClassName,
+            "min-w-0",
             titleAlign === "center" ? "pointer-events-none absolute inset-x-12 text-center" : undefined,
           )}
         >
-          {title}
-        </h1>
+          {eyebrow ? <div className="truncate text-[11px] uppercase tracking-[0.26em] text-[color:var(--brand-secondary)]">{eyebrow}</div> : null}
+          <h1
+            className={cn(
+              "truncate text-xl font-semibold tracking-[0.01em] text-current",
+              eyebrow ? "mt-1" : undefined,
+              titleClassName,
+            )}
+          >
+            {title}
+          </h1>
+          {subtitle ? <div className="mt-1 truncate text-xs text-[color:var(--text-muted)]">{subtitle}</div> : null}
+        </div>
         {rightActions ? (
           <div className={cn("shrink-0", titleAlign === "center" ? "ml-auto" : undefined)}>{rightActions}</div>
         ) : titleAlign === "center" ? <div className="w-9 shrink-0" aria-hidden="true" /> : null}

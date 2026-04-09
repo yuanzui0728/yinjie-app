@@ -11,7 +11,7 @@ export function AvatarChip({
 }) {
   const classes =
     size === "sm"
-      ? "h-9 w-9 text-sm"
+      ? "h-9 w-9 rounded-[16px] text-sm"
       : size === "wechat"
         ? "h-12 w-12 rounded-xl text-base"
       : size === "lg"
@@ -19,11 +19,11 @@ export function AvatarChip({
         : "h-11 w-11 rounded-full text-base";
 
   if (src && src.trim()) {
-    return <img src={src} alt={name ?? "avatar"} className={`${classes} object-cover`} />;
+    return <img src={src} alt={name ?? "avatar"} className={`${classes} border border-white/80 object-cover shadow-[var(--shadow-soft)]`} />;
   }
 
   return (
-    <div className={`${classes} flex items-center justify-center bg-[linear-gradient(135deg,rgba(249,115,22,0.85),rgba(251,191,36,0.85))] font-semibold text-white`}>
+    <div className={`${classes} flex items-center justify-center border border-white/80 bg-[linear-gradient(135deg,rgba(255,138,61,0.9),rgba(255,193,88,0.94))] font-semibold text-white shadow-[var(--shadow-soft)]`}>
       {initials(name)}
     </div>
   );
