@@ -38,11 +38,11 @@ export function SplashPage() {
 
   return (
     <AppPage className="flex min-h-full flex-col items-center justify-center py-10 text-center">
-      <AppSection className="w-full max-w-md bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,246,232,0.94)_42%,rgba(240,251,245,0.96))] px-8 py-10">
-        <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-[rgba(255,179,71,0.24)] bg-white/88 px-3 py-1 text-[11px] uppercase tracking-[0.34em] text-[color:var(--brand-secondary)]">
+      <AppSection className="w-full max-w-md bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,248,235,0.96))] px-8 py-10">
+        <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-[rgba(249,115,22,0.24)] bg-white/88 px-3 py-1 text-[11px] uppercase tracking-[0.34em] text-[color:var(--brand-primary)]">
           Beyond Reality
         </div>
-        <div className="mx-auto mt-6 flex h-20 w-20 items-center justify-center rounded-[28px] bg-[var(--brand-gradient)] text-2xl font-semibold text-white shadow-[var(--shadow-lift)]">
+        <div className="mx-auto mt-6 flex h-20 w-20 animate-pulse items-center justify-center rounded-[28px] bg-[linear-gradient(135deg,rgba(251,191,36,0.96),rgba(249,115,22,0.92))] text-2xl font-semibold text-white shadow-[var(--shadow-lift)]">
           隐界
         </div>
         <h1 className="mt-6 text-4xl font-semibold tracking-[0.08em] text-[color:var(--text-primary)]">欢迎回到你的世界</h1>

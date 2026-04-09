@@ -12,6 +12,7 @@ import type {
   GroupMessage,
   Message,
   SetConversationPinnedRequest,
+  SetConversationMutedRequest,
   SendGroupMessageRequest,
 } from "./chat";
 import type { Character, CharacterDraft } from "./characters";
@@ -616,6 +617,17 @@ export function markConversationRead(id: string, baseUrl?: string) {
 export function setConversationPinned(id: string, payload: SetConversationPinnedRequest, baseUrl?: string) {
   return requestLegacyApi<Conversation>(
     `/conversations/${id}/pin`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
+export function setConversationMuted(id: string, payload: SetConversationMutedRequest, baseUrl?: string) {
+  return requestLegacyApi<Conversation>(
+    `/conversations/${id}/mute`,
     {
       method: "POST",
       body: JSON.stringify(payload),

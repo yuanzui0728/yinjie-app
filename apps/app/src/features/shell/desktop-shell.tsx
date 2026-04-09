@@ -194,18 +194,18 @@ export function DesktopShell({ children }: PropsWithChildren) {
       <div
         className={cn(
           nativeDesktopShell
-            ? "relative flex h-screen flex-col overflow-hidden bg-[linear-gradient(180deg,#f8fcf9,#edf5f1)]"
-            : "relative flex h-[calc(100vh-16px)] flex-col overflow-hidden border border-[color:var(--border-subtle)] bg-[linear-gradient(180deg,#f8fcf9,#edf5f1)] shadow-[var(--shadow-shell)]",
+            ? "relative flex h-screen flex-col overflow-hidden bg-[linear-gradient(180deg,#fffdf7,#fff8ee)]"
+            : "relative flex h-[calc(100vh-16px)] flex-col overflow-hidden border border-[rgba(249,115,22,0.12)] bg-[linear-gradient(180deg,#fffdf7,#fff8ee)] shadow-[var(--shadow-shell)]",
           shellInsetClass,
         )}
       >
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          <div className="absolute -left-20 top-0 h-56 w-56 rounded-full bg-[rgba(255,179,71,0.14)] blur-3xl" />
-          <div className="absolute right-0 top-20 h-48 w-48 rounded-full bg-[rgba(96,165,250,0.1)] blur-3xl" />
-          <div className="absolute bottom-0 left-1/3 h-52 w-52 rounded-full bg-[rgba(74,222,128,0.1)] blur-3xl" />
+          <div className="absolute -left-20 top-0 h-64 w-64 rounded-full bg-[rgba(251,191,36,0.18)] blur-3xl" />
+          <div className="absolute right-0 top-20 h-52 w-52 rounded-full bg-[rgba(249,115,22,0.12)] blur-3xl" />
+          <div className="absolute bottom-0 left-1/3 h-52 w-52 rounded-full bg-[rgba(16,185,129,0.09)] blur-3xl" />
         </div>
 
-        <header className="relative z-10 flex h-16 shrink-0 items-center gap-3 border-b border-[color:var(--border-faint)] bg-[rgba(255,255,255,0.78)] px-5 backdrop-blur-2xl">
+        <header className="relative z-10 flex h-16 shrink-0 items-center gap-3 border-b border-[rgba(249,115,22,0.10)] bg-[rgba(255,253,248,0.86)] px-5 backdrop-blur-2xl">
           <div
             className={cn(
               "flex min-w-0 flex-1 select-none items-center gap-3",
@@ -231,9 +231,9 @@ export function DesktopShell({ children }: PropsWithChildren) {
               </div>
             </div>
 
-            <div className="hidden min-w-0 items-center gap-2 rounded-full border border-[color:var(--border-faint)] bg-[rgba(255,255,255,0.84)] px-3 py-2 text-xs text-[color:var(--text-secondary)] xl:flex">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(74,222,128,0.9)]" />
-              <span className="truncate">远程世界连接顺畅</span>
+            <div className="hidden min-w-0 items-center gap-2 rounded-full border border-[rgba(16,185,129,0.24)] bg-[rgba(240,253,248,0.88)] px-3 py-2 text-xs xl:flex">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.50)]" />
+              <span className="truncate font-medium text-emerald-700">远程世界连接顺畅</span>
             </div>
           </div>
 
@@ -287,7 +287,7 @@ export function DesktopShell({ children }: PropsWithChildren) {
         </header>
 
         <div className="relative z-10 flex min-h-0 flex-1 gap-4 p-4 pt-3">
-          <aside className="hidden w-[104px] shrink-0 rounded-[30px] border border-[color:var(--border-faint)] bg-[rgba(255,255,255,0.88)] p-3 shadow-[var(--shadow-section)] backdrop-blur-2xl lg:flex lg:flex-col">
+          <aside className="hidden w-[104px] shrink-0 rounded-[30px] border border-[rgba(249,115,22,0.10)] bg-[linear-gradient(180deg,rgba(255,254,250,0.95),rgba(255,249,238,0.90))] p-3 shadow-[var(--shadow-section)] backdrop-blur-2xl lg:flex lg:flex-col">
             <nav className="flex flex-1 flex-col gap-2">
               {navItems.map(({ to, label, icon: Icon, shortLabel }) => {
                 const active = isActive(pathname, to);
@@ -305,9 +305,9 @@ export function DesktopShell({ children }: PropsWithChildren) {
                   >
                     <div
                       className={cn(
-                        "flex h-11 w-11 items-center justify-center rounded-[18px] border transition-colors",
+                        "flex h-11 w-11 items-center justify-center rounded-[18px] border transition-[background-color,border-color,filter]",
                         active
-                          ? "border-[color:var(--border-brand)] bg-[rgba(255,138,61,0.12)]"
+                          ? "border-[color:var(--border-brand)] bg-[rgba(249,115,22,0.12)] [filter:drop-shadow(0_0_8px_rgba(249,115,22,0.35))]"
                           : "border-transparent bg-[rgba(255,255,255,0.82)] group-hover:border-[color:var(--border-faint)] group-hover:bg-white",
                       )}
                     >
@@ -321,7 +321,7 @@ export function DesktopShell({ children }: PropsWithChildren) {
             </nav>
           </aside>
 
-          <main className="min-w-0 flex-1 overflow-hidden rounded-[32px] border border-[color:var(--border-faint)] bg-[rgba(255,255,255,0.88)] shadow-[var(--shadow-section)] backdrop-blur-2xl">
+          <main className="min-w-0 flex-1 overflow-hidden rounded-[32px] border border-[rgba(249,115,22,0.10)] bg-[rgba(255,253,248,0.92)] shadow-[var(--shadow-section)] backdrop-blur-2xl">
             {children}
           </main>
         </div>

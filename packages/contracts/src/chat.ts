@@ -22,6 +22,8 @@ export interface Conversation {
   messages: Message[];
   isPinned: boolean;
   pinnedAt?: string;
+  isMuted: boolean;
+  mutedAt?: string;
   createdAt: string;
   updatedAt: string;
   lastReadAt?: string;
@@ -40,6 +42,10 @@ export interface GetOrCreateConversationRequest {
 
 export interface SetConversationPinnedRequest {
   pinned: boolean;
+}
+
+export interface SetConversationMutedRequest {
+  muted: boolean;
 }
 
 export interface Group {

@@ -1,7 +1,12 @@
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { getConversations } from "@yinjie/contracts";
+import {
+  getConversations,
+  hideConversation,
+  setConversationMuted,
+  setConversationPinned,
+} from "@yinjie/contracts";
 import { Plus, QrCode, Search, UserPlus, Users, WalletCards } from "lucide-react";
 import { AppPage, Button, ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
@@ -64,6 +69,9 @@ function MobileChatListPage() {
   const [searchText, setSearchText] = useState("");
   const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [contextMenuId, setContextMenuId] = useState<string | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const queryClient = useQueryClient();
 
   const conversationsQuery = useQuery({
     queryKey: ["app-conversations", baseUrl],
@@ -86,6 +94,40 @@ function MobileChatListPage() {
 
   const hasConversations = filteredConversations.length > 0;
   const hasSearchResult = normalizedSearchText.length > 0;
+
+  const contextConversation = contextMenuId
+    ? conversations.find((c) => c.id === contextMenuId) ?? null
+    : null;
+
+  const pinMutation = useMutation({
+    mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) =>
+      setConversationPinned(id, { pinned }, baseUrl),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl] }),
+  });
+
+  const muteMutation = useMutation({
+    mutationFn: ({ id, muted }: { id: string; muted: boolean }) =>
+      setConversationMuted(id, { muted }, baseUrl),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl] }),
+  });
+
+  const hideMutation = useMutation({
+    mutationFn: (id: string) => hideConversation(id, baseUrl),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl] }),
+  });
+
+  function startLongPress(convId: string) {
+    longPressTimer.current = setTimeout(() => {
+      setContextMenuId(convId);
+    }, 500);
+  }
+
+  function cancelLongPress() {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }
 
   function handleUnavailableAction(message: string) {
     setIsQuickMenuOpen(false);
@@ -111,7 +153,6 @@ function MobileChatListPage() {
 
       <TabPageTopBar
         title="消息"
-        subtitle={`共 ${conversations.length} 个会话`}
         className="z-40 space-y-4 overflow-visible px-4 pb-4 pt-3 text-[color:var(--text-primary)]"
         titleAlign="center"
         rightActions={
@@ -194,50 +235,58 @@ function MobileChatListPage() {
           hasConversations ? (
             <section className="overflow-hidden rounded-[28px] border border-white/80 bg-white/88 shadow-[var(--shadow-section)]">
               {filteredConversations.map((conversation, index) => (
-                <Link
+                <div
                   key={conversation.id}
-                  to="/chat/$conversationId"
-                  params={{ conversationId: conversation.id }}
-                  className={cn(
-                    "block transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[rgba(255,138,61,0.05)]",
-                    index > 0 ? "border-t border-[color:var(--border-faint)]" : undefined,
-                  )}
+                  onPointerDown={() => startLongPress(conversation.id)}
+                  onPointerUp={cancelLongPress}
+                  onPointerCancel={cancelLongPress}
+                  onContextMenu={(e) => e.preventDefault()}
                 >
-                  <div className="flex items-center gap-3 px-4 py-4">
-                    <AvatarChip name={conversation.title} size="wechat" />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-[15px] font-medium text-[color:var(--text-primary)]">
-                            {conversation.title}
-                          </div>
-                          <div className="mt-1 truncate text-[13px] text-[color:var(--text-muted)]">
-                            {conversation.lastMessage?.text ?? "从这里开始第一句问候"}
-                          </div>
-                        </div>
-                        <div className="flex shrink-0 flex-col items-end gap-1">
-                          <div className="text-[11px] text-[color:var(--text-dim)]">
-                            {formatConversationTimestamp(conversation.lastMessage?.createdAt ?? conversation.updatedAt)}
-                          </div>
-                          {conversation.unreadCount > 0 ? (
-                            <div
-                              className={cn(
-                                "flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-gradient)] px-1.5 text-[11px] leading-none text-white shadow-[var(--shadow-soft)]",
-                                conversation.unreadCount > 9 ? "min-w-6" : undefined,
-                              )}
-                            >
-                              {conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}
+                  <Link
+                    to="/chat/$conversationId"
+                    params={{ conversationId: conversation.id }}
+                    className={cn(
+                      "block transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[rgba(255,138,61,0.05)]",
+                      index > 0 ? "border-t border-[color:var(--border-faint)]" : undefined,
+                    )}
+                  >
+                    <div className="flex items-center gap-3 px-4 py-4">
+                      <div className="relative shrink-0">
+                        <AvatarChip name={conversation.title} size="wechat" />
+                        {conversation.isMuted && conversation.unreadCount > 0 ? (
+                          <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full bg-[color:var(--text-dim)] ring-2 ring-white" />
+                        ) : null}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-[15px] font-medium text-[color:var(--text-primary)]">
+                              {conversation.title}
                             </div>
-                          ) : (
-                            <div className="rounded-full bg-[rgba(74,222,128,0.12)] px-2 py-0.5 text-[10px] text-emerald-700">
-                              已读
+                            <div className="mt-1 truncate text-[13px] text-[color:var(--text-muted)]">
+                              {conversation.lastMessage?.text ?? "从这里开始第一句问候"}
                             </div>
-                          )}
+                          </div>
+                          <div className="flex shrink-0 flex-col items-end gap-1">
+                            <div className="text-[11px] text-[color:var(--text-dim)]">
+                              {formatConversationTimestamp(conversation.lastMessage?.createdAt ?? conversation.updatedAt)}
+                            </div>
+                            {conversation.unreadCount > 0 && !conversation.isMuted ? (
+                              <div
+                                className={cn(
+                                  "flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[11px] leading-none text-white",
+                                  conversation.unreadCount > 9 ? "min-w-6" : undefined,
+                                )}
+                              >
+                                {conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}
+                              </div>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
+                  </Link>
+                </div>
               ))}
             </section>
           ) : (
@@ -262,6 +311,59 @@ function MobileChatListPage() {
           )
         ) : null}
       </div>
+
+      {contextConversation ? (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setContextMenuId(null)} />
+          <div
+            className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-[460px] rounded-t-[28px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,253,248,0.97),rgba(255,250,240,0.98))] p-4 shadow-[var(--shadow-overlay)]"
+            style={{ paddingBottom: "max(1rem, var(--safe-area-inset-bottom))" }}
+          >
+            <div className="mb-2 px-4 py-2 text-center text-[13px] text-[color:var(--text-dim)]">
+              {contextConversation.title}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                pinMutation.mutate({ id: contextConversation.id, pinned: !contextConversation.isPinned });
+                setContextMenuId(null);
+              }}
+              className="w-full rounded-[18px] px-4 py-3.5 text-left text-[15px] text-[color:var(--text-primary)] transition-colors hover:bg-white/60"
+            >
+              {contextConversation.isPinned ? "取消置顶" : "置顶"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                muteMutation.mutate({ id: contextConversation.id, muted: !contextConversation.isMuted });
+                setContextMenuId(null);
+              }}
+              className="w-full rounded-[18px] px-4 py-3.5 text-left text-[15px] text-[color:var(--text-primary)] transition-colors hover:bg-white/60"
+            >
+              {contextConversation.isMuted ? "取消免打扰" : "消息免打扰"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                hideMutation.mutate(contextConversation.id);
+                setContextMenuId(null);
+              }}
+              className="w-full rounded-[18px] px-4 py-3.5 text-left text-[15px] text-[color:var(--text-primary)] transition-colors hover:bg-white/60"
+            >
+              不显示该聊天
+            </button>
+            <div className="mt-2 border-t border-[color:var(--border-faint)] pt-2">
+              <button
+                type="button"
+                onClick={() => setContextMenuId(null)}
+                className="w-full rounded-[18px] px-4 py-3.5 text-center text-[15px] text-[color:var(--text-muted)] transition-colors hover:bg-white/60"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </>
+      ) : null}
     </AppPage>
   );
 }

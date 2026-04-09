@@ -32,6 +32,12 @@ export class ConversationEntity {
   @Column({ type: 'datetime', nullable: true })
   hiddenAt?: Date | null;
 
+  @Column({ default: false })
+  isMuted: boolean;
+
+  @Column({ type: 'datetime', nullable: true })
+  mutedAt?: Date | null;
+
   @Column({ type: 'datetime', nullable: true })
   lastClearedAt?: Date | null;
 

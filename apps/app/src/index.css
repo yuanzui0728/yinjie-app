@@ -23,8 +23,54 @@ body {
   position: relative;
   background:
     var(--bg-accent),
-    linear-gradient(180deg, #fbfff8, #f4faf7 42%, #f8fcfb);
+    linear-gradient(180deg, #fffdf7, #fff8ee 40%, #fefcf8);
   background-attachment: fixed;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bubble-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.86) translateY(4px);
+  }
+  70% {
+    transform: scale(1.02) translateY(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes heart-pop {
+  0%, 100% {
+    scale: 1;
+  }
+  50% {
+    scale: 1.30;
+  }
+}
+
+@keyframes success-glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
 }
 
 html.yj-desktop-window,

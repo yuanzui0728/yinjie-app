@@ -37,6 +37,11 @@ export class ChatController {
     return this.chatService.setConversationPinned(id, body.pinned);
   }
 
+  @Post(':id/mute')
+  setMuted(@Param('id') id: string, @Body() body: { muted: boolean }) {
+    return this.chatService.setConversationMuted(id, body.muted);
+  }
+
   @Post(':id/hide')
   hideConversation(@Param('id') id: string) {
     return this.chatService.hideConversation(id);

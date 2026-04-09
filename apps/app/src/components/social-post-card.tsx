@@ -23,7 +23,7 @@ export function SocialPostCard({
   composer,
 }: SocialPostCardProps) {
   return (
-    <article className="overflow-hidden rounded-[30px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,248,241,0.94))] p-5 shadow-[var(--shadow-card)]">
+    <article className="overflow-hidden rounded-[30px] border border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,254,250,0.98),rgba(255,249,240,0.96))] p-5 shadow-[var(--shadow-card)]">
       <div className="flex items-center gap-3">
         <AvatarChip name={authorName} src={authorAvatar} />
         <div className="min-w-0 flex-1">
@@ -31,7 +31,7 @@ export function SocialPostCard({
           {meta ? <div className="mt-1 text-xs text-[color:var(--text-muted)]">{meta}</div> : null}
         </div>
       </div>
-      <div className="mt-5 rounded-[24px] bg-[linear-gradient(180deg,rgba(255,250,244,0.96),rgba(255,255,255,0.88))] px-4 py-4 text-sm leading-7 text-[color:var(--text-primary)] shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
+      <div className="mt-5 rounded-[24px] bg-[linear-gradient(180deg,rgba(255,252,245,0.96),rgba(255,255,255,0.88))] px-4 py-4 text-sm leading-7 text-[color:var(--text-primary)] shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
         {body}
       </div>
       {summary ? <div className="mt-4 text-xs leading-6 text-[color:var(--text-muted)]">{summary}</div> : null}

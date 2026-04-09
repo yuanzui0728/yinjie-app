@@ -119,6 +119,16 @@ export class ChatService {
     return this._entityToConversation(updated);
   }
 
+  async setConversationMuted(convId: string, muted: boolean): Promise<Conversation> {
+    const entity = await this.requireOwnedConversation(convId);
+    const updated = await this.convRepo.save({
+      ...entity,
+      isMuted: muted,
+      mutedAt: muted ? new Date() : null,
+    });
+    return this._entityToConversation(updated);
+  }
+
   async hideConversation(convId: string): Promise<Conversation> {
     const entity = await this.requireOwnedConversation(convId);
     const updated = await this.convRepo.save({
@@ -542,6 +552,8 @@ export class ChatService {
       messages: [],
       isPinned: entity.isPinned ?? false,
       pinnedAt: entity.pinnedAt ?? undefined,
+      isMuted: entity.isMuted ?? false,
+      mutedAt: entity.mutedAt ?? undefined,
       lastReadAt: entity.lastReadAt ?? undefined,
       lastClearedAt: entity.lastClearedAt ?? undefined,
       lastActivityAt: entity.lastActivityAt ?? entity.updatedAt ?? entity.createdAt,
