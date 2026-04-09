@@ -80,6 +80,7 @@
 
 ## 会话管理结构（2026-04-08）
 - `Conversation` 表保留字段：`isPinned`、`pinnedAt`、`isHidden`、`hiddenAt`、`lastClearedAt`、`lastActivityAt`
+- `Message` 表现已扩展附件字段：`attachmentKind`、`attachmentPayload`，用于承载 `sticker` 表情包消息元数据
 - 会话管理路由：
   - `POST /api/conversations/:id/pin`
   - `POST /api/conversations/:id/hide`
@@ -136,6 +137,7 @@
 
 ## Single-world cleanup notes (2026-04-09)
 - `GET /api/moments` no longer accepts `authorId`; it always returns the current world's feed.
+- 聊天消息契约现已支持 `sticker` 类型；消息附件元数据由共享表情包目录解析并写入 `Message.attachment`
 - AI 语音转写路由已提供：
   - `POST /api/ai/transcriptions`
 - 社交屏蔽路由已提供：

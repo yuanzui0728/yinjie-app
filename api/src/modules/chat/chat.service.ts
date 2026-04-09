@@ -8,7 +8,22 @@ import { CharactersService } from '../characters/characters.service';
 import { NarrativeService } from '../narrative/narrative.service';
 import { ConversationEntity } from './conversation.entity';
 import { MessageEntity } from './message.entity';
-import { Conversation, Message } from './chat.types';
+import { Conversation, Message, StickerAttachment } from './chat.types';
+import { findStickerAttachment } from './sticker-catalog';
+
+type SendConversationMessageInput =
+  | {
+      type?: 'text';
+      text: string;
+    }
+  | {
+      type: 'sticker';
+      text?: string;
+      sticker: {
+        packId: string;
+        stickerId: string;
+      };
+    };
 
 @Injectable()
 export class ChatService {
@@ -224,7 +239,7 @@ export class ChatService {
     return this._entityToMessage(messageEntity);
   }
 
-  async sendMessage(convId: string, text: string): Promise<Message[]> {
+  async sendMessage(convId: string, input: SendConversationMessageInput): Promise<Message[]> {
     const entity = await this.convRepo.findOneBy({ id: convId });
     if (!entity) {
       throw new NotFoundException(`Conversation ${convId} not found`);
@@ -232,6 +247,7 @@ export class ChatService {
 
     const owner = await this.worldOwnerService.getOwnerOrThrow();
     const aiKeyOverride = (await this.worldOwnerService.getOwnerAiConfig()) ?? undefined;
+    const normalizedInput = this.normalizeOutgoingMessageInput(input);
 
     const userMsgEntity = this.msgRepo.create({
       id: `msg_${Date.now()}`,
@@ -239,15 +255,19 @@ export class ChatService {
       senderType: 'user',
       senderId: owner.id,
       senderName: owner.username?.trim() || 'You',
-      type: 'text',
-      text,
+      type: normalizedInput.type,
+      text: normalizedInput.text,
+      attachmentKind: normalizedInput.attachment?.kind ?? null,
+      attachmentPayload: normalizedInput.attachment
+        ? JSON.stringify(normalizedInput.attachment)
+        : null,
     });
     await this.msgRepo.save(userMsgEntity);
     await this.touchConversationActivity(entity, userMsgEntity.createdAt ?? new Date());
 
     const userMsg = this._entityToMessage(userMsgEntity);
     const history = await this.ensureConversationHistory(entity);
-    history.push({ role: 'user', content: text });
+    history.push({ role: 'user', content: normalizedInput.promptText });
 
     const results: Message[] = [userMsg];
 
@@ -258,7 +278,11 @@ export class ChatService {
         throw new Error(`Profile not found for ${charId}`);
       }
 
-      const intent = await this.ai.classifyIntent(text, profile.name, profile.expertDomains);
+      const intent = await this.ai.classifyIntent(
+        normalizedInput.promptText,
+        profile.name,
+        profile.expertDomains,
+      );
 
       if (intent.needsGroupChat && intent.requiredDomains.length > 0) {
         const ownerConversations = await this.convRepo.find({ where: { ownerId: owner.id } });
@@ -325,11 +349,11 @@ export class ChatService {
 
             const reply = await this.ai.generateReply({
               profile: invitedProfile,
-              conversationHistory: history,
-              userMessage: text,
-              isGroupChat: true,
-              aiKeyOverride,
-            });
+            conversationHistory: history,
+            userMessage: normalizedInput.promptText,
+            isGroupChat: true,
+            aiKeyOverride,
+          });
             const aiEntity = this.msgRepo.create({
               id: `msg_${Date.now()}_${invited.id}`,
               conversationId: convId,
@@ -366,7 +390,7 @@ export class ChatService {
       const reply = await this.ai.generateReply({
         profile,
         conversationHistory: history,
-        userMessage: text,
+        userMessage: normalizedInput.promptText,
         chatContext,
         aiKeyOverride,
       });
@@ -394,7 +418,7 @@ export class ChatService {
         const reply = await this.ai.generateReply({
           profile,
           conversationHistory: history,
-          userMessage: text,
+          userMessage: normalizedInput.promptText,
           isGroupChat: true,
           aiKeyOverride,
         });
@@ -569,9 +593,58 @@ export class ChatService {
       senderType: entity.senderType as 'user' | 'character' | 'system',
       senderId: entity.senderId,
       senderName: entity.senderName,
-      type: entity.type as 'text' | 'system' | 'proactive',
+      type: entity.type as 'text' | 'system' | 'proactive' | 'sticker',
       text: entity.text,
+      attachment: this.parseAttachment(entity),
       createdAt: entity.createdAt,
     };
+  }
+
+  private normalizeOutgoingMessageInput(input: SendConversationMessageInput): {
+    type: 'text' | 'sticker';
+    text: string;
+    promptText: string;
+    attachment?: StickerAttachment;
+  } {
+    if (input.type === 'sticker') {
+      const attachment = findStickerAttachment(
+        input.sticker.packId,
+        input.sticker.stickerId,
+      );
+      if (!attachment) {
+        throw new NotFoundException('Sticker not found');
+      }
+
+      const fallbackText = input.text?.trim() || `[表情包] ${attachment.label ?? attachment.stickerId}`;
+      return {
+        type: 'sticker',
+        text: fallbackText,
+        promptText: fallbackText,
+        attachment,
+      };
+    }
+
+    const text = input.text.trim();
+    if (!text) {
+      throw new NotFoundException('Message text is required');
+    }
+
+    return {
+      type: 'text',
+      text,
+      promptText: text,
+    };
+  }
+
+  private parseAttachment(entity: MessageEntity): StickerAttachment | undefined {
+    if (entity.attachmentKind !== 'sticker' || !entity.attachmentPayload) {
+      return undefined;
+    }
+
+    try {
+      return JSON.parse(entity.attachmentPayload) as StickerAttachment;
+    } catch {
+      return undefined;
+    }
   }
 }

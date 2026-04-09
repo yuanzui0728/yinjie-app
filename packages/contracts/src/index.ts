@@ -12,6 +12,7 @@ export * from "./moderation";
 export * from "./push";
 export * from "./social";
 export * from "./speech";
+export * from "./stickers";
 export * from "./system";
 export * from "./world";
 export * from "./ws";

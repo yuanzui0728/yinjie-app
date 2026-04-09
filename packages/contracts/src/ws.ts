@@ -16,11 +16,23 @@ export interface JoinConversationPayload {
   conversationId: string;
 }
 
-export interface SendMessagePayload {
-  conversationId: string;
-  characterId: string;
-  text: string;
-}
+export type SendMessagePayload =
+  | {
+      conversationId: string;
+      characterId: string;
+      type?: "text";
+      text: string;
+    }
+  | {
+      conversationId: string;
+      characterId: string;
+      type: "sticker";
+      text?: string;
+      sticker: {
+        packId: string;
+        stickerId: string;
+      };
+    };
 
 export interface TypingPayload {
   conversationId: string;
@@ -37,4 +49,3 @@ export interface ConversationUpdatedPayload {
 export interface ChatErrorPayload {
   message: string;
 }
-

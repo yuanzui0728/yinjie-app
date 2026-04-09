@@ -1,6 +1,8 @@
+import type { MessageAttachment } from "./sticker-types";
+
 export type MessageSenderType = "user" | "character" | "system";
 export type ConversationType = "direct" | "group";
-export type MessageType = "text" | "system" | "proactive";
+export type MessageType = "text" | "system" | "proactive" | "sticker";
 export type GroupMemberType = "user" | "character";
 
 export interface Message {
@@ -11,6 +13,7 @@ export interface Message {
   senderName: string;
   type: MessageType;
   text: string;
+  attachment?: MessageAttachment;
   createdAt: string;
 }
 
@@ -99,4 +102,3 @@ export interface SendGroupMessageRequest {
   senderType?: GroupMemberType;
   text: string;
 }
-

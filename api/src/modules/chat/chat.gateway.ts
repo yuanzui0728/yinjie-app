@@ -11,11 +11,23 @@ import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 
-interface SendMessagePayload {
-  conversationId: string;
-  characterId: string;
-  text: string;
-}
+type SendMessagePayload =
+  | {
+      conversationId: string;
+      characterId: string;
+      type?: 'text';
+      text: string;
+    }
+  | {
+      conversationId: string;
+      characterId: string;
+      type: 'sticker';
+      text?: string;
+      sticker: {
+        packId: string;
+        stickerId: string;
+      };
+    };
 
 const configuredSocketOrigins = process.env.CORS_ALLOWED_ORIGINS
   ?.split(',')
@@ -80,7 +92,8 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() payload: SendMessagePayload,
     @ConnectedSocket() client: Socket,
   ) {
-    const { conversationId, characterId, text } = payload;
+    const { conversationId, characterId } = payload;
+    const replyText = payload.type === 'sticker' ? payload.text ?? '[表情包]' : payload.text;
 
     try {
       let convId = conversationId;
@@ -95,7 +108,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         await this.emitSystemMessage(convId, SLEEP_HINTS);
         const delay = 12_000 + Math.random() * 10_000;
         setTimeout(() => {
-          void this.deliverConversationReply(convId, characterId, text);
+          void this.deliverConversationReply(convId, characterId, payload, replyText);
         }, delay);
         return { event: 'message_sent', data: { conversationId: convId } };
       }
@@ -104,12 +117,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         await this.emitSystemMessage(convId, BUSY_HINTS[activity] ?? ['对方现在有些忙，稍后会回复你。']);
         const delay = 8_000 + Math.random() * 7_000;
         setTimeout(() => {
-          void this.deliverConversationReply(convId, characterId, text);
+          void this.deliverConversationReply(convId, characterId, payload, replyText);
         }, delay);
         return { event: 'message_sent', data: { conversationId: convId } };
       }
 
-      await this.deliverConversationReply(convId, characterId, text);
+      await this.deliverConversationReply(convId, characterId, payload, replyText);
       return { event: 'message_sent', data: { conversationId: convId } };
     } catch (err) {
       this.logger.error('Error handling message', err);
@@ -141,14 +154,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.server.to(conversationId).emit('new_message', message);
   }
 
-  private async deliverConversationReply(convId: string, characterId: string, text: string) {
+  private async deliverConversationReply(
+    convId: string,
+    characterId: string,
+    payload: SendMessagePayload,
+    replyText: string,
+  ) {
     this.server.to(convId).emit('typing_start', { conversationId: convId, characterId });
 
     try {
-      const messages = await this.chatService.sendMessage(convId, text);
+      const messages = await this.chatService.sendMessage(convId, payload);
       const aiReply = messages.find((message) => message.senderType === 'character');
       if (aiReply) {
-        const delay = Math.min(Math.max(aiReply.text.length * 16, 400), 3_000);
+        const lengthBasis = aiReply.type === 'sticker' ? replyText.length : aiReply.text.length;
+        const delay = Math.min(Math.max(lengthBasis * 16, 400), 3_000);
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
 
