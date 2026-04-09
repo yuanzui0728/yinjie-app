@@ -182,7 +182,7 @@ export function ContactsPage() {
             to="/friend-requests"
             className="rounded-[24px] bg-white/84 p-4 shadow-[var(--shadow-soft)] transition-[transform,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)]"
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#6fd97d,#47b35a)] text-white">
+            <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#2f7a3f,#2a6c3a)] text-white">
               <UserPlus size={18} />
             </div>
             <div className="mt-3 text-[15px] font-medium text-[color:var(--text-primary)]">新的朋友</div>
@@ -193,7 +193,7 @@ export function ContactsPage() {
             to="/group/new"
             className="rounded-[24px] bg-white/84 p-4 shadow-[var(--shadow-soft)] transition-[transform,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)]"
           >
-            <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#71b8ff,#4387ff)] text-white">
+            <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#2f78b5,#285f96)] text-white">
               <Users size={18} />
             </div>
             <div className="mt-3 text-[15px] font-medium text-[color:var(--text-primary)]">发起群聊</div>

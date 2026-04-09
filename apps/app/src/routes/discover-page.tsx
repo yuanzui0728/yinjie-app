@@ -55,7 +55,7 @@ const mobileDiscoverEntries: MobileDiscoverEntry[] = [
     description: "熟人动态",
     detail: "记录生活片段，把更近的情绪留给更熟的人。",
     icon: Users,
-    iconClassName: "bg-[linear-gradient(135deg,#68cf7d,#45b958)] text-white",
+    iconClassName: "bg-[linear-gradient(135deg,#2f7a3f,#2a6c3a)] text-white",
     to: "/discover/moments",
   },
   {
@@ -64,7 +64,7 @@ const mobileDiscoverEntries: MobileDiscoverEntry[] = [
     description: "随机相遇",
     detail: "随手触发一场新相遇，让世界主动回应你。",
     icon: Sparkles,
-    iconClassName: "bg-[linear-gradient(135deg,#ffbb63,#ff835d)] text-white",
+    iconClassName: "bg-[var(--brand-gradient)] text-white",
     to: "/discover/encounter",
   },
   {
@@ -73,7 +73,7 @@ const mobileDiscoverEntries: MobileDiscoverEntry[] = [
     description: "地点触发",
     detail: "换一个地点，就换一种更有画面感的靠近方式。",
     icon: Compass,
-    iconClassName: "bg-[linear-gradient(135deg,#60c0ff,#3e8dff)] text-white",
+    iconClassName: "bg-[linear-gradient(135deg,#2f78b5,#285f96)] text-white",
     to: "/discover/scene",
   },
   {
@@ -82,7 +82,7 @@ const mobileDiscoverEntries: MobileDiscoverEntry[] = [
     description: "公共发现",
     detail: "看看更大的公共内容流，也把自己的声音发出去。",
     icon: Newspaper,
-    iconClassName: "bg-[linear-gradient(135deg,#949dff,#616dff)] text-white",
+    iconClassName: "bg-[linear-gradient(135deg,#5d67c9,#4951a3)] text-white",
     to: "/discover/feed",
   },
 ];
