@@ -14,13 +14,15 @@ export function ChatRoomPage() {
   }
 
   return (
-    <AppPage className="bg-[#e5ddd5] px-0 pb-0">
-      <ConversationThreadPanel
-        conversationId={conversationId}
-        onBack={() => {
-          void navigate({ to: "/tabs/chat" });
-        }}
-      />
+    <AppPage className="flex min-h-full flex-col space-y-0 bg-[#e5ddd5] px-0 py-0">
+      <div className="min-h-0 flex-1">
+        <ConversationThreadPanel
+          conversationId={conversationId}
+          onBack={() => {
+            void navigate({ to: "/tabs/chat" });
+          }}
+        />
+      </div>
     </AppPage>
   );
 }
