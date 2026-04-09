@@ -1,5 +1,17 @@
 const ADMIN_SECRET_KEY = "yinjie_admin_secret";
 
+function getStorage() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
 function resolveAdminApiBase() {
   const configuredBase = import.meta.env.VITE_API_BASE?.trim();
   if (configuredBase) {
@@ -14,15 +26,15 @@ function resolveAdminApiBase() {
 }
 
 export function getAdminSecret(): string {
-  return localStorage.getItem(ADMIN_SECRET_KEY)?.trim() ?? "";
+  return getStorage()?.getItem(ADMIN_SECRET_KEY)?.trim() ?? "";
 }
 
 export function setAdminSecret(secret: string) {
-  localStorage.setItem(ADMIN_SECRET_KEY, secret.trim());
+  getStorage()?.setItem(ADMIN_SECRET_KEY, secret.trim());
 }
 
 export function clearAdminSecret() {
-  localStorage.removeItem(ADMIN_SECRET_KEY);
+  getStorage()?.removeItem(ADMIN_SECRET_KEY);
 }
 
 async function adminFetch<T>(path: string, options?: RequestInit): Promise<T> {
