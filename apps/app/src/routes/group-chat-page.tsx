@@ -130,6 +130,11 @@ export function GroupChatPage() {
           placeholder="输入消息"
           pending={sendMutation.isPending}
           error={sendError}
+          speechInput={{
+            baseUrl,
+            conversationId: groupId,
+            enabled: runtimeConfig.appPlatform === "web",
+          }}
           onChange={setText}
           onSubmit={() => sendMutation.mutate()}
         />
