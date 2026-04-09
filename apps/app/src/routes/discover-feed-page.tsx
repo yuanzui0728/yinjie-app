@@ -7,6 +7,7 @@ import { AppPage, AppSection, Button, ErrorBlock, InlineNotice, LoadingBlock, Te
 import { EmptyState } from "../components/empty-state";
 import { SocialPostCard } from "../components/social-post-card";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
+import { formatTimestamp } from "../lib/format";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../store/world-owner-store";
 
@@ -95,6 +96,7 @@ export function DiscoverFeedPage() {
     <AppPage>
       <TabPageTopBar
         title="广场动态"
+        subtitle="世界居民的公开朋友圈"
         titleAlign="center"
         leftActions={
           <Button
@@ -111,12 +113,12 @@ export function DiscoverFeedPage() {
       <AppSection className="space-y-4">
         <div>
           <div className="text-sm font-medium text-[color:var(--text-primary)]">发一条广场动态</div>
-          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">分享你的想法，等待角色或熟人的互动。</div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">把这一刻发到广场，让这个世界里的居民看到。</div>
         </div>
         <TextAreaField
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder="分享你的想法..."
+          placeholder="这一刻，想让整个世界知道什么？"
           className="min-h-28 resize-none"
         />
         <Button disabled={!text.trim() || createMutation.isPending} onClick={() => createMutation.mutate()} variant="primary">
@@ -125,7 +127,11 @@ export function DiscoverFeedPage() {
         {createMutation.isError && createMutation.error instanceof Error ? <ErrorBlock message={createMutation.error.message} /> : null}
       </AppSection>
 
-      <div className="space-y-4">
+      <AppSection className="space-y-4">
+        <div>
+          <div className="text-sm font-medium text-[color:var(--text-primary)]">最近动态</div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">这里不只看朋友，也能看到世界居民正在说什么。</div>
+        </div>
         {successNotice ? <InlineNotice tone="success">{successNotice}</InlineNotice> : null}
         {feedQuery.isLoading ? <LoadingBlock label="正在读取广场动态..." /> : null}
         {feedQuery.isError && feedQuery.error instanceof Error ? <ErrorBlock message={feedQuery.error.message} /> : null}
@@ -135,13 +141,25 @@ export function DiscoverFeedPage() {
             key={post.id}
             authorName={post.authorName}
             authorAvatar={post.authorAvatar}
-            meta={post.aiReacted ? "AI 已响应" : "等待 AI 互动"}
+            meta={`${formatTimestamp(post.createdAt)} · ${post.authorType === "user" ? "世界主人" : "居民动态"}`}
             body={post.text}
-            summary={`${post.likeCount} 赞 · ${post.commentCount} 评论`}
+            summary={`${post.likeCount} 赞 · ${post.commentCount} 评论${post.aiReacted ? " · AI 已参与回应" : ""}`}
             actions={
               <Button disabled={likeMutation.isPending} onClick={() => likeMutation.mutate(post.id)} variant="secondary" size="sm">
                 {pendingLikePostId === post.id ? "处理中..." : "点赞"}
               </Button>
+            }
+            secondary={
+              post.commentsPreview.length > 0 ? (
+                <div className="space-y-2 rounded-[22px] bg-[color:var(--surface-soft)] p-3">
+                  {post.commentsPreview.map((comment) => (
+                    <div key={comment.id} className="text-xs leading-6 text-[color:var(--text-secondary)]">
+                      <span className="text-[color:var(--text-primary)]">{comment.authorName}</span>
+                      {`：${comment.text}`}
+                    </div>
+                  ))}
+                </div>
+              ) : null
             }
             composer={
               <>
@@ -173,9 +191,9 @@ export function DiscoverFeedPage() {
         {commentMutation.isError && commentMutation.error instanceof Error ? <ErrorBlock message={commentMutation.error.message} /> : null}
 
         {!feedQuery.isLoading && !feedQuery.isError && !visiblePosts.length ? (
-          <EmptyState title="广场还没有新动态" description="你先发一条，或者晚点再回来看看。" />
+          <EmptyState title="广场还没有新动态" description="你先发一条，或者等世界里的居民先开口。" />
         ) : null}
-      </div>
+      </AppSection>
     </AppPage>
   );
 }
