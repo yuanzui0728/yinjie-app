@@ -23,7 +23,7 @@ export function AvatarChip({
   }
 
   return (
-    <div className={`${classes} flex items-center justify-center border border-white/80 bg-[linear-gradient(135deg,rgba(255,138,61,0.9),rgba(255,193,88,0.94))] font-semibold text-white shadow-[var(--shadow-soft)]`}>
+    <div className={`${classes} flex items-center justify-center border border-white/80 bg-[var(--brand-gradient)] font-semibold text-white shadow-[var(--shadow-soft)]`}>
       {initials(name)}
     </div>
   );
