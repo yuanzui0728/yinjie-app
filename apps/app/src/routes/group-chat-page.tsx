@@ -61,30 +61,49 @@ export function GroupChatPage() {
   return (
     <AppPage className="flex h-full min-h-0 flex-col space-y-0 bg-[linear-gradient(180deg,#f8fcf8,#f2f8f5)] px-0 py-0">
       <div className="flex h-full min-h-0 flex-1 flex-col">
-        <header className="flex items-center gap-2 border-b border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,248,239,0.94))] px-3 py-2.5">
-          <Button
-            onClick={() => navigate({ to: "/tabs/chat" })}
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9 rounded-full border border-white/70 bg-white/82 text-[color:var(--text-primary)] shadow-[var(--shadow-soft)] hover:bg-white"
-            aria-label="返回"
-          >
-            <ArrowLeft size={18} />
-          </Button>
-          <AvatarChip name={groupQuery.data?.name ?? "群聊"} size="wechat" />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[16px] font-medium text-[color:var(--text-primary)]">{groupQuery.data?.name ?? "群聊"}</div>
-            <div className="mt-0.5 text-[11px] text-[color:var(--text-muted)]">{membersQuery.data?.length ?? 0}人群聊</div>
-          </div>
-          <div className="flex items-center gap-1">
-            <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--text-primary)] hover:bg-white/72" aria-label="语音通话">
-              <Phone size={18} />
-            </button>
-            <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--text-primary)] hover:bg-white/72" aria-label="视频通话">
-              <Video size={18} />
-            </button>
-            <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--text-primary)] hover:bg-white/72" aria-label="更多操作">
+        <header className="border-b border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,248,239,0.94))] px-3 pb-3 pt-3">
+          <div className="flex items-start gap-2.5">
+            <Button
+              onClick={() => navigate({ to: "/tabs/chat" })}
+              variant="ghost"
+              size="icon"
+              className="mt-0.5 h-9 w-9 shrink-0 rounded-full border border-white/70 bg-white/82 text-[color:var(--text-primary)] shadow-[var(--shadow-soft)] hover:bg-white"
+              aria-label="返回"
+            >
+              <ArrowLeft size={18} />
+            </Button>
+            <div className="shrink-0">
+              <AvatarChip name={groupQuery.data?.name ?? "群聊"} size="wechat" />
+            </div>
+            <div className="min-w-0 flex-1 pt-0.5">
+              <div className="truncate text-[16px] font-medium text-[color:var(--text-primary)]">{groupQuery.data?.name ?? "群聊"}</div>
+              <div className="mt-1 text-[11px] text-[color:var(--text-muted)]">{membersQuery.data?.length ?? 0} 人群聊</div>
+            </div>
+            <button
+              type="button"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/65 bg-white/72 text-[color:var(--text-primary)] shadow-[var(--shadow-soft)] hover:bg-white"
+              aria-label="更多操作"
+            >
               <Ellipsis size={18} />
+            </button>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              className="flex h-9 min-w-[92px] items-center justify-center gap-1.5 rounded-full border border-white/65 bg-white/78 px-3 text-[13px] text-[color:var(--text-primary)] shadow-[var(--shadow-soft)] hover:bg-white"
+              aria-label="语音通话"
+            >
+              <Phone size={16} />
+              <span>语音</span>
+            </button>
+            <button
+              type="button"
+              className="flex h-9 min-w-[92px] items-center justify-center gap-1.5 rounded-full border border-white/65 bg-white/78 px-3 text-[13px] text-[color:var(--text-primary)] shadow-[var(--shadow-soft)] hover:bg-white"
+              aria-label="视频通话"
+            >
+              <Video size={16} />
+              <span>视频</span>
             </button>
           </div>
         </header>
@@ -99,7 +118,10 @@ export function GroupChatPage() {
               </InlineNotice>
             ) : null}
             {(membersQuery.data ?? []).map((member) => (
-              <div key={member.id} className="flex min-w-fit items-center gap-2 rounded-full border border-white/80 bg-white/88 px-2.5 py-1.5 shadow-[var(--shadow-soft)]">
+              <div
+                key={member.id}
+                className="flex min-w-fit items-center gap-2 rounded-full border border-white/80 bg-white/88 px-2.5 py-1.5 shadow-[var(--shadow-soft)]"
+              >
                 <AvatarChip name={member.memberName ?? member.memberId} src={member.memberAvatar} size="sm" />
                 <span className="text-xs text-[color:var(--text-secondary)]">{member.memberName ?? member.memberId}</span>
               </div>
