@@ -1,6 +1,12 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  BadGatewayException,
+  BadRequestException,
+  Injectable,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
+import OpenAI, { toFile } from 'openai';
 import {
   GenerateReplyOptions,
   GenerateReplyResult,
@@ -12,6 +18,17 @@ import {
 import { PromptBuilderService } from './prompt-builder.service';
 import { SystemConfigService } from '../config/config.service';
 import { WorldService } from '../world/world.service';
+
+const DEFAULT_TRANSCRIPTION_MODEL = 'gpt-4o-mini-transcribe';
+const ACCEPTED_AUDIO_MIME_TYPES = new Set([
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/ogg',
+  'audio/wav',
+  'audio/webm',
+  'video/mp4',
+  'video/webm',
+]);
 
 @Injectable()
 export class AiOrchestratorService {
@@ -38,6 +55,43 @@ export class AiOrchestratorService {
       });
     }
     return this.client;
+  }
+
+  private normalizeProviderEndpoint(value: string) {
+    const normalized = value.trim().replace(/\/+$/, '');
+    if (normalized.endsWith('/chat/completions')) {
+      return normalized.slice(0, -'/chat/completions'.length);
+    }
+    if (normalized.endsWith('/responses')) {
+      return normalized.slice(0, -'/responses'.length);
+    }
+
+    return normalized;
+  }
+
+  private async resolveProviderConfig() {
+    const endpoint =
+      (await this.configService.getConfig('provider_endpoint')) ??
+      this.config.get<string>('OPENAI_BASE_URL') ??
+      'https://api.deepseek.com';
+    const model =
+      (await this.configService.getConfig('provider_model')) ??
+      this.config.get<string>('AI_MODEL') ??
+      'deepseek-chat';
+    const apiKey =
+      (await this.configService.getConfig('provider_api_key')) ??
+      this.config.get<string>('DEEPSEEK_API_KEY') ??
+      '';
+    const transcriptionModel =
+      (await this.configService.getConfig('provider_transcription_model')) ??
+      DEFAULT_TRANSCRIPTION_MODEL;
+
+    return {
+      endpoint: this.normalizeProviderEndpoint(endpoint),
+      model,
+      apiKey,
+      transcriptionModel,
+    };
   }
 
   private hasAvailableApiKey(override?: AiKeyOverride): boolean {
@@ -211,6 +265,71 @@ ${chatHistory}
       return JSON.parse(raw) as { needsGroupChat: boolean; reason: string; requiredDomains: string[] };
     } catch {
       return { needsGroupChat: false, reason: '', requiredDomains: [] };
+    }
+  }
+
+  async transcribeAudio(
+    file: Express.Multer.File,
+    options: { conversationId?: string; mode?: string },
+  ) {
+    if (!file.buffer?.length) {
+      throw new BadRequestException('没有收到可转写的音频内容。');
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      throw new BadRequestException('录音文件过大，请缩短单次语音输入时长。');
+    }
+
+    if (file.mimetype && !ACCEPTED_AUDIO_MIME_TYPES.has(file.mimetype)) {
+      throw new BadRequestException('当前录音格式暂不支持，请改用系统默认录音格式。');
+    }
+
+    const provider = await this.resolveProviderConfig();
+    if (!provider.apiKey.trim()) {
+      throw new ServiceUnavailableException('当前实例未配置可用的 AI Key，暂时无法转写语音。');
+    }
+
+    const client = new OpenAI({
+      apiKey: provider.apiKey,
+      baseURL: provider.endpoint,
+    });
+    const startedAt = Date.now();
+
+    try {
+      const response = await client.audio.transcriptions.create({
+        file: await toFile(file.buffer, file.originalname || 'speech-input.webm', {
+          type: file.mimetype || 'audio/webm',
+        }),
+        model: provider.transcriptionModel,
+        language: 'zh',
+        prompt: '这是聊天输入语音转文字，请输出自然、简洁的中文口语内容。',
+      });
+      const text = response.text.trim();
+
+      if (!text) {
+        throw new BadGatewayException('这段语音没有识别出有效文字，请再说一遍。');
+      }
+
+      return {
+        text,
+        durationMs: Date.now() - startedAt,
+        provider: provider.model,
+        conversationId: options.conversationId?.trim() || undefined,
+        mode: options.mode ?? 'dictation',
+      };
+    } catch (error) {
+      if (error instanceof BadGatewayException) {
+        throw error;
+      }
+
+      this.logger.error('speech transcription failed', {
+        conversationId: options.conversationId,
+        mode: options.mode,
+        mimetype: file.mimetype,
+        size: file.size,
+        error,
+      });
+      throw new BadGatewayException('当前 Provider 不支持语音转写，或本次转写请求失败。');
     }
   }
 }

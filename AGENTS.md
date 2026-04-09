@@ -136,6 +136,8 @@
 
 ## Single-world cleanup notes (2026-04-09)
 - `GET /api/moments` no longer accepts `authorId`; it always returns the current world's feed.
+- AI 语音转写路由已提供：
+  - `POST /api/ai/transcriptions`
 - 社交屏蔽路由已提供：
   - `GET /api/social/blocks`
   - `POST /api/social/block`
