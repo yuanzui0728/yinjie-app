@@ -102,7 +102,12 @@ export class SchedulerService {
   @Cron('*/15 * * * *')
   async checkMomentSchedule() {
     try {
-      const chars = await this.characterRepo.find();
+      const friendCharacterIds = new Set(await this.socialService.getFriendCharacterIds());
+      if (!friendCharacterIds.size) {
+        return;
+      }
+
+      const chars = (await this.characterRepo.find()).filter((char) => friendCharacterIds.has(char.id));
       const now = new Date();
       const hour = now.getHours();
 

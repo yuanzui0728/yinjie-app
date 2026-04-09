@@ -80,6 +80,20 @@ export class SocialService {
     return result.filter((entry) => entry.character !== null);
   }
 
+  async getFriendCharacterIds(ownerId?: string): Promise<string[]> {
+    const resolvedOwnerId = ownerId ?? (await this.worldOwnerService.getOwnerOrThrow()).id;
+    await this.ensureDefaultFriendships(resolvedOwnerId);
+    const friendships = await this.friendshipRepo.find({
+      where: { ownerId: resolvedOwnerId, status: Not('blocked') },
+    });
+    return friendships.map((friendship) => friendship.characterId);
+  }
+
+  async isFriendCharacter(characterId: string, ownerId?: string): Promise<boolean> {
+    const friendCharacterIds = await this.getFriendCharacterIds(ownerId);
+    return friendCharacterIds.includes(characterId);
+  }
+
   async getBlockedCharacters(): Promise<Array<{
     id: string;
     characterId: string;
@@ -98,6 +112,15 @@ export class SocialService {
       reason: undefined,
       createdAt: item.createdAt,
     }));
+  }
+
+  async getBlockedCharacterIds(ownerId?: string): Promise<string[]> {
+    const resolvedOwnerId = ownerId ?? (await this.worldOwnerService.getOwnerOrThrow()).id;
+    const blocked = await this.friendshipRepo.find({
+      where: { ownerId: resolvedOwnerId, status: 'blocked' },
+      order: { createdAt: 'DESC' },
+    });
+    return blocked.map((item) => item.characterId);
   }
 
   async ensureDefaultFriendships(ownerId?: string): Promise<void> {

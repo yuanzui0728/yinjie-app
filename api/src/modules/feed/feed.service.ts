@@ -7,6 +7,7 @@ import { UserFeedInteractionEntity } from '../analytics/user-feed-interaction.en
 import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
 import { CharactersService } from '../characters/characters.service';
 import { WorldOwnerService } from '../auth/world-owner.service';
+import { SocialService } from '../social/social.service';
 
 type FeedListItem = FeedPostEntity & {
   commentsPreview: FeedCommentEntity[];
@@ -26,6 +27,7 @@ export class FeedService {
     private readonly ai: AiOrchestratorService,
     private readonly characters: CharactersService,
     private readonly worldOwnerService: WorldOwnerService,
+    private readonly socialService: SocialService,
   ) {}
 
   async getFeed(page = 1, limit = 20): Promise<{ posts: FeedListItem[]; total: number }> {
@@ -143,7 +145,8 @@ export class FeedService {
   }
 
   async triggerAiReactionForPost(post: FeedPostEntity): Promise<void> {
-    const chars = await this.characters.findAll();
+    const blockedCharacterIds = new Set(await this.socialService.getBlockedCharacterIds());
+    const chars = (await this.characters.findAll()).filter((char) => !blockedCharacterIds.has(char.id));
     const selected = chars.filter(() => Math.random() < 0.3).slice(0, 2);
     for (const char of selected) {
       const profile = await this.characters.getProfile(char.id);

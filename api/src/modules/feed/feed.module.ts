@@ -8,6 +8,7 @@ import { UserFeedInteractionEntity } from '../analytics/user-feed-interaction.en
 import { AiModule } from '../ai/ai.module';
 import { CharactersModule } from '../characters/characters.module';
 import { AuthModule } from '../auth/auth.module';
+import { SocialModule } from '../social/social.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AuthModule } from '../auth/auth.module';
     AiModule,
     CharactersModule,
     AuthModule,
+    SocialModule,
   ],
   providers: [FeedService],
   controllers: [FeedController],
