@@ -1,11 +1,38 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { addFeedComment, createFeedPost, getBlockedCharacters, getFeed, likeFeedPost, sendFriendRequest, shake, triggerSceneFriendRequest } from "@yinjie/contracts";
-import { AppHeader, AppPage, AppSection, Button, ErrorBlock, InlineNotice, LoadingBlock, TextAreaField, TextField } from "@yinjie/ui";
+import { Link } from "@tanstack/react-router";
+import {
+  addFeedComment,
+  addMomentComment,
+  createFeedPost,
+  createUserMoment,
+  getBlockedCharacters,
+  getFeed,
+  getMoments,
+  likeFeedPost,
+  sendFriendRequest,
+  shake,
+  toggleMomentLike,
+  triggerSceneFriendRequest,
+} from "@yinjie/contracts";
+import { ChevronRight, Compass, Newspaper, Sparkles, Users } from "lucide-react";
+import {
+  AppHeader,
+  AppPage,
+  AppSection,
+  Button,
+  ErrorBlock,
+  InlineNotice,
+  LoadingBlock,
+  TextAreaField,
+  TextField,
+  cn,
+} from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
 import { SocialPostCard } from "../components/social-post-card";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
+import { formatTimestamp } from "../lib/format";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../store/world-owner-store";
 
@@ -16,21 +43,77 @@ const scenes = [
   { id: "park", label: "公园" },
 ];
 
+type MobileDiscoverEntry = {
+  key: "moments" | "encounter" | "scene" | "feed";
+  label: string;
+  description: string;
+  icon: typeof Users;
+  iconClassName: string;
+  to: "/discover/moments" | "/discover/encounter" | "/discover/scene" | "/discover/feed";
+};
+
+const mobileDiscoverGroups: MobileDiscoverEntry[][] = [
+  [
+    {
+      key: "moments",
+      label: "朋友圈",
+      description: "熟人动态",
+      icon: Users,
+      iconClassName: "bg-[linear-gradient(135deg,#64c466,#2fa43a)] text-white",
+      to: "/discover/moments",
+    },
+  ],
+  [
+    {
+      key: "encounter",
+      label: "摇一摇",
+      description: "随机相遇",
+      icon: Sparkles,
+      iconClassName: "bg-[linear-gradient(135deg,#ffb45f,#ff7b54)] text-white",
+      to: "/discover/encounter",
+    },
+    {
+      key: "scene",
+      label: "场景相遇",
+      description: "地点触发",
+      icon: Compass,
+      iconClassName: "bg-[linear-gradient(135deg,#54b8ff,#2f7cff)] text-white",
+      to: "/discover/scene",
+    },
+  ],
+  [
+    {
+      key: "feed",
+      label: "广场动态",
+      description: "公共发现",
+      icon: Newspaper,
+      iconClassName: "bg-[linear-gradient(135deg,#9097ff,#5963ff)] text-white",
+      to: "/discover/feed",
+    },
+  ],
+];
+
 export function DiscoverPage() {
   const isDesktopLayout = useDesktopLayout();
   const queryClient = useQueryClient();
   const ownerId = useWorldOwnerStore((state) => state.id);
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl ?? "default";
-  const [text, setText] = useState("");
-  const [shakeMessage, setShakeMessage] = useState<string>("");
-  const [sceneMessage, setSceneMessage] = useState<string>("");
-  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>({});
+  const [momentText, setMomentText] = useState("");
+  const [feedText, setFeedText] = useState("");
+  const [shakeMessage, setShakeMessage] = useState("");
+  const [sceneMessage, setSceneMessage] = useState("");
+  const [momentCommentDrafts, setMomentCommentDrafts] = useState<Record<string, string>>({});
+  const [feedCommentDrafts, setFeedCommentDrafts] = useState<Record<string, string>>({});
   const [successNotice, setSuccessNotice] = useState("");
 
   const feedQuery = useQuery({
     queryKey: ["app-feed", baseUrl],
     queryFn: () => getFeed(1, 20),
+  });
+  const momentsQuery = useQuery({
+    queryKey: ["app-moments", baseUrl],
+    queryFn: () => getMoments(baseUrl),
   });
   const blockedQuery = useQuery({
     queryKey: ["app-discover-blocked-characters", baseUrl],
@@ -38,15 +121,33 @@ export function DiscoverPage() {
     enabled: Boolean(ownerId),
   });
 
-  const createPostMutation = useMutation({
+  const createFeedPostMutation = useMutation({
     mutationFn: () =>
-      createFeedPost({
-        text: text.trim(),
-      }, baseUrl),
+      createFeedPost(
+        {
+          text: feedText.trim(),
+        },
+        baseUrl,
+      ),
     onSuccess: async () => {
-      setText("");
-      setSuccessNotice("发现页动态已发布。");
+      setFeedText("");
+      setSuccessNotice("广场动态已发布。");
       await queryClient.invalidateQueries({ queryKey: ["app-feed", baseUrl] });
+    },
+  });
+
+  const createMomentMutation = useMutation({
+    mutationFn: () =>
+      createUserMoment(
+        {
+          text: momentText.trim(),
+        },
+        baseUrl,
+      ),
+    onSuccess: async () => {
+      setMomentText("");
+      setSuccessNotice("朋友圈已发布。");
+      await queryClient.invalidateQueries({ queryKey: ["app-moments", baseUrl] });
     },
   });
 
@@ -79,9 +180,12 @@ export function DiscoverPage() {
 
   const sceneMutation = useMutation({
     mutationFn: async (scene: string) => {
-      const result = await triggerSceneFriendRequest({
-        scene,
-      }, baseUrl);
+      const result = await triggerSceneFriendRequest(
+        {
+          scene,
+        },
+        baseUrl,
+      );
       return { request: result, scene };
     },
     onSuccess: ({ request, scene }) => {
@@ -93,44 +197,78 @@ export function DiscoverPage() {
       }
 
       setSuccessNotice("场景相遇已写入好友申请列表。");
-      setSceneMessage(
-        `${request.characterName} 在${sceneLabel}里注意到了你：${request.greeting ?? "对你产生了兴趣。"}`
-      );
+      setSceneMessage(`${request.characterName} 在${sceneLabel}里注意到了你：${request.greeting ?? "对你产生了兴趣。"}`);
       void queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl] });
     },
   });
 
-  const likeMutation = useMutation({
+  const likeFeedMutation = useMutation({
     mutationFn: (postId: string) => likeFeedPost(postId, baseUrl),
     onSuccess: async () => {
-      setSuccessNotice("发现页互动已更新。");
+      setSuccessNotice("广场互动已更新。");
       await queryClient.invalidateQueries({ queryKey: ["app-feed", baseUrl] });
     },
   });
 
-  const commentMutation = useMutation({
+  const commentFeedMutation = useMutation({
     mutationFn: (postId: string) =>
-      addFeedComment(postId, {
-        text: commentDrafts[postId].trim(),
-      }, baseUrl),
+      addFeedComment(
+        postId,
+        {
+          text: feedCommentDrafts[postId].trim(),
+        },
+        baseUrl,
+      ),
     onSuccess: async (_, postId) => {
-      setCommentDrafts((current) => ({ ...current, [postId]: "" }));
-      setSuccessNotice("发现页互动已更新。");
+      setFeedCommentDrafts((current) => ({ ...current, [postId]: "" }));
+      setSuccessNotice("广场互动已更新。");
       await queryClient.invalidateQueries({ queryKey: ["app-feed", baseUrl] });
     },
   });
-  const pendingLikePostId = likeMutation.isPending ? likeMutation.variables : null;
-  const pendingCommentPostId = commentMutation.isPending ? commentMutation.variables : null;
+
+  const likeMomentMutation = useMutation({
+    mutationFn: (momentId: string) => toggleMomentLike(momentId, baseUrl),
+    onSuccess: async () => {
+      setSuccessNotice("朋友圈互动已更新。");
+      await queryClient.invalidateQueries({ queryKey: ["app-moments", baseUrl] });
+    },
+  });
+
+  const commentMomentMutation = useMutation({
+    mutationFn: (momentId: string) =>
+      addMomentComment(
+        momentId,
+        {
+          text: momentCommentDrafts[momentId].trim(),
+        },
+        baseUrl,
+      ),
+    onSuccess: async (_, momentId) => {
+      setMomentCommentDrafts((current) => ({ ...current, [momentId]: "" }));
+      setSuccessNotice("朋友圈互动已更新。");
+      await queryClient.invalidateQueries({ queryKey: ["app-moments", baseUrl] });
+    },
+  });
+
   const blockedCharacterIds = new Set((blockedQuery.data ?? []).map((item) => item.characterId));
   const visiblePosts = (feedQuery.data?.posts ?? []).filter(
     (post) => post.authorType !== "character" || !blockedCharacterIds.has(post.authorId),
   );
+  const visibleMoments = (momentsQuery.data ?? []).filter(
+    (moment) => moment.authorType !== "character" || !blockedCharacterIds.has(moment.authorId),
+  );
+  const pendingLikePostId = likeFeedMutation.isPending ? likeFeedMutation.variables : null;
+  const pendingCommentPostId = commentFeedMutation.isPending ? commentFeedMutation.variables : null;
+  const pendingLikeMomentId = likeMomentMutation.isPending ? likeMomentMutation.variables : null;
+  const pendingCommentMomentId = commentMomentMutation.isPending ? commentMomentMutation.variables : null;
 
   useEffect(() => {
-    setText("");
+    setMomentText("");
+    setFeedText("");
     setShakeMessage("");
     setSceneMessage("");
-    setCommentDrafts({});
+    setMomentCommentDrafts({});
+    setFeedCommentDrafts({});
     setSuccessNotice("");
   }, [baseUrl]);
 
@@ -146,7 +284,11 @@ export function DiscoverPage() {
   if (isDesktopLayout) {
     return (
       <AppPage className="space-y-5 px-6 py-6">
-        <AppHeader eyebrow="发现" title="在更大的画布里安排相遇" description="随机相遇、场景相遇和广场动态拆开排布，不再堆在一条手机长页里。" />
+        <AppHeader
+          eyebrow="发现"
+          title="在更大的画布里安排相遇"
+          description="随机相遇、场景相遇和广场动态拆开排布，不再堆在一条手机长页里。"
+        />
 
         <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
           <div className="space-y-5">
@@ -162,7 +304,9 @@ export function DiscoverPage() {
                 <div className="text-xs text-[color:var(--text-muted)]">随机相遇会从不同场景里发生。</div>
               </div>
               {shakeMessage ? <InlineNotice className="mt-3" tone="success">{shakeMessage}</InlineNotice> : null}
-              {shakeMutation.isError && shakeMutation.error instanceof Error ? <ErrorBlock className="mt-3" message={shakeMutation.error.message} /> : null}
+              {shakeMutation.isError && shakeMutation.error instanceof Error ? (
+                <ErrorBlock className="mt-3" message={shakeMutation.error.message} />
+              ) : null}
               <div className="mt-4 flex flex-wrap gap-2">
                 {scenes.map((scene) => (
                   <Button
@@ -177,7 +321,9 @@ export function DiscoverPage() {
                 ))}
               </div>
               {sceneMessage ? <InlineNotice className="mt-3" tone="info">{sceneMessage}</InlineNotice> : null}
-              {sceneMutation.isError && sceneMutation.error instanceof Error ? <ErrorBlock className="mt-3" message={sceneMutation.error.message} /> : null}
+              {sceneMutation.isError && sceneMutation.error instanceof Error ? (
+                <ErrorBlock className="mt-3" message={sceneMutation.error.message} />
+              ) : null}
             </AppSection>
 
             <AppSection className="space-y-4">
@@ -186,15 +332,21 @@ export function DiscoverPage() {
                 <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">左侧负责动作和发布，右侧专注内容流。</div>
               </div>
               <TextAreaField
-                value={text}
-                onChange={(event) => setText(event.target.value)}
+                value={feedText}
+                onChange={(event) => setFeedText(event.target.value)}
                 placeholder="分享你的想法..."
                 className="min-h-36 resize-none"
               />
-              <Button disabled={!text.trim() || createPostMutation.isPending} onClick={() => createPostMutation.mutate()} variant="primary">
-                {createPostMutation.isPending ? "正在发布..." : "发布"}
+              <Button
+                disabled={!feedText.trim() || createFeedPostMutation.isPending}
+                onClick={() => createFeedPostMutation.mutate()}
+                variant="primary"
+              >
+                {createFeedPostMutation.isPending ? "正在发布..." : "发布"}
               </Button>
-              {createPostMutation.isError && createPostMutation.error instanceof Error ? <ErrorBlock message={createPostMutation.error.message} /> : null}
+              {createFeedPostMutation.isError && createFeedPostMutation.error instanceof Error ? (
+                <ErrorBlock message={createFeedPostMutation.error.message} />
+              ) : null}
             </AppSection>
           </div>
 
@@ -215,16 +367,16 @@ export function DiscoverPage() {
                 body={post.text}
                 summary={`${post.likeCount} 赞 · ${post.commentCount} 评论`}
                 actions={
-                  <Button disabled={likeMutation.isPending} onClick={() => likeMutation.mutate(post.id)} variant="secondary" size="sm">
+                  <Button disabled={likeFeedMutation.isPending} onClick={() => likeFeedMutation.mutate(post.id)} variant="secondary" size="sm">
                     {pendingLikePostId === post.id ? "处理中..." : "点赞"}
                   </Button>
                 }
                 composer={
                   <>
                     <TextField
-                      value={commentDrafts[post.id] ?? ""}
+                      value={feedCommentDrafts[post.id] ?? ""}
                       onChange={(event) =>
-                        setCommentDrafts((current) => ({
+                        setFeedCommentDrafts((current) => ({
                           ...current,
                           [post.id]: event.target.value,
                         }))
@@ -233,8 +385,8 @@ export function DiscoverPage() {
                       className="min-w-0 flex-1 rounded-full py-2 text-xs"
                     />
                     <Button
-                      disabled={!(commentDrafts[post.id] ?? "").trim() || commentMutation.isPending}
-                      onClick={() => commentMutation.mutate(post.id)}
+                      disabled={!(feedCommentDrafts[post.id] ?? "").trim() || commentFeedMutation.isPending}
+                      onClick={() => commentFeedMutation.mutate(post.id)}
                       variant="primary"
                       size="sm"
                     >
@@ -244,8 +396,10 @@ export function DiscoverPage() {
                 }
               />
             ))}
-            {likeMutation.isError && likeMutation.error instanceof Error ? <ErrorBlock message={likeMutation.error.message} /> : null}
-            {commentMutation.isError && commentMutation.error instanceof Error ? <ErrorBlock message={commentMutation.error.message} /> : null}
+            {likeFeedMutation.isError && likeFeedMutation.error instanceof Error ? <ErrorBlock message={likeFeedMutation.error.message} /> : null}
+            {commentFeedMutation.isError && commentFeedMutation.error instanceof Error ? (
+              <ErrorBlock message={commentFeedMutation.error.message} />
+            ) : null}
             {!feedQuery.isLoading && !feedQuery.isError && !visiblePosts.length ? (
               <EmptyState title="发现页还没有新动态" description="你先发一条，或者再摇一摇看看会遇到谁。" />
             ) : null}
@@ -256,121 +410,41 @@ export function DiscoverPage() {
   }
 
   return (
-    <AppPage>
+    <AppPage className="space-y-5">
+      <TabPageTopBar title="发现" titleAlign="center" />
 
-      <TabPageTopBar title="发现" />
-            <AppSection className="space-y-4 bg-[color:var(--brand-soft)]">
-        <div>
-          <div className="text-sm font-medium text-[color:var(--text-primary)]">随机相遇</div>
-          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">轻轻推动世界一次，看看今天会从哪里有人靠近你。</div>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={() => shakeMutation.mutate()}
-            disabled={shakeMutation.isPending}
-            variant="primary"
+      <div className="space-y-3">
+        {mobileDiscoverGroups.map((group, groupIndex) => (
+          <div
+            key={`group-${groupIndex}`}
+            className="overflow-hidden rounded-[24px] border border-[color:var(--border-faint)] bg-white shadow-[var(--shadow-soft)]"
           >
-            {shakeMutation.isPending ? "正在寻找..." : "摇一摇"}
-          </Button>
-          <div className="text-xs text-[color:var(--text-muted)]">随机相遇会从不同场景里发生。</div>
-        </div>
-        {shakeMessage ? <InlineNotice className="mt-3" tone="success">{shakeMessage}</InlineNotice> : null}
-        {shakeMutation.isError && shakeMutation.error instanceof Error ? <ErrorBlock className="mt-3" message={shakeMutation.error.message} /> : null}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {scenes.map((scene) => (
-            <Button
-              key={scene.id}
-              onClick={() => sceneMutation.mutate(scene.id)}
-              disabled={sceneMutation.isPending}
-              variant="secondary"
-              size="sm"
-            >
-              {sceneMutation.isPending && sceneMutation.variables === scene.id ? `正在前往${scene.label}...` : scene.label}
-            </Button>
-          ))}
-        </div>
-        {sceneMessage ? <InlineNotice className="mt-3" tone="info">{sceneMessage}</InlineNotice> : null}
-        {sceneMutation.isError && sceneMutation.error instanceof Error ? <ErrorBlock className="mt-3" message={sceneMutation.error.message} /> : null}
-      </AppSection>
-
-      <AppSection className="space-y-4">
-        <div>
-          <div className="text-sm font-medium text-[color:var(--text-primary)]">发一条发现页动态</div>
-          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">这里更像公共广场，动态会等待熟人和角色来回应。</div>
-        </div>
-        <TextAreaField
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          placeholder="分享你的想法..."
-          className="min-h-28 resize-none"
-        />
-        <Button
-          disabled={!text.trim() || createPostMutation.isPending}
-          onClick={() => createPostMutation.mutate()}
-          variant="primary"
-        >
-          {createPostMutation.isPending ? "正在发布..." : "发布"}
-        </Button>
-        {createPostMutation.isError && createPostMutation.error instanceof Error ? <ErrorBlock message={createPostMutation.error.message} /> : null}
-      </AppSection>
-
-      <AppSection className="space-y-4">
-        <div>
-          <div className="text-sm font-medium text-[color:var(--text-primary)]">广场动态</div>
-          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">先看内容，再做互动，避免控件把注意力从正文上抢走。</div>
-        </div>
-        {successNotice ? <InlineNotice tone="success">{successNotice}</InlineNotice> : null}
-        {feedQuery.isLoading ? <LoadingBlock label="正在读取发现页动态..." /> : null}
-
-        {feedQuery.isError && feedQuery.error instanceof Error ? <ErrorBlock message={feedQuery.error.message} /> : null}
-
-        {visiblePosts.map((post) => (
-          <SocialPostCard
-            key={post.id}
-            authorName={post.authorName}
-            authorAvatar={post.authorAvatar}
-            meta={post.aiReacted ? "AI 已响应" : "等待 AI 互动"}
-            body={post.text}
-            summary={`${post.likeCount} 赞 · ${post.commentCount} 评论`}
-            actions={
-              <Button disabled={likeMutation.isPending} onClick={() => likeMutation.mutate(post.id)} variant="secondary" size="sm">
-                {pendingLikePostId === post.id ? "处理中..." : "点赞"}
-              </Button>
-            }
-            composer={
-              <>
-                <TextField
-                  value={commentDrafts[post.id] ?? ""}
-                  onChange={(event) =>
-                    setCommentDrafts((current) => ({
-                      ...current,
-                      [post.id]: event.target.value,
-                    }))
-                  }
-                  placeholder="写评论..."
-                  className="min-w-0 flex-1 rounded-full py-2 text-xs"
-                />
-                <Button
-                  disabled={!(commentDrafts[post.id] ?? "").trim() || commentMutation.isPending}
-                  onClick={() => commentMutation.mutate(post.id)}
-                  variant="primary"
-                  size="sm"
+            {group.map((item, itemIndex) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.key}
+                  to={item.to}
+                  className={cn(
+                    "flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
+                    "bg-white hover:bg-[color:var(--surface-soft)]",
+                    itemIndex < group.length - 1 ? "border-b border-[color:var(--border-faint)]" : undefined,
+                  )}
                 >
-                  {pendingCommentPostId === post.id ? "发送中..." : "发送"}
-                </Button>
-              </>
-            }
-          />
+                  <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", item.iconClassName)}>
+                    <Icon size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[15px] font-medium text-[color:var(--text-primary)]">{item.label}</div>
+                    <div className="mt-0.5 text-xs text-[color:var(--text-muted)]">{item.description}</div>
+                  </div>
+                  <ChevronRight size={16} className="shrink-0 text-[color:var(--text-dim)]" />
+                </Link>
+              );
+            })}
+          </div>
         ))}
-
-        {likeMutation.isError && likeMutation.error instanceof Error ? <ErrorBlock message={likeMutation.error.message} /> : null}
-
-        {commentMutation.isError && commentMutation.error instanceof Error ? <ErrorBlock message={commentMutation.error.message} /> : null}
-
-        {!feedQuery.isLoading && !feedQuery.isError && !visiblePosts.length ? (
-          <EmptyState title="发现页还没有新动态" description="你先发一条，或者再摇一摇看看会遇到谁。" />
-        ) : null}
-      </AppSection>
+      </div>
     </AppPage>
   );
 }
