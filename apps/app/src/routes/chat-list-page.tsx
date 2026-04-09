@@ -5,11 +5,13 @@ import { getConversations } from "@yinjie/contracts";
 import { Plus, QrCode, Search, UserPlus, Users, WalletCards } from "lucide-react";
 import { AppPage, Button, ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
+import { EmptyState } from "../components/empty-state";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { DesktopChatWorkspace } from "../features/desktop/chat/desktop-chat-workspace";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { formatConversationTimestamp } from "../lib/format";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
+import { useWorldOwnerStore } from "../store/world-owner-store";
 
 type QuickActionItem = {
   key: string;
@@ -59,6 +61,7 @@ export function ChatListPage() {
 function MobileChatListPage() {
   const navigate = useNavigate();
   const runtimeConfig = useAppRuntimeConfig();
+  const ownerName = useWorldOwnerStore((state) => state.username);
   const baseUrl = runtimeConfig.apiBaseUrl;
   const [searchText, setSearchText] = useState("");
   const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
@@ -82,9 +85,12 @@ function MobileChatListPage() {
       return title.includes(normalizedSearchText) || lastMessageText.includes(normalizedSearchText);
     });
   }, [conversations, normalizedSearchText]);
+
+  const unreadConversationCount = conversations.filter((conversation) => conversation.unreadCount > 0).length;
+  const unreadMessageCount = conversations.reduce((total, conversation) => total + conversation.unreadCount, 0);
   const hasConversations = filteredConversations.length > 0;
-  const shouldShowListArea =
-    !!notice || conversationsQuery.isLoading || (conversationsQuery.isError && conversationsQuery.error instanceof Error) || hasConversations;
+  const hasSearchResult = normalizedSearchText.length > 0;
+
   function handleUnavailableAction(message: string) {
     setIsQuickMenuOpen(false);
     setNotice(message);
@@ -97,7 +103,7 @@ function MobileChatListPage() {
   }
 
   return (
-    <AppPage className="bg-[#ededed] px-0">
+    <AppPage className="space-y-4 px-0">
       {isQuickMenuOpen ? (
         <button
           type="button"
@@ -108,9 +114,10 @@ function MobileChatListPage() {
       ) : null}
 
       <TabPageTopBar
+        eyebrow="继续连线"
         title="消息"
-        className="space-y-3 border-b border-black/5 bg-[#ededed] px-4 pb-3 pt-2 text-[#111111]"
-        titleClassName="text-[#111111]"
+        subtitle={`共 ${conversations.length} 个会话`}
+        className="space-y-4 px-4 pb-4 pt-3 text-[color:var(--text-primary)]"
         titleAlign="center"
         rightActions={
           <div className="relative">
@@ -119,14 +126,14 @@ function MobileChatListPage() {
               variant="ghost"
               size="icon"
               onClick={() => setIsQuickMenuOpen((current) => !current)}
-              className="h-8 w-8 rounded-full border border-black/8 bg-white text-[#111111] shadow-[0_1px_2px_rgba(0,0,0,0.06)] hover:bg-[#f7f7f7]"
+              className="h-9 w-9 rounded-full border border-white/70 bg-white/82 text-[color:var(--text-primary)] shadow-[var(--shadow-soft)] hover:bg-white"
               aria-label="打开快捷菜单"
             >
               <Plus size={16} strokeWidth={2.4} />
             </Button>
 
             {isQuickMenuOpen ? (
-              <div className="absolute right-0 top-[calc(100%+0.45rem)] z-40 w-44 overflow-hidden rounded-2xl border border-black/6 bg-[#2f3133] p-1.5 shadow-[0_14px_32px_rgba(0,0,0,0.24)]">
+              <div className="absolute right-0 top-[calc(100%+0.45rem)] z-40 w-48 overflow-hidden rounded-[24px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,246,236,0.94))] p-2 shadow-[var(--shadow-overlay)]">
                 {quickActionItems.map((item) => {
                   const Icon = item.icon;
 
@@ -137,9 +144,11 @@ function MobileChatListPage() {
                         key={item.key}
                         type="button"
                         onClick={() => handleNavigate(to)}
-                        className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-white/92 transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-white/8"
+                        className="flex w-full items-center gap-3 rounded-[18px] px-3 py-3 text-left text-sm text-[color:var(--text-primary)] transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-white/82"
                       >
-                        <Icon size={17} className="shrink-0 text-white/72" />
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-[rgba(255,138,61,0.12)] text-[color:var(--brand-primary)]">
+                          <Icon size={16} />
+                        </div>
                         <span>{item.label}</span>
                       </button>
                     );
@@ -150,9 +159,11 @@ function MobileChatListPage() {
                       key={item.key}
                       type="button"
                       onClick={() => handleUnavailableAction(item.unavailableNotice!)}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-white/92 transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-white/8"
+                      className="flex w-full items-center gap-3 rounded-[18px] px-3 py-3 text-left text-sm text-[color:var(--text-primary)] transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-white/82"
                     >
-                      <Icon size={17} className="shrink-0 text-white/72" />
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-[rgba(255,138,61,0.12)] text-[color:var(--brand-primary)]">
+                        <Icon size={16} />
+                      </div>
                       <span>{item.label}</span>
                     </button>
                   );
@@ -162,64 +173,91 @@ function MobileChatListPage() {
           </div>
         }
       >
+        <section className="rounded-[30px] border border-white/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,246,232,0.94)_42%,rgba(240,251,245,0.96))] p-4 shadow-[var(--shadow-section)]">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--brand-secondary)]">Today</div>
+              <div className="mt-2 text-[1.45rem] font-semibold leading-tight text-[color:var(--text-primary)]">
+                {ownerName ? `${ownerName}，把今天聊热一点` : "把今天聊热一点"}
+              </div>
+              <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
+                从最近的对话继续，也可以直接发起新的连接，让你的世界保持活跃和温度。
+              </div>
+            </div>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] bg-[var(--brand-gradient)] text-lg font-semibold text-white shadow-[var(--shadow-card)]">
+              YJ
+            </div>
+          </div>
+
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <ConversationMetric label="会话" value={String(conversations.length)} />
+            <ConversationMetric label="未读会话" value={String(unreadConversationCount)} />
+            <ConversationMetric label="未读消息" value={String(unreadMessageCount)} />
+          </div>
+        </section>
+
         <label className="relative block">
           <Search
             aria-hidden="true"
-            className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#8e8e93]"
+            className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[color:var(--text-dim)]"
           />
           <input
             type="search"
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
-            placeholder="搜索"
-            className="h-9 w-full rounded-xl border border-black/5 bg-white pl-11 pr-4 text-center text-sm font-medium text-[#111111] outline-none transition-[background-color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] placeholder:text-center placeholder:font-normal placeholder:text-[#8e8e93] focus:border-black/10 focus:bg-white"
+            placeholder="搜索联系人、消息或关键词"
+            className="h-11 w-full rounded-[20px] border border-white/75 bg-white/90 pl-11 pr-4 text-sm text-[color:var(--text-primary)] shadow-[var(--shadow-soft)] outline-none transition-[background-color,border-color,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] placeholder:text-[color:var(--text-dim)] focus:border-[color:var(--border-brand)] focus:bg-white focus:shadow-[var(--shadow-focus)]"
           />
         </label>
       </TabPageTopBar>
 
-      {shouldShowListArea ? (
-        <div className="space-y-3 pb-4">
-          {notice ? <InlineNotice tone="info" className="mx-4">{notice}</InlineNotice> : null}
+      <div className="space-y-4 px-4 pb-5">
+        {notice ? <InlineNotice tone="info">{notice}</InlineNotice> : null}
+        {conversationsQuery.isLoading ? <LoadingBlock label="正在读取会话..." /> : null}
+        {conversationsQuery.isError && conversationsQuery.error instanceof Error ? (
+          <ErrorBlock message={conversationsQuery.error.message} />
+        ) : null}
 
-          {conversationsQuery.isLoading ? <LoadingBlock label="正在读取会话..." /> : null}
-          {conversationsQuery.isError && conversationsQuery.error instanceof Error ? (
-            <ErrorBlock message={conversationsQuery.error.message} />
-          ) : null}
-
-          {!conversationsQuery.isLoading && hasConversations ? (
-            <section className="bg-white">
-              {filteredConversations.map((conversation) => (
+        {!conversationsQuery.isLoading && !conversationsQuery.isError ? (
+          hasConversations ? (
+            <section className="overflow-hidden rounded-[28px] border border-white/80 bg-white/88 shadow-[var(--shadow-section)]">
+              {filteredConversations.map((conversation, index) => (
                 <Link
                   key={conversation.id}
                   to="/chat/$conversationId"
                   params={{ conversationId: conversation.id }}
-                  className="block bg-white transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[#f8f8f8]"
+                  className={cn(
+                    "block transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[rgba(255,138,61,0.05)]",
+                    index > 0 ? "border-t border-[color:var(--border-faint)]" : undefined,
+                  )}
                 >
-                  <div className="flex items-center gap-3 px-4 py-3.5">
+                  <div className="flex items-center gap-3 px-4 py-4">
                     <AvatarChip name={conversation.title} size="wechat" />
-                    <div className="min-w-0 flex-1 border-b border-[#f2f2f2] pb-0.5 last:border-b-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-[16px] font-normal text-[#111111]">{conversation.title}</div>
-                          <div className="mt-1 truncate text-[13px] text-[#8e8e93]">
-                            {conversation.lastMessage?.text ?? "暂无消息"}
+                          <div className="truncate text-[15px] font-medium text-[color:var(--text-primary)]">{conversation.title}</div>
+                          <div className="mt-1 truncate text-[13px] text-[color:var(--text-muted)]">
+                            {conversation.lastMessage?.text ?? "从这里开始第一句问候"}
                           </div>
                         </div>
                         <div className="flex shrink-0 flex-col items-end gap-1">
-                          <div className="text-[11px] text-[#b2b2b2]">
+                          <div className="text-[11px] text-[color:var(--text-dim)]">
                             {formatConversationTimestamp(conversation.lastMessage?.createdAt ?? conversation.updatedAt)}
                           </div>
                           {conversation.unreadCount > 0 ? (
                             <div
                               className={cn(
-                                "flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[#fa5151] px-1.5 text-[11px] leading-none text-white",
+                                "flex min-h-5 min-w-5 items-center justify-center rounded-full bg-[var(--brand-gradient)] px-1.5 text-[11px] leading-none text-white shadow-[var(--shadow-soft)]",
                                 conversation.unreadCount > 9 ? "min-w-6" : undefined,
                               )}
                             >
                               {conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}
                             </div>
                           ) : (
-                            <div className="h-5" aria-hidden="true" />
+                            <div className="rounded-full bg-[rgba(74,222,128,0.12)] px-2 py-0.5 text-[10px] text-emerald-700">
+                              已读
+                            </div>
                           )}
                         </div>
                       </div>
@@ -228,9 +266,37 @@ function MobileChatListPage() {
                 </Link>
               ))}
             </section>
-          ) : null}
-        </div>
-      ) : null}
+          ) : (
+            <EmptyState
+              title={hasSearchResult ? "没有找到匹配的会话" : "还没有任何会话"}
+              description={
+                hasSearchResult
+                  ? "换一个关键词试试，或者直接去通讯录发起新的对话。"
+                  : "先去通讯录认识角色，或者从发现页触发第一次相遇。"
+              }
+              action={
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Link to="/tabs/contacts">
+                    <Button variant="secondary">去通讯录看看</Button>
+                  </Link>
+                  <Link to="/tabs/discover">
+                    <Button variant="primary">去发现页</Button>
+                  </Link>
+                </div>
+              }
+            />
+          )
+        ) : null}
+      </div>
     </AppPage>
+  );
+}
+
+function ConversationMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[22px] bg-white/82 px-3 py-3 shadow-[var(--shadow-soft)]">
+      <div className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{label}</div>
+      <div className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">{value}</div>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
@@ -42,50 +42,49 @@ type MobileDiscoverEntry = {
   key: "moments" | "encounter" | "scene" | "feed";
   label: string;
   description: string;
+  detail: string;
   icon: typeof Users;
   iconClassName: string;
   to: "/discover/moments" | "/discover/encounter" | "/discover/scene" | "/discover/feed";
 };
 
-const mobileDiscoverGroups: MobileDiscoverEntry[][] = [
-  [
-    {
-      key: "moments",
-      label: "朋友圈",
-      description: "熟人动态",
-      icon: Users,
-      iconClassName: "bg-[linear-gradient(135deg,#64c466,#2fa43a)] text-white",
-      to: "/discover/moments",
-    },
-  ],
-  [
-    {
-      key: "encounter",
-      label: "摇一摇",
-      description: "随机相遇",
-      icon: Sparkles,
-      iconClassName: "bg-[linear-gradient(135deg,#ffb45f,#ff7b54)] text-white",
-      to: "/discover/encounter",
-    },
-    {
-      key: "scene",
-      label: "场景相遇",
-      description: "地点触发",
-      icon: Compass,
-      iconClassName: "bg-[linear-gradient(135deg,#54b8ff,#2f7cff)] text-white",
-      to: "/discover/scene",
-    },
-  ],
-  [
-    {
-      key: "feed",
-      label: "广场动态",
-      description: "公共发现",
-      icon: Newspaper,
-      iconClassName: "bg-[linear-gradient(135deg,#9097ff,#5963ff)] text-white",
-      to: "/discover/feed",
-    },
-  ],
+const mobileDiscoverEntries: MobileDiscoverEntry[] = [
+  {
+    key: "moments",
+    label: "朋友圈",
+    description: "熟人动态",
+    detail: "记录生活片段，把更近的情绪留给更熟的人。",
+    icon: Users,
+    iconClassName: "bg-[linear-gradient(135deg,#68cf7d,#45b958)] text-white",
+    to: "/discover/moments",
+  },
+  {
+    key: "encounter",
+    label: "摇一摇",
+    description: "随机相遇",
+    detail: "随手触发一场新相遇，让世界主动回应你。",
+    icon: Sparkles,
+    iconClassName: "bg-[linear-gradient(135deg,#ffbb63,#ff835d)] text-white",
+    to: "/discover/encounter",
+  },
+  {
+    key: "scene",
+    label: "场景相遇",
+    description: "地点触发",
+    detail: "换一个地点，就换一种更有画面感的靠近方式。",
+    icon: Compass,
+    iconClassName: "bg-[linear-gradient(135deg,#60c0ff,#3e8dff)] text-white",
+    to: "/discover/scene",
+  },
+  {
+    key: "feed",
+    label: "广场动态",
+    description: "公共发现",
+    detail: "看看更大的公共内容流，也把自己的声音发出去。",
+    icon: Newspaper,
+    iconClassName: "bg-[linear-gradient(135deg,#949dff,#616dff)] text-white",
+    to: "/discover/feed",
+  },
 ];
 
 export function DiscoverPage() {
@@ -104,7 +103,6 @@ export function DiscoverPage() {
     queryKey: ["app-feed", baseUrl],
     queryFn: () => getFeed(1, 20, baseUrl),
   });
-
   const blockedQuery = useQuery({
     queryKey: ["app-discover-blocked-characters", baseUrl],
     queryFn: () => getBlockedCharacters(baseUrl),
@@ -140,40 +138,42 @@ export function DiscoverPage() {
         },
         baseUrl,
       );
+
       return result;
     },
-    onSuccess: async (result) => {
+    onSuccess: (result) => {
       if (!result) {
         setShakeMessage("附近暂时没有新的相遇。");
         return;
       }
 
       setSuccessNotice("新的好友申请已发送。");
-      setShakeMessage(`${result.character.name} 向你发来了一句招呼：${result.greeting}`);
-      await queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl] });
+      setShakeMessage(`${result.character.name} 向你发来了好友申请：${result.greeting}`);
+      void queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl] });
     },
   });
 
   const sceneMutation = useMutation({
     mutationFn: async (scene: string) => {
-      const request = await triggerSceneFriendRequest(
+      const result = await triggerSceneFriendRequest(
         {
           scene,
         },
         baseUrl,
       );
-      return { request, scene };
+      return { request: result, scene };
     },
-    onSuccess: async ({ request, scene }) => {
+    onSuccess: ({ request, scene }) => {
       const sceneLabel = scenes.find((item) => item.id === scene)?.label ?? scene;
+
       if (!request) {
         setSceneMessage(`${sceneLabel} 里暂时没有新的相遇。`);
         return;
       }
 
       setSuccessNotice("场景相遇已写入好友申请列表。");
-      setSceneMessage(`${request.characterName} 在${sceneLabel}注意到了你：${request.greeting ?? "对你产生了兴趣。"}`);
-      await queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl] });
+      setSceneMessage(`${request.characterName} 在${sceneLabel}里注意到了你：${request.greeting ?? "对你产生了兴趣。"}`);
+      void queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl] });
     },
   });
 
@@ -190,7 +190,7 @@ export function DiscoverPage() {
       addFeedComment(
         postId,
         {
-          text: (feedCommentDrafts[postId] ?? "").trim(),
+          text: feedCommentDrafts[postId].trim(),
         },
         baseUrl,
       ),
@@ -201,9 +201,16 @@ export function DiscoverPage() {
     },
   });
 
-  const blockedCharacterIds = new Set((blockedQuery.data ?? []).map((item) => item.characterId));
-  const visiblePosts = (feedQuery.data?.posts ?? []).filter(
-    (post) => post.authorType !== "character" || !blockedCharacterIds.has(post.authorId),
+  const blockedCharacterIds = useMemo(
+    () => new Set((blockedQuery.data ?? []).map((item) => item.characterId)),
+    [blockedQuery.data],
+  );
+  const visiblePosts = useMemo(
+    () =>
+      (feedQuery.data?.posts ?? []).filter(
+        (post) => post.authorType !== "character" || !blockedCharacterIds.has(post.authorId),
+      ),
+    [blockedCharacterIds, feedQuery.data?.posts],
   );
   const pendingLikePostId = likeFeedMutation.isPending ? likeFeedMutation.variables : null;
   const pendingCommentPostId = commentFeedMutation.isPending ? commentFeedMutation.variables : null;
@@ -230,31 +237,32 @@ export function DiscoverPage() {
       <AppPage className="space-y-5 px-6 py-6">
         <AppHeader
           eyebrow="发现"
-          title="把相遇和广场拆开来处理"
-          description="桌面端保留摇一摇、场景相遇和广场动态三个面板，移动端仍然从发现入口进入二级页。"
+          title="向外走一步，世界就会主动回应你"
+          description="把随机相遇、场景相遇和公共动态拆开排布，让桌面上的探索节奏更清晰，也更有想继续点开的冲动。"
         />
 
-        <div className="grid gap-5 xl:grid-cols-[0.92fr_1.08fr]">
+        <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
           <div className="space-y-5">
             <AppSection className="space-y-4 bg-[color:var(--brand-soft)]">
               <div>
-                <div className="text-sm font-medium text-[color:var(--text-primary)]">随机相遇</div>
+                <div className="text-sm font-medium text-[color:var(--text-primary)]">今日相遇</div>
                 <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
-                  把摇一摇和场景相遇集中在一起，便于连续触发新的社交线索。
+                  轻轻试一次，就可能遇到一段新的关系线索。
                 </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <DiscoverMetric label="场景" value={String(scenes.length)} />
+                <DiscoverMetric label="广场动态" value={String(visiblePosts.length)} />
+                <DiscoverMetric label="反馈状态" value={blockedCharacterIds.size > 0 ? "已过滤" : "开放"} />
               </div>
 
               <div className="flex items-center gap-3">
                 <Button onClick={() => shakeMutation.mutate()} disabled={shakeMutation.isPending} variant="primary">
                   {shakeMutation.isPending ? "正在寻找..." : "摇一摇"}
                 </Button>
-                <div className="text-xs text-[color:var(--text-muted)]">相遇结果会自动写入好友申请列表。</div>
+                <div className="text-xs text-[color:var(--text-muted)]">随机相遇会从不同场景里发生。</div>
               </div>
-
-              {shakeMessage ? <InlineNotice tone="success">{shakeMessage}</InlineNotice> : null}
-              {shakeMutation.isError && shakeMutation.error instanceof Error ? (
-                <ErrorBlock message={shakeMutation.error.message} />
-              ) : null}
 
               <div className="flex flex-wrap gap-2">
                 {scenes.map((scene) => (
@@ -270,35 +278,32 @@ export function DiscoverPage() {
                 ))}
               </div>
 
+              {shakeMessage ? <InlineNotice tone="success">{shakeMessage}</InlineNotice> : null}
               {sceneMessage ? <InlineNotice tone="info">{sceneMessage}</InlineNotice> : null}
-              {sceneMutation.isError && sceneMutation.error instanceof Error ? (
-                <ErrorBlock message={sceneMutation.error.message} />
-              ) : null}
+              {shakeMutation.isError && shakeMutation.error instanceof Error ? <ErrorBlock message={shakeMutation.error.message} /> : null}
+              {sceneMutation.isError && sceneMutation.error instanceof Error ? <ErrorBlock message={sceneMutation.error.message} /> : null}
             </AppSection>
 
             <AppSection className="space-y-4">
               <div>
-                <div className="text-sm font-medium text-[color:var(--text-primary)]">发布广场动态</div>
+                <div className="text-sm font-medium text-[color:var(--text-primary)]">发一条广场动态</div>
                 <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
-                  在桌面端直接写一条动态，右侧立刻看到广场回流。
+                  把你的想法投向更大的公共内容流，等待角色或熟人的回应。
                 </div>
               </div>
-
               <TextAreaField
                 value={feedText}
                 onChange={(event) => setFeedText(event.target.value)}
-                placeholder="分享你此刻想说的话..."
+                placeholder="分享一个新的想法、感受或今天的灵感..."
                 className="min-h-36 resize-none"
               />
-
               <Button
                 disabled={!feedText.trim() || createFeedPostMutation.isPending}
                 onClick={() => createFeedPostMutation.mutate()}
                 variant="primary"
               >
-                {createFeedPostMutation.isPending ? "正在发布..." : "发布"}
+                {createFeedPostMutation.isPending ? "正在发布..." : "发布到广场"}
               </Button>
-
               {createFeedPostMutation.isError && createFeedPostMutation.error instanceof Error ? (
                 <ErrorBlock message={createFeedPostMutation.error.message} />
               ) : null}
@@ -309,10 +314,9 @@ export function DiscoverPage() {
             <div>
               <div className="text-sm font-medium text-[color:var(--text-primary)]">广场动态</div>
               <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
-                过滤掉已屏蔽角色后，只保留当前世界真正可见的公共内容。
+                把正文和互动拆得更清楚，让浏览和回应都更轻快。
               </div>
             </div>
-
             {successNotice ? <InlineNotice tone="success">{successNotice}</InlineNotice> : null}
             {feedQuery.isLoading ? <LoadingBlock label="正在读取广场动态..." /> : null}
             {feedQuery.isError && feedQuery.error instanceof Error ? <ErrorBlock message={feedQuery.error.message} /> : null}
@@ -322,16 +326,11 @@ export function DiscoverPage() {
                 key={post.id}
                 authorName={post.authorName}
                 authorAvatar={post.authorAvatar}
-                meta={post.aiReacted ? "AI 已参与互动" : "等待 AI 参与"}
+                meta={post.aiReacted ? "AI 已响应" : "等待 AI 互动"}
                 body={post.text}
                 summary={`${post.likeCount} 赞 · ${post.commentCount} 评论`}
                 actions={
-                  <Button
-                    disabled={likeFeedMutation.isPending}
-                    onClick={() => likeFeedMutation.mutate(post.id)}
-                    variant="secondary"
-                    size="sm"
-                  >
+                  <Button disabled={likeFeedMutation.isPending} onClick={() => likeFeedMutation.mutate(post.id)} variant="secondary" size="sm">
                     {pendingLikePostId === post.id ? "处理中..." : "点赞"}
                   </Button>
                 }
@@ -361,18 +360,13 @@ export function DiscoverPage() {
               />
             ))}
 
-            {likeFeedMutation.isError && likeFeedMutation.error instanceof Error ? (
-              <ErrorBlock message={likeFeedMutation.error.message} />
-            ) : null}
+            {likeFeedMutation.isError && likeFeedMutation.error instanceof Error ? <ErrorBlock message={likeFeedMutation.error.message} /> : null}
             {commentFeedMutation.isError && commentFeedMutation.error instanceof Error ? (
               <ErrorBlock message={commentFeedMutation.error.message} />
             ) : null}
 
             {!feedQuery.isLoading && !feedQuery.isError && !visiblePosts.length ? (
-              <EmptyState
-                title="广场里还没有新动态"
-                description="先发一条，或者去触发一次新的相遇，公共内容会慢慢长出来。"
-              />
+              <EmptyState title="广场还没有新动态" description="你先发一条，或者先去摇一摇看看今天会遇到谁。" />
             ) : null}
           </AppSection>
         </div>
@@ -382,40 +376,87 @@ export function DiscoverPage() {
 
   return (
     <AppPage className="space-y-5">
-      <TabPageTopBar title="发现" titleAlign="center" />
+      <TabPageTopBar
+        eyebrow="向外走一步"
+        title="发现"
+        subtitle={`最近广场有 ${visiblePosts.length} 条可见动态`}
+        titleAlign="center"
+      />
+
+      <section className="rounded-[30px] border border-white/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,246,232,0.94)_42%,rgba(240,251,245,0.96))] p-4 shadow-[var(--shadow-section)]">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--brand-secondary)]">Explore</div>
+            <div className="mt-2 text-[1.45rem] font-semibold leading-tight text-[color:var(--text-primary)]">
+              今天，世界也在等你先迈出一步
+            </div>
+            <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
+              去摇一摇、去换个场景、去看一眼广场，新的关系和内容就会慢慢靠近你。
+            </div>
+          </div>
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] bg-[var(--brand-gradient)] text-lg font-semibold text-white shadow-[var(--shadow-card)]">
+            YJ
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          <DiscoverMetric label="场景" value={String(scenes.length)} />
+          <DiscoverMetric label="广场" value={String(visiblePosts.length)} />
+          <DiscoverMetric label="节奏" value="轻快" />
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <Link
+            to="/discover/encounter"
+            className="inline-flex items-center justify-center rounded-[20px] bg-[var(--brand-gradient)] px-4 py-3 text-sm font-medium text-white shadow-[var(--shadow-card)]"
+          >
+            去摇一摇
+          </Link>
+          <Link
+            to="/discover/feed"
+            className="inline-flex items-center justify-center rounded-[20px] border border-[color:var(--border-subtle)] bg-white/84 px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] shadow-[var(--shadow-soft)]"
+          >
+            去看广场
+          </Link>
+        </div>
+      </section>
 
       <div className="space-y-3">
-        {mobileDiscoverGroups.map((group, groupIndex) => (
-          <div
-            key={`group-${groupIndex}`}
-            className="overflow-hidden rounded-[24px] border border-[color:var(--border-faint)] bg-white shadow-[var(--shadow-soft)]"
-          >
-            {group.map((item, itemIndex) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.key}
-                  to={item.to}
-                  className={cn(
-                    "flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
-                    "bg-white hover:bg-[color:var(--surface-soft)]",
-                    itemIndex < group.length - 1 ? "border-b border-[color:var(--border-faint)]" : undefined,
-                  )}
-                >
-                  <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl", item.iconClassName)}>
-                    <Icon size={18} />
+        {mobileDiscoverEntries.map((item) => {
+          const Icon = item.icon;
+
+          return (
+            <Link
+              key={item.key}
+              to={item.to}
+              className="flex items-center gap-4 rounded-[28px] border border-white/80 bg-white/88 px-4 py-4 shadow-[var(--shadow-section)] transition-[transform,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]"
+            >
+              <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px]", item.iconClassName)}>
+                <Icon size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <div className="text-[15px] font-medium text-[color:var(--text-primary)]">{item.label}</div>
+                  <div className="rounded-full bg-[rgba(255,138,61,0.08)] px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-[color:var(--brand-primary)]">
+                    {item.description}
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[15px] font-medium text-[color:var(--text-primary)]">{item.label}</div>
-                    <div className="mt-0.5 text-xs text-[color:var(--text-muted)]">{item.description}</div>
-                  </div>
-                  <ChevronRight size={16} className="shrink-0 text-[color:var(--text-dim)]" />
-                </Link>
-              );
-            })}
-          </div>
-        ))}
+                </div>
+                <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">{item.detail}</div>
+              </div>
+              <ChevronRight size={16} className="shrink-0 text-[color:var(--text-dim)]" />
+            </Link>
+          );
+        })}
       </div>
     </AppPage>
+  );
+}
+
+function DiscoverMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[22px] bg-white/82 px-3 py-3 shadow-[var(--shadow-soft)]">
+      <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">{label}</div>
+      <div className="mt-2 text-base font-semibold text-[color:var(--text-primary)]">{value}</div>
+    </div>
   );
 }

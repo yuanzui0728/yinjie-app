@@ -37,6 +37,8 @@ export function ContactsPage() {
   });
   const pendingCharacterId = startChatMutation.isPending ? startChatMutation.variables : null;
   const visibleCharacters = charactersQuery.data ?? [];
+  const friendCount = friendsQuery.data?.length ?? 0;
+  const characterCount = visibleCharacters.length;
 
   const resetStartChatMutation = useEffectEvent(() => {
     startChatMutation.reset();
@@ -51,8 +53,8 @@ export function ContactsPage() {
       <AppPage className="space-y-5 px-6 py-6">
         <AppHeader
           eyebrow="通讯录"
-          title="联系人和世界角色分屏展开"
-          description="桌面端把已认识的人和待接触的角色并排展开，避免来回切页。"
+          title="把已经建立的关系和下一段相遇都放在眼前"
+          description="左边是已经连上的人，右边是还可以继续认识的角色。桌面端不再让你来回切页。"
         />
 
         <div className="grid min-h-0 gap-5 xl:grid-cols-[0.92fr_1.08fr]">
@@ -150,39 +152,62 @@ export function ContactsPage() {
       <TabPageTopBar
         title="通讯录"
         titleAlign="center"
+        eyebrow="关系网络"
+        subtitle={`已建立 ${friendCount} 位联系`}
       />
 
-      <div className="overflow-hidden rounded-[24px] border border-[color:var(--border-faint)] bg-white shadow-[var(--shadow-soft)]">
-        <Link
-          to="/friend-requests"
-          className="flex items-center gap-3 px-4 py-3.5 transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[color:var(--surface-soft)]"
-        >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#69c35d,#44a83f)] text-white">
-            <UserPlus size={18} />
+      <section className="rounded-[30px] border border-white/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,246,232,0.94)_42%,rgba(240,251,245,0.96))] p-4 shadow-[var(--shadow-section)]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--brand-secondary)]">Contacts</div>
+            <div className="mt-2 text-[1.4rem] font-semibold leading-tight text-[color:var(--text-primary)]">让关系慢慢长出来</div>
+            <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
+              先维护已经认识的人，再给下一次相遇留出位置。
+            </div>
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-medium text-[color:var(--text-primary)]">新的朋友</div>
+          <div className="grid min-w-[126px] grid-cols-2 gap-2">
+            <div className="rounded-[20px] bg-white/82 px-3 py-3 text-center shadow-[var(--shadow-soft)]">
+              <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">联系人</div>
+              <div className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">{friendCount}</div>
+            </div>
+            <div className="rounded-[20px] bg-white/82 px-3 py-3 text-center shadow-[var(--shadow-soft)]">
+              <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">角色</div>
+              <div className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">{characterCount}</div>
+            </div>
           </div>
-          <ChevronRight size={16} className="shrink-0 text-[color:var(--text-dim)]" />
-        </Link>
+        </div>
 
-        <Link
-          to="/group/new"
-          className="flex items-center gap-3 border-t border-[color:var(--border-faint)] px-4 py-3.5 transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[color:var(--surface-soft)]"
-        >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#66b2ff,#3c7cff)] text-white">
-            <Users size={18} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-medium text-[color:var(--text-primary)]">群聊</div>
-          </div>
-          <ChevronRight size={16} className="shrink-0 text-[color:var(--text-dim)]" />
-        </Link>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <Link
+            to="/friend-requests"
+            className="rounded-[24px] bg-white/84 p-4 shadow-[var(--shadow-soft)] transition-[transform,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)]"
+          >
+            <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#6fd97d,#47b35a)] text-white">
+              <UserPlus size={18} />
+            </div>
+            <div className="mt-3 text-[15px] font-medium text-[color:var(--text-primary)]">新的朋友</div>
+            <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">处理申请、回应新的靠近</div>
+          </Link>
+
+          <Link
+            to="/group/new"
+            className="rounded-[24px] bg-white/84 p-4 shadow-[var(--shadow-soft)] transition-[transform,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)]"
+          >
+            <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#71b8ff,#4387ff)] text-white">
+              <Users size={18} />
+            </div>
+            <div className="mt-3 text-[15px] font-medium text-[color:var(--text-primary)]">发起群聊</div>
+            <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">把关系拉进同一个热闹场景</div>
+          </Link>
+        </div>
+      </section>
+
+      <div>
+        <div className="px-1 text-xs font-medium tracking-[0.14em] text-[color:var(--text-muted)]">已建立联系</div>
+        <div className="mt-1 px-1 text-sm text-[color:var(--text-secondary)]">可以直接开始对话的人，会优先停留在这里。</div>
       </div>
 
-      <div className="px-1 text-xs font-medium tracking-[0.12em] text-[color:var(--text-muted)]">联系人</div>
-
-      <div className="overflow-hidden rounded-[24px] border border-[color:var(--border-faint)] bg-white shadow-[var(--shadow-soft)]">
+      <div className="overflow-hidden rounded-[26px] border border-white/80 bg-white/88 shadow-[var(--shadow-section)]">
         {friendsQuery.isLoading ? <LoadingBlock className="px-4 py-5 text-left" label="正在读取联系人..." /> : null}
         {(friendsQuery.data ?? []).map(({ character, friendship }, index) => (
           <div key={character.id} className={cn(index > 0 ? "border-t border-[color:var(--border-faint)]" : undefined)}>
@@ -223,9 +248,12 @@ export function ContactsPage() {
         <ErrorBlock message={startChatMutation.error.message} />
       ) : null}
 
-      <div className="px-1 text-xs font-medium tracking-[0.12em] text-[color:var(--text-muted)]">世界角色</div>
+      <div>
+        <div className="px-1 text-xs font-medium tracking-[0.14em] text-[color:var(--text-muted)]">可继续认识的角色</div>
+        <div className="mt-1 px-1 text-sm text-[color:var(--text-secondary)]">先看看他们是谁，再决定要不要把关系往前推一步。</div>
+      </div>
 
-      <div className="overflow-hidden rounded-[24px] border border-[color:var(--border-faint)] bg-white shadow-[var(--shadow-soft)]">
+      <div className="overflow-hidden rounded-[26px] border border-white/80 bg-white/88 shadow-[var(--shadow-section)]">
         {charactersQuery.isLoading ? <LoadingBlock className="px-4 py-5 text-left" label="正在读取角色档案..." /> : null}
         {visibleCharacters.map((character, index) => (
           <div key={character.id} className={cn(index > 0 ? "border-t border-[color:var(--border-faint)]" : undefined)}>
@@ -249,7 +277,7 @@ export function ContactsPage() {
       </div>
 
       {charactersQuery.isError && charactersQuery.error instanceof Error ? <ErrorBlock message={charactersQuery.error.message} /> : null}
-      <InlineNotice tone="muted">这里展示尚未建立关系的角色档案。可以先浏览，再决定是否进入对话。</InlineNotice>
+      <InlineNotice tone="muted">这里展示还没建立关系的角色。先浏览，再决定是否让故事继续推进。</InlineNotice>
     </AppPage>
   );
 }
