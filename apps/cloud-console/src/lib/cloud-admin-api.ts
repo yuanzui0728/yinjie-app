@@ -4,6 +4,18 @@ const ADMIN_SECRET_KEY = "yinjie_cloud_admin_secret";
 
 type EditableStatus = Exclude<CloudWorldStatus, "none">;
 
+function getStorage() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
 function resolveCloudAdminApiBase() {
   const configuredBase = import.meta.env.VITE_CLOUD_API_BASE?.trim();
   if (configuredBase) {
@@ -18,11 +30,11 @@ function resolveCloudAdminApiBase() {
 }
 
 export function getCloudAdminSecret() {
-  return localStorage.getItem(ADMIN_SECRET_KEY)?.trim() ?? "";
+  return getStorage()?.getItem(ADMIN_SECRET_KEY)?.trim() ?? "";
 }
 
 export function setCloudAdminSecret(secret: string) {
-  localStorage.setItem(ADMIN_SECRET_KEY, secret.trim());
+  getStorage()?.setItem(ADMIN_SECRET_KEY, secret.trim());
 }
 
 async function adminFetch<T>(path: string, options?: RequestInit): Promise<T> {
