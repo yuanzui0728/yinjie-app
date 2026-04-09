@@ -28,6 +28,7 @@ import { EmptyState } from "../components/empty-state";
 import { SocialPostCard } from "../components/social-post-card";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
+import { formatTimestamp } from "../lib/format";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../store/world-owner-store";
 
@@ -45,11 +46,7 @@ type MobileDiscoverEntry = {
   detail: string;
   icon: typeof Users;
   iconClassName: string;
-  to:
-    | "/discover/moments"
-    | "/discover/encounter"
-    | "/discover/scene"
-    | "/discover/feed";
+  to: "/discover/moments" | "/discover/encounter" | "/discover/scene" | "/discover/feed";
 };
 
 const mobileDiscoverEntries: MobileDiscoverEntry[] = [
@@ -59,8 +56,7 @@ const mobileDiscoverEntries: MobileDiscoverEntry[] = [
     description: "仅好友可见",
     detail: "记录只给好友看的生活片段，把更近的情绪留在熟人关系里。",
     icon: Users,
-    iconClassName:
-      "bg-[linear-gradient(135deg,rgba(251,191,36,0.92),rgba(249,115,22,0.88))] text-white",
+    iconClassName: "bg-[linear-gradient(135deg,#2f7a3f,#2a6c3a)] text-white",
     to: "/discover/moments",
   },
   {
@@ -69,18 +65,17 @@ const mobileDiscoverEntries: MobileDiscoverEntry[] = [
     description: "随机相遇",
     detail: "随手触发一场新相遇，让世界主动回应你。",
     icon: Sparkles,
-    iconClassName:
-      "bg-[linear-gradient(135deg,rgba(56,189,248,0.92),rgba(59,130,246,0.88))] text-white",
+    iconClassName: "bg-[var(--brand-gradient)] text-white",
     to: "/discover/encounter",
   },
+
   {
     key: "feed",
     label: "广场动态",
     description: "居民公开可见",
     detail: "看看世界里的居民正在说什么，也把自己的这一刻发到居民广场。",
     icon: Newspaper,
-    iconClassName:
-      "bg-[linear-gradient(135deg,rgba(251,113,133,0.92),rgba(244,63,94,0.88))] text-white",
+    iconClassName: "bg-[linear-gradient(135deg,#5d67c9,#4951a3)] text-white",
     to: "/discover/feed",
   },
 ];
@@ -94,9 +89,7 @@ export function DiscoverPage() {
   const [feedText, setFeedText] = useState("");
   const [shakeMessage, setShakeMessage] = useState("");
   const [sceneMessage, setSceneMessage] = useState("");
-  const [feedCommentDrafts, setFeedCommentDrafts] = useState<
-    Record<string, string>
-  >({});
+  const [feedCommentDrafts, setFeedCommentDrafts] = useState<Record<string, string>>({});
   const [successNotice, setSuccessNotice] = useState("");
 
   const feedQuery = useQuery({
@@ -119,7 +112,7 @@ export function DiscoverPage() {
       ),
     onSuccess: async () => {
       setFeedText("");
-      setSuccessNotice("广场动态已发布，正在向世界扩散。");
+      setSuccessNotice("广场动态已发布，世界居民公开可见。");
       await queryClient.invalidateQueries({ queryKey: ["app-feed", baseUrl] });
     },
   });
@@ -148,12 +141,8 @@ export function DiscoverPage() {
       }
 
       setSuccessNotice("新的好友申请已发送。");
-      setShakeMessage(
-        `${result.character.name} 向你发来了好友申请：${result.greeting}`,
-      );
-      void queryClient.invalidateQueries({
-        queryKey: ["app-friend-requests", baseUrl],
-      });
+      setShakeMessage(`${result.character.name} 向你发来了好友申请：${result.greeting}`);
+      void queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl] });
     },
   });
 
@@ -168,8 +157,7 @@ export function DiscoverPage() {
       return { request: result, scene };
     },
     onSuccess: ({ request, scene }) => {
-      const sceneLabel =
-        scenes.find((item) => item.id === scene)?.label ?? scene;
+      const sceneLabel = scenes.find((item) => item.id === scene)?.label ?? scene;
 
       if (!request) {
         setSceneMessage(`${sceneLabel} 里暂时没有新的相遇。`);
@@ -177,12 +165,8 @@ export function DiscoverPage() {
       }
 
       setSuccessNotice("场景相遇已写入好友申请列表。");
-      setSceneMessage(
-        `${request.characterName} 在${sceneLabel}里注意到了你：${request.greeting ?? "对你产生了兴趣。"}`,
-      );
-      void queryClient.invalidateQueries({
-        queryKey: ["app-friend-requests", baseUrl],
-      });
+      setSceneMessage(`${request.characterName} 在${sceneLabel}里注意到了你：${request.greeting ?? "对你产生了兴趣。"}`);
+      void queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl] });
     },
   });
 
@@ -217,18 +201,12 @@ export function DiscoverPage() {
   const visiblePosts = useMemo(
     () =>
       (feedQuery.data?.posts ?? []).filter(
-        (post) =>
-          post.authorType !== "character" ||
-          !blockedCharacterIds.has(post.authorId),
+        (post) => post.authorType !== "character" || !blockedCharacterIds.has(post.authorId),
       ),
     [blockedCharacterIds, feedQuery.data?.posts],
   );
-  const pendingLikePostId = likeFeedMutation.isPending
-    ? likeFeedMutation.variables
-    : null;
-  const pendingCommentPostId = commentFeedMutation.isPending
-    ? commentFeedMutation.variables
-    : null;
+  const pendingLikePostId = likeFeedMutation.isPending ? likeFeedMutation.variables : null;
+  const pendingCommentPostId = commentFeedMutation.isPending ? commentFeedMutation.variables : null;
 
   useEffect(() => {
     setFeedText("");
@@ -252,17 +230,43 @@ export function DiscoverPage() {
       <AppPage className="space-y-5 px-6 py-6">
         <AppHeader
           eyebrow="发现"
-          title="向外走一步，世界就会主动回应你"
-          description="把随机相遇、场景相遇和公共动态拆开排布，让桌面上的探索节奏更清晰，也更有想继续点开的冲动。"
+          title="朋友圈给好友，广场给居民"
+          description="发现页把随机相遇、场景相遇和居民公开动态拆开排布，让桌面上的探索节奏更清晰，也把熟人私域和居民公开流分得更明白。"
         />
 
         <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
           <div className="space-y-5">
+            <AppSection className="space-y-4 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,247,236,0.94)_44%,rgba(240,251,245,0.92))]">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--brand-secondary)]">内容视角</div>
+                  <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">先决定发给好友，还是发给居民</div>
+                  <div className="mt-2 text-xs leading-6 text-[color:var(--text-muted)]">
+                    朋友圈和广场动态共用同一套发现入口，但可见范围完全不同，桌面端先把这层分界讲清楚。
+                  </div>
+                </div>
+                <div className="rounded-full bg-white/84 px-3 py-1 text-[11px] font-medium text-[color:var(--text-muted)] shadow-[var(--shadow-soft)]">
+                  Discover
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-[26px] border border-[rgba(47,122,63,0.16)] bg-[linear-gradient(180deg,rgba(247,252,248,0.98),rgba(255,255,255,0.96))] px-4 py-4 shadow-[var(--shadow-soft)]">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-[#2f7a3f]">朋友圈</div>
+                  <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">仅好友可见</div>
+                  <div className="mt-2 text-xs leading-6 text-[color:var(--text-muted)]">更近一点的生活片段，留在熟人关系里慢慢流动。</div>
+                </div>
+                <div className="rounded-[26px] border border-[rgba(93,103,201,0.16)] bg-[linear-gradient(180deg,rgba(246,247,255,0.98),rgba(255,255,255,0.96))] px-4 py-4 shadow-[var(--shadow-soft)]">
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-[#4951a3]">广场动态</div>
+                  <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">世界居民公开可见</div>
+                  <div className="mt-2 text-xs leading-6 text-[color:var(--text-muted)]">把这一刻发到居民广场，让世界里的居民也能看见并回应。</div>
+                </div>
+              </div>
+            </AppSection>
+
             <AppSection className="space-y-4 bg-[color:var(--brand-soft)]">
               <div>
-                <div className="text-sm font-medium text-[color:var(--text-primary)]">
-                  今日相遇
-                </div>
+                <div className="text-sm font-medium text-[color:var(--text-primary)]">今日相遇</div>
                 <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
                   轻轻试一次，就可能遇到一段新的关系线索。
                 </div>
@@ -270,101 +274,48 @@ export function DiscoverPage() {
 
               <div className="grid grid-cols-3 gap-3">
                 <DiscoverMetric label="场景" value={String(scenes.length)} />
-                <DiscoverMetric
-                  label="广场动态"
-                  value={String(visiblePosts.length)}
-                />
-                <DiscoverMetric
-                  label="反馈状态"
-                  value={blockedCharacterIds.size > 0 ? "已过滤" : "开放"}
-                />
+                <DiscoverMetric label="居民动态" value={String(visiblePosts.length)} />
+                <DiscoverMetric label="反馈状态" value={blockedCharacterIds.size > 0 ? "已过滤" : "开放"} />
               </div>
 
               <div className="flex items-center gap-3">
-                <Button
-                  onClick={() => shakeMutation.mutate()}
-                  disabled={shakeMutation.isPending}
-                  variant="primary"
-                >
+                <Button onClick={() => shakeMutation.mutate()} disabled={shakeMutation.isPending} variant="primary">
                   {shakeMutation.isPending ? "正在寻找..." : "摇一摇"}
                 </Button>
-                <div className="text-xs text-[color:var(--text-muted)]">
-                  随机相遇会从不同场景里发生。
-                </div>
+                <div className="text-xs text-[color:var(--text-muted)]">随机相遇会从不同场景里发生。</div>
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {scenes.map((scene, index) => {
-                  const sceneColors = [
-                    "bg-[rgba(251,191,36,0.10)] text-amber-700 hover:bg-[rgba(251,191,36,0.18)] border-[rgba(251,191,36,0.20)]",
-                    "bg-[rgba(249,115,22,0.10)] text-orange-700 hover:bg-[rgba(249,115,22,0.18)] border-[rgba(249,115,22,0.20)]",
-                    "bg-[rgba(16,185,129,0.10)] text-emerald-700 hover:bg-[rgba(16,185,129,0.18)] border-[rgba(16,185,129,0.20)]",
-                    "bg-[rgba(56,189,248,0.10)] text-sky-700 hover:bg-[rgba(56,189,248,0.18)] border-[rgba(56,189,248,0.20)]",
-                  ];
-                  return (
-                    <button
-                      key={scene.id}
-                      type="button"
-                      onClick={() => sceneMutation.mutate(scene.id)}
-                      disabled={sceneMutation.isPending}
-                      className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors duration-[var(--motion-fast)] ${sceneColors[index % sceneColors.length]}`}
-                    >
-                      {sceneMutation.isPending &&
-                      sceneMutation.variables === scene.id
-                        ? `正在前往${scene.label}...`
-                        : scene.label}
-                    </button>
-                  );
-                })}
+                {scenes.map((scene) => (
+                  <Button
+                    key={scene.id}
+                    onClick={() => sceneMutation.mutate(scene.id)}
+                    disabled={sceneMutation.isPending}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    {sceneMutation.isPending && sceneMutation.variables === scene.id ? `正在前往${scene.label}...` : scene.label}
+                  </Button>
+                ))}
               </div>
 
-              {shakeMessage ? (
-                <InlineNotice tone="success">{shakeMessage}</InlineNotice>
-              ) : null}
-              {sceneMessage ? (
-                <InlineNotice tone="info">{sceneMessage}</InlineNotice>
-              ) : null}
-              {shakeMutation.isError && shakeMutation.error instanceof Error ? (
-                <ErrorBlock message={shakeMutation.error.message} />
-              ) : null}
-              {sceneMutation.isError && sceneMutation.error instanceof Error ? (
-                <ErrorBlock message={sceneMutation.error.message} />
-              ) : null}
+              {shakeMessage ? <InlineNotice tone="success">{shakeMessage}</InlineNotice> : null}
+              {sceneMessage ? <InlineNotice tone="info">{sceneMessage}</InlineNotice> : null}
+              {shakeMutation.isError && shakeMutation.error instanceof Error ? <ErrorBlock message={shakeMutation.error.message} /> : null}
+              {sceneMutation.isError && sceneMutation.error instanceof Error ? <ErrorBlock message={sceneMutation.error.message} /> : null}
             </AppSection>
 
-            <AppSection className="space-y-4 bg-[linear-gradient(180deg,rgba(255,250,245,0.98),rgba(255,255,255,0.95))]">
-              <div className="rounded-[26px] border border-[rgba(249,115,22,0.14)] bg-[linear-gradient(180deg,rgba(255,247,238,0.98),rgba(255,255,255,0.94))] p-4 shadow-[var(--shadow-soft)]">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--brand-secondary)]">
-                      Publishing Desk
-                    </div>
-                    <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
-                      发一条广场动态
-                    </div>
-                    <div className="mt-2 text-xs leading-6 text-[color:var(--text-muted)]">
-                      把你的想法投向整个世界，让更多角色都可能看到并回应。
-                    </div>
-                  </div>
-                  <div className="rounded-full bg-white/90 px-3 py-1 text-[11px] font-medium text-[color:var(--brand-primary)] shadow-[var(--shadow-soft)]">
-                    发布区
-                  </div>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <DiscoverMetric label="内容流向" value="广场" />
-                  <DiscoverMetric
-                    label="当前状态"
-                    value={
-                      createFeedPostMutation.isPending ? "发布中" : "待发送"
-                    }
-                  />
+            <AppSection className="space-y-4">
+              <div>
+                <div className="text-sm font-medium text-[color:var(--text-primary)]">发一条广场动态</div>
+                <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
+                  把你的想法发到居民广场，让世界里的居民都可能看到并回应。
                 </div>
               </div>
               <TextAreaField
                 value={feedText}
                 onChange={(event) => setFeedText(event.target.value)}
-                placeholder="写点想让整个世界都能看到的内容..."
+                placeholder="写点想让世界居民都能看到的内容..."
                 className="min-h-36 resize-none"
               />
               <Button
@@ -372,83 +323,73 @@ export function DiscoverPage() {
                 onClick={() => createFeedPostMutation.mutate()}
                 variant="primary"
               >
-                {createFeedPostMutation.isPending
-                  ? "正在发布..."
-                  : "发布到广场"}
+                {createFeedPostMutation.isPending ? "正在发布..." : "发布到广场"}
               </Button>
-              <InlineNotice tone="muted">
-                发布后会直接出现在右侧广场动态内容流里。
-              </InlineNotice>
-              {createFeedPostMutation.isError &&
-              createFeedPostMutation.error instanceof Error ? (
+              <InlineNotice tone="muted">世界居民公开可见。</InlineNotice>
+              {createFeedPostMutation.isError && createFeedPostMutation.error instanceof Error ? (
                 <ErrorBlock message={createFeedPostMutation.error.message} />
               ) : null}
             </AppSection>
           </div>
 
           <AppSection className="space-y-4 bg-[linear-gradient(180deg,rgba(248,249,255,0.98),rgba(255,255,255,0.96))]">
-            <div className="rounded-[26px] border border-[rgba(244,63,94,0.12)] bg-[linear-gradient(180deg,rgba(255,244,247,0.96),rgba(255,255,255,0.94))] p-4 shadow-[var(--shadow-soft)]">
+            <div className="rounded-[26px] border border-[rgba(93,103,201,0.14)] bg-[linear-gradient(180deg,rgba(245,247,255,0.98),rgba(255,255,255,0.94))] p-4 shadow-[var(--shadow-soft)]">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-rose-500">
-                    Residents Feed
-                  </div>
-                  <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
-                    广场动态
-                  </div>
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-[#4951a3]">Residents Feed</div>
+                  <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">广场动态</div>
                   <div className="mt-2 text-xs leading-6 text-[color:var(--text-muted)]">
-                    把正文和互动拆得更清楚，让浏览和回应都更轻快。
+                    这里不只看朋友，也能看到世界里的居民正在说什么。
                   </div>
                 </div>
-                <div className="rounded-full bg-white/90 px-3 py-1 text-[11px] font-medium text-rose-500 shadow-[var(--shadow-soft)]">
+                <div className="rounded-full bg-white/90 px-3 py-1 text-[11px] font-medium text-[#4951a3] shadow-[var(--shadow-soft)]">
                   公开流
                 </div>
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <DiscoverMetric
-                  label="广场动态"
-                  value={String(visiblePosts.length)}
-                />
-                <DiscoverMetric label="浏览模式" value="公开发现" />
+                <DiscoverMetric label="可见动态" value={String(visiblePosts.length)} />
+                <DiscoverMetric label="范围" value="居民公开" />
               </div>
             </div>
-            {successNotice ? (
-              <InlineNotice tone="success">{successNotice}</InlineNotice>
-            ) : null}
-            {feedQuery.isLoading ? (
-              <LoadingBlock label="正在读取广场动态..." />
-            ) : null}
-            {feedQuery.isError && feedQuery.error instanceof Error ? (
-              <ErrorBlock message={feedQuery.error.message} />
-            ) : null}
+
+            {successNotice ? <InlineNotice tone="success">{successNotice}</InlineNotice> : null}
+            {feedQuery.isLoading ? <LoadingBlock label="正在读取广场动态..." /> : null}
+            {feedQuery.isError && feedQuery.error instanceof Error ? <ErrorBlock message={feedQuery.error.message} /> : null}
 
             {visiblePosts.map((post) => (
               <SocialPostCard
                 key={post.id}
                 authorName={post.authorName}
                 authorAvatar={post.authorAvatar}
-                meta={post.aiReacted ? "AI 已响应" : "等待 AI 互动"}
+                meta={`${formatTimestamp(post.createdAt)} · ${post.authorType === "user" ? "世界主人" : "居民动态"}`}
                 body={
                   <>
                     {post.authorType === "user" ? (
                       <div className="mb-3 inline-flex rounded-full bg-[rgba(93,103,201,0.12)] px-2.5 py-1 text-[11px] font-medium text-[#4951a3]">
-                        世界公开
+                        居民公开可见
                       </div>
                     ) : null}
                     <div>{post.text}</div>
                   </>
                 }
-                summary={`${post.likeCount} 赞 · ${post.commentCount} 评论`}
+                summary={`${post.likeCount} 赞 · ${post.commentCount} 评论${post.aiReacted ? " · AI 已参与回应" : ""}`}
                 actions={
-                  <Button
-                    disabled={likeFeedMutation.isPending}
-                    onClick={() => likeFeedMutation.mutate(post.id)}
-                    variant="secondary"
-                    size="sm"
-                  >
+                  <Button disabled={likeFeedMutation.isPending} onClick={() => likeFeedMutation.mutate(post.id)} variant="secondary" size="sm">
                     {pendingLikePostId === post.id ? "处理中..." : "点赞"}
                   </Button>
+                }
+                secondary={
+                  post.commentsPreview.length > 0 ? (
+                    <div className="space-y-2 rounded-[22px] bg-[color:var(--surface-soft)] p-3">
+                      {post.commentsPreview.map((comment) => (
+                        <div key={comment.id} className="text-xs leading-6 text-[color:var(--text-secondary)]">
+                          <span className="text-[color:var(--text-primary)]">{comment.authorName}</span>
+                          {`：${comment.text}`}
+                        </div>
+                      ))}
+                    </div>
+                  ) : null
                 }
                 composer={
                   <>
@@ -464,10 +405,7 @@ export function DiscoverPage() {
                       className="min-w-0 flex-1 rounded-full py-2 text-xs"
                     />
                     <Button
-                      disabled={
-                        !(feedCommentDrafts[post.id] ?? "").trim() ||
-                        commentFeedMutation.isPending
-                      }
+                      disabled={!(feedCommentDrafts[post.id] ?? "").trim() || commentFeedMutation.isPending}
                       onClick={() => commentFeedMutation.mutate(post.id)}
                       variant="primary"
                       size="sm"
@@ -479,22 +417,13 @@ export function DiscoverPage() {
               />
             ))}
 
-            {likeFeedMutation.isError &&
-            likeFeedMutation.error instanceof Error ? (
-              <ErrorBlock message={likeFeedMutation.error.message} />
-            ) : null}
-            {commentFeedMutation.isError &&
-            commentFeedMutation.error instanceof Error ? (
+            {likeFeedMutation.isError && likeFeedMutation.error instanceof Error ? <ErrorBlock message={likeFeedMutation.error.message} /> : null}
+            {commentFeedMutation.isError && commentFeedMutation.error instanceof Error ? (
               <ErrorBlock message={commentFeedMutation.error.message} />
             ) : null}
 
-            {!feedQuery.isLoading &&
-            !feedQuery.isError &&
-            !visiblePosts.length ? (
-              <EmptyState
-                title="广场还没有新动态"
-                description="你先发一条，或者先去摇一摇看看今天会遇到谁。"
-              />
+            {!feedQuery.isLoading && !feedQuery.isError && !visiblePosts.length ? (
+              <EmptyState title="广场还没有新动态" description="你先发一条居民公开可见的动态，或者等世界里的居民先开口。" />
             ) : null}
           </AppSection>
         </div>
@@ -505,6 +434,7 @@ export function DiscoverPage() {
   return (
     <AppPage className="space-y-5">
       <TabPageTopBar
+        eyebrow="向外走一步"
         title="发现"
         subtitle={`最近有 ${visiblePosts.length} 条世界居民动态`}
         titleAlign="center"
@@ -513,9 +443,7 @@ export function DiscoverPage() {
       <section className="rounded-[30px] border border-white/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,246,232,0.94)_42%,rgba(240,251,245,0.96))] p-4 shadow-[var(--shadow-section)]">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--brand-secondary)]">
-              Explore
-            </div>
+            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--brand-secondary)]">Explore</div>
             <div className="mt-2 text-[1.45rem] font-semibold leading-tight text-[color:var(--text-primary)]">
               今天，居民广场也在慢慢热起来
             </div>
@@ -541,10 +469,7 @@ export function DiscoverPage() {
 
         <div className="mt-4 grid grid-cols-3 gap-3">
           <DiscoverMetric label="场景" value={String(scenes.length)} />
-          <DiscoverMetric
-            label="居民动态"
-            value={String(visiblePosts.length)}
-          />
+          <DiscoverMetric label="居民动态" value={String(visiblePosts.length)} />
           <DiscoverMetric label="视角" value="公开" />
         </div>
 
@@ -563,6 +488,7 @@ export function DiscoverPage() {
           </Link>
         </div>
       </section>
+
       <div className="space-y-3">
         {mobileDiscoverEntries.map((item) => {
           const Icon = item.icon;
@@ -573,31 +499,19 @@ export function DiscoverPage() {
               to={item.to}
               className="flex items-center gap-4 rounded-[28px] border border-white/80 bg-white/88 px-4 py-4 shadow-[var(--shadow-section)] transition-[transform,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]"
             >
-              <div
-                className={cn(
-                  "flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px]",
-                  item.iconClassName,
-                )}
-              >
+              <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px]", item.iconClassName)}>
                 <Icon size={20} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <div className="text-[15px] font-medium text-[color:var(--text-primary)]">
-                    {item.label}
-                  </div>
-                  <div className="rounded-full bg-[rgba(249,115,22,0.08)] px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-[color:var(--brand-primary)]">
+                  <div className="text-[15px] font-medium text-[color:var(--text-primary)]">{item.label}</div>
+                  <div className="rounded-full bg-[rgba(255,138,61,0.08)] px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-[color:var(--brand-primary)]">
                     {item.description}
                   </div>
                 </div>
-                <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
-                  {item.detail}
-                </div>
+                <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">{item.detail}</div>
               </div>
-              <ChevronRight
-                size={16}
-                className="shrink-0 text-[color:var(--text-dim)]"
-              />
+              <ChevronRight size={16} className="shrink-0 text-[color:var(--text-dim)]" />
             </Link>
           );
         })}
@@ -609,12 +523,8 @@ export function DiscoverPage() {
 function DiscoverMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[22px] bg-white/82 px-3 py-3 shadow-[var(--shadow-soft)]">
-      <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">
-        {label}
-      </div>
-      <div className="mt-2 text-base font-semibold text-[color:var(--text-primary)]">
-        {value}
-      </div>
+      <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">{label}</div>
+      <div className="mt-2 text-base font-semibold text-[color:var(--text-primary)]">{value}</div>
     </div>
   );
 }
