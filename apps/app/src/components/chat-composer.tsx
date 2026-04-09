@@ -300,6 +300,33 @@ export function ChatComposer({
     setAttachmentDraft(null);
   };
 
+  const handleRemoveDraftImage = (index: number) => {
+    setAttachmentDraft((currentDraft) => {
+      if (!currentDraft || currentDraft.kind !== "images") {
+        return currentDraft;
+      }
+
+      const target = currentDraft.items[index];
+      if (!target) {
+        return currentDraft;
+      }
+
+      URL.revokeObjectURL(target.previewUrl);
+      const nextItems = currentDraft.items.filter(
+        (_, itemIndex) => itemIndex !== index,
+      );
+
+      if (!nextItems.length) {
+        return null;
+      }
+
+      return {
+        kind: "images",
+        items: nextItems,
+      };
+    });
+  };
+
   const handleSendAttachment = async (
     payload: ChatComposerAttachmentPayload,
   ) => {
@@ -417,6 +444,11 @@ export function ChatComposer({
             }
             pending={attachmentBusy}
             onCancel={handleCancelAttachmentDraft}
+            onRemoveImage={
+              attachmentDraft.kind === "images"
+                ? handleRemoveDraftImage
+                : undefined
+            }
             onSend={handleSendDraftAttachment}
           />
         ) : null}

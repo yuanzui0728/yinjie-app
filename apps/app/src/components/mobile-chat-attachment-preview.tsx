@@ -1,4 +1,4 @@
-import { FileText } from "lucide-react";
+import { FileText, X } from "lucide-react";
 import { Button } from "@yinjie/ui";
 
 type MobileChatAttachmentPreviewProps = {
@@ -12,6 +12,7 @@ type MobileChatAttachmentPreviewProps = {
   size?: number;
   pending?: boolean;
   onCancel: () => void;
+  onRemoveImage?: (index: number) => void;
   onSend: () => void | Promise<void>;
 };
 
@@ -23,24 +24,31 @@ export function MobileChatAttachmentPreview({
   size,
   pending = false,
   onCancel,
+  onRemoveImage,
   onSend,
 }: MobileChatAttachmentPreviewProps) {
   return (
     <div className="mb-2 rounded-[22px] border border-white/80 bg-white/92 p-3 shadow-[var(--shadow-soft)]">
       <div className="flex items-center gap-3">
         {kind === "images" && imagePreviews?.length ? (
-          <div className="grid w-[7.75rem] grid-cols-2 gap-1">
-            {imagePreviews.slice(0, 4).map((item, index) => (
+          <div className="grid max-h-[11.5rem] w-[11.5rem] grid-cols-3 gap-1 overflow-auto pr-1">
+            {imagePreviews.map((item, index) => (
               <div key={`${item.fileName}-${index}`} className="relative">
                 <img
                   src={item.previewUrl}
                   alt={item.fileName}
                   className="h-14 w-14 rounded-[14px] border border-white/75 bg-[color:var(--surface-soft)] object-cover"
                 />
-                {index === 3 && imagePreviews.length > 4 ? (
-                  <div className="absolute inset-0 flex items-center justify-center rounded-[14px] bg-black/45 text-xs font-medium text-white">
-                    +{imagePreviews.length - 4}
-                  </div>
+                {onRemoveImage ? (
+                  <button
+                    type="button"
+                    onClick={() => onRemoveImage(index)}
+                    disabled={pending}
+                    className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/55 text-white transition hover:bg-black/70 disabled:opacity-45"
+                    aria-label={`移除${item.fileName}`}
+                  >
+                    <X size={12} />
+                  </button>
                 ) : null}
               </div>
             ))}
@@ -63,7 +71,7 @@ export function MobileChatAttachmentPreview({
           </div>
           {kind === "images" ? (
             <div className="mt-1 text-[11px] text-[color:var(--text-dim)]">
-              最多支持 9 张图片一起发送。
+              最多支持 9 张图片一起发送，可逐张移除。
             </div>
           ) : null}
           {kind === "file" ? (
