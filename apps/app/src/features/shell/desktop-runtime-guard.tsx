@@ -61,7 +61,7 @@ export function DesktopRuntimeGuard() {
     return null;
   }
 
-  if (!hasDesktopRuntimeControl && needsRemoteConfiguration && onSetupRoute) {
+  if (!hasDesktopRuntimeControl && onSetupRoute && runtimeContext.capabilities.canConfigureRemoteService) {
     return null;
   }
 
