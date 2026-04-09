@@ -6,11 +6,14 @@ import { getConversationMessages, getConversations } from "@yinjie/contracts";
 import { ErrorBlock, LoadingBlock } from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
 import { ChatDetailsShell } from "../features/chat-details/chat-details-shell";
+import { ChatDetailsSection } from "../features/chat-details/chat-details-section";
 import { formatMessageTimestamp, parseTimestamp } from "../lib/format";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export function ChatMessageSearchPage() {
-  const { conversationId } = useParams({ from: "/chat/$conversationId/search" });
+  const { conversationId } = useParams({
+    from: "/chat/$conversationId/search",
+  });
   const navigate = useNavigate();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
@@ -27,7 +30,8 @@ export function ChatMessageSearchPage() {
   });
 
   const conversationTitle =
-    conversationsQuery.data?.find((item) => item.id === conversationId)?.title ?? "聊天记录";
+    conversationsQuery.data?.find((item) => item.id === conversationId)
+      ?.title ?? "聊天记录";
   const trimmedKeyword = keyword.trim().toLowerCase();
   const results = useMemo(() => {
     if (!trimmedKeyword) {
@@ -48,11 +52,14 @@ export function ChatMessageSearchPage() {
       title="查找聊天记录"
       subtitle={conversationTitle}
       onBack={() => {
-        void navigate({ to: "/chat/$conversationId/details", params: { conversationId } });
+        void navigate({
+          to: "/chat/$conversationId/details",
+          params: { conversationId },
+        });
       }}
     >
-      <div className="px-3">
-        <label className="flex items-center gap-2 rounded-[12px] border border-black/5 bg-white px-3 py-3 shadow-sm">
+      <ChatDetailsSection title="搜索">
+        <label className="flex items-center gap-2 px-3 py-3">
           <Search size={16} className="shrink-0 text-[color:var(--text-dim)]" />
           <input
             type="search"
@@ -62,9 +69,11 @@ export function ChatMessageSearchPage() {
             className="min-w-0 flex-1 bg-transparent text-[15px] text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-dim)]"
           />
         </label>
-      </div>
+      </ChatDetailsSection>
 
-      {messagesQuery.isLoading ? <LoadingBlock label="正在读取聊天记录..." /> : null}
+      {messagesQuery.isLoading ? (
+        <LoadingBlock label="正在读取聊天记录..." />
+      ) : null}
       {messagesQuery.isError && messagesQuery.error instanceof Error ? (
         <div className="px-3">
           <ErrorBlock message={messagesQuery.error.message} />
@@ -73,18 +82,27 @@ export function ChatMessageSearchPage() {
 
       {!messagesQuery.isLoading && !messagesQuery.isError && !trimmedKeyword ? (
         <div className="px-3">
-          <EmptyState title="输入关键词开始搜索" description="支持按聊天文本搜索，表情和附件会按兜底文案参与匹配。" />
+          <EmptyState
+            title="输入关键词开始搜索"
+            description="支持按聊天文本搜索，表情和附件会按兜底文案参与匹配。"
+          />
         </div>
       ) : null}
 
-      {!messagesQuery.isLoading && !messagesQuery.isError && trimmedKeyword && !results.length ? (
+      {!messagesQuery.isLoading &&
+      !messagesQuery.isError &&
+      trimmedKeyword &&
+      !results.length ? (
         <div className="px-3">
-          <EmptyState title="没有找到相关聊天记录" description="换个关键词试试，或者返回聊天详情页。" />
+          <EmptyState
+            title="没有找到相关聊天记录"
+            description="换个关键词试试，或者返回聊天详情页。"
+          />
         </div>
       ) : null}
 
       {results.length ? (
-        <section className="border-y border-black/5 bg-white">
+        <ChatDetailsSection title={`搜索结果 · ${results.length} 条`}>
           <div className="divide-y divide-black/5">
             {results.map((message) => (
               <button
@@ -112,7 +130,7 @@ export function ChatMessageSearchPage() {
               </button>
             ))}
           </div>
-        </section>
+        </ChatDetailsSection>
       ) : null}
     </ChatDetailsShell>
   );

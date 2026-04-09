@@ -6,6 +6,7 @@ import { getGroup, getGroupMessages } from "@yinjie/contracts";
 import { ErrorBlock, LoadingBlock } from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
 import { ChatDetailsShell } from "../features/chat-details/chat-details-shell";
+import { ChatDetailsSection } from "../features/chat-details/chat-details-section";
 import { formatMessageTimestamp, parseTimestamp } from "../lib/format";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
@@ -49,8 +50,8 @@ export function GroupMessageSearchPage() {
         void navigate({ to: "/group/$groupId/details", params: { groupId } });
       }}
     >
-      <div className="px-3">
-        <label className="flex items-center gap-2 rounded-[12px] border border-black/5 bg-white px-3 py-3 shadow-sm">
+      <ChatDetailsSection title="搜索">
+        <label className="flex items-center gap-2 px-3 py-3">
           <Search size={16} className="shrink-0 text-[color:var(--text-dim)]" />
           <input
             type="search"
@@ -60,9 +61,11 @@ export function GroupMessageSearchPage() {
             className="min-w-0 flex-1 bg-transparent text-[15px] text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-dim)]"
           />
         </label>
-      </div>
+      </ChatDetailsSection>
 
-      {messagesQuery.isLoading ? <LoadingBlock label="正在读取群聊记录..." /> : null}
+      {messagesQuery.isLoading ? (
+        <LoadingBlock label="正在读取群聊记录..." />
+      ) : null}
       {messagesQuery.isError && messagesQuery.error instanceof Error ? (
         <div className="px-3">
           <ErrorBlock message={messagesQuery.error.message} />
@@ -71,18 +74,27 @@ export function GroupMessageSearchPage() {
 
       {!messagesQuery.isLoading && !messagesQuery.isError && !trimmedKeyword ? (
         <div className="px-3">
-          <EmptyState title="输入关键词开始搜索" description="支持按群聊文本搜索，结果按时间倒序展示。" />
+          <EmptyState
+            title="输入关键词开始搜索"
+            description="支持按群聊文本搜索，结果按时间倒序展示。"
+          />
         </div>
       ) : null}
 
-      {!messagesQuery.isLoading && !messagesQuery.isError && trimmedKeyword && !results.length ? (
+      {!messagesQuery.isLoading &&
+      !messagesQuery.isError &&
+      trimmedKeyword &&
+      !results.length ? (
         <div className="px-3">
-          <EmptyState title="没有找到相关群聊记录" description="换个关键词试试，或者返回群聊信息页。" />
+          <EmptyState
+            title="没有找到相关群聊记录"
+            description="换个关键词试试，或者返回群聊信息页。"
+          />
         </div>
       ) : null}
 
       {results.length ? (
-        <section className="border-y border-black/5 bg-white">
+        <ChatDetailsSection title={`搜索结果 · ${results.length} 条`}>
           <div className="divide-y divide-black/5">
             {results.map((message) => (
               <button
@@ -110,7 +122,7 @@ export function GroupMessageSearchPage() {
               </button>
             ))}
           </div>
-        </section>
+        </ChatDetailsSection>
       ) : null}
     </ChatDetailsShell>
   );
