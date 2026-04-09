@@ -32,6 +32,7 @@ export function ConversationThreadPanel({
     renderedMessages,
     scrollAnchorRef,
     sendMutation,
+    sendAttachmentMessage,
     sendStickerMessage,
     sendTextMessage,
     setSocketError,
@@ -73,7 +74,9 @@ export function ConversationThreadPanel({
         {isDesktop ? (
           <>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-[17px] font-medium text-[color:var(--text-primary)]">{conversationTitle}</div>
+              <div className="truncate text-[17px] font-medium text-[color:var(--text-primary)]">
+                {conversationTitle}
+              </div>
               <div className="mt-1 flex items-center gap-2 text-[11px] text-[color:var(--text-muted)]">
                 {conversationType === "group" ? <Users size={12} /> : null}
                 <span>{desktopSubtitle}</span>
@@ -113,7 +116,9 @@ export function ConversationThreadPanel({
                 type="button"
                 onClick={onToggleInspector}
                 className={`flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition ${
-                  inspectorOpen ? "bg-[color:var(--surface-soft)] text-[color:var(--brand-primary)]" : "hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--brand-primary)]"
+                  inspectorOpen
+                    ? "bg-[color:var(--surface-soft)] text-[color:var(--brand-primary)]"
+                    : "hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--brand-primary)]"
                 }`}
                 aria-label="更多"
               >
@@ -161,12 +166,22 @@ export function ConversationThreadPanel({
 
       <div
         ref={scrollAnchorRef}
-        className={isDesktop ? "flex-1 space-y-4 overflow-auto bg-[linear-gradient(180deg,rgba(255,252,246,0.94),rgba(255,248,240,0.96))] px-8 py-6" : "flex-1 overflow-auto px-3 py-4"}
+        className={
+          isDesktop
+            ? "flex-1 space-y-4 overflow-auto bg-[linear-gradient(180deg,rgba(255,252,246,0.94),rgba(255,248,240,0.96))] px-8 py-6"
+            : "flex-1 overflow-auto px-3 py-4"
+        }
       >
-        {messagesQuery.isLoading ? <LoadingBlock label="正在读取会话..." /> : null}
-        {messagesQuery.isError && messagesQuery.error instanceof Error ? <ErrorBlock message={messagesQuery.error.message} /> : null}
+        {messagesQuery.isLoading ? (
+          <LoadingBlock label="正在读取会话..." />
+        ) : null}
+        {messagesQuery.isError && messagesQuery.error instanceof Error ? (
+          <ErrorBlock message={messagesQuery.error.message} />
+        ) : null}
         {socketError ? <ErrorBlock message={socketError} /> : null}
-        {sendMutation.isError && sendMutation.error instanceof Error ? <ErrorBlock message={sendMutation.error.message} /> : null}
+        {sendMutation.isError && sendMutation.error instanceof Error ? (
+          <ErrorBlock message={sendMutation.error.message} />
+        ) : null}
 
         <ChatMessageList
           messages={renderedMessages}
@@ -180,7 +195,10 @@ export function ConversationThreadPanel({
         />
 
         {typingCharacterId && !isDesktop ? (
-          <InlineNotice tone="muted" className="mt-3 border-white/70 bg-white/82 text-[color:var(--text-muted)]">
+          <InlineNotice
+            tone="muted"
+            className="mt-3 border-white/70 bg-white/82 text-[color:var(--text-muted)]"
+          >
             对方正在输入...
           </InlineNotice>
         ) : null}
@@ -191,7 +209,11 @@ export function ConversationThreadPanel({
         placeholder="输入消息"
         variant={isDesktop ? "desktop" : "mobile"}
         pending={sendMutation.isPending}
-        error={sendMutation.error instanceof Error ? sendMutation.error.message : null}
+        error={
+          sendMutation.error instanceof Error
+            ? sendMutation.error.message
+            : null
+        }
         speechInput={{
           baseUrl,
           conversationId,
@@ -208,6 +230,12 @@ export function ConversationThreadPanel({
             setSocketError(null);
           }
           await sendStickerMessage(sticker);
+        }}
+        onSendAttachment={async (payload) => {
+          if (socketError) {
+            setSocketError(null);
+          }
+          await sendAttachmentMessage(payload);
         }}
         onSubmit={() => void sendTextMessage()}
       />

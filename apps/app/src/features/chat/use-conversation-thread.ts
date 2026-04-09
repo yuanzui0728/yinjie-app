@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getConversationMessages, getConversations, markConversationRead, type Message, type SendMessagePayload, type StickerAttachment } from "@yinjie/contracts";
+import {
+  getConversationMessages,
+  getConversations,
+  markConversationRead,
+  uploadChatAttachment,
+  type Message,
+  type SendMessagePayload,
+  type StickerAttachment,
+} from "@yinjie/contracts";
+import { type ChatComposerAttachmentPayload } from "./chat-plus-types";
 import { useScrollAnchor } from "../../hooks/use-scroll-anchor";
 import {
   emitChatMessage,
@@ -23,10 +32,14 @@ export function useConversationThread(conversationId: string) {
   const baseUrl = runtimeConfig.apiBaseUrl;
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
-  const [typingCharacterId, setTypingCharacterId] = useState<string | null>(null);
+  const [typingCharacterId, setTypingCharacterId] = useState<string | null>(
+    null,
+  );
   const [socketError, setSocketError] = useState<string | null>(null);
   const [conversationTitle, setConversationTitle] = useState("Conversation");
-  const [conversationType, setConversationType] = useState<"direct" | "group">("direct");
+  const [conversationType, setConversationType] = useState<"direct" | "group">(
+    "direct",
+  );
   const [participants, setParticipants] = useState<string[]>([]);
   const scrollAnchorRef = useScrollAnchor<HTMLDivElement>(
     `${conversationId}:${messages.length}:${typingCharacterId ?? ""}`,
@@ -49,7 +62,9 @@ export function useConversationThread(conversationId: string) {
   }, [messagesQuery.data]);
 
   useEffect(() => {
-    const conversation = conversationsQuery.data?.find((item) => item.id === conversationId);
+    const conversation = conversationsQuery.data?.find(
+      (item) => item.id === conversationId,
+    );
     if (!conversation) {
       return;
     }
@@ -68,7 +83,9 @@ export function useConversationThread(conversationId: string) {
     setTypingCharacterId(null);
     joinConversationRoom({ conversationId });
     void markConversationRead(conversationId, baseUrl).then(() => {
-      void queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl] });
+      void queryClient.invalidateQueries({
+        queryKey: ["app-conversations", baseUrl],
+      });
     });
 
     const offMessage = onChatMessage((payload) => {
@@ -89,7 +106,9 @@ export function useConversationThread(conversationId: string) {
 
         return [...withoutPendingEcho, payload];
       });
-      void queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl] });
+      void queryClient.invalidateQueries({
+        queryKey: ["app-conversations", baseUrl],
+      });
     });
 
     const offTypingStart = onTypingStart((payload) => {
@@ -112,11 +131,15 @@ export function useConversationThread(conversationId: string) {
       setConversationTitle(payload.title);
       setConversationType(payload.type);
       setParticipants(payload.participants);
-      void queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl] });
+      void queryClient.invalidateQueries({
+        queryKey: ["app-conversations", baseUrl],
+      });
     });
 
     const offError = onChatError((message) => {
-      setMessages((current) => current.filter((item) => !item.id.startsWith("local_")));
+      setMessages((current) =>
+        current.filter((item) => !item.id.startsWith("local_")),
+      );
       setSocketError(message);
     });
 
@@ -149,7 +172,10 @@ export function useConversationThread(conversationId: string) {
       emitChatMessage(payload);
 
       setSocketError(null);
-      setMessages((current) => [...current, buildOptimisticMessage(payload, ownerId, username ?? "You")]);
+      setMessages((current) => [
+        ...current,
+        buildOptimisticMessage(payload, ownerId, username ?? "You"),
+      ]);
       if (payload.type !== "sticker") {
         setText("");
       }
@@ -208,13 +234,70 @@ export function useConversationThread(conversationId: string) {
     });
   };
 
+  const sendAttachmentMessage = async (
+    payload: ChatComposerAttachmentPayload,
+  ) => {
+    if (!ownerId) {
+      return;
+    }
+
+    const targetCharacterId = resolveTargetCharacterId({
+      conversationId,
+      ownerId,
+      messages,
+      participants,
+    });
+
+    if (!targetCharacterId) {
+      throw new Error("The target character is not ready yet.");
+    }
+
+    if (payload.type === "image") {
+      const formData = new FormData();
+      formData.set("file", payload.file);
+      formData.set("width", String(payload.width ?? ""));
+      formData.set("height", String(payload.height ?? ""));
+      const result = await uploadChatAttachment(formData, baseUrl);
+
+      await sendMutation.mutateAsync({
+        conversationId,
+        characterId: targetCharacterId,
+        type: "image",
+        text: `[图片] ${result.attachment.fileName}`,
+        attachment: result.attachment,
+      });
+      return;
+    }
+
+    if (payload.type === "contact_card") {
+      await sendMutation.mutateAsync({
+        conversationId,
+        characterId: targetCharacterId,
+        type: "contact_card",
+        text: `[名片] ${payload.attachment.name}`,
+        attachment: payload.attachment,
+      });
+      return;
+    }
+
+    await sendMutation.mutateAsync({
+      conversationId,
+      characterId: targetCharacterId,
+      type: "location_card",
+      text: `[位置] ${payload.attachment.title}`,
+      attachment: payload.attachment,
+    });
+  };
+
   const renderedMessages = useMemo(() => {
     const deduped = new Map<string, Message>();
     for (const item of messages) {
       deduped.set(item.id, item);
     }
     return [...deduped.values()].sort(
-      (left, right) => (parseTimestamp(left.createdAt) ?? 0) - (parseTimestamp(right.createdAt) ?? 0),
+      (left, right) =>
+        (parseTimestamp(left.createdAt) ?? 0) -
+        (parseTimestamp(right.createdAt) ?? 0),
     );
   }, [messages]);
 
@@ -228,6 +311,7 @@ export function useConversationThread(conversationId: string) {
     scrollAnchorRef,
     sendMutation,
     sendStickerMessage,
+    sendAttachmentMessage,
     sendTextMessage,
     setSocketError,
     setText,
@@ -254,7 +338,10 @@ function removePendingUserEcho(current: Message[], incoming: Message) {
   return current.filter((_, index) => index !== pendingIndex);
 }
 
-function attachmentsEqual(left?: Message["attachment"], right?: Message["attachment"]) {
+function attachmentsEqual(
+  left?: Message["attachment"],
+  right?: Message["attachment"],
+) {
   if (!left && !right) {
     return true;
   }
@@ -271,10 +358,26 @@ function attachmentsEqual(left?: Message["attachment"], right?: Message["attachm
     return left.packId === right.packId && left.stickerId === right.stickerId;
   }
 
+  if (left.kind === "image" && right.kind === "image") {
+    return left.url === right.url && left.fileName === right.fileName;
+  }
+
+  if (left.kind === "contact_card" && right.kind === "contact_card") {
+    return left.characterId === right.characterId;
+  }
+
+  if (left.kind === "location_card" && right.kind === "location_card") {
+    return left.sceneId === right.sceneId && left.title === right.title;
+  }
+
   return false;
 }
 
-function buildOptimisticMessage(payload: SendMessagePayload, ownerId: string, senderName: string): Message {
+function buildOptimisticMessage(
+  payload: SendMessagePayload,
+  ownerId: string,
+  senderName: string,
+): Message {
   const createdAt = String(Date.now());
 
   if (payload.type === "sticker") {
@@ -293,8 +396,34 @@ function buildOptimisticMessage(payload: SendMessagePayload, ownerId: string, se
         url: `/stickers/${payload.sticker.packId}/${payload.sticker.stickerId}.svg`,
         width: 160,
         height: 160,
-        label: payload.text?.replace(/^\[表情包\]\s*/, "") || payload.sticker.stickerId,
+        label:
+          payload.text?.replace(/^\[表情包\]\s*/, "") ||
+          payload.sticker.stickerId,
       },
+      createdAt,
+    };
+  }
+
+  if (
+    payload.type === "image" ||
+    payload.type === "contact_card" ||
+    payload.type === "location_card"
+  ) {
+    return {
+      id: `local_${createdAt}`,
+      conversationId: payload.conversationId,
+      senderType: "user",
+      senderId: ownerId,
+      senderName,
+      type: payload.type,
+      text:
+        payload.text ??
+        (payload.type === "contact_card"
+          ? `[名片] ${payload.attachment.name}`
+          : payload.type === "location_card"
+            ? `[位置] ${payload.attachment.title}`
+            : `[图片] ${payload.attachment.fileName}`),
+      attachment: payload.attachment,
       createdAt,
     };
   }
@@ -317,7 +446,9 @@ function resolveTargetCharacterId(input: {
   messages: Message[];
   participants: string[];
 }) {
-  const fromMessages = input.messages.find((item) => item.senderType === "character")?.senderId;
+  const fromMessages = input.messages.find(
+    (item) => item.senderType === "character",
+  )?.senderId;
   if (fromMessages) {
     return fromMessages;
   }
