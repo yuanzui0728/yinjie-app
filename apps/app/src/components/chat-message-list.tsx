@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { ContactRound, MapPin } from "lucide-react";
+import { type MessageAttachment } from "@yinjie/contracts";
 import { InlineNotice } from "@yinjie/ui";
 import { AvatarChip } from "./avatar-chip";
 import { formatMessageTimestamp } from "../lib/format";
@@ -9,13 +11,7 @@ type ChatRenderableMessage = {
   senderName?: string | null;
   type?: string | null;
   text: string;
-  attachment?: {
-    kind: string;
-    url: string;
-    width: number;
-    height: number;
-    label?: string;
-  };
+  attachment?: MessageAttachment;
   createdAt: string;
 };
 
@@ -42,7 +38,8 @@ export function ChatMessageList({
     <div className={isDesktop ? "space-y-5" : "space-y-4"}>
       {messages.map((message) => {
         const isUser = message.senderType === "user";
-        const isSystem = message.type === "system" || message.senderType === "system";
+        const isSystem =
+          message.type === "system" || message.senderType === "system";
 
         if (isSystem) {
           return (
@@ -62,40 +59,148 @@ export function ChatMessageList({
 
         return (
           <div key={message.id} className="space-y-1.5">
-            <div className="text-center text-[11px] text-[color:var(--text-dim)]">{formatMessageTimestamp(message.createdAt)}</div>
-            <div className={`flex items-start gap-2.5 ${isUser ? "justify-end" : "justify-start"}`}>
-              {!isUser ? <AvatarChip name={message.senderName} size="wechat" /> : null}
-              <div className={`flex max-w-[78%] flex-col ${isUser ? "items-end" : "items-start"}`}>
+            <div className="text-center text-[11px] text-[color:var(--text-dim)]">
+              {formatMessageTimestamp(message.createdAt)}
+            </div>
+            <div
+              className={`flex items-start gap-2.5 ${isUser ? "justify-end" : "justify-start"}`}
+            >
+              {!isUser ? (
+                <AvatarChip name={message.senderName} size="wechat" />
+              ) : null}
+              <div
+                className={`flex max-w-[78%] flex-col ${isUser ? "items-end" : "items-start"}`}
+              >
                 {!isUser && groupMode ? (
-                  <div className="mb-1 px-1 text-[11px] text-[color:var(--text-muted)]">{message.senderName}</div>
+                  <div className="mb-1 px-1 text-[11px] text-[color:var(--text-muted)]">
+                    {message.senderName}
+                  </div>
                 ) : null}
-                <div
-                  className={message.type === "sticker" ? "" : `rounded-[18px] px-3.5 py-2.5 text-[15px] leading-6 ${
-                    isUser
-                      ? isDesktop
-                        ? "bg-[var(--brand-gradient)] text-white shadow-[var(--shadow-soft)]"
-                        : "bg-[linear-gradient(135deg,rgba(251,191,36,0.96),rgba(249,115,22,0.90))] text-white [animation:bubble-in_220ms_cubic-bezier(0.22,1,0.36,1)] shadow-[var(--shadow-soft)]"
-                      : isDesktop
-                        ? "border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] text-[color:var(--text-primary)] shadow-[var(--shadow-soft)]"
-                        : "border border-[rgba(255,240,220,0.80)] bg-[rgba(255,253,248,0.92)] text-[color:var(--text-primary)] shadow-[var(--shadow-soft)]"
-                  }`}
-                >
-                  {message.type === "sticker" && message.attachment?.kind === "sticker" ? (
-                    <StickerMessage
-                      url={message.attachment.url}
-                      label={message.attachment.label ?? message.text}
-                      maxSize={isDesktop ? 160 : 132}
-                    />
-                  ) : (
-                    message.text
-                  )}
-                </div>
+                {message.type === "sticker" &&
+                message.attachment?.kind === "sticker" ? (
+                  <StickerMessage
+                    url={message.attachment.url}
+                    label={message.attachment.label ?? message.text}
+                    maxSize={isDesktop ? 160 : 132}
+                  />
+                ) : message.type === "image" &&
+                  message.attachment?.kind === "image" ? (
+                  <ImageMessage
+                    url={message.attachment.url}
+                    label={message.attachment.fileName || message.text}
+                    maxSize={isDesktop ? 180 : 144}
+                  />
+                ) : message.type === "contact_card" &&
+                  message.attachment?.kind === "contact_card" ? (
+                  <ContactCardMessage attachment={message.attachment} />
+                ) : message.type === "location_card" &&
+                  message.attachment?.kind === "location_card" ? (
+                  <LocationCardMessage attachment={message.attachment} />
+                ) : (
+                  <div
+                    className={`rounded-[18px] px-3.5 py-2.5 text-[15px] leading-6 ${
+                      isUser
+                        ? isDesktop
+                          ? "bg-[var(--brand-gradient)] text-white shadow-[var(--shadow-soft)]"
+                          : "bg-[linear-gradient(135deg,rgba(251,191,36,0.96),rgba(249,115,22,0.90))] text-white [animation:bubble-in_220ms_cubic-bezier(0.22,1,0.36,1)] shadow-[var(--shadow-soft)]"
+                        : isDesktop
+                          ? "border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] text-[color:var(--text-primary)] shadow-[var(--shadow-soft)]"
+                          : "border border-[rgba(255,240,220,0.80)] bg-[rgba(255,253,248,0.92)] text-[color:var(--text-primary)] shadow-[var(--shadow-soft)]"
+                    }`}
+                  >
+                    {message.text}
+                  </div>
+                )}
               </div>
               {isUser ? <AvatarChip name="我" size="wechat" /> : null}
             </div>
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function ImageMessage({
+  url,
+  label,
+  maxSize,
+}: {
+  url: string;
+  label: string;
+  maxSize: number;
+}) {
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  if (loadFailed) {
+    return (
+      <div className="flex h-28 w-28 items-center justify-center rounded-[22px] border border-white/80 bg-white/90 px-3 text-center text-xs text-[color:var(--text-secondary)] shadow-[var(--shadow-soft)]">
+        {label || "[图片]"}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={url}
+      alt={label}
+      onError={() => setLoadFailed(true)}
+      className="rounded-[22px] border border-white/75 bg-white/80 object-cover shadow-[var(--shadow-soft)]"
+      style={{ maxWidth: `${maxSize}px`, maxHeight: `${maxSize}px` }}
+      loading="lazy"
+    />
+  );
+}
+
+function ContactCardMessage({
+  attachment,
+}: {
+  attachment: Extract<MessageAttachment, { kind: "contact_card" }>;
+}) {
+  return (
+    <div className="w-[220px] rounded-[22px] border border-white/80 bg-white/92 p-3 shadow-[var(--shadow-soft)]">
+      <div className="flex items-center gap-3">
+        <AvatarChip
+          name={attachment.name}
+          src={attachment.avatar}
+          size="wechat"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">
+            {attachment.name}
+          </div>
+          <div className="mt-0.5 truncate text-xs text-[color:var(--text-muted)]">
+            {attachment.relationship || "世界联系人"}
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">
+        <ContactRound size={12} />
+        <span>角色名片</span>
+      </div>
+    </div>
+  );
+}
+
+function LocationCardMessage({
+  attachment,
+}: {
+  attachment: Extract<MessageAttachment, { kind: "location_card" }>;
+}) {
+  return (
+    <div className="w-[220px] rounded-[22px] border border-white/80 bg-white/92 p-3 shadow-[var(--shadow-soft)]">
+      <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.12em] text-[color:var(--text-muted)]">
+        <MapPin size={12} />
+        <span>位置</span>
+      </div>
+      <div className="mt-3 text-sm font-medium text-[color:var(--text-primary)]">
+        {attachment.title}
+      </div>
+      {attachment.subtitle ? (
+        <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
+          {attachment.subtitle}
+        </div>
+      ) : null}
     </div>
   );
 }
