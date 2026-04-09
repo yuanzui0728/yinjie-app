@@ -11,9 +11,9 @@ export function SetupPage() {
   const navigate = useNavigate();
   const hasOwner = Boolean(useWorldOwnerStore((state) => state.id));
 
-  function continueIntoWorld() {
+  function continueIntoWorld(ownerReady: boolean) {
     void navigate({
-      to: hasOwner ? "/tabs/chat" : "/onboarding",
+      to: ownerReady ? "/tabs/chat" : "/onboarding",
       replace: true,
     });
   }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   createMyCloudWorldRequest,
+  getWorldOwner,
   getMyCloudWorld,
   sendCloudPhoneCode,
   verifyCloudPhoneCode,
@@ -17,11 +18,14 @@ import {
   SetupStepList,
   TextField,
 } from "@yinjie/ui";
+import { describeRequestError } from "../../../lib/request-error";
+import { assertWorldReachable } from "../../../lib/world-entry";
 import { setAppRuntimeConfig, useAppRuntimeConfig } from "../../../runtime/runtime-config-store";
+import { useWorldOwnerStore } from "../../../store/world-owner-store";
 
 type MobileSetupPanelProps = {
   hasOwner: boolean;
-  onContinue: () => void;
+  onContinue: (ownerReady: boolean) => void;
 };
 
 type WorldAccessMode = "cloud" | "local";
@@ -49,6 +53,7 @@ function describeCloudStatus(data?: CloudWorldLookupResponse | null) {
 
 export function MobileSetupPanel({ hasOwner, onContinue }: MobileSetupPanelProps) {
   const runtimeConfig = useAppRuntimeConfig();
+  const hydrateOwner = useWorldOwnerStore((state) => state.hydrateOwner);
   const [mode, setMode] = useState<WorldAccessMode>(
     runtimeConfig.worldAccessMode ?? (runtimeConfig.apiBaseUrl ? "local" : "cloud"),
   );
@@ -62,6 +67,8 @@ export function MobileSetupPanel({ hasOwner, onContinue }: MobileSetupPanelProps
   const [worldName, setWorldName] = useState("");
   const [cloudAccessToken, setCloudAccessToken] = useState("");
   const [notice, setNotice] = useState("");
+  const [continueError, setContinueError] = useState("");
+  const [isContinuing, setIsContinuing] = useState(false);
 
   const normalizedLocalApiBaseUrl = normalizeBaseUrl(localApiBaseUrl);
   const normalizedLocalSocketBaseUrl = normalizeBaseUrl(localSocketBaseUrl);
@@ -176,6 +183,10 @@ export function MobileSetupPanel({ hasOwner, onContinue }: MobileSetupPanelProps
       ? runtimeConfig.cloudWorldId || runtimeConfig.cloudPhone || "Cloud world pending confirmation"
       : runtimeConfig.apiBaseUrl || "Not configured";
 
+  useEffect(() => {
+    setContinueError("");
+  }, [mode, normalizedLocalApiBaseUrl, currentCloudWorld?.apiBaseUrl]);
+
   const steps = useMemo(() => {
     if (mode === "cloud") {
       return [
@@ -249,31 +260,55 @@ export function MobileSetupPanel({ hasOwner, onContinue }: MobileSetupPanelProps
     setNotice("Local world entry saved.");
   }
 
-  function continueWithLocalWorld() {
+  async function continueWithLocalWorld() {
     if (!normalizedLocalApiBaseUrl) {
       return;
     }
 
-    saveLocalWorld();
-    onContinue();
+    setIsContinuing(true);
+    setContinueError("");
+
+    try {
+      await assertWorldReachable(normalizedLocalApiBaseUrl);
+      saveLocalWorld();
+      const owner = await getWorldOwner(normalizedLocalApiBaseUrl);
+      hydrateOwner(owner);
+      onContinue(owner.onboardingCompleted);
+    } catch (error) {
+      setContinueError(describeRequestError(error, "当前世界地址暂时不可用，请检查后再试。"));
+    } finally {
+      setIsContinuing(false);
+    }
   }
 
-  function continueWithCloudWorld() {
+  async function continueWithCloudWorld() {
     if (!cloudCanContinue || !currentCloudWorld?.apiBaseUrl) {
       return;
     }
 
-    setAppRuntimeConfig({
-      apiBaseUrl: currentCloudWorld.apiBaseUrl,
-      socketBaseUrl: currentCloudWorld.apiBaseUrl,
-      worldAccessMode: "cloud",
-      cloudApiBaseUrl: normalizedCloudApiBaseUrl || undefined,
-      cloudPhone: phone.trim() || runtimeConfig.cloudPhone,
-      cloudWorldId: currentCloudWorld.id,
-      bootstrapSource: "user",
-      configStatus: "configured",
-    });
-    onContinue();
+    setIsContinuing(true);
+    setContinueError("");
+
+    try {
+      await assertWorldReachable(currentCloudWorld.apiBaseUrl);
+      setAppRuntimeConfig({
+        apiBaseUrl: currentCloudWorld.apiBaseUrl,
+        socketBaseUrl: currentCloudWorld.apiBaseUrl,
+        worldAccessMode: "cloud",
+        cloudApiBaseUrl: normalizedCloudApiBaseUrl || undefined,
+        cloudPhone: phone.trim() || runtimeConfig.cloudPhone,
+        cloudWorldId: currentCloudWorld.id,
+        bootstrapSource: "user",
+        configStatus: "configured",
+      });
+      const owner = await getWorldOwner(currentCloudWorld.apiBaseUrl);
+      hydrateOwner(owner);
+      onContinue(owner.onboardingCompleted);
+    } catch (error) {
+      setContinueError(describeRequestError(error, "云世界暂时不可用，请稍后再试。"));
+    } finally {
+      setIsContinuing(false);
+    }
   }
 
   function selectMode(nextMode: WorldAccessMode) {
@@ -351,19 +386,19 @@ export function MobileSetupPanel({ hasOwner, onContinue }: MobileSetupPanelProps
             <div className="flex flex-wrap gap-3">
               <Button
                 onClick={saveLocalWorld}
-                disabled={!localCanContinue}
+                disabled={!localCanContinue || isContinuing}
                 variant="primary"
                 size="lg"
               >
                 Save local world
               </Button>
               <Button
-                onClick={continueWithLocalWorld}
-                disabled={!localCanContinue}
+                onClick={() => void continueWithLocalWorld()}
+                disabled={!localCanContinue || isContinuing}
                 variant="secondary"
                 size="lg"
               >
-                {hasOwner ? "Enter Yinjie" : "Continue"}
+                {isContinuing ? "Checking world..." : hasOwner ? "Enter Yinjie" : "Continue"}
               </Button>
             </div>
           ) : (
@@ -393,12 +428,12 @@ export function MobileSetupPanel({ hasOwner, onContinue }: MobileSetupPanelProps
                 {cloudStatusQuery.isFetching ? "Refreshing..." : "Refresh status"}
               </Button>
               <Button
-                onClick={continueWithCloudWorld}
-                disabled={!cloudCanContinue}
+                onClick={() => void continueWithCloudWorld()}
+                disabled={!cloudCanContinue || isContinuing}
                 variant="secondary"
                 size="lg"
               >
-                {hasOwner ? "Enter Yinjie" : "Continue"}
+                {isContinuing ? "Checking world..." : hasOwner ? "Enter Yinjie" : "Continue"}
               </Button>
             </div>
           )}
@@ -527,6 +562,7 @@ export function MobileSetupPanel({ hasOwner, onContinue }: MobileSetupPanelProps
           {createWorldRequestMutation.isError && createWorldRequestMutation.error instanceof Error ? (
             <ErrorBlock className="mt-4" message={createWorldRequestMutation.error.message} />
           ) : null}
+          {continueError ? <ErrorBlock className="mt-4" message={continueError} /> : null}
         </section>
       }
     />
