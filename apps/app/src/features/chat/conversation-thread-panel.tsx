@@ -11,12 +11,16 @@ type ConversationThreadPanelProps = {
   conversationId: string;
   variant?: "mobile" | "desktop";
   onBack?: () => void;
+  inspectorOpen?: boolean;
+  onToggleInspector?: () => void;
 };
 
 export function ConversationThreadPanel({
   conversationId,
   variant = "mobile",
   onBack,
+  inspectorOpen = false,
+  onToggleInspector,
 }: ConversationThreadPanelProps) {
   const {
     conversationTitle,
@@ -70,6 +74,7 @@ export function ConversationThreadPanel({
             <span>{subtitle}</span>
           </div>
         </div>
+
         {isDesktop ? (
           <div className="hidden items-center gap-1.5 xl:flex">
             <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition hover:bg-white" aria-label="搜索">
@@ -88,7 +93,14 @@ export function ConversationThreadPanel({
             >
               <Users size={16} />
             </Link>
-            <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition hover:bg-white" aria-label="更多">
+            <button
+              type="button"
+              onClick={onToggleInspector}
+              className={`flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition ${
+                inspectorOpen ? "bg-[rgba(15,23,42,0.08)] text-[color:var(--text-primary)]" : "hover:bg-white"
+              }`}
+              aria-label="更多"
+            >
               <Ellipsis size={16} />
             </button>
           </div>

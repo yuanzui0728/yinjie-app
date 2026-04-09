@@ -1,6 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { X } from "lucide-react";
 import {
   getBlockedCharacters,
   getConversations,
@@ -23,6 +24,7 @@ export function DesktopChatWorkspace({ selectedConversationId }: DesktopChatWork
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
   const [searchTerm, setSearchTerm] = useState("");
+  const [inspectorOpen, setInspectorOpen] = useState(false);
 
   const conversationsQuery = useQuery({
     queryKey: ["app-conversations", baseUrl],
@@ -80,8 +82,14 @@ export function DesktopChatWorkspace({ selectedConversationId }: DesktopChatWork
     return filteredConversations[0];
   }, [filteredConversations, selectedConversationId]);
 
+  useEffect(() => {
+    if (!activeConversation) {
+      setInspectorOpen(false);
+    }
+  }, [activeConversation]);
+
   return (
-    <div className="flex h-full min-h-0">
+    <div className="relative flex h-full min-h-0">
       <section className="flex w-[320px] shrink-0 flex-col border-r border-[rgba(15,23,42,0.06)] bg-[linear-gradient(180deg,rgba(246,247,249,0.98),rgba(242,244,247,0.98))]">
         <div className="border-b border-[rgba(15,23,42,0.06)] px-4 py-4">
           <div className="flex items-center justify-between">
@@ -132,7 +140,12 @@ export function DesktopChatWorkspace({ selectedConversationId }: DesktopChatWork
 
       <section className="min-w-0 flex-1">
         {activeConversation ? (
-          <ConversationThreadPanel conversationId={activeConversation.id} variant="desktop" />
+          <ConversationThreadPanel
+            conversationId={activeConversation.id}
+            variant="desktop"
+            inspectorOpen={inspectorOpen}
+            onToggleInspector={() => setInspectorOpen((current) => !current)}
+          />
         ) : (
           <div className="flex h-full items-center justify-center px-10">
             <EmptyState
@@ -143,65 +156,69 @@ export function DesktopChatWorkspace({ selectedConversationId }: DesktopChatWork
         )}
       </section>
 
-      <aside className="hidden w-[280px] shrink-0 border-l border-[rgba(15,23,42,0.06)] bg-[rgba(248,249,251,0.98)] xl:flex xl:flex-col">
-        <div className="border-b border-[rgba(15,23,42,0.06)] px-5 py-5">
-          <div className="text-lg font-semibold text-[color:var(--text-primary)]">
-            {activeConversation ? activeConversation.title : "聊天信息"}
+      {activeConversation && inspectorOpen ? (
+        <aside className="absolute bottom-0 right-0 top-[73px] z-20 hidden w-[280px] border-l border-[rgba(15,23,42,0.06)] bg-[rgba(248,249,251,0.98)] shadow-[-8px_0_24px_rgba(15,23,42,0.08)] xl:flex xl:flex-col">
+          <div className="flex items-center justify-between border-b border-[rgba(15,23,42,0.06)] px-5 py-5">
+            <div className="min-w-0">
+              <div className="truncate text-lg font-semibold text-[color:var(--text-primary)]">
+                {activeConversation.title}
+              </div>
+              <div className="mt-2 text-sm text-[color:var(--text-secondary)]">
+                {activeConversation.type === "group" ? "群聊" : "单聊"}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setInspectorOpen(false)}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition hover:bg-white"
+              aria-label="关闭"
+            >
+              <X size={16} />
+            </button>
           </div>
-          <div className="mt-2 text-sm text-[color:var(--text-secondary)]">
-            {activeConversation ? (activeConversation.type === "group" ? "群聊" : "单聊") : "选择一个会话查看详情"}
-          </div>
-        </div>
 
-        <div className="space-y-4 px-5 py-5">
-          {activeConversation ? (
-            <>
-              <div className="rounded-[20px] border border-white/80 bg-white/90 p-4 shadow-[var(--shadow-soft)]">
-                <div className="flex items-center gap-3">
-                  <AvatarChip name={activeConversation.title} />
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">{activeConversation.title}</div>
-                    <div className="mt-1 text-xs text-[color:var(--text-muted)]">
-                      {activeConversation.type === "group" ? "群聊" : "单聊"}
-                    </div>
+          <div className="space-y-4 px-5 py-5">
+            <div className="rounded-[20px] border border-white/80 bg-white/90 p-4 shadow-[var(--shadow-soft)]">
+              <div className="flex items-center gap-3">
+                <AvatarChip name={activeConversation.title} />
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">{activeConversation.title}</div>
+                  <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                    {activeConversation.type === "group" ? "群聊" : "单聊"}
                   </div>
                 </div>
               </div>
-
-              <DetailMetric label="参与成员" value={String(activeConversation.participants.length || 1)} />
-              <DetailMetric
-                label="最后活跃"
-                value={formatTimestamp(activeConversation.lastMessage?.createdAt ?? activeConversation.updatedAt)}
-              />
-              <DetailMetric
-                label="未读消息"
-                value={activeConversation.unreadCount > 0 ? String(activeConversation.unreadCount) : "已读"}
-              />
-
-              <div className="rounded-[20px] border border-white/80 bg-white/90 p-4 shadow-[var(--shadow-soft)]">
-                <div className="grid grid-cols-1 gap-2">
-                  <Link
-                    to="/tabs/contacts"
-                    className="rounded-[14px] bg-[rgba(15,23,42,0.04)] px-3 py-3 text-sm text-[color:var(--text-secondary)] transition hover:bg-[rgba(15,23,42,0.07)] hover:text-[color:var(--text-primary)]"
-                  >
-                    通讯录
-                  </Link>
-                  <Link
-                    to="/tabs/profile"
-                    className="rounded-[14px] bg-[rgba(15,23,42,0.04)] px-3 py-3 text-sm text-[color:var(--text-secondary)] transition hover:bg-[rgba(15,23,42,0.07)] hover:text-[color:var(--text-primary)]"
-                  >
-                    我的资料
-                  </Link>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="rounded-[20px] border border-dashed border-[color:var(--border-faint)] px-4 py-5 text-sm leading-7 text-[color:var(--text-muted)]">
-              选择一个会话后，这里会显示聊天信息。
             </div>
-          )}
-        </div>
-      </aside>
+
+            <DetailMetric label="参与成员" value={String(activeConversation.participants.length || 1)} />
+            <DetailMetric
+              label="最后活跃"
+              value={formatTimestamp(activeConversation.lastMessage?.createdAt ?? activeConversation.updatedAt)}
+            />
+            <DetailMetric
+              label="未读消息"
+              value={activeConversation.unreadCount > 0 ? String(activeConversation.unreadCount) : "已读"}
+            />
+
+            <div className="rounded-[20px] border border-white/80 bg-white/90 p-4 shadow-[var(--shadow-soft)]">
+              <div className="grid grid-cols-1 gap-2">
+                <Link
+                  to="/tabs/contacts"
+                  className="rounded-[14px] bg-[rgba(15,23,42,0.04)] px-3 py-3 text-sm text-[color:var(--text-secondary)] transition hover:bg-[rgba(15,23,42,0.07)] hover:text-[color:var(--text-primary)]"
+                >
+                  通讯录
+                </Link>
+                <Link
+                  to="/tabs/profile"
+                  className="rounded-[14px] bg-[rgba(15,23,42,0.04)] px-3 py-3 text-sm text-[color:var(--text-secondary)] transition hover:bg-[rgba(15,23,42,0.07)] hover:text-[color:var(--text-primary)]"
+                >
+                  我的资料
+                </Link>
+              </div>
+            </div>
+          </div>
+        </aside>
+      ) : null}
     </div>
   );
 }
