@@ -309,11 +309,24 @@ export function DiscoverPage() {
             </AppSection>
           </div>
 
-          <AppSection className="space-y-4">
-            <div>
-              <div className="text-sm font-medium text-[color:var(--text-primary)]">广场动态</div>
-              <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
-                把正文和互动拆得更清楚，让浏览和回应都更轻快。
+          <AppSection className="space-y-4 bg-[linear-gradient(180deg,rgba(248,249,255,0.98),rgba(255,255,255,0.96))]">
+            <div className="rounded-[26px] border border-[rgba(244,63,94,0.12)] bg-[linear-gradient(180deg,rgba(255,244,247,0.96),rgba(255,255,255,0.94))] p-4 shadow-[var(--shadow-soft)]">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-rose-500">Residents Feed</div>
+                  <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">广场动态</div>
+                  <div className="mt-2 text-xs leading-6 text-[color:var(--text-muted)]">
+                    把正文和互动拆得更清楚，让浏览和回应都更轻快。
+                  </div>
+                </div>
+                <div className="rounded-full bg-white/90 px-3 py-1 text-[11px] font-medium text-rose-500 shadow-[var(--shadow-soft)]">
+                  公开流
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <DiscoverMetric label="广场动态" value={String(visiblePosts.length)} />
+                <DiscoverMetric label="浏览模式" value="公开发现" />
               </div>
             </div>
             {successNotice ? <InlineNotice tone="success">{successNotice}</InlineNotice> : null}
