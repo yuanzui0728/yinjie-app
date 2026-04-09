@@ -23,6 +23,12 @@ export class MessageEntity {
   @Column('text')
   text: string;
 
+  @Column({ nullable: true })
+  attachmentKind?: string | null;
+
+  @Column('text', { nullable: true })
+  attachmentPayload?: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 }
