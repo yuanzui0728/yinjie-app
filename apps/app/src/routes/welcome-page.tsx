@@ -545,7 +545,7 @@ export function WelcomePage() {
             onClick={() => chooseMode("cloud")}
             className={`rounded-[24px] border p-4 text-left transition ${
               mode === "cloud"
-                ? "border-[rgba(255,179,71,0.48)] bg-[rgba(255,248,236,0.94)] shadow-[var(--shadow-soft)]"
+                ? "border-[rgba(249,115,22,0.50)] bg-[rgba(255,248,235,0.96)] shadow-[0_4px_16px_rgba(249,115,22,0.14)]"
                 : "border-[color:var(--border-faint)] bg-white/76 hover:bg-white"
             }`}
           >
@@ -557,7 +557,7 @@ export function WelcomePage() {
             onClick={() => chooseMode("local")}
             className={`rounded-[24px] border p-4 text-left transition ${
               mode === "local"
-                ? "border-[rgba(96,165,250,0.42)] bg-[rgba(244,249,255,0.95)] shadow-[var(--shadow-soft)]"
+                ? "border-[rgba(16,185,129,0.40)] bg-[rgba(240,253,248,0.96)] shadow-[var(--shadow-soft)]"
                 : "border-[color:var(--border-faint)] bg-white/76 hover:bg-white"
             }`}
           >
@@ -589,12 +589,12 @@ export function WelcomePage() {
   if (isDesktopLayout) {
     return (
       <AppPage className="relative flex min-h-full items-center justify-center overflow-hidden p-6 sm:p-8">
-        <div className="pointer-events-none absolute inset-0 bg-[rgba(35,41,38,0.18)] backdrop-blur-[18px]" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),rgba(28,34,31,0.28)_74%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[rgba(30,20,10,0.14)] backdrop-blur-[18px]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,248,230,0.16),rgba(30,20,10,0.22)_74%)]" />
         <div className="relative z-10 w-full max-w-3xl">
           <div className="pointer-events-none absolute inset-0 rounded-[44px] bg-[rgba(255,255,255,0.24)] blur-3xl" />
-          <AppSection className="relative mx-auto w-full max-w-xl rounded-[32px] border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(252,248,242,0.94))] px-7 py-8 shadow-[0_28px_72px_rgba(42,50,46,0.34)] backdrop-blur-2xl">
-            <div className="inline-flex rounded-full border border-[rgba(255,179,71,0.24)] bg-white/78 px-3 py-1 text-[11px] uppercase tracking-[0.32em] text-[color:var(--brand-secondary)]">
+          <AppSection className="relative mx-auto w-full max-w-xl rounded-[32px] border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,248,235,0.94))] px-7 py-8 shadow-[0_28px_72px_rgba(160,90,10,0.22)] backdrop-blur-2xl">
+            <div className="inline-flex rounded-full border border-[rgba(249,115,22,0.24)] bg-white/78 px-3 py-1 text-[11px] uppercase tracking-[0.32em] text-[color:var(--brand-primary)]">
               世界入口
             </div>
             <h1 className="mt-5 text-3xl font-semibold tracking-[0.08em] text-[color:var(--text-primary)]">
@@ -612,8 +612,8 @@ export function WelcomePage() {
 
   return (
     <AppPage className="py-8">
-      <AppSection className="mx-auto w-full max-w-xl bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,246,232,0.94)_44%,rgba(240,251,245,0.96))] px-6 py-8">
-        <div className="inline-flex rounded-full border border-[rgba(255,179,71,0.24)] bg-white/78 px-3 py-1 text-[11px] uppercase tracking-[0.32em] text-[color:var(--brand-secondary)]">
+      <AppSection className="mx-auto w-full max-w-xl bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,248,235,0.96))] px-6 py-8">
+        <div className="inline-flex rounded-full border border-[rgba(249,115,22,0.24)] bg-white/78 px-3 py-1 text-[11px] uppercase tracking-[0.32em] text-[color:var(--brand-primary)]">
           世界入口
         </div>
         <h1 className="mt-6 text-3xl font-semibold tracking-[0.08em] text-[color:var(--text-primary)]">

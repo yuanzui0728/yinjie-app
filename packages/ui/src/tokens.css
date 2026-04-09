@@ -1,64 +1,72 @@
 :root {
   color-scheme: light;
 
-  --bg-canvas: #f7fbf6;
+  /* === 背景：暖奶油阳光调 === */
+  --bg-canvas: #fffcf5;
   --bg-canvas-elevated: #ffffff;
   --bg-accent:
-    radial-gradient(circle at top left, rgba(255, 195, 113, 0.26), transparent 34%),
-    radial-gradient(circle at top right, rgba(125, 211, 252, 0.22), transparent 32%),
-    radial-gradient(circle at 50% 110%, rgba(74, 222, 128, 0.14), transparent 38%);
+    radial-gradient(ellipse at 20% 0%, rgba(251, 191, 36, 0.22), transparent 55%),
+    radial-gradient(ellipse at 85% 20%, rgba(249, 115, 22, 0.14), transparent 50%),
+    radial-gradient(ellipse at 40% 95%, rgba(16, 185, 129, 0.10), transparent 50%);
   --bg-glow-top: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0));
   --bg-glow-bottom: linear-gradient(0deg, rgba(255, 255, 255, 0.64), rgba(255, 255, 255, 0));
   --bg-grid:
     linear-gradient(rgba(255, 255, 255, 0.44) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.44) 1px, transparent 1px);
 
+  /* === Surface：暖调透明 === */
   --surface-primary: rgba(255, 255, 255, 0.92);
-  --surface-shell: rgba(255, 255, 255, 0.9);
+  --surface-shell: rgba(255, 252, 245, 0.92);
   --surface-section: #ffffff;
   --surface-card: rgba(255, 255, 255, 0.98);
-  --surface-card-hover: #fffdf8;
-  --surface-soft: rgba(173, 87, 26, 0.12);
+  --surface-card-hover: #fffbf0;
+  --surface-soft: rgba(249, 115, 22, 0.08);
   --surface-secondary: rgba(255, 255, 255, 0.78);
-  --surface-tertiary: rgba(173, 87, 26, 0.14);
-  --surface-overlay: rgba(255, 255, 255, 0.94);
-  --surface-console: #f9fcfb;
+  --surface-tertiary: rgba(249, 115, 22, 0.10);
+  --surface-overlay: rgba(255, 253, 248, 0.96);
+  --surface-console: #fffdf7;
   --surface-input: rgba(255, 255, 255, 0.94);
 
-  --border-faint: rgba(14, 30, 37, 0.12);
-  --border-subtle: rgba(14, 30, 37, 0.18);
-  --border-strong: rgba(14, 30, 37, 0.26);
-  --border-brand: rgba(173, 87, 26, 0.34);
+  /* === 边框：暖棕调 === */
+  --border-faint: rgba(120, 70, 20, 0.10);
+  --border-subtle: rgba(120, 70, 20, 0.16);
+  --border-strong: rgba(120, 70, 20, 0.24);
+  --border-brand: rgba(249, 115, 22, 0.30);
   --border-danger: rgba(239, 68, 68, 0.3);
-  --border-success: rgba(34, 197, 94, 0.28);
+  --border-success: rgba(16, 185, 129, 0.28);
   --hairline-light: rgba(255, 255, 255, 0.5);
 
-  --text-primary: #112a24;
-  --text-secondary: #2f4a43;
-  --text-muted: #47605a;
-  --text-dim: #5a716b;
+  /* === 文字：暖棕系（去掉墨绿调）=== */
+  --text-primary: #1a0f05;
+  --text-secondary: #4a3728;
+  --text-muted: #7a6454;
+  --text-dim: #a0897a;
 
-  --brand-primary: #ad571a;
-  --brand-secondary: #6f4315;
-  --brand-soft: rgba(173, 87, 26, 0.12);
-  --brand-gradient: linear-gradient(135deg, rgba(173, 87, 26, 0.98), rgba(180, 83, 9, 0.96));
+  /* === 品牌色：晨光橙系 === */
+  --brand-primary: #f97316;
+  --brand-secondary: #fb923c;
+  --brand-accent: #10b981;
+  --brand-soft: rgba(249, 115, 22, 0.08);
+  --brand-gradient: linear-gradient(135deg, rgba(251, 191, 36, 0.96), rgba(249, 115, 22, 0.94));
 
-  --state-success-bg: rgba(34, 197, 94, 0.1);
+  /* === 状态色 === */
+  --state-success-bg: rgba(16, 185, 129, 0.10);
   --state-success-text: #065f46;
-  --state-warning-bg: rgba(245, 158, 11, 0.1);
+  --state-warning-bg: rgba(245, 158, 11, 0.10);
   --state-warning-text: #92400e;
-  --state-danger-bg: rgba(239, 68, 68, 0.1);
+  --state-danger-bg: rgba(239, 68, 68, 0.10);
   --state-danger-text: #991b1b;
   --state-info-bg: rgba(59, 130, 246, 0.09);
   --state-info-text: #1e40af;
 
-  --shadow-shell: 0 18px 60px rgba(130, 157, 145, 0.2);
-  --shadow-section: 0 12px 32px rgba(137, 163, 151, 0.12);
-  --shadow-card: 0 10px 24px rgba(121, 143, 133, 0.14);
-  --shadow-soft: 0 6px 16px rgba(117, 143, 131, 0.1);
-  --shadow-lift: 0 18px 44px rgba(110, 133, 124, 0.18);
-  --shadow-overlay: 0 22px 48px rgba(110, 133, 124, 0.2);
-  --shadow-focus: 0 0 0 3px rgba(255, 138, 61, 0.18);
+  /* === 阴影：暖琥珀调（阳光透射感）=== */
+  --shadow-shell: 0 20px 64px rgba(160, 90, 10, 0.14);
+  --shadow-section: 0 12px 32px rgba(180, 100, 20, 0.08);
+  --shadow-card: 0 8px 24px rgba(180, 100, 20, 0.10);
+  --shadow-soft: 0 4px 16px rgba(180, 100, 20, 0.07);
+  --shadow-lift: 0 18px 44px rgba(180, 100, 20, 0.12);
+  --shadow-overlay: 0 24px 52px rgba(160, 90, 10, 0.16);
+  --shadow-focus: 0 0 0 3px rgba(249, 115, 22, 0.20);
 
   --radius-sm: 0.75rem;
   --radius-md: 1rem;
@@ -81,17 +89,17 @@
 }
 
 html {
-  background: linear-gradient(180deg, #fbfff8, #f5faf7);
+  background: linear-gradient(180deg, #fffdf7, #fff8ee);
 }
 
 body {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(245, 250, 247, 0.98));
+  background: linear-gradient(180deg, rgba(255, 253, 247, 0.94), rgba(255, 248, 238, 0.98));
   color: var(--text-primary);
   accent-color: var(--brand-primary);
 }
 
 ::selection {
-  background: rgba(173, 87, 26, 0.18);
+  background: rgba(249, 115, 22, 0.16);
   color: var(--text-primary);
 }
 
