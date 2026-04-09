@@ -32,10 +32,6 @@ export function MobileShell({ children }: PropsWithChildren) {
       >
         <div className="relative flex h-full min-h-0 flex-1 flex-col overflow-hidden rounded-[40px] border border-white/70 bg-[color:var(--surface-shell)] shadow-[var(--shadow-shell)] backdrop-blur-[22px]">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0))]" />
-          <div className="pointer-events-none absolute inset-x-6 top-3 flex items-center justify-between text-[10px] uppercase tracking-[0.24em] text-[color:var(--text-dim)]">
-            <span>Remote World</span>
-            <span>Positive Flow</span>
-          </div>
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
           {showTabs ? (
             <nav
