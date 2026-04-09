@@ -1,36 +1,28 @@
-import { useEffect, useEffectEvent, useMemo, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import {
   getBlockedCharacters,
   getConversations,
-  getFriends,
-  getOrCreateConversation,
   type ConversationListItem,
 } from "@yinjie/contracts";
-import { ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
+import { ErrorBlock, LoadingBlock, TextField } from "@yinjie/ui";
 import { AvatarChip } from "../../../components/avatar-chip";
 import { EmptyState } from "../../../components/empty-state";
-import { ConversationThreadPanel } from "../../chat/conversation-thread-panel";
 import { formatTimestamp } from "../../../lib/format";
 import { useAppRuntimeConfig } from "../../../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../../../store/world-owner-store";
-
-type NoticeState = {
-  tone: "success" | "danger";
-  message: string;
-};
+import { ConversationThreadPanel } from "../../chat/conversation-thread-panel";
 
 type DesktopChatWorkspaceProps = {
   selectedConversationId?: string;
 };
 
 export function DesktopChatWorkspace({ selectedConversationId }: DesktopChatWorkspaceProps) {
-  const navigate = useNavigate();
   const ownerId = useWorldOwnerStore((state) => state.id);
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
-  const [notice, setNotice] = useState<NoticeState | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const conversationsQuery = useQuery({
     queryKey: ["app-conversations", baseUrl],
@@ -38,35 +30,10 @@ export function DesktopChatWorkspace({ selectedConversationId }: DesktopChatWork
     enabled: Boolean(ownerId),
   });
 
-  const friendsQuery = useQuery({
-    queryKey: ["app-friends-quick-start", baseUrl],
-    queryFn: () => getFriends(baseUrl),
-    enabled: Boolean(ownerId),
-  });
-
   const blockedQuery = useQuery({
     queryKey: ["app-chat-blocked-characters", baseUrl],
     queryFn: () => getBlockedCharacters(baseUrl),
     enabled: Boolean(ownerId),
-  });
-
-  const startChatMutation = useMutation({
-    mutationFn: async (characterId: string) => {
-      if (!ownerId) {
-        throw new Error("Missing world owner.");
-      }
-
-      return getOrCreateConversation({ characterId }, baseUrl);
-    },
-    onSuccess: (conversation) => {
-      void navigate({ to: "/chat/$conversationId", params: { conversationId: conversation.id } });
-    },
-    onError: (error) => {
-      setNotice({
-        tone: "danger",
-        message: error instanceof Error ? error.message : "Unable to start this conversation right now.",
-      });
-    },
   });
 
   const blockedCharacterIds = useMemo(
@@ -83,97 +50,67 @@ export function DesktopChatWorkspace({ selectedConversationId }: DesktopChatWork
     [blockedCharacterIds, conversationsQuery.data],
   );
 
-  const quickStart = useMemo(
-    () =>
-      (friendsQuery.data ?? [])
-        .filter(({ character }) => !blockedCharacterIds.has(character.id))
-        .slice(0, 6),
-    [blockedCharacterIds, friendsQuery.data],
-  );
+  const filteredConversations = useMemo(() => {
+    const keyword = searchTerm.trim().toLowerCase();
+    if (!keyword) {
+      return conversations;
+    }
+
+    return conversations.filter((conversation) => {
+      const title = conversation.title.toLowerCase();
+      const preview = conversation.lastMessage?.text?.toLowerCase() ?? "";
+      return title.includes(keyword) || preview.includes(keyword);
+    });
+  }, [conversations, searchTerm]);
+
   const unreadMessageCount = useMemo(
-    () => conversations.reduce((total, conversation) => total + conversation.unreadCount, 0),
-    [conversations],
+    () => filteredConversations.reduce((total, conversation) => total + conversation.unreadCount, 0),
+    [filteredConversations],
   );
 
   const activeConversation = useMemo(() => {
-    if (!conversations.length) {
+    if (!filteredConversations.length) {
       return null;
     }
 
     if (selectedConversationId) {
-      return conversations.find((conversation) => conversation.id === selectedConversationId) ?? conversations[0];
+      return filteredConversations.find((conversation) => conversation.id === selectedConversationId) ?? filteredConversations[0];
     }
 
-    return conversations[0];
-  }, [conversations, selectedConversationId]);
-
-  const resetStartChatState = useEffectEvent(() => {
-    setNotice(null);
-    startChatMutation.reset();
-  });
-
-  useEffect(() => {
-    resetStartChatState();
-  }, [baseUrl, ownerId, resetStartChatState]);
+    return filteredConversations[0];
+  }, [filteredConversations, selectedConversationId]);
 
   return (
     <div className="flex h-full min-h-0">
-      <section className="flex w-[360px] shrink-0 flex-col border-r border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(248,252,249,0.96))]">
-        <div className="border-b border-white/80 px-5 py-5">
-          <div className="text-[11px] uppercase tracking-[0.3em] text-[color:var(--brand-secondary)]">Workspace</div>
-          <div className="mt-3 text-2xl font-semibold text-[color:var(--text-primary)]">桌面会话工作台</div>
-          <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
-            列表、对话和资料栏同时常驻，阅读、回复和查看关系都不需要跳出当前节奏。
-          </div>
-
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            <WorkspaceMetric label="会话" value={String(conversations.length)} />
-            <WorkspaceMetric label="未读" value={String(unreadMessageCount)} />
-            <WorkspaceMetric label="快捷入口" value={String(quickStart.length)} />
-          </div>
-        </div>
-
-        <div className="border-b border-white/80 px-5 py-4">
+      <section className="flex w-[320px] shrink-0 flex-col border-r border-[rgba(15,23,42,0.06)] bg-[linear-gradient(180deg,rgba(246,247,249,0.98),rgba(242,244,247,0.98))]">
+        <div className="border-b border-[rgba(15,23,42,0.06)] px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="text-sm font-medium text-[color:var(--text-primary)]">快速开始</div>
-            <Link to="/tabs/contacts" className="text-xs text-[color:var(--brand-secondary)]">
-              通讯录
-            </Link>
+            <div className="text-base font-medium text-[color:var(--text-primary)]">消息</div>
+            <div className="text-xs text-[color:var(--text-muted)]">
+              {filteredConversations.length} / {unreadMessageCount}
+            </div>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            {quickStart.map(({ character }) => (
-              <button
-                key={character.id}
-                type="button"
-                onClick={() => startChatMutation.mutate(character.id)}
-                disabled={startChatMutation.isPending}
-                className="rounded-[22px] border border-white/80 bg-white/86 p-3 text-left shadow-[var(--shadow-soft)] transition-[background-color,transform,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:-translate-y-0.5 hover:bg-white hover:shadow-[var(--shadow-card)]"
-              >
-                <AvatarChip name={character.name} src={character.avatar} />
-                <div className="mt-3 line-clamp-1 text-sm font-medium text-[color:var(--text-primary)]">{character.name}</div>
-                <div className="mt-1 line-clamp-1 text-[11px] text-[color:var(--text-muted)]">
-                  {startChatMutation.variables === character.id && startChatMutation.isPending
-                    ? "正在建立会话..."
-                    : character.relationship}
-                </div>
-              </button>
-            ))}
+          <div className="mt-3">
+            <TextField
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="搜索"
+              className="rounded-[18px] border-[rgba(15,23,42,0.06)] bg-white/92 px-4 py-2.5 shadow-none hover:bg-white focus:shadow-none"
+            />
           </div>
-          {!quickStart.length && !friendsQuery.isLoading ? (
-            <div className="mt-3 text-xs text-[color:var(--text-muted)]">先去通讯录认识一些人，这里会出现更顺手的快捷入口。</div>
-          ) : null}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-auto px-4 py-4">
-          {notice ? <InlineNotice tone={notice.tone}>{notice.message}</InlineNotice> : null}
+        <div className="min-h-0 flex-1 overflow-auto px-2 py-2">
           {conversationsQuery.isLoading ? <LoadingBlock label="正在读取会话..." /> : null}
           {conversationsQuery.isError && conversationsQuery.error instanceof Error ? (
             <ErrorBlock message={conversationsQuery.error.message} />
           ) : null}
-          {friendsQuery.isError && friendsQuery.error instanceof Error ? <ErrorBlock message={friendsQuery.error.message} /> : null}
+          {blockedQuery.isError && blockedQuery.error instanceof Error ? (
+            <ErrorBlock message={blockedQuery.error.message} />
+          ) : null}
 
-          <div className="space-y-2">
-            {conversations.map((conversation) => (
+          <div className="space-y-1.5">
+            {filteredConversations.map((conversation) => (
               <ConversationCard
                 key={conversation.id}
                 active={conversation.id === activeConversation?.id}
@@ -182,19 +119,11 @@ export function DesktopChatWorkspace({ selectedConversationId }: DesktopChatWork
             ))}
           </div>
 
-          {!conversationsQuery.isLoading && !conversations.length ? (
+          {!conversationsQuery.isLoading && !filteredConversations.length ? (
             <div className="pt-4">
               <EmptyState
-                title="还没有任何会话"
-                description="先去通讯录认识一些人，等第一条消息出现后，这里就会慢慢热起来。"
-                action={
-                  <Link
-                    to="/tabs/contacts"
-                    className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-4 py-2 text-sm text-[color:var(--text-primary)] shadow-[var(--shadow-soft)]"
-                  >
-                    去通讯录
-                  </Link>
-                }
+                title={searchTerm.trim() ? "没有匹配的会话" : "还没有任何会话"}
+                description={searchTerm.trim() ? "换个关键词试试。" : "等第一条消息出现后，这里就会开始热起来。"}
               />
             </div>
           ) : null}
@@ -208,25 +137,26 @@ export function DesktopChatWorkspace({ selectedConversationId }: DesktopChatWork
           <div className="flex h-full items-center justify-center px-10">
             <EmptyState
               title="先选择一个会话"
-              description="会话会停留在中间区域，右侧资料也会跟着一起更新。"
+              description="会话列表会固定停留在左侧，当前对话会始终停留在中间区域。"
             />
           </div>
         )}
       </section>
 
-      <aside className="hidden w-[300px] shrink-0 border-l border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.84),rgba(248,252,249,0.96))] xl:flex xl:flex-col">
-        <div className="border-b border-white/80 px-5 py-5">
-          <div className="text-[11px] uppercase tracking-[0.3em] text-[color:var(--text-muted)]">Inspector</div>
-          <div className="mt-3 text-lg font-semibold text-[color:var(--text-primary)]">会话资料</div>
-          <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
-            当前会话的信息会固定停留在右侧，方便边聊边看。
+      <aside className="hidden w-[280px] shrink-0 border-l border-[rgba(15,23,42,0.06)] bg-[rgba(248,249,251,0.98)] xl:flex xl:flex-col">
+        <div className="border-b border-[rgba(15,23,42,0.06)] px-5 py-5">
+          <div className="text-lg font-semibold text-[color:var(--text-primary)]">
+            {activeConversation ? activeConversation.title : "聊天信息"}
+          </div>
+          <div className="mt-2 text-sm text-[color:var(--text-secondary)]">
+            {activeConversation ? (activeConversation.type === "group" ? "群聊" : "单聊") : "选择一个会话查看详情"}
           </div>
         </div>
 
         <div className="space-y-4 px-5 py-5">
           {activeConversation ? (
             <>
-              <div className="rounded-[24px] border border-white/80 bg-white/86 p-4 shadow-[var(--shadow-soft)]">
+              <div className="rounded-[20px] border border-white/80 bg-white/90 p-4 shadow-[var(--shadow-soft)]">
                 <div className="flex items-center gap-3">
                   <AvatarChip name={activeConversation.title} />
                   <div className="min-w-0">
@@ -248,21 +178,26 @@ export function DesktopChatWorkspace({ selectedConversationId }: DesktopChatWork
                 value={activeConversation.unreadCount > 0 ? String(activeConversation.unreadCount) : "已读"}
               />
 
-              <div className="rounded-[24px] border border-white/80 bg-white/86 p-4 shadow-[var(--shadow-soft)]">
-                <div className="text-sm font-medium text-[color:var(--text-primary)]">快捷操作</div>
-                <div className="mt-3 grid grid-cols-1 gap-2">
-                  <Link to="/tabs/contacts" className="rounded-[18px] bg-[rgba(255,138,61,0.08)] px-3 py-3 text-sm text-[color:var(--text-secondary)] transition hover:bg-[rgba(255,138,61,0.12)] hover:text-[color:var(--text-primary)]">
-                    查看通讯录
+              <div className="rounded-[20px] border border-white/80 bg-white/90 p-4 shadow-[var(--shadow-soft)]">
+                <div className="grid grid-cols-1 gap-2">
+                  <Link
+                    to="/tabs/contacts"
+                    className="rounded-[14px] bg-[rgba(15,23,42,0.04)] px-3 py-3 text-sm text-[color:var(--text-secondary)] transition hover:bg-[rgba(15,23,42,0.07)] hover:text-[color:var(--text-primary)]"
+                  >
+                    通讯录
                   </Link>
-                  <Link to="/tabs/profile" className="rounded-[18px] bg-[rgba(255,138,61,0.08)] px-3 py-3 text-sm text-[color:var(--text-secondary)] transition hover:bg-[rgba(255,138,61,0.12)] hover:text-[color:var(--text-primary)]">
-                    打开我的资料
+                  <Link
+                    to="/tabs/profile"
+                    className="rounded-[14px] bg-[rgba(15,23,42,0.04)] px-3 py-3 text-sm text-[color:var(--text-secondary)] transition hover:bg-[rgba(15,23,42,0.07)] hover:text-[color:var(--text-primary)]"
+                  >
+                    我的资料
                   </Link>
                 </div>
               </div>
             </>
           ) : (
-            <div className="rounded-[24px] border border-dashed border-[color:var(--border-faint)] px-4 py-5 text-sm leading-7 text-[color:var(--text-muted)]">
-              选择一个会话后，这里会显示会话资料和快捷入口。
+            <div className="rounded-[20px] border border-dashed border-[color:var(--border-faint)] px-4 py-5 text-sm leading-7 text-[color:var(--text-muted)]">
+              选择一个会话后，这里会显示聊天信息。
             </div>
           )}
         </div>
@@ -284,8 +219,8 @@ function ConversationCard({
       params={{ conversationId: conversation.id }}
       className={
         active
-          ? "flex items-center gap-3 rounded-[24px] border border-[color:var(--border-brand)] bg-[linear-gradient(135deg,rgba(255,246,232,0.96),rgba(255,255,255,0.92))] px-4 py-4 shadow-[var(--shadow-card)]"
-          : "flex items-center gap-3 rounded-[24px] border border-transparent bg-white/72 px-4 py-4 transition-[background-color,transform,border-color,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:-translate-y-0.5 hover:border-[color:var(--border-faint)] hover:bg-white/92 hover:shadow-[var(--shadow-soft)]"
+          ? "flex items-center gap-3 rounded-[18px] border border-transparent bg-[rgba(226,230,235,0.96)] px-4 py-3"
+          : "flex items-center gap-3 rounded-[18px] border border-transparent bg-transparent px-4 py-3 transition-[background-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[rgba(255,255,255,0.82)]"
       }
     >
       <AvatarChip name={conversation.title} />
@@ -301,7 +236,7 @@ function ConversationCard({
             {conversation.lastMessage?.text ?? "从这里开始第一句问候"}
           </div>
           {conversation.unreadCount > 0 ? (
-            <div className="min-w-6 rounded-full bg-[var(--brand-gradient)] px-2 py-0.5 text-center text-[11px] text-white shadow-[var(--shadow-soft)]">
+            <div className="min-w-6 rounded-full bg-[rgba(7,193,96,0.92)] px-2 py-0.5 text-center text-[11px] text-white">
               {conversation.unreadCount}
             </div>
           ) : null}
@@ -313,18 +248,9 @@ function ConversationCard({
 
 function DetailMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[24px] border border-white/80 bg-white/86 p-4 shadow-[var(--shadow-soft)]">
-      <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-muted)]">{label}</div>
+    <div className="rounded-[20px] border border-white/80 bg-white/90 p-4 shadow-[var(--shadow-soft)]">
+      <div className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-muted)]">{label}</div>
       <div className="mt-3 text-base font-medium text-[color:var(--text-primary)]">{value}</div>
-    </div>
-  );
-}
-
-function WorkspaceMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[20px] bg-white/86 px-3 py-3 shadow-[var(--shadow-soft)]">
-      <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">{label}</div>
-      <div className="mt-2 text-base font-semibold text-[color:var(--text-primary)]">{value}</div>
     </div>
   );
 }
