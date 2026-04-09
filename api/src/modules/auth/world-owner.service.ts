@@ -18,6 +18,11 @@ import { MomentLikeEntity } from '../moments/moment-like.entity';
 import { FeedPostEntity } from '../feed/feed-post.entity';
 import { FeedCommentEntity } from '../feed/feed-comment.entity';
 import { UserFeedInteractionEntity } from '../analytics/user-feed-interaction.entity';
+import type { ChatBackgroundAsset } from '../chat/chat-background.types';
+import {
+  normalizeChatBackgroundAsset,
+  parseChatBackgroundAsset,
+} from '../chat/chat-background.utils';
 
 type UpdateWorldOwnerInput = {
   username?: string;
@@ -49,6 +54,7 @@ export class WorldOwnerService {
         signature: '',
         customApiKey: null,
         customApiBase: null,
+        defaultChatBackgroundPayload: null,
       });
       return this.userRepo.save(owner);
     }
@@ -209,6 +215,27 @@ export class WorldOwnerService {
     return this.serializeOwner(owner);
   }
 
+  async setDefaultChatBackground(background: ChatBackgroundAsset) {
+    const owner = await this.getOwnerOrThrow();
+    owner.defaultChatBackgroundPayload = JSON.stringify(
+      normalizeChatBackgroundAsset(background),
+    );
+    await this.userRepo.save(owner);
+    return this.serializeOwner(owner);
+  }
+
+  async clearDefaultChatBackground() {
+    const owner = await this.getOwnerOrThrow();
+    owner.defaultChatBackgroundPayload = null;
+    await this.userRepo.save(owner);
+    return this.serializeOwner(owner);
+  }
+
+  async getDefaultChatBackground() {
+    const owner = await this.getOwnerOrThrow();
+    return parseChatBackgroundAsset(owner.defaultChatBackgroundPayload);
+  }
+
   async clearOwnerApiKey() {
     const owner = await this.getOwnerOrThrow();
     owner.customApiKey = null;
@@ -239,6 +266,8 @@ export class WorldOwnerService {
       signature: owner.signature ?? '',
       hasCustomApiKey: Boolean(owner.customApiKey),
       customApiBase: owner.customApiBase ?? null,
+      defaultChatBackground:
+        parseChatBackgroundAsset(owner.defaultChatBackgroundPayload) ?? null,
       createdAt: owner.createdAt.toISOString(),
     };
   }

@@ -1,5 +1,11 @@
 import type { SuccessResponse } from "./auth";
 import type {
+  ConversationBackgroundSettings,
+  UpdateConversationBackgroundRequest,
+  UpdateWorldOwnerChatBackgroundRequest,
+  UploadChatBackgroundResponse,
+} from "./chat-backgrounds";
+import type {
   AddGroupMemberRequest,
   Conversation,
   ConversationListItem,
@@ -837,12 +843,80 @@ export function clearConversationHistory(id: string, baseUrl?: string) {
   );
 }
 
+export function getConversationBackground(id: string, baseUrl?: string) {
+  return requestLegacyApi<ConversationBackgroundSettings>(
+    `/conversations/${id}/background`,
+    undefined,
+    baseUrl,
+  );
+}
+
+export function setConversationBackground(
+  id: string,
+  payload: UpdateConversationBackgroundRequest,
+  baseUrl?: string,
+) {
+  return requestLegacyApi<ConversationBackgroundSettings>(
+    `/conversations/${id}/background`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
+export function clearConversationBackground(id: string, baseUrl?: string) {
+  return requestLegacyApi<ConversationBackgroundSettings>(
+    `/conversations/${id}/background`,
+    {
+      method: "DELETE",
+    },
+    baseUrl,
+  );
+}
+
 export function uploadChatAttachment(payload: FormData, baseUrl?: string) {
   return requestLegacyApi<UploadChatAttachmentResponse>(
     "/chat/attachments",
     {
       method: "POST",
       body: payload,
+    },
+    baseUrl,
+  );
+}
+
+export function uploadChatBackground(payload: FormData, baseUrl?: string) {
+  return requestLegacyApi<UploadChatBackgroundResponse>(
+    "/chat/backgrounds",
+    {
+      method: "POST",
+      body: payload,
+    },
+    baseUrl,
+  );
+}
+
+export function setWorldOwnerChatBackground(
+  payload: UpdateWorldOwnerChatBackgroundRequest,
+  baseUrl?: string,
+) {
+  return requestLegacyApi<WorldOwner>(
+    "/world/owner/chat-background",
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
+export function clearWorldOwnerChatBackground(baseUrl?: string) {
+  return requestLegacyApi<WorldOwner>(
+    "/world/owner/chat-background",
+    {
+      method: "DELETE",
     },
     baseUrl,
   );

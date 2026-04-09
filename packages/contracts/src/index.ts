@@ -1,6 +1,7 @@
 export * from "./api";
 export * from "./attachments";
 export * from "./auth";
+export * from "./chat-backgrounds";
 export * from "./chat";
 export * from "./cloud";
 export * from "./characters";

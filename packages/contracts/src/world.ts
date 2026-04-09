@@ -1,3 +1,5 @@
+import type { ChatBackgroundAsset } from "./chat-backgrounds";
+
 export interface WorldContext {
   id: string;
   localTime: string;
@@ -17,6 +19,7 @@ export interface WorldOwner {
   signature?: string;
   hasCustomApiKey: boolean;
   customApiBase?: string | null;
+  defaultChatBackground?: ChatBackgroundAsset | null;
   createdAt: string;
 }
 

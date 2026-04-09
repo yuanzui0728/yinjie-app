@@ -3,6 +3,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
 import {
+  ChatBackgroundAssetsController,
+  ConversationBackgroundController,
+} from './chat-backgrounds.controller';
+import { ChatBackgroundsService } from './chat-backgrounds.service';
+import {
   ChatAttachmentController,
   ChatController,
   GroupController,
@@ -32,8 +37,14 @@ import { GroupMessageEntity } from './group-message.entity';
       GroupMessageEntity,
     ]),
   ],
-  providers: [ChatGateway, ChatService, GroupService],
-  controllers: [ChatController, ChatAttachmentController, GroupController],
-  exports: [ChatService, GroupService, ChatGateway],
+  providers: [ChatGateway, ChatService, ChatBackgroundsService, GroupService],
+  controllers: [
+    ChatController,
+    ChatAttachmentController,
+    ConversationBackgroundController,
+    ChatBackgroundAssetsController,
+    GroupController,
+  ],
+  exports: [ChatService, ChatBackgroundsService, GroupService, ChatGateway],
 })
 export class ChatModule {}

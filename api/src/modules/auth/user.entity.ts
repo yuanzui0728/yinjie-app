@@ -36,6 +36,9 @@ export class UserEntity {
   @Column({ nullable: true, type: 'text' })
   customApiBase: string | null;
 
+  @Column({ nullable: true, type: 'text' })
+  defaultChatBackgroundPayload: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 }

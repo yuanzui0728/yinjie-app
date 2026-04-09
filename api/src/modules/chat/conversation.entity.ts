@@ -41,6 +41,12 @@ export class ConversationEntity {
   @Column({ type: 'datetime', nullable: true })
   lastClearedAt?: Date | null;
 
+  @Column({ default: 'inherit' })
+  chatBackgroundMode: string;
+
+  @Column({ type: 'text', nullable: true })
+  chatBackgroundPayload?: string | null;
+
   @Column({
     type: 'datetime',
     default: () => 'CURRENT_TIMESTAMP',
