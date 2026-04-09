@@ -39,6 +39,7 @@
 - `discover-page.tsx`：移动端承载微信式发现入口列表，点击后进入独立子页面
 - `discover/moments` · `discover/encounter` · `discover/scene` · `discover/feed`：发现二级页，分别承载朋友圈 / 摇一摇 / 场景相遇 / 广场动态
 - `profile/settings`：我的二级设置页，集中承载资料编辑与专属 API Key 配置
+- `chat-background-page.tsx`：聊天背景设置页，承载默认背景图与好友专属背景图配置
 - `chat/$conversationId/details`：单聊右上角三个点详情页，对齐微信式聊天信息页
 - `chat/$conversationId/search`：单聊聊天记录检索页，由聊天信息页进入
 - `group/$groupId/details`：群聊右上角三个点详情页，对齐微信式群聊信息页
@@ -71,6 +72,8 @@
   - `PATCH /api/world/owner`
   - `PATCH /api/world/owner/api-key`
   - `DELETE /api/world/owner/api-key`
+  - `PATCH /api/world/owner/chat-background`
+  - `DELETE /api/world/owner/chat-background`
 - `/system/status` 使用 `worldSurface` 语义，实例状态以 `ownerCount` 表示单世界主人数量
 
 ## 云世界平台实体（`apps/cloud-api/src/entities/`）
@@ -94,18 +97,26 @@
 ## 会话管理结构（2026-04-08）
 
 - `Conversation` 表保留字段：`isPinned`、`pinnedAt`、`isHidden`、`hiddenAt`、`lastClearedAt`、`lastActivityAt`
+- `Conversation` 表现已扩展背景字段：`chatBackgroundMode`、`chatBackgroundPayload`，用于承载会话专属聊天背景配置
 - `Message` 表现已扩展附件字段：`attachmentKind`、`attachmentPayload`，用于承载 `sticker` 表情包消息元数据
 - `GroupMessage` 表现已扩展附件字段：`attachmentKind`、`attachmentPayload`，用于承载聊天附件消息元数据
+- `User` 表现已扩展字段：`defaultChatBackgroundPayload`，用于承载实例默认聊天背景配置
 - 会话管理路由：
   - `POST /api/conversations/:id/pin`
   - `POST /api/conversations/:id/hide`
   - `POST /api/conversations/:id/clear`
+  - `GET /api/conversations/:id/background`
+  - `PATCH /api/conversations/:id/background`
+  - `DELETE /api/conversations/:id/background`
   - `POST /api/chat/attachments`
   - `GET /api/chat/attachments/:fileName`
+  - `POST /api/chat/backgrounds`
+  - `GET /api/chat/backgrounds/:fileName`
 
 ## 前端状态约束
 
 - 世界主人主状态存放于 `apps/app/src/store/world-owner-store.ts`
+- 世界主人资料契约现已支持 `defaultChatBackground`，用于承载实例默认聊天背景配置
 - `apps/app/src/store/session-store.ts` 目前仅作为兼容别名导出，底层仍指向世界主人 store；后续收口时应删除
 - `token`、`userId`、`onboardingCompleted` 等兼容字段目前仍通过该 store 暴露，后续收口时应继续移除
 - 运行时世界入口状态存放于 `apps/app/src/runtime/runtime-config.ts` / `runtime-config-store.ts`

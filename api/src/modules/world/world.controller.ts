@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Patch } from '@nestjs/common';
 import { WorldService } from './world.service';
 import { WorldOwnerService } from '../auth/world-owner.service';
+import type { ChatBackgroundAsset } from '../chat/chat-background.types';
 
 @Controller('world')
 export class WorldController {
@@ -29,6 +30,16 @@ export class WorldController {
   @Patch('owner/api-key')
   setOwnerApiKey(@Body() body: { apiKey: string; apiBase?: string }) {
     return this.worldOwnerService.setOwnerApiKey(body.apiKey, body.apiBase);
+  }
+
+  @Patch('owner/chat-background')
+  setOwnerChatBackground(@Body() body: { background: ChatBackgroundAsset }) {
+    return this.worldOwnerService.setDefaultChatBackground(body.background);
+  }
+
+  @Delete('owner/chat-background')
+  clearOwnerChatBackground() {
+    return this.worldOwnerService.clearDefaultChatBackground();
   }
 
   @Delete('owner/api-key')
