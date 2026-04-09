@@ -1,7 +1,7 @@
-import { useEffect, useEffectEvent } from "react";
+import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ChevronRight, UserPlus, Users } from "lucide-react";
+import { BookUser, Search, Tag, UserPlus, Users } from "lucide-react";
 import { getFriends, getOrCreateConversation, listCharacters } from "@yinjie/contracts";
 import { AppHeader, AppPage, AppSection, Button, ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
@@ -10,11 +10,25 @@ import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
+type ShortcutRoute = "/group/new" | "/friend-requests";
+
+type MobileShortcutItem = {
+  key: string;
+  label: string;
+  icon: typeof Users;
+  iconClassName: string;
+  to?: ShortcutRoute;
+  unavailableNotice?: string;
+  onClick?: () => void;
+};
+
 export function ContactsPage() {
   const isDesktopLayout = useDesktopLayout();
   const navigate = useNavigate();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
+  const [searchText, setSearchText] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
 
   const friendsQuery = useQuery({
     queryKey: ["app-friends", baseUrl],
@@ -32,13 +46,44 @@ export function ContactsPage() {
       if (!conversation) {
         return;
       }
+
       navigate({ to: "/chat/$conversationId", params: { conversationId: conversation.id } });
     },
   });
+
   const pendingCharacterId = startChatMutation.isPending ? startChatMutation.variables : null;
-  const visibleCharacters = charactersQuery.data ?? [];
-  const friendCount = friendsQuery.data?.length ?? 0;
-  const characterCount = visibleCharacters.length;
+
+  const friendContacts = useMemo(() => {
+    return [...(friendsQuery.data ?? [])].sort((left, right) =>
+      left.character.name.localeCompare(right.character.name, "zh-CN"),
+    );
+  }, [friendsQuery.data]);
+
+  const discoverableCharacters = useMemo(() => {
+    const friendIds = new Set(friendContacts.map(({ character }) => character.id));
+    return [...(charactersQuery.data ?? [])]
+      .filter((character) => !friendIds.has(character.id))
+      .sort((left, right) => left.name.localeCompare(right.name, "zh-CN"));
+  }, [charactersQuery.data, friendContacts]);
+
+  const normalizedSearchText = searchText.trim().toLowerCase();
+  const filteredFriends = useMemo(() => {
+    if (!normalizedSearchText) {
+      return friendContacts;
+    }
+
+    return friendContacts.filter(({ character }) => matchesCharacterSearch(character, normalizedSearchText));
+  }, [friendContacts, normalizedSearchText]);
+
+  const filteredCharacters = useMemo(() => {
+    if (!normalizedSearchText) {
+      return discoverableCharacters;
+    }
+
+    return discoverableCharacters.filter((character) => matchesCharacterSearch(character, normalizedSearchText));
+  }, [discoverableCharacters, normalizedSearchText]);
+
+  const characterCount = discoverableCharacters.length;
 
   const resetStartChatMutation = useEffectEvent(() => {
     startChatMutation.reset();
@@ -48,13 +93,65 @@ export function ContactsPage() {
     resetStartChatMutation();
   }, [baseUrl, resetStartChatMutation]);
 
+  function handleShortcutNavigate(to: ShortcutRoute) {
+    setNotice(null);
+    void navigate({ to });
+  }
+
+  function handleUnavailableAction(message: string) {
+    setNotice(message);
+  }
+
+  function jumpToWorldCharacters() {
+    setNotice(null);
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    document.getElementById("contact-world-characters")?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
+  const mobileShortcutItems: MobileShortcutItem[] = [
+    {
+      key: "new-friends",
+      label: "新的朋友",
+      icon: UserPlus,
+      iconClassName: "bg-[#f97316]",
+      to: "/friend-requests",
+    },
+    {
+      key: "group-chat",
+      label: "群聊",
+      icon: Users,
+      iconClassName: "bg-[#07c160]",
+      to: "/group/new",
+    },
+    {
+      key: "tags",
+      label: "标签",
+      icon: Tag,
+      iconClassName: "bg-[#3b82f6]",
+      unavailableNotice: "标签功能暂未开放。",
+    },
+    {
+      key: "world-characters",
+      label: "世界角色",
+      icon: BookUser,
+      iconClassName: "bg-[#14b8a6]",
+      onClick: jumpToWorldCharacters,
+    },
+  ];
+
   if (isDesktopLayout) {
     return (
       <AppPage className="space-y-5 px-6 py-6">
         <AppHeader
           eyebrow="通讯录"
           title="把已经建立的关系和下一段相遇都放在眼前"
-          description="左边是已经连上的人，右边是还可以继续认识的角色。桌面端不再让你来回切页。"
+          description="左边是已经连上的联系人，右边是还可以继续认识的角色。桌面端保持双栏结构，方便边看边发起对话。"
         />
 
         <div className="grid min-h-0 gap-5 xl:grid-cols-[0.92fr_1.08fr]">
@@ -62,7 +159,9 @@ export function ContactsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-medium text-[color:var(--text-primary)]">我的联系人</div>
-                <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">已建立关系的人优先停留在左侧工作区。</div>
+                <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
+                  已经建立关系的人会优先停留在这里，可以直接继续对话。
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <Link to="/group/new" className="text-xs text-[color:var(--brand-secondary)]">
@@ -73,9 +172,11 @@ export function ContactsPage() {
                 </Link>
               </div>
             </div>
+
             <div className="space-y-3">
               {friendsQuery.isLoading ? <LoadingBlock label="正在读取联系人..." /> : null}
-              {(friendsQuery.data ?? []).map(({ character, friendship }) => (
+
+              {friendContacts.map(({ character, friendship }) => (
                 <button
                   key={character.id}
                   type="button"
@@ -92,13 +193,14 @@ export function ContactsPage() {
                         : `${character.relationship} · 亲密度 ${friendship.intimacyLevel}`}
                     </div>
                   </div>
-                  <div className={`h-2.5 w-2.5 rounded-full ${character.isOnline ? "bg-emerald-400" : "bg-gray-300"}`} />
+                  <div className={cn("h-2.5 w-2.5 rounded-full", character.isOnline ? "bg-emerald-400" : "bg-gray-300")} />
                 </button>
               ))}
-              {!friendsQuery.isLoading && !friendsQuery.isError && !friendsQuery.data?.length ? (
+
+              {!friendsQuery.isLoading && !friendsQuery.isError && !friendContacts.length ? (
                 <EmptyState
                   title="通讯录还是空的"
-                  description="先去发现页摇一摇，或处理新的好友申请。"
+                  description="先去发现页认识角色，或者处理新的朋友申请。"
                   action={
                     <Link to="/friend-requests">
                       <Button variant="secondary">查看新的朋友</Button>
@@ -106,7 +208,10 @@ export function ContactsPage() {
                   }
                 />
               ) : null}
-              {friendsQuery.isError && friendsQuery.error instanceof Error ? <ErrorBlock message={friendsQuery.error.message} /> : null}
+
+              {friendsQuery.isError && friendsQuery.error instanceof Error ? (
+                <ErrorBlock message={friendsQuery.error.message} />
+              ) : null}
               {startChatMutation.isError && startChatMutation.error instanceof Error ? (
                 <ErrorBlock message={startChatMutation.error.message} />
               ) : null}
@@ -115,14 +220,19 @@ export function ContactsPage() {
 
           <AppSection className="space-y-4">
             <div>
-              <div className="text-sm font-medium text-[color:var(--text-primary)]">世界里的人</div>
-              <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">桌面端把待接近角色放到更宽的资料网格里，浏览时不用挤在单列。</div>
+              <div className="text-sm font-medium text-[color:var(--text-primary)]">世界角色</div>
+              <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
+                这里展示还没有建立关系的角色档案，可以先浏览，再决定是否继续认识。
+              </div>
             </div>
-            <InlineNotice tone="muted">这里展示尚未建立关系的角色档案。可以先浏览，再决定是否进入对话。</InlineNotice>
+
             {charactersQuery.isLoading ? <LoadingBlock label="正在读取角色档案..." /> : null}
-            {charactersQuery.isError && charactersQuery.error instanceof Error ? <ErrorBlock message={charactersQuery.error.message} /> : null}
+            {charactersQuery.isError && charactersQuery.error instanceof Error ? (
+              <ErrorBlock message={charactersQuery.error.message} />
+            ) : null}
+
             <div className="grid gap-4 lg:grid-cols-2">
-              {visibleCharacters.map((character) => (
+              {discoverableCharacters.map((character) => (
                 <Link
                   key={character.id}
                   to="/character/$characterId"
@@ -136,9 +246,10 @@ export function ContactsPage() {
                 </Link>
               ))}
             </div>
-            {!charactersQuery.isLoading && !charactersQuery.isError && !visibleCharacters.length ? (
+
+            {!charactersQuery.isLoading && !charactersQuery.isError && !discoverableCharacters.length ? (
               <div className="mt-3">
-                <EmptyState title="世界里还没有人" description="当前没有可浏览的角色档案，或你已经屏蔽了所有可见角色。" />
+                <EmptyState title="暂时没有新的角色" description="当前没有可浏览的世界角色，或者你已经认识了所有可见角色。" />
               </div>
             ) : null}
           </AppSection>
@@ -148,136 +259,180 @@ export function ContactsPage() {
   }
 
   return (
-    <AppPage className="space-y-4">
+    <AppPage className="space-y-0 bg-[#ededed] px-0 py-0">
       <TabPageTopBar
         title="通讯录"
         titleAlign="center"
-        eyebrow="关系网络"
-        subtitle={`已建立 ${friendCount} 位联系`}
+        className="mb-0 border-b border-[#d9d9d9] bg-[#f7f7f7] px-4 py-3 text-[#111827]"
       />
 
-      <section className="rounded-[30px] border border-white/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,246,232,0.94)_42%,rgba(240,251,245,0.96))] p-4 shadow-[var(--shadow-section)]">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--brand-secondary)]">Contacts</div>
-            <div className="mt-2 text-[1.4rem] font-semibold leading-tight text-[color:var(--text-primary)]">让关系慢慢长出来</div>
-            <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
-              先维护已经认识的人，再给下一次相遇留出位置。
-            </div>
-          </div>
-          <div className="grid min-w-[126px] grid-cols-2 gap-2">
-            <div className="rounded-[20px] bg-white/82 px-3 py-3 text-center shadow-[var(--shadow-soft)]">
-              <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">联系人</div>
-              <div className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">{friendCount}</div>
-            </div>
-            <div className="rounded-[20px] bg-white/82 px-3 py-3 text-center shadow-[var(--shadow-soft)]">
-              <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">角色</div>
-              <div className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">{characterCount}</div>
-            </div>
-          </div>
+      <div className="pb-6">
+        <div className="border-b border-[#d9d9d9] bg-[#ededed] px-3 py-2">
+          <label className="flex items-center gap-2 rounded-[10px] bg-white px-3 py-2 text-sm text-[#9ca3af] shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+            <Search size={15} className="shrink-0" />
+            <input
+              type="search"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              placeholder="搜索"
+              className="min-w-0 flex-1 bg-transparent text-sm text-[#111827] outline-none placeholder:text-[#9ca3af]"
+            />
+          </label>
         </div>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <Link
-            to="/friend-requests"
-            className="rounded-[24px] bg-white/84 p-4 shadow-[var(--shadow-soft)] transition-[transform,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)]"
-          >
-            <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#2f7a3f,#2a6c3a)] text-white">
-              <UserPlus size={18} />
-            </div>
-            <div className="mt-3 text-[15px] font-medium text-[color:var(--text-primary)]">新的朋友</div>
-            <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">处理申请、回应新的靠近</div>
-          </Link>
+        {notice ? (
+          <div className="px-3 pt-3">
+            <InlineNotice tone="info">{notice}</InlineNotice>
+          </div>
+        ) : null}
+        {friendsQuery.isError && friendsQuery.error instanceof Error ? (
+          <div className="px-3 pt-3">
+            <ErrorBlock message={friendsQuery.error.message} />
+          </div>
+        ) : null}
+        {charactersQuery.isError && charactersQuery.error instanceof Error ? (
+          <div className="px-3 pt-3">
+            <ErrorBlock message={charactersQuery.error.message} />
+          </div>
+        ) : null}
+        {startChatMutation.isError && startChatMutation.error instanceof Error ? (
+          <div className="px-3 pt-3">
+            <ErrorBlock message={startChatMutation.error.message} />
+          </div>
+        ) : null}
 
-          <Link
-            to="/group/new"
-            className="rounded-[24px] bg-white/84 p-4 shadow-[var(--shadow-soft)] transition-[transform,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)]"
-          >
-            <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-[linear-gradient(135deg,#2f78b5,#285f96)] text-white">
-              <Users size={18} />
-            </div>
-            <div className="mt-3 text-[15px] font-medium text-[color:var(--text-primary)]">发起群聊</div>
-            <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">把关系拉进同一个热闹场景</div>
-          </Link>
-        </div>
-      </section>
+        <section className="mt-2 overflow-hidden border-y border-[#d9d9d9] bg-white">
+          {mobileShortcutItems.map((item, index) => {
+            const Icon = item.icon;
+            const handleClick = item.to
+              ? () => handleShortcutNavigate(item.to!)
+              : item.onClick
+                ? item.onClick
+                : () => handleUnavailableAction(item.unavailableNotice ?? "该功能暂未开放。");
 
-      <div>
-        <div className="px-1 text-xs font-medium tracking-[0.14em] text-[color:var(--text-muted)]">已建立联系</div>
-        <div className="mt-1 px-1 text-sm text-[color:var(--text-secondary)]">可以直接开始对话的人，会优先停留在这里。</div>
-      </div>
-
-      <div className="overflow-hidden rounded-[26px] border border-white/80 bg-white/88 shadow-[var(--shadow-section)]">
-        {friendsQuery.isLoading ? <LoadingBlock className="px-4 py-5 text-left" label="正在读取联系人..." /> : null}
-        {(friendsQuery.data ?? []).map(({ character, friendship }, index) => (
-          <div key={character.id} className={cn(index > 0 ? "border-t border-[color:var(--border-faint)]" : undefined)}>
-            <button
-              type="button"
-              onClick={() => startChatMutation.mutate(character.id)}
-              disabled={startChatMutation.isPending}
-              className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[color:var(--surface-soft)] disabled:opacity-60"
-            >
-              <AvatarChip name={character.name} src={character.avatar} size="sm" />
-              <div className="min-w-0 flex-1">
-                <div className="text-[15px] font-medium text-[color:var(--text-primary)]">{character.name}</div>
-                <div className="mt-0.5 text-xs text-[color:var(--text-muted)]">
-                  {pendingCharacterId === character.id
-                    ? "正在发起会话..."
-                    : `${character.relationship} · 亲密度 ${friendship.intimacyLevel}${character.isOnline ? " · 在线" : ""}`}
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={handleClick}
+                className={cn(
+                  "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[#f8f8f8]",
+                  index > 0 ? "border-t border-[#ececec]" : undefined,
+                )}
+              >
+                <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-white", item.iconClassName)}>
+                  <Icon size={18} />
                 </div>
+                <div className="min-w-0 flex-1 text-[16px] text-[#111827]">{item.label}</div>
+              </button>
+            );
+          })}
+        </section>
+
+        <MobileSectionHeader label="联系人" />
+
+        <section className="overflow-hidden border-y border-[#d9d9d9] bg-white">
+          {friendsQuery.isLoading ? <LoadingBlock className="px-4 py-5 text-left" label="正在读取联系人..." /> : null}
+
+          {!friendsQuery.isLoading && !friendsQuery.isError && filteredFriends.length
+            ? filteredFriends.map(({ character, friendship }, index) => (
+                <button
+                  key={character.id}
+                  type="button"
+                  onClick={() => startChatMutation.mutate(character.id)}
+                  disabled={startChatMutation.isPending}
+                  className={cn(
+                    "flex w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[#f8f8f8] disabled:opacity-60",
+                    index > 0 ? "border-t border-[#ececec]" : undefined,
+                  )}
+                >
+                  <AvatarChip name={character.name} src={character.avatar} size="wechat" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[16px] text-[#111827]">{character.name}</div>
+                    <div className="mt-0.5 truncate text-xs text-[#8c8c8c]">
+                      {pendingCharacterId === character.id
+                        ? "正在发起会话..."
+                        : character.currentStatus?.trim() || `${character.relationship} · 亲密度 ${friendship.intimacyLevel}`}
+                    </div>
+                  </div>
+                  {character.isOnline ? <div className="h-2.5 w-2.5 shrink-0 rounded-full bg-[#07c160]" /> : null}
+                </button>
+              ))
+            : null}
+
+          {!friendsQuery.isLoading && !friendsQuery.isError && !filteredFriends.length ? (
+            <div className="px-4 py-10 text-center">
+              <div className="text-sm text-[#666]">
+                {normalizedSearchText ? "没有找到匹配的联系人" : "通讯录还是空的"}
               </div>
-              <ChevronRight size={16} className="shrink-0 text-[color:var(--text-dim)]" />
-            </button>
-          </div>
-        ))}
-        {!friendsQuery.isLoading && !friendsQuery.isError && !friendsQuery.data?.length ? (
-          <EmptyState
-            title="通讯录还是空的"
-            description="先去发现页摇一摇，或处理新的好友申请。"
-            action={
-              <Link to="/friend-requests">
-                <Button variant="secondary">查看新的朋友</Button>
-              </Link>
-            }
-          />
-        ) : null}
+              {!normalizedSearchText ? (
+                <div className="mt-4">
+                  <Link to="/friend-requests">
+                    <Button variant="secondary">去看新的朋友</Button>
+                  </Link>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
+
+        <MobileSectionHeader label={`世界角色 · ${characterCount}`} />
+
+        <section id="contact-world-characters" className="overflow-hidden border-y border-[#d9d9d9] bg-white">
+          {charactersQuery.isLoading ? <LoadingBlock className="px-4 py-5 text-left" label="正在读取世界角色..." /> : null}
+
+          {!charactersQuery.isLoading && !charactersQuery.isError && filteredCharacters.length
+            ? filteredCharacters.map((character, index) => (
+                <Link
+                  key={character.id}
+                  to="/character/$characterId"
+                  params={{ characterId: character.id }}
+                  className={cn(
+                    "flex items-center gap-3 px-4 py-3 transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[#f8f8f8]",
+                    index > 0 ? "border-t border-[#ececec]" : undefined,
+                  )}
+                >
+                  <AvatarChip name={character.name} src={character.avatar} size="wechat" />
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[16px] text-[#111827]">{character.name}</div>
+                    <div className="mt-0.5 truncate text-xs text-[#8c8c8c]">
+                      {character.relationship || character.bio || "查看角色档案"}
+                    </div>
+                  </div>
+                </Link>
+              ))
+            : null}
+
+          {!charactersQuery.isLoading && !charactersQuery.isError && !filteredCharacters.length ? (
+            <div className="px-4 py-10 text-center text-sm text-[#666]">
+              {normalizedSearchText ? "没有找到匹配的世界角色" : "暂时没有新的世界角色"}
+            </div>
+          ) : null}
+        </section>
       </div>
-
-      {friendsQuery.isError && friendsQuery.error instanceof Error ? <ErrorBlock message={friendsQuery.error.message} /> : null}
-      {startChatMutation.isError && startChatMutation.error instanceof Error ? (
-        <ErrorBlock message={startChatMutation.error.message} />
-      ) : null}
-
-      <div>
-        <div className="px-1 text-xs font-medium tracking-[0.14em] text-[color:var(--text-muted)]">可继续认识的角色</div>
-        <div className="mt-1 px-1 text-sm text-[color:var(--text-secondary)]">先看看他们是谁，再决定要不要把关系往前推一步。</div>
-      </div>
-
-      <div className="overflow-hidden rounded-[26px] border border-white/80 bg-white/88 shadow-[var(--shadow-section)]">
-        {charactersQuery.isLoading ? <LoadingBlock className="px-4 py-5 text-left" label="正在读取角色档案..." /> : null}
-        {visibleCharacters.map((character, index) => (
-          <div key={character.id} className={cn(index > 0 ? "border-t border-[color:var(--border-faint)]" : undefined)}>
-            <Link
-              to="/character/$characterId"
-              params={{ characterId: character.id }}
-              className="flex items-center gap-3 px-4 py-3.5 transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[color:var(--surface-soft)]"
-            >
-              <AvatarChip name={character.name} src={character.avatar} size="sm" />
-              <div className="min-w-0 flex-1">
-                <div className="text-[15px] font-medium text-[color:var(--text-primary)]">{character.name}</div>
-                <div className="mt-0.5 line-clamp-1 text-xs text-[color:var(--text-muted)]">{character.relationship}</div>
-              </div>
-              <ChevronRight size={16} className="shrink-0 text-[color:var(--text-dim)]" />
-            </Link>
-          </div>
-        ))}
-        {!charactersQuery.isLoading && !charactersQuery.isError && !visibleCharacters.length ? (
-          <EmptyState title="世界里还没有人" description="当前没有可浏览的角色档案，或你已经屏蔽了所有可见角色。" />
-        ) : null}
-      </div>
-
-      {charactersQuery.isError && charactersQuery.error instanceof Error ? <ErrorBlock message={charactersQuery.error.message} /> : null}
-      <InlineNotice tone="muted">这里展示还没建立关系的角色。先浏览，再决定是否让故事继续推进。</InlineNotice>
     </AppPage>
   );
+}
+
+function MobileSectionHeader({ label }: { label: string }) {
+  return <div className="px-4 py-2 text-xs font-medium tracking-[0.08em] text-[#8c8c8c]">{label}</div>;
+}
+
+function matchesCharacterSearch(
+  character: {
+    name: string;
+    relationship?: string | null;
+    bio?: string | null;
+    currentStatus?: string | null;
+  },
+  normalizedSearchText: string,
+) {
+  const haystacks = [
+    character.name,
+    character.relationship ?? "",
+    character.bio ?? "",
+    character.currentStatus ?? "",
+  ];
+
+  return haystacks.some((value) => value.toLowerCase().includes(normalizedSearchText));
 }
