@@ -262,7 +262,39 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server
         .to(convId)
         .emit('typing_stop', { conversationId: convId, characterId });
+      await this.emitConversationFailure(convId, error);
       throw error;
     }
+  }
+
+  private async emitConversationFailure(
+    conversationId: string,
+    error: unknown,
+  ) {
+    const messages = await this.chatService.getMessages(conversationId);
+    const latestUserMessage = [...messages]
+      .reverse()
+      .find((message) => message.senderType === 'user');
+
+    if (latestUserMessage) {
+      this.server.to(conversationId).emit('new_message', latestUserMessage);
+    }
+
+    const systemMessage = await this.chatService.saveSystemMessage(
+      conversationId,
+      this.describeReplyFailure(error),
+    );
+    this.server.to(conversationId).emit('new_message', systemMessage);
+  }
+
+  private describeReplyFailure(error: unknown) {
+    if (
+      error instanceof Error &&
+      /invalid token|api key|authentication/i.test(error.message)
+    ) {
+      return '消息已送达，但当前世界配置的 AI Key 无效，暂时无法生成回复。请到“我 > 设置”里更新 API Key。';
+    }
+
+    return '消息已送达，但对方暂时无法回复。请稍后再试。';
   }
 }
