@@ -174,18 +174,6 @@ function requestCloudApi<T>(path: string, init?: RequestInit, baseUrl?: string) 
   return request<T>(path, init, resolveCloudApiBaseUrl(baseUrl));
 }
 
-function resolveOptionalBaseUrl(primary?: string, secondary?: string) {
-  if (secondary) {
-    return secondary;
-  }
-
-  if (primary && (/^https?:\/\//.test(primary) || primary.startsWith("/"))) {
-    return primary;
-  }
-
-  return undefined;
-}
-
 export function getSystemStatus(baseUrl?: string) {
   return requestLegacyApi<SystemStatus>("/system/status", undefined, baseUrl);
 }
@@ -751,9 +739,8 @@ export function unblockCharacter(payload: UnblockCharacterRequest, baseUrl?: str
   );
 }
 
-export function listModerationReports(userIdOrBaseUrl?: string, baseUrl?: string) {
-  const resolvedBaseUrl = resolveOptionalBaseUrl(userIdOrBaseUrl, baseUrl);
-  return requestLegacyApi<ModerationReport[]>("/moderation/reports", undefined, resolvedBaseUrl);
+export function listModerationReports(baseUrl?: string) {
+  return requestLegacyApi<ModerationReport[]>("/moderation/reports", undefined, baseUrl);
 }
 
 export function createModerationReport(payload: CreateModerationReportRequest, baseUrl?: string) {
