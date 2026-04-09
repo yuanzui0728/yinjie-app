@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import type { CloudWorldStatus } from "@yinjie/contracts";
+import { ErrorBlock } from "@yinjie/ui";
 import { cloudAdminApi } from "../lib/cloud-admin-api";
 
 type EditableStatus = Exclude<CloudWorldStatus, "none">;
@@ -39,6 +40,7 @@ export function WorldDetailPage() {
   });
 
   const world = worldQuery.data;
+  const worldError = worldQuery.error instanceof Error ? worldQuery.error.message : null;
 
   useEffect(() => {
     if (world) {
@@ -51,8 +53,12 @@ export function WorldDetailPage() {
     }
   }, [world]);
 
+  if (worldError) {
+    return <ErrorBlock message={worldError} />;
+  }
+
   if (!world) {
-    return <div className="rounded-[28px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-5">加载中...</div>;
+    return <div className="rounded-[28px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-5">正在读取云世界详情...</div>;
   }
 
   return (
@@ -96,6 +102,9 @@ export function WorldDetailPage() {
           <button onClick={() => updateMutation.mutate()} className="rounded-xl bg-[color:var(--surface-secondary)] px-4 py-3 text-[color:var(--text-primary)] hover:bg-[color:var(--surface-tertiary)]">
             {updateMutation.isPending ? "正在保存..." : "保存云世界"}
           </button>
+          {updateMutation.isError && updateMutation.error instanceof Error ? (
+            <ErrorBlock message={updateMutation.error.message} />
+          ) : null}
         </div>
       </div>
 

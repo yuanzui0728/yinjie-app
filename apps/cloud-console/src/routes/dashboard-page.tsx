@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { ErrorBlock } from "@yinjie/ui";
 import { cloudAdminApi } from "../lib/cloud-admin-api";
 
 function countByStatus(items: { status: string }[], target: string) {
@@ -47,6 +48,9 @@ export function DashboardPage() {
             </Link>
           </div>
           <div className="mt-4 space-y-3">
+            {requestsQuery.isError && requestsQuery.error instanceof Error ? (
+              <ErrorBlock message={requestsQuery.error.message} />
+            ) : null}
             {requests.slice(0, 5).map((item) => (
               <Link
                 key={item.id}
@@ -61,7 +65,7 @@ export function DashboardPage() {
                 <div className="mt-1 text-xs text-[color:var(--text-secondary)]">{item.phone}</div>
               </Link>
             ))}
-            {requests.length === 0 ? <div className="text-sm text-[color:var(--text-muted)]">暂无申请。</div> : null}
+            {!requestsQuery.isError && requests.length === 0 ? <div className="text-sm text-[color:var(--text-muted)]">暂无申请。</div> : null}
           </div>
         </div>
 
@@ -76,6 +80,9 @@ export function DashboardPage() {
             </Link>
           </div>
           <div className="mt-4 space-y-3">
+            {worldsQuery.isError && worldsQuery.error instanceof Error ? (
+              <ErrorBlock message={worldsQuery.error.message} />
+            ) : null}
             {worlds.slice(0, 5).map((item) => (
               <Link
                 key={item.id}
@@ -90,7 +97,7 @@ export function DashboardPage() {
                 <div className="mt-1 text-xs text-[color:var(--text-secondary)]">{item.phone}</div>
               </Link>
             ))}
-            {worlds.length === 0 ? <div className="text-sm text-[color:var(--text-muted)]">暂无云世界。</div> : null}
+            {!worldsQuery.isError && worlds.length === 0 ? <div className="text-sm text-[color:var(--text-muted)]">暂无云世界。</div> : null}
           </div>
         </div>
       </section>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { CloudWorldStatus } from "@yinjie/contracts";
+import { ErrorBlock } from "@yinjie/ui";
 import { cloudAdminApi } from "../lib/cloud-admin-api";
 
 type RequestStatusFilter = Exclude<CloudWorldStatus, "none"> | "all";
@@ -62,7 +63,15 @@ export function RequestsPage() {
             ))}
           </tbody>
         </table>
-        {requestsQuery.data?.length ? null : <div className="p-4 text-sm text-[color:var(--text-muted)]">暂无匹配申请。</div>}
+        {requestsQuery.isError && requestsQuery.error instanceof Error ? (
+          <div className="p-4">
+            <ErrorBlock message={requestsQuery.error.message} />
+          </div>
+        ) : null}
+        {requestsQuery.isLoading ? <div className="p-4 text-sm text-[color:var(--text-muted)]">正在读取申请列表...</div> : null}
+        {!requestsQuery.isLoading && !requestsQuery.isError && !requestsQuery.data?.length ? (
+          <div className="p-4 text-sm text-[color:var(--text-muted)]">暂无匹配申请。</div>
+        ) : null}
       </div>
     </section>
   );

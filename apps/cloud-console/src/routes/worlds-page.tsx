@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { CloudWorldStatus } from "@yinjie/contracts";
+import { ErrorBlock } from "@yinjie/ui";
 import { cloudAdminApi } from "../lib/cloud-admin-api";
 
 type WorldStatusFilter = Exclude<CloudWorldStatus, "none"> | "all";
@@ -62,7 +63,15 @@ export function WorldsPage() {
             ))}
           </tbody>
         </table>
-        {worldsQuery.data?.length ? null : <div className="p-4 text-sm text-[color:var(--text-muted)]">暂无匹配世界。</div>}
+        {worldsQuery.isError && worldsQuery.error instanceof Error ? (
+          <div className="p-4">
+            <ErrorBlock message={worldsQuery.error.message} />
+          </div>
+        ) : null}
+        {worldsQuery.isLoading ? <div className="p-4 text-sm text-[color:var(--text-muted)]">正在读取云世界列表...</div> : null}
+        {!worldsQuery.isLoading && !worldsQuery.isError && !worldsQuery.data?.length ? (
+          <div className="p-4 text-sm text-[color:var(--text-muted)]">暂无匹配世界。</div>
+        ) : null}
       </div>
     </section>
   );

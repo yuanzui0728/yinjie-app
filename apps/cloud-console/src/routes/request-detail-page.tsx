@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
 import type { CloudWorldStatus } from "@yinjie/contracts";
+import { ErrorBlock } from "@yinjie/ui";
 import { cloudAdminApi } from "../lib/cloud-admin-api";
 
 type EditableStatus = Exclude<CloudWorldStatus, "none">;
@@ -40,6 +41,7 @@ export function RequestDetailPage() {
   });
 
   const request = requestQuery.data;
+  const requestError = requestQuery.error instanceof Error ? requestQuery.error.message : null;
 
   useEffect(() => {
     if (request) {
@@ -52,8 +54,12 @@ export function RequestDetailPage() {
     }
   }, [request]);
 
+  if (requestError) {
+    return <ErrorBlock message={requestError} />;
+  }
+
   if (!request) {
-    return <div className="rounded-[28px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-5">加载中...</div>;
+    return <div className="rounded-[28px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-5">正在读取申请详情...</div>;
   }
 
   return (
@@ -97,6 +103,9 @@ export function RequestDetailPage() {
           <button onClick={() => updateMutation.mutate()} className="rounded-xl bg-[color:var(--surface-secondary)] px-4 py-3 text-[color:var(--text-primary)] hover:bg-[color:var(--surface-tertiary)]">
             {updateMutation.isPending ? "正在保存..." : "保存申请处理结果"}
           </button>
+          {updateMutation.isError && updateMutation.error instanceof Error ? (
+            <ErrorBlock message={updateMutation.error.message} />
+          ) : null}
         </div>
       </div>
 
