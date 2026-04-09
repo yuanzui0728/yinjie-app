@@ -390,11 +390,6 @@ export function DiscoverPage() {
     <AppPage className="space-y-5">
       <TabPageTopBar
         title="发现"
-<<<<<<< HEAD
-        titleAlign="center"
-      />
-
-=======
         subtitle={`最近有 ${visiblePosts.length} 条世界居民动态`}
         titleAlign="center"
       />
@@ -436,8 +431,6 @@ export function DiscoverPage() {
           </Link>
         </div>
       </section>
-
->>>>>>> 3c3c187 (feat: update discover feed entry copy)
       <div className="space-y-3">
         {mobileDiscoverEntries.map((item) => {
           const Icon = item.icon;
