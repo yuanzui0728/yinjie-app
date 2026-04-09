@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { getConversations } from "@yinjie/contracts";
-import { ChevronRight, Plus, QrCode, Search, UserPlus, Users, WalletCards } from "lucide-react";
+import { Plus, QrCode, Search, UserPlus, Users, WalletCards } from "lucide-react";
 import { AppPage, Button, ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
@@ -85,9 +85,6 @@ function MobileChatListPage() {
   const hasConversations = filteredConversations.length > 0;
   const shouldShowListArea =
     !!notice || conversationsQuery.isLoading || (conversationsQuery.isError && conversationsQuery.error instanceof Error) || hasConversations;
-  const pinnedActions = quickActionItems.slice(0, 2);
-  const extraActions = quickActionItems.slice(2);
-
   function handleUnavailableAction(message: string) {
     setIsQuickMenuOpen(false);
     setNotice(message);
@@ -182,67 +179,6 @@ function MobileChatListPage() {
       {shouldShowListArea ? (
         <div className="space-y-3 pb-4">
           {notice ? <InlineNotice tone="info" className="mx-4">{notice}</InlineNotice> : null}
-
-          <section className="bg-white">
-            {pinnedActions.map((item) => {
-              const Icon = item.icon;
-              const content = (
-                <div className="flex items-center gap-3 px-4 py-3.5">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#07c160] text-white">
-                    <Icon size={18} />
-                  </div>
-                  <div className="min-w-0 flex-1 text-[15px] text-[#111111]">{item.label}</div>
-                  <ChevronRight size={16} className="text-[#c7c7cc]" />
-                </div>
-              );
-
-              if (item.to) {
-                const to = item.to;
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => handleNavigate(to)}
-                    className="block w-full border-b border-[#f2f2f2] text-left last:border-b-0"
-                  >
-                    {content}
-                  </button>
-                );
-              }
-
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  onClick={() => handleUnavailableAction(item.unavailableNotice!)}
-                  className="block w-full border-b border-[#f2f2f2] text-left last:border-b-0"
-                >
-                  {content}
-                </button>
-              );
-            })}
-          </section>
-
-          {extraActions.length ? (
-            <div className="flex gap-2 overflow-x-auto px-4 pb-1">
-              {extraActions.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => handleUnavailableAction(item.unavailableNotice!)}
-                    className="flex min-w-[104px] shrink-0 flex-col items-start gap-2 rounded-2xl bg-white px-4 py-3 text-left shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
-                  >
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f5f5f5] text-[#3a3a3c]">
-                      <Icon size={18} />
-                    </div>
-                    <div className="text-sm text-[#111111]">{item.label}</div>
-                  </button>
-                );
-              })}
-            </div>
-          ) : null}
 
           {conversationsQuery.isLoading ? <LoadingBlock label="正在读取会话..." /> : null}
           {conversationsQuery.isError && conversationsQuery.error instanceof Error ? (
