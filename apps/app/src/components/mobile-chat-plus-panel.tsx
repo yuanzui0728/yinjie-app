@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   getFriends,
@@ -84,6 +84,7 @@ export function MobileChatPlusPanel({
   const baseUrl = runtimeConfig.apiBaseUrl;
   const [activeView, setActiveView] = useState<PanelView>("root");
   const [activeRootPage, setActiveRootPage] = useState(0);
+  const rootPagerRef = useRef<HTMLDivElement | null>(null);
 
   const friendsQuery = useQuery({
     queryKey: ["app-chat-plus-friends", baseUrl],
@@ -117,19 +118,29 @@ export function MobileChatPlusPanel({
               更多功能
             </div>
             <div className="mt-1 text-xs text-[color:var(--text-muted)]">
-              常用入口放在第一页，低频附件继续向右切换。
+              常用入口放在第一页，左右滑动继续查看低频附件。
             </div>
           </div>
 
-          <div className="relative mt-4 overflow-hidden">
-            <div
-              className="flex transition-transform duration-[var(--motion-fast)] ease-[var(--ease-standard)]"
-              style={{ transform: `translateX(-${activeRootPage * 100}%)` }}
-            >
+          <div
+            ref={rootPagerRef}
+            className="relative mt-4 flex snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            onScroll={(event) => {
+              const target = event.currentTarget;
+              const nextPage = Math.round(
+                target.scrollLeft / Math.max(target.clientWidth, 1),
+              );
+
+              setActiveRootPage((currentPage) =>
+                currentPage === nextPage ? currentPage : nextPage,
+              );
+            }}
+          >
+            <div className="flex min-w-full">
               {rootActionPages.map((page, pageIndex) => (
                 <div
                   key={`page-${pageIndex}`}
-                  className="grid min-w-full grid-cols-4 gap-y-4 px-4"
+                  className="grid min-w-full shrink-0 snap-start grid-cols-4 gap-y-4 px-4"
                 >
                   {page.map((item) => {
                     const Icon = item.icon;
@@ -177,7 +188,13 @@ export function MobileChatPlusPanel({
                 <button
                   key={`dot-${pageIndex}`}
                   type="button"
-                  onClick={() => setActiveRootPage(pageIndex)}
+                  onClick={() => {
+                    setActiveRootPage(pageIndex);
+                    rootPagerRef.current?.scrollTo({
+                      left: rootPagerRef.current.clientWidth * pageIndex,
+                      behavior: "smooth",
+                    });
+                  }}
                   className={cn(
                     "h-1.5 rounded-full transition-all duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
                     activeRootPage === pageIndex
