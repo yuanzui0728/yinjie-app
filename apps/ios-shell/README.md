@@ -15,10 +15,10 @@
 
 1. 在 macOS 上安装依赖
 2. 执行 `pnpm --dir apps/ios-shell install`
-3. 执行 `pnpm --dir apps/ios-shell doctor`
-4. 执行 `pnpm --dir apps/ios-shell sync`
-5. 执行 `pnpm --dir apps/ios-shell configure`
-6. 执行 `pnpm --dir apps/ios-shell open`
+3. 执行 `pnpm --dir apps/ios-shell run doctor`
+4. 执行 `pnpm --dir apps/ios-shell run sync`
+5. 执行 `pnpm --dir apps/ios-shell run configure`
+6. 执行 `pnpm --dir apps/ios-shell run open`
 7. 参考 `xcode-template/` 与 `docs/ios-xcode-integration-checklist.md`
 8. 在 Xcode 中补齐签名、Capabilities、Keychain、Push、Privacy 文案
 9. 将 `xcode-template/AppDelegatePush.example.swift` 的 APNs token 缓存逻辑并入真实 `AppDelegate`
