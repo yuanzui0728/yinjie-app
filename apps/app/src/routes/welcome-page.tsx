@@ -55,10 +55,6 @@ export function WelcomePage() {
   const [localApiBaseUrl, setLocalApiBaseUrl] = useState(
     runtimeConfig.apiBaseUrl ?? DEFAULT_CORE_API_BASE_URL,
   );
-  const [localSocketBaseUrl, setLocalSocketBaseUrl] = useState(
-    runtimeConfig.socketBaseUrl ?? runtimeConfig.apiBaseUrl ?? DEFAULT_CORE_API_BASE_URL,
-  );
-  const [cloudApiBaseUrl, setCloudApiBaseUrl] = useState(runtimeConfig.cloudApiBaseUrl ?? "");
   const [phone, setPhone] = useState(runtimeConfig.cloudPhone ?? "");
   const [code, setCode] = useState("");
   const [worldName, setWorldName] = useState("");
@@ -72,23 +68,18 @@ export function WelcomePage() {
   const [isContinuing, setIsContinuing] = useState(false);
 
   const normalizedLocalApiBaseUrl = normalizeBaseUrl(localApiBaseUrl);
-  const normalizedLocalSocketBaseUrl = normalizeBaseUrl(localSocketBaseUrl);
-  const normalizedCloudApiBaseUrl = normalizeBaseUrl(cloudApiBaseUrl);
+  const normalizedCloudApiBaseUrl = normalizeBaseUrl(runtimeConfig.cloudApiBaseUrl ?? "");
   const showOwnerStep = Boolean(readyBaseUrl) && !onboardingCompleted;
 
   useEffect(() => {
     setLocalApiBaseUrl(runtimeConfig.apiBaseUrl ?? DEFAULT_CORE_API_BASE_URL);
-    setLocalSocketBaseUrl(runtimeConfig.socketBaseUrl ?? runtimeConfig.apiBaseUrl ?? DEFAULT_CORE_API_BASE_URL);
-    setCloudApiBaseUrl(runtimeConfig.cloudApiBaseUrl ?? "");
     setPhone(runtimeConfig.cloudPhone ?? "");
     if (runtimeConfig.worldAccessMode) {
       setMode(runtimeConfig.worldAccessMode);
     }
   }, [
     runtimeConfig.apiBaseUrl,
-    runtimeConfig.cloudApiBaseUrl,
     runtimeConfig.cloudPhone,
-    runtimeConfig.socketBaseUrl,
     runtimeConfig.worldAccessMode,
   ]);
 
@@ -222,7 +213,7 @@ export function WelcomePage() {
 
     setAppRuntimeConfig({
       apiBaseUrl: normalizedLocalApiBaseUrl,
-      socketBaseUrl: normalizedLocalSocketBaseUrl || normalizedLocalApiBaseUrl,
+      socketBaseUrl: normalizedLocalApiBaseUrl,
       worldAccessMode: "local",
       cloudApiBaseUrl: undefined,
       cloudPhone: undefined,
@@ -454,24 +445,6 @@ export function WelcomePage() {
             {isContinuing ? "进入中..." : "进入我的世界"}
           </Button>
 
-          <details className="rounded-[24px] border border-[color:var(--border-faint)] bg-[rgba(255,255,255,0.72)] px-4 py-3">
-            <summary className="cursor-pointer text-sm font-medium text-[color:var(--text-primary)]">高级设置</summary>
-            <div className="mt-4">
-              <label className="block space-y-2">
-                <span className="text-xs uppercase tracking-[0.24em] text-[color:var(--text-muted)]">云平台地址</span>
-                <TextField
-                  value={cloudApiBaseUrl}
-                  onChange={(event) => {
-                    setCloudApiBaseUrl(event.target.value);
-                    setCloudAccessToken("");
-                    setCode("");
-                    setEntryError("");
-                  }}
-                  placeholder="留空则使用官方默认地址"
-                />
-              </label>
-            </div>
-          </details>
         </div>
       );
     }
@@ -489,20 +462,6 @@ export function WelcomePage() {
             placeholder="例如 http://127.0.0.1:3000"
           />
         </label>
-
-        <details className="rounded-[24px] border border-[color:var(--border-faint)] bg-[rgba(255,255,255,0.72)] px-4 py-3">
-          <summary className="cursor-pointer text-sm font-medium text-[color:var(--text-primary)]">高级设置</summary>
-          <div className="mt-4">
-            <label className="block space-y-2">
-              <span className="text-xs uppercase tracking-[0.24em] text-[color:var(--text-muted)]">Socket 地址</span>
-              <TextField
-                value={localSocketBaseUrl}
-                onChange={(event) => setLocalSocketBaseUrl(event.target.value)}
-                placeholder="留空则默认跟世界地址一致"
-              />
-            </label>
-          </div>
-        </details>
 
         <Button
           onClick={() => void continueWithLocalWorld()}
