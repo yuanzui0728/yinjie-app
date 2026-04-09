@@ -41,7 +41,7 @@ export function DiscoverFeedPage() {
       ),
     onSuccess: async () => {
       setText("");
-      setSuccessNotice("广场动态已发布，正在向世界扩散。");
+      setSuccessNotice("广场动态已发布，世界居民公开可见。");
       await queryClient.invalidateQueries({ queryKey: ["app-feed", baseUrl] });
     },
   });
