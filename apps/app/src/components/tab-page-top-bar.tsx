@@ -32,7 +32,10 @@ export function TabPageTopBar({
         >
           {title}
         </h1>
-        {rightActions ? <div className="shrink-0">{rightActions}</div> : null}
+        {titleAlign === "center" ? <div className="w-9 shrink-0" aria-hidden="true" /> : null}
+        {rightActions ? (
+          <div className={cn("shrink-0", titleAlign === "center" ? "ml-auto" : undefined)}>{rightActions}</div>
+        ) : null}
       </div>
       {children}
     </div>
