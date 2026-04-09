@@ -136,8 +136,9 @@ export function EvalsPage() {
 
   function persistSavedPresets(nextPresets: EvalsPreset[]) {
     setSavedPresets(nextPresets);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(getEvalStorageKey(EVALS_PRESETS_KEY, baseUrl), JSON.stringify(nextPresets));
+    const storage = getBrowserStorage();
+    if (storage) {
+      storage.setItem(getEvalStorageKey(EVALS_PRESETS_KEY, baseUrl), JSON.stringify(nextPresets));
     }
   }
 
@@ -572,11 +573,13 @@ export function EvalsPage() {
   const displayedTraces = compactView ? failureFocusedTraces.slice(0, 8) : recentTraces;
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    const storage = getBrowserStorage();
+    if (!storage) {
+      setSavedPresets([]);
       return;
     }
     try {
-      const raw = window.localStorage.getItem(getEvalStorageKey(EVALS_PRESETS_KEY, baseUrl));
+      const raw = storage.getItem(getEvalStorageKey(EVALS_PRESETS_KEY, baseUrl));
       if (!raw) {
         setSavedPresets([]);
         return;
@@ -607,10 +610,11 @@ export function EvalsPage() {
   }, [baselineRun, baselineRunId, candidateRun, candidateRunId]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    const storage = getBrowserStorage();
+    if (!storage) {
       return;
     }
-    window.localStorage.setItem(
+    storage.setItem(
       getEvalStorageKey(EVALS_STATE_KEY, baseUrl),
       JSON.stringify({
         traceSource,
@@ -2557,13 +2561,14 @@ function readInitialEvalsState(baseUrl: string): EvalsViewState {
     focusedCaseId: null as string | null,
     focusedTraceIds: [] as string[],
   };
-  if (typeof window === "undefined") {
+  const storage = getBrowserStorage();
+  if (!storage) {
     return fallback;
   }
 
   let persisted = fallback;
   try {
-    const raw = window.localStorage.getItem(getEvalStorageKey(EVALS_STATE_KEY, baseUrl));
+    const raw = storage.getItem(getEvalStorageKey(EVALS_STATE_KEY, baseUrl));
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<EvalsViewState>;
       persisted = {
@@ -2645,6 +2650,18 @@ function readInitialEvalsState(baseUrl: string): EvalsViewState {
     focusedCaseId: params.get("case") ?? persisted.focusedCaseId,
     focusedTraceIds: persisted.focusedTraceIds,
   };
+}
+
+function getBrowserStorage() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
 }
 
 function getEvalStorageKey(prefix: string, baseUrl: string) {
