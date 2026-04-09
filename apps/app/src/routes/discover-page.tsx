@@ -76,8 +76,8 @@ const mobileDiscoverEntries: MobileDiscoverEntry[] = [
   {
     key: "feed",
     label: "广场动态",
-    description: "全世界可见",
-    detail: "看看这个世界正在发生什么，也把自己的这一刻发向整个世界。",
+    description: "居民公开可见",
+    detail: "看看世界里的居民正在说什么，也把自己的这一刻发到居民广场。",
     icon: Newspaper,
     iconClassName:
       "bg-[linear-gradient(135deg,rgba(251,113,133,0.92),rgba(244,63,94,0.88))] text-white",
@@ -520,11 +520,22 @@ export function DiscoverPage() {
               今天，居民广场也在慢慢热起来
             </div>
             <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
-              朋友圈留给好友，广场发向世界。去摇一摇、去换个场景、去看一眼广场，新的关系和内容就会慢慢靠近你。
+              朋友圈留给好友，广场发向居民。去摇一摇、去换个场景、去看一眼广场，新的关系和内容就会慢慢靠近你。
             </div>
           </div>
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] bg-[var(--brand-gradient)] text-lg font-semibold text-white shadow-[var(--shadow-card)]">
             YJ
+          </div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-[20px] border border-white/70 bg-white/76 px-3 py-3 shadow-[var(--shadow-soft)]">
+            <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">朋友圈</div>
+            <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">仅好友可见</div>
+          </div>
+          <div className="rounded-[20px] border border-white/70 bg-white/76 px-3 py-3 shadow-[var(--shadow-soft)]">
+            <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">广场动态</div>
+            <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">居民公开可见</div>
           </div>
         </div>
 
