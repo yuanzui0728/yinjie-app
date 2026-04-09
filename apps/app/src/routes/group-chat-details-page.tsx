@@ -4,6 +4,8 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { getGroup, getGroupMembers } from "@yinjie/contracts";
 import { ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
+import { getChatBackgroundLabel } from "../features/chat/backgrounds/chat-background-helpers";
+import { useDefaultChatBackground } from "../features/chat/backgrounds/use-conversation-background";
 import { ChatDetailsShell } from "../features/chat-details/chat-details-shell";
 import { ChatMemberGrid } from "../features/chat-details/chat-member-grid";
 import {
@@ -22,6 +24,7 @@ export function GroupChatDetailsPage() {
   const [preferences, setPreferences] = useState(() =>
     readGroupChatDetailPreferences(groupId),
   );
+  const ownerQuery = useDefaultChatBackground();
 
   useEffect(() => {
     setPreferences(readGroupChatDetailPreferences(groupId));
@@ -197,10 +200,14 @@ export function GroupChatDetailsPage() {
           <section className="border-y border-black/5 bg-white">
             <div className="divide-y divide-black/5">
               <ChatSettingRow
-                label="设置当前聊天背景"
-                value={preferences.backgroundLabel}
+                label="聊天背景"
+                value={`默认：${getChatBackgroundLabel(
+                  ownerQuery.data?.defaultChatBackground,
+                )}`}
                 onClick={() => {
-                  setNotice("聊天背景入口已预留，首版先保留默认背景。");
+                  setNotice(
+                    "群聊当前会跟随默认背景图。可先到任意单聊的“聊天背景”页设置默认背景。",
+                  );
                 }}
               />
             </div>
