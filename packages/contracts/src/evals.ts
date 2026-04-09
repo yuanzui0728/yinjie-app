@@ -44,7 +44,7 @@ export interface GenerationTrace {
   conversationId?: string | null;
   characterId?: string | null;
   relatedCharacterIds: string[];
-  userId?: string | null;
+  ownerId?: string | null;
   jobId?: string | null;
   provider?: {
     endpoint?: string | null;

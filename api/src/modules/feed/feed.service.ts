@@ -83,10 +83,10 @@ export class FeedService {
     await this.likePost(postId, owner.id);
   }
 
-  async likePost(postId: string, userId: string): Promise<void> {
-    const existing = await this.interactionRepo.findOneBy({ postId, userId, type: 'like' });
+  async likePost(postId: string, ownerId: string): Promise<void> {
+    const existing = await this.interactionRepo.findOneBy({ postId, userId: ownerId, type: 'like' });
     if (existing) return;
-    const interaction = this.interactionRepo.create({ postId, userId, type: 'like' });
+    const interaction = this.interactionRepo.create({ postId, userId: ownerId, type: 'like' });
     await this.interactionRepo.save(interaction);
     await this.postRepo.increment({ id: postId }, 'likeCount', 1);
   }
