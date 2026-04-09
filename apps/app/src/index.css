@@ -20,7 +20,11 @@ body {
   font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  background: #f5f6f7;
+  position: relative;
+  background:
+    var(--bg-accent),
+    linear-gradient(180deg, #fbfff8, #f4faf7 42%, #f8fcfb);
+  background-attachment: fixed;
 }
 
 html.yj-desktop-window,
@@ -50,4 +54,26 @@ textarea {
 
 #root {
   isolation: isolate;
+}
+
+body::before,
+body::after {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+}
+
+body::before {
+  background:
+    var(--bg-glow-top),
+    var(--bg-glow-bottom);
+  opacity: 1;
+}
+
+body::after {
+  background: var(--bg-grid);
+  background-size: 32px 32px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent 78%);
+  opacity: 0.22;
 }
