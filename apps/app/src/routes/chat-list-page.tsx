@@ -11,7 +11,6 @@ import { DesktopChatWorkspace } from "../features/desktop/chat/desktop-chat-work
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { formatConversationTimestamp } from "../lib/format";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
-import { useWorldOwnerStore } from "../store/world-owner-store";
 
 type QuickActionItem = {
   key: string;
@@ -61,7 +60,6 @@ export function ChatListPage() {
 function MobileChatListPage() {
   const navigate = useNavigate();
   const runtimeConfig = useAppRuntimeConfig();
-  const ownerName = useWorldOwnerStore((state) => state.username);
   const baseUrl = runtimeConfig.apiBaseUrl;
   const [searchText, setSearchText] = useState("");
   const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
@@ -86,8 +84,6 @@ function MobileChatListPage() {
     });
   }, [conversations, normalizedSearchText]);
 
-  const unreadConversationCount = conversations.filter((conversation) => conversation.unreadCount > 0).length;
-  const unreadMessageCount = conversations.reduce((total, conversation) => total + conversation.unreadCount, 0);
   const hasConversations = filteredConversations.length > 0;
   const hasSearchResult = normalizedSearchText.length > 0;
 
@@ -114,7 +110,6 @@ function MobileChatListPage() {
       ) : null}
 
       <TabPageTopBar
-        eyebrow="继续连线"
         title="消息"
         subtitle={`共 ${conversations.length} 个会话`}
         className="space-y-4 px-4 pb-4 pt-3 text-[color:var(--text-primary)]"
@@ -173,29 +168,6 @@ function MobileChatListPage() {
           </div>
         }
       >
-        <section className="rounded-[30px] border border-white/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,246,232,0.94)_42%,rgba(240,251,245,0.96))] p-4 shadow-[var(--shadow-section)]">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--brand-secondary)]">Today</div>
-              <div className="mt-2 text-[1.45rem] font-semibold leading-tight text-[color:var(--text-primary)]">
-                {ownerName ? `${ownerName}，把今天聊热一点` : "把今天聊热一点"}
-              </div>
-              <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
-                从最近的对话继续，也可以直接发起新的连接，让你的世界保持活跃和温度。
-              </div>
-            </div>
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] bg-[var(--brand-gradient)] text-lg font-semibold text-white shadow-[var(--shadow-card)]">
-              YJ
-            </div>
-          </div>
-
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            <ConversationMetric label="会话" value={String(conversations.length)} />
-            <ConversationMetric label="未读会话" value={String(unreadConversationCount)} />
-            <ConversationMetric label="未读消息" value={String(unreadMessageCount)} />
-          </div>
-        </section>
-
         <label className="relative block">
           <Search
             aria-hidden="true"
@@ -236,7 +208,9 @@ function MobileChatListPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <div className="truncate text-[15px] font-medium text-[color:var(--text-primary)]">{conversation.title}</div>
+                          <div className="truncate text-[15px] font-medium text-[color:var(--text-primary)]">
+                            {conversation.title}
+                          </div>
                           <div className="mt-1 truncate text-[13px] text-[color:var(--text-muted)]">
                             {conversation.lastMessage?.text ?? "从这里开始第一句问候"}
                           </div>
@@ -289,14 +263,5 @@ function MobileChatListPage() {
         ) : null}
       </div>
     </AppPage>
-  );
-}
-
-function ConversationMetric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-[22px] bg-white/82 px-3 py-3 shadow-[var(--shadow-soft)]">
-      <div className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{label}</div>
-      <div className="mt-2 text-lg font-semibold text-[color:var(--text-primary)]">{value}</div>
-    </div>
   );
 }
