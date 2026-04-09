@@ -55,7 +55,7 @@ const mobileDiscoverEntries: MobileDiscoverEntry[] = [
     description: "熟人动态",
     detail: "记录生活片段，把更近的情绪留给更熟的人。",
     icon: Users,
-    iconClassName: "bg-[linear-gradient(135deg,#2f7a3f,#2a6c3a)] text-white",
+    iconClassName: "bg-[linear-gradient(135deg,rgba(251,191,36,0.92),rgba(249,115,22,0.88))] text-white",
     to: "/discover/moments",
   },
   {
@@ -64,17 +64,16 @@ const mobileDiscoverEntries: MobileDiscoverEntry[] = [
     description: "随机相遇",
     detail: "随手触发一场新相遇，让世界主动回应你。",
     icon: Sparkles,
-    iconClassName: "bg-[var(--brand-gradient)] text-white",
+    iconClassName: "bg-[linear-gradient(135deg,rgba(56,189,248,0.92),rgba(59,130,246,0.88))] text-white",
     to: "/discover/encounter",
   },
-
   {
     key: "feed",
     label: "广场动态",
     description: "公共发现",
     detail: "看看更大的公共内容流，也把自己的声音发出去。",
     icon: Newspaper,
-    iconClassName: "bg-[linear-gradient(135deg,#5d67c9,#4951a3)] text-white",
+    iconClassName: "bg-[linear-gradient(135deg,rgba(251,113,133,0.92),rgba(244,63,94,0.88))] text-white",
     to: "/discover/feed",
   },
 ];
@@ -257,17 +256,25 @@ export function DiscoverPage() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {scenes.map((scene) => (
-                  <Button
+                {scenes.map((scene, index) => {
+                  const sceneColors = [
+                    "bg-[rgba(251,191,36,0.10)] text-amber-700 hover:bg-[rgba(251,191,36,0.18)] border-[rgba(251,191,36,0.20)]",
+                    "bg-[rgba(249,115,22,0.10)] text-orange-700 hover:bg-[rgba(249,115,22,0.18)] border-[rgba(249,115,22,0.20)]",
+                    "bg-[rgba(16,185,129,0.10)] text-emerald-700 hover:bg-[rgba(16,185,129,0.18)] border-[rgba(16,185,129,0.20)]",
+                    "bg-[rgba(56,189,248,0.10)] text-sky-700 hover:bg-[rgba(56,189,248,0.18)] border-[rgba(56,189,248,0.20)]",
+                  ];
+                  return (
+                  <button
                     key={scene.id}
+                    type="button"
                     onClick={() => sceneMutation.mutate(scene.id)}
                     disabled={sceneMutation.isPending}
-                    variant="secondary"
-                    size="sm"
+                    className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors duration-[var(--motion-fast)] ${sceneColors[index % sceneColors.length]}`}
                   >
                     {sceneMutation.isPending && sceneMutation.variables === scene.id ? `正在前往${scene.label}...` : scene.label}
-                  </Button>
-                ))}
+                  </button>
+                  );
+                })}
               </div>
 
               {shakeMessage ? <InlineNotice tone="success">{shakeMessage}</InlineNotice> : null}
@@ -369,49 +376,9 @@ export function DiscoverPage() {
   return (
     <AppPage className="space-y-5">
       <TabPageTopBar
-        eyebrow="向外走一步"
         title="发现"
-        subtitle={`最近广场有 ${visiblePosts.length} 条可见动态`}
         titleAlign="center"
       />
-
-      <section className="rounded-[30px] border border-white/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,246,232,0.94)_42%,rgba(240,251,245,0.96))] p-4 shadow-[var(--shadow-section)]">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--brand-secondary)]">Explore</div>
-            <div className="mt-2 text-[1.45rem] font-semibold leading-tight text-[color:var(--text-primary)]">
-              今天，世界也在等你先迈出一步
-            </div>
-            <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
-              去摇一摇、去换个场景、去看一眼广场，新的关系和内容就会慢慢靠近你。
-            </div>
-          </div>
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] bg-[var(--brand-gradient)] text-lg font-semibold text-white shadow-[var(--shadow-card)]">
-            YJ
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          <DiscoverMetric label="场景" value={String(scenes.length)} />
-          <DiscoverMetric label="广场" value={String(visiblePosts.length)} />
-          <DiscoverMetric label="节奏" value="轻快" />
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <Link
-            to="/discover/encounter"
-            className="inline-flex items-center justify-center rounded-[20px] bg-[var(--brand-gradient)] px-4 py-3 text-sm font-medium text-white shadow-[var(--shadow-card)]"
-          >
-            去摇一摇
-          </Link>
-          <Link
-            to="/discover/feed"
-            className="inline-flex items-center justify-center rounded-[20px] border border-[color:var(--border-subtle)] bg-white/84 px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] shadow-[var(--shadow-soft)]"
-          >
-            去看广场
-          </Link>
-        </div>
-      </section>
 
       <div className="space-y-3">
         {mobileDiscoverEntries.map((item) => {
@@ -429,7 +396,7 @@ export function DiscoverPage() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <div className="text-[15px] font-medium text-[color:var(--text-primary)]">{item.label}</div>
-                  <div className="rounded-full bg-[rgba(255,138,61,0.08)] px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-[color:var(--brand-primary)]">
+                  <div className="rounded-full bg-[rgba(249,115,22,0.08)] px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-[color:var(--brand-primary)]">
                     {item.description}
                   </div>
                 </div>
