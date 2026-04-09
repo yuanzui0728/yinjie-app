@@ -125,3 +125,7 @@
 - 管理后台：访问 `apps/admin`，输入 `ADMIN_SECRET` 鉴权
 - 云世界管理平台：访问 `apps/cloud-console`，输入 `CLOUD_ADMIN_SECRET` 鉴权
 - 云平台当前不是自动实例编排器，如需“每用户一个独立实例”的自动化托管能力，需要额外实现
+
+## Single-world cleanup notes (2026-04-09)
+- `GET /api/moments` no longer accepts `authorId`; it always returns the current world's feed.
+- `packages/contracts/src/evals.ts` now uses `ownerId` for trace owner semantics.

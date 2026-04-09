@@ -67,11 +67,6 @@ export class MomentsService {
     return this._enrichPost(post);
   }
 
-  async getFeedByAuthor(authorId: string): Promise<Moment[]> {
-    const posts = await this.postRepo.find({ where: { authorId }, order: { postedAt: 'DESC' } });
-    return Promise.all(posts.map((p) => this._enrichPost(p)));
-  }
-
   async getFeed(): Promise<Moment[]> {
     const posts = await this.postRepo.find({ order: { postedAt: 'DESC' } });
     return Promise.all(posts.map((p) => this._enrichPost(p)));

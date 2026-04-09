@@ -767,9 +767,8 @@ export function createModerationReport(payload: CreateModerationReportRequest, b
   );
 }
 
-export function getMoments(baseUrlOrLegacyUnused?: string, baseUrl?: string) {
-  const resolvedBaseUrl = baseUrl ?? baseUrlOrLegacyUnused;
-  return requestLegacyApi<Moment[]>("/moments", undefined, resolvedBaseUrl);
+export function getMoments(baseUrl?: string) {
+  return requestLegacyApi<Moment[]>("/moments", undefined, baseUrl);
 }
 
 export function getMoment(id: string, baseUrl?: string) {

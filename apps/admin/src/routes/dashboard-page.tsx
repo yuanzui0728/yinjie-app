@@ -113,7 +113,7 @@ export function DashboardPage() {
 
   const momentsQuery = useQuery({
     queryKey: ["admin-moments", baseUrl],
-    queryFn: () => getMoments(undefined, baseUrl),
+    queryFn: () => getMoments(baseUrl),
   });
 
   const feedQuery = useQuery({
