@@ -85,6 +85,22 @@ export function GroupAnnouncementPage() {
 
       {groupQuery.data ? (
         <>
+          <ChatDetailsSection title="当前公告">
+            <div className="px-4 py-4">
+              <div className="rounded-[12px] border border-black/6 bg-[#f7f7f7] px-4 py-3">
+                {draft.trim() ? (
+                  <div className="whitespace-pre-wrap text-[14px] leading-7 text-[color:var(--text-primary)]">
+                    {draft.trim()}
+                  </div>
+                ) : (
+                  <div className="text-[13px] text-[color:var(--text-muted)]">
+                    暂未设置群公告
+                  </div>
+                )}
+              </div>
+            </div>
+          </ChatDetailsSection>
+
           <ChatDetailsSection title="编辑公告">
             <div className="px-4 py-4">
               <textarea
@@ -92,10 +108,11 @@ export function GroupAnnouncementPage() {
                 onChange={(event) => setDraft(event.target.value)}
                 placeholder="写一条群公告，群成员会在聊天页看到它。"
                 rows={8}
-                className="min-h-44 w-full resize-none rounded-[14px] border border-black/8 bg-[#f7f7f7] px-3 py-3 text-[15px] leading-6 text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-dim)]"
+                className="min-h-44 w-full resize-none rounded-[10px] border border-black/8 bg-white px-3 py-3 text-[15px] leading-6 text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-dim)]"
               />
-              <div className="mt-3 text-[12px] text-[color:var(--text-muted)]">
-                留空后保存，会清空当前群公告。
+              <div className="mt-3 flex items-center justify-between gap-3 text-[12px] text-[color:var(--text-muted)]">
+                <span>留空后保存，会清空当前群公告。</span>
+                <span>{draft.trim().length} 字</span>
               </div>
             </div>
           </ChatDetailsSection>
@@ -107,7 +124,7 @@ export function GroupAnnouncementPage() {
               size="lg"
               disabled={saveMutation.isPending}
               onClick={() => saveMutation.mutate()}
-              className="w-full rounded-2xl"
+              className="h-10 w-full rounded-[10px] bg-[#07c160] text-white hover:bg-[#06ad56]"
             >
               {saveMutation.isPending ? "正在保存..." : "保存群公告"}
             </Button>
