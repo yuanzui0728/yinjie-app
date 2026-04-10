@@ -788,7 +788,7 @@ export class SchedulerService {
 
     for (let index = 0; index < chars.length; index += 1) {
       for (let inner = index + 1; inner < chars.length; inner += 1) {
-        if (Math.random() > 0.08) {
+        if (Math.random() > runtimeRules.relationshipUpdateChance) {
           continue;
         }
 
@@ -807,7 +807,10 @@ export class SchedulerService {
         });
 
         if (existing) {
-          existing.strength = Math.min(100, existing.strength + 4);
+          existing.strength = Math.min(
+            runtimeRules.relationshipStrengthMax,
+            existing.strength + runtimeRules.relationshipUpdateStep,
+          );
           await this.aiRelationshipRepo.save(existing);
           updates += 1;
           this.recordRelationshipEvent(left, right, existing.strength, runtimeRules);
