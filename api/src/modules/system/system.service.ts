@@ -37,6 +37,18 @@ function normalizeProviderEndpoint(value: string) {
   return normalized;
 }
 
+function extractErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  return 'Provider connection failed.';
+}
+
 function resolveAppMode() {
   return process.env.NODE_ENV === 'production' ? 'production' : 'development';
 }
@@ -104,6 +116,28 @@ export class SystemService {
       apiKey: payload.apiKey,
       baseURL: normalizeProviderEndpoint(payload.endpoint),
     });
+  }
+
+  private async testChatProviderConnection(payload: ProviderPayload) {
+    const client = this.createProviderClient(payload);
+    await client.chat.completions.create({
+      model: payload.model,
+      messages: [{ role: 'user', content: 'ping' }],
+      max_tokens: 1,
+      temperature: 0,
+    });
+  }
+
+  private async testTranscriptionProviderConnection(payload: {
+    endpoint: string;
+    apiKey: string;
+  }) {
+    const client = this.createProviderClient({
+      endpoint: payload.endpoint,
+      model: 'transcription-probe',
+      apiKey: payload.apiKey,
+    });
+    await client.models.list();
   }
 
   async getStatus() {
@@ -261,33 +295,51 @@ export class SystemService {
 
   async testProviderConnection(payload: ProviderPayload) {
     const normalizedEndpoint = normalizeProviderEndpoint(payload.endpoint);
+    const normalizedTranscriptionEndpoint = payload.transcriptionEndpoint?.trim()
+      ? normalizeProviderEndpoint(payload.transcriptionEndpoint)
+      : undefined;
+    const transcriptionApiKey =
+      payload.transcriptionApiKey?.trim() || payload.apiKey?.trim() || '';
+
     try {
-      const client = this.createProviderClient({
+      await this.testChatProviderConnection({
         ...payload,
         endpoint: normalizedEndpoint,
       });
-
-      await client.chat.completions.create({
-        model: payload.model,
-        messages: [{ role: 'user', content: 'ping' }],
-        max_tokens: 1,
-        temperature: 0,
-      });
-
-      return {
-        success: true,
-        message: 'Provider connection succeeded.',
-        normalizedEndpoint,
-        statusCode: 200,
-      };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Provider connection failed.';
       return {
         success: false,
-        message,
+        message: `主推理服务连接失败：${extractErrorMessage(error)}`,
         normalizedEndpoint,
+        normalizedTranscriptionEndpoint,
       };
     }
+
+    if (normalizedTranscriptionEndpoint) {
+      try {
+        await this.testTranscriptionProviderConnection({
+          endpoint: normalizedTranscriptionEndpoint,
+          apiKey: transcriptionApiKey,
+        });
+      } catch (error) {
+        return {
+          success: false,
+          message: `独立语音转写网关连接失败：${extractErrorMessage(error)}`,
+          normalizedEndpoint,
+          normalizedTranscriptionEndpoint,
+        };
+      }
+    }
+
+    return {
+      success: true,
+      message: normalizedTranscriptionEndpoint
+        ? '主推理服务与独立语音转写网关均可连通。'
+        : '主推理服务连通成功。',
+      normalizedEndpoint,
+      normalizedTranscriptionEndpoint,
+      statusCode: 200,
+    };
   }
 
   async runInferencePreview(payload: { prompt: string; model?: string; systemPrompt?: string }) {

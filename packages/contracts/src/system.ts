@@ -114,6 +114,7 @@ export interface ProviderTestResult {
   success: boolean;
   message: string;
   normalizedEndpoint?: string;
+  normalizedTranscriptionEndpoint?: string;
   statusCode?: number;
 }
 
