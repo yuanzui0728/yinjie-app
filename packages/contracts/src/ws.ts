@@ -5,6 +5,7 @@ import type {
   LocationCardAttachment,
   VoiceAttachment,
 } from "./attachments";
+import type { GroupMessage, Message } from "./chat";
 
 export const CHAT_NAMESPACE = "/chat";
 
@@ -19,6 +20,7 @@ export const CHAT_EVENTS = {
 } as const;
 
 export type ChatEventName = (typeof CHAT_EVENTS)[keyof typeof CHAT_EVENTS];
+export type RealtimeChatMessage = Message | GroupMessage;
 
 export interface JoinConversationPayload {
   conversationId: string;

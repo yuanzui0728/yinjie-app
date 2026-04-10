@@ -5,7 +5,7 @@ import {
   type ChatErrorPayload,
   type ConversationUpdatedPayload,
   type JoinConversationPayload,
-  type Message,
+  type RealtimeChatMessage,
   type SendMessagePayload,
   type TypingPayload,
 } from "@yinjie/contracts";
@@ -48,7 +48,7 @@ export function emitChatMessage(payload: SendMessagePayload) {
   getChatSocket().emit(CHAT_EVENTS.sendMessage, payload);
 }
 
-export function onChatMessage(handler: (payload: Message) => void) {
+export function onChatMessage(handler: (payload: RealtimeChatMessage) => void) {
   const active = getChatSocket();
   active.on(CHAT_EVENTS.newMessage, handler);
   return () => active.off(CHAT_EVENTS.newMessage, handler);

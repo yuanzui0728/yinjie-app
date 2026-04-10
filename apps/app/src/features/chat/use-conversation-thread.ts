@@ -102,7 +102,7 @@ export function useConversationThread(conversationId: string) {
     });
 
     const offMessage = onChatMessage((payload) => {
-      if (payload.conversationId !== conversationId) {
+      if (!("conversationId" in payload) || payload.conversationId !== conversationId) {
         return;
       }
 
@@ -113,8 +113,13 @@ export function useConversationThread(conversationId: string) {
             ? removePendingUserEcho(current, payload)
             : current;
 
-        if (withoutPendingEcho.some((item) => item.id === payload.id)) {
-          return withoutPendingEcho;
+        const existingIndex = withoutPendingEcho.findIndex(
+          (item) => item.id === payload.id,
+        );
+        if (existingIndex >= 0) {
+          const nextMessages = [...withoutPendingEcho];
+          nextMessages[existingIndex] = payload;
+          return nextMessages;
         }
 
         return [...withoutPendingEcho, payload];

@@ -14,8 +14,10 @@ import { ReplyLogicRulesService } from '../ai/reply-logic-rules.service';
 import type {
   ContactCardAttachment,
   FileAttachment,
+  GroupMessage,
   ImageAttachment,
   LocationCardAttachment,
+  Message,
 } from './chat.types';
 
 type SendMessagePayload =
@@ -94,6 +96,27 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
+  }
+
+  emitThreadMessage(roomId: string, message: Message | GroupMessage) {
+    if (!this.server) {
+      return;
+    }
+
+    this.server.to(roomId).emit('new_message', message);
+  }
+
+  emitConversationUpdated(payload: {
+    id: string;
+    type: 'direct' | 'group';
+    title: string;
+    participants: string[];
+  }) {
+    if (!this.server) {
+      return;
+    }
+
+    this.server.to(payload.id).emit('conversation_updated', payload);
   }
 
   @SubscribeMessage('join_conversation')
@@ -202,7 +225,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       characterName,
       text,
     );
-    this.server.to(convId).emit('new_message', message);
+    this.emitThreadMessage(convId, message);
     return message;
   }
 
@@ -211,7 +234,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       conversationId,
       hints[Math.floor(Math.random() * hints.length)],
     );
-    this.server.to(conversationId).emit('new_message', message);
+    this.emitThreadMessage(conversationId, message);
   }
 
   private async deliverConversationReply(
@@ -241,12 +264,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         .emit('typing_stop', { conversationId: convId, characterId });
 
       for (const message of messages) {
-        this.server.to(convId).emit('new_message', message);
+        this.emitThreadMessage(convId, message);
       }
 
       const conv = await this.chatService.getConversation(convId);
       if (conv?.type === 'group') {
-        this.server.to(convId).emit('conversation_updated', {
+        this.emitConversationUpdated({
           id: convId,
           type: conv.type,
           title: conv.title,
