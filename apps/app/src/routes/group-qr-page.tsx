@@ -775,7 +775,7 @@ export function GroupQrPage() {
                   本轮待回流会话
                 </div>
                 <div className="text-xs leading-6 text-[color:var(--text-secondary)]">
-                  这一轮已经发出但还没有从聊天线程回到邀请页的目标，会先避开刚补发过的会话，再按最近活跃和发送先后优先补发。
+                  这一轮已经发出但还没有从聊天线程回到邀请页的目标，会先避开刚补发过的会话；冷却结束后会自动回到优先位，再按最近活跃和发送先后优先补发。
                 </div>
                 {pendingCurrentBatchConversations.map(({ conversation, target }) => (
                   <button
@@ -817,6 +817,12 @@ export function GroupQrPage() {
                           待回流 {formatPendingReturnDuration(target.deliveredAt)}
                         </span>
                       </div>
+                      {isPendingReturnCoolingDown(target.deliveredAt) ? (
+                        <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                          冷却剩余 {formatPendingReturnCooldownRemaining(target.deliveredAt)}
+                          ，结束后会自动回到优先位。
+                        </div>
+                      ) : null}
                     </div>
                     <span className="shrink-0 rounded-full bg-[rgba(249,115,22,0.1)] px-3 py-1 text-xs text-[color:var(--brand-secondary)]">
                       {isPendingReturnCoolingDown(target.deliveredAt)
@@ -1179,6 +1185,20 @@ function resolvePendingReturnBadgeTone(deliveredAt: string) {
 function isPendingReturnCoolingDown(deliveredAt: string) {
   const elapsedMinutes = resolvePendingReturnElapsedMinutes(deliveredAt);
   return elapsedMinutes !== null && elapsedMinutes < 5;
+}
+
+function formatPendingReturnCooldownRemaining(deliveredAt: string) {
+  const elapsedMinutes = resolvePendingReturnElapsedMinutes(deliveredAt);
+  if (elapsedMinutes === null) {
+    return "一段时间";
+  }
+
+  const remainingMinutes = Math.max(5 - elapsedMinutes, 0);
+  if (remainingMinutes < 1) {
+    return "不到 1 分钟";
+  }
+
+  return `${remainingMinutes} 分钟`;
 }
 
 function resolvePendingReturnElapsedMinutes(deliveredAt: string) {
