@@ -96,6 +96,30 @@ export function DesktopGroupCallPanel({
     });
   }, [activeCount, members.length, onPanelOpened, panelOpenedReported]);
 
+  useEffect(() => {
+    if (inviteNoticePending || endNoticePending || hasSyncedStatus) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      onSendInviteNotice({
+        activeCount,
+        totalCount: members.length,
+      });
+    }, 1200);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [
+    activeCount,
+    endNoticePending,
+    hasSyncedStatus,
+    inviteNoticePending,
+    members.length,
+    onSendInviteNotice,
+  ]);
+
   function toggleJoinedState(member: GroupMember) {
     if (member.memberType === "user") {
       return;
@@ -197,7 +221,9 @@ export function DesktopGroupCallPanel({
           {!hasSyncedStatus ? (
             <div className="mt-3">
               <InlineNotice tone="warning">
-                成员状态刚刚有变化，记得同步到聊天消息流，避免群通话卡片信息过旧。
+                {inviteNoticePending
+                  ? "正在把最新成员状态同步到聊天消息流。"
+                  : "成员状态刚刚有变化，系统会自动同步到聊天消息流。"}
               </InlineNotice>
             </div>
           ) : null}
