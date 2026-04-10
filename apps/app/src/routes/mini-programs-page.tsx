@@ -34,6 +34,25 @@ function resolveMiniProgramSelectionFromLocation() {
     : null;
 }
 
+function resolveMiniProgramLaunchContextFromLocation() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const sourceGroupId = searchParams.get("sourceGroupId")?.trim() ?? "";
+  const sourceGroupName = searchParams.get("sourceGroupName")?.trim() ?? "";
+
+  if (!sourceGroupId) {
+    return null;
+  }
+
+  return {
+    sourceGroupId,
+    sourceGroupName: sourceGroupName || "当前群聊",
+  };
+}
+
 export function MiniProgramsPage() {
   const navigate = useNavigate();
   const isDesktopLayout = useDesktopLayout();
@@ -54,6 +73,10 @@ export function MiniProgramsPage() {
   const [searchText, setSearchText] = useState("");
   const [selectedMiniProgramId, setSelectedMiniProgramId] = useState(
     resolveMiniProgramSelectionFromLocation() ?? resolveDefaultMiniProgramId(),
+  );
+  const launchContext = useMemo(
+    () => resolveMiniProgramLaunchContextFromLocation(),
+    [],
   );
   const [successNotice, setSuccessNotice] = useState("");
   const [noticeTone, setNoticeTone] = useState<"success" | "info">("success");
@@ -210,6 +233,17 @@ export function MiniProgramsPage() {
         onSelectMiniProgram={setSelectedMiniProgramId}
         onToggleMiniProgramTask={handleToggleMiniProgramTask}
         onTogglePinnedMiniProgram={handleTogglePinnedMiniProgram}
+        launchContext={launchContext}
+        onReturnToGroup={
+          launchContext
+            ? () => {
+                void navigate({
+                  to: "/group/$groupId",
+                  params: { groupId: launchContext.sourceGroupId },
+                });
+              }
+            : undefined
+        }
       />
     );
   }
