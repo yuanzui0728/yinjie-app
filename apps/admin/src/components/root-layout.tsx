@@ -25,6 +25,27 @@ export function RootLayout() {
 
   const routeMeta = useMemo(() => resolveRouteMeta(location.pathname), [location.pathname]);
   const characterContext = useMemo(() => resolveCharacterContext(location.pathname), [location.pathname]);
+  const shellStatus = useMemo(() => {
+    if (statusQuery.isError) {
+      return { label: "实例状态待确认", tone: "warning" as const };
+    }
+
+    const issueCount = [
+      !statusQuery.data?.coreApi.healthy,
+      !statusQuery.data?.inferenceGateway.activeProvider,
+      (statusQuery.data?.worldSurface.ownerCount ?? 0) !== 1,
+    ].filter(Boolean).length;
+
+    if (!statusQuery.data) {
+      return { label: "正在读取实例状态", tone: "muted" as const };
+    }
+
+    if (issueCount > 0) {
+      return { label: `${issueCount} 项待处理`, tone: "warning" as const };
+    }
+
+    return { label: "实例已就绪", tone: "healthy" as const };
+  }, [statusQuery.data, statusQuery.isError]);
 
   function saveSecret() {
     setAdminSecret(draft);
@@ -58,6 +79,8 @@ export function RootLayout() {
             eyebrow={routeMeta.eyebrow}
             title={routeMeta.title}
             description={routeMeta.description}
+            statusLabel={shellStatus.label}
+            statusTone={shellStatus.tone}
           />
         }
       >
