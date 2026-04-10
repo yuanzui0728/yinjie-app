@@ -120,6 +120,30 @@ export type ReplyLogicSchedulerDescriptions = {
   trigger_memory_proactive_messages: string;
 };
 
+export type ReplyLogicSchedulerNames = {
+  world_context_snapshot: string;
+  expire_friend_requests: string;
+  update_ai_active_status: string;
+  check_moment_schedule: string;
+  trigger_scene_friend_requests: string;
+  process_pending_feed_reactions: string;
+  check_channels_schedule: string;
+  update_character_status: string;
+  trigger_memory_proactive_messages: string;
+};
+
+export type ReplyLogicSchedulerNextRunHints = {
+  world_context_snapshot: string;
+  expire_friend_requests: string;
+  update_ai_active_status: string;
+  check_moment_schedule: string;
+  trigger_scene_friend_requests: string;
+  process_pending_feed_reactions: string;
+  check_channels_schedule: string;
+  update_character_status: string;
+  trigger_memory_proactive_messages: string;
+};
+
 export type ReplyLogicRuntimeRules = {
   sleepHintMessages: string[];
   busyHintMessages: {
@@ -153,6 +177,8 @@ export type ReplyLogicRuntimeRules = {
   worldContextRules: ReplyLogicWorldContextRules;
   inspectorTemplates: ReplyLogicInspectorTemplates;
   schedulerDescriptions: ReplyLogicSchedulerDescriptions;
+  schedulerNames: ReplyLogicSchedulerNames;
+  schedulerNextRunHints: ReplyLogicSchedulerNextRunHints;
 };
 
 export const REPLY_LOGIC_RUNTIME_RULES_CONFIG_KEY =
@@ -413,6 +439,32 @@ export const DEFAULT_REPLY_LOGIC_SCHEDULER_DESCRIPTIONS: ReplyLogicSchedulerDesc
     trigger_memory_proactive_messages: '扫描角色记忆，在合适时机主动给用户发提醒。',
   });
 
+export const DEFAULT_REPLY_LOGIC_SCHEDULER_NAMES: ReplyLogicSchedulerNames =
+  Object.freeze({
+    world_context_snapshot: '世界快照',
+    expire_friend_requests: '过期好友请求',
+    update_ai_active_status: '在线状态调度',
+    check_moment_schedule: '朋友圈调度',
+    trigger_scene_friend_requests: '场景加好友调度',
+    process_pending_feed_reactions: '广场反应调度',
+    check_channels_schedule: '视频号调度',
+    update_character_status: '活动状态调度',
+    trigger_memory_proactive_messages: '主动提醒调度',
+  });
+
+export const DEFAULT_REPLY_LOGIC_SCHEDULER_NEXT_RUN_HINTS: ReplyLogicSchedulerNextRunHints =
+  Object.freeze({
+    world_context_snapshot: '每 30 分钟',
+    expire_friend_requests: '每日 23:59',
+    update_ai_active_status: '每 10 分钟',
+    check_moment_schedule: '每 15 分钟',
+    trigger_scene_friend_requests: '每日 10:00 / 14:00 / 19:00',
+    process_pending_feed_reactions: '每 5 分钟',
+    check_channels_schedule: '每 20 分钟',
+    update_character_status: '每 2 小时',
+    trigger_memory_proactive_messages: '每日 20:00',
+  });
+
 export const DEFAULT_REPLY_LOGIC_RUNTIME_RULES: ReplyLogicRuntimeRules =
   Object.freeze({
     sleepHintMessages: [...SLEEP_HINTS],
@@ -502,6 +554,12 @@ export const DEFAULT_REPLY_LOGIC_RUNTIME_RULES: ReplyLogicRuntimeRules =
     },
     schedulerDescriptions: {
       ...DEFAULT_REPLY_LOGIC_SCHEDULER_DESCRIPTIONS,
+    },
+    schedulerNames: {
+      ...DEFAULT_REPLY_LOGIC_SCHEDULER_NAMES,
+    },
+    schedulerNextRunHints: {
+      ...DEFAULT_REPLY_LOGIC_SCHEDULER_NEXT_RUN_HINTS,
     },
   });
 
@@ -884,6 +942,94 @@ function normalizeSchedulerDescriptions(
   };
 }
 
+function normalizeSchedulerNames(
+  value: Partial<ReplyLogicSchedulerNames> | undefined,
+): ReplyLogicSchedulerNames {
+  const defaults = DEFAULT_REPLY_LOGIC_SCHEDULER_NAMES;
+  return {
+    world_context_snapshot: sanitizeTemplate(
+      value?.world_context_snapshot,
+      defaults.world_context_snapshot,
+    ),
+    expire_friend_requests: sanitizeTemplate(
+      value?.expire_friend_requests,
+      defaults.expire_friend_requests,
+    ),
+    update_ai_active_status: sanitizeTemplate(
+      value?.update_ai_active_status,
+      defaults.update_ai_active_status,
+    ),
+    check_moment_schedule: sanitizeTemplate(
+      value?.check_moment_schedule,
+      defaults.check_moment_schedule,
+    ),
+    trigger_scene_friend_requests: sanitizeTemplate(
+      value?.trigger_scene_friend_requests,
+      defaults.trigger_scene_friend_requests,
+    ),
+    process_pending_feed_reactions: sanitizeTemplate(
+      value?.process_pending_feed_reactions,
+      defaults.process_pending_feed_reactions,
+    ),
+    check_channels_schedule: sanitizeTemplate(
+      value?.check_channels_schedule,
+      defaults.check_channels_schedule,
+    ),
+    update_character_status: sanitizeTemplate(
+      value?.update_character_status,
+      defaults.update_character_status,
+    ),
+    trigger_memory_proactive_messages: sanitizeTemplate(
+      value?.trigger_memory_proactive_messages,
+      defaults.trigger_memory_proactive_messages,
+    ),
+  };
+}
+
+function normalizeSchedulerNextRunHints(
+  value: Partial<ReplyLogicSchedulerNextRunHints> | undefined,
+): ReplyLogicSchedulerNextRunHints {
+  const defaults = DEFAULT_REPLY_LOGIC_SCHEDULER_NEXT_RUN_HINTS;
+  return {
+    world_context_snapshot: sanitizeTemplate(
+      value?.world_context_snapshot,
+      defaults.world_context_snapshot,
+    ),
+    expire_friend_requests: sanitizeTemplate(
+      value?.expire_friend_requests,
+      defaults.expire_friend_requests,
+    ),
+    update_ai_active_status: sanitizeTemplate(
+      value?.update_ai_active_status,
+      defaults.update_ai_active_status,
+    ),
+    check_moment_schedule: sanitizeTemplate(
+      value?.check_moment_schedule,
+      defaults.check_moment_schedule,
+    ),
+    trigger_scene_friend_requests: sanitizeTemplate(
+      value?.trigger_scene_friend_requests,
+      defaults.trigger_scene_friend_requests,
+    ),
+    process_pending_feed_reactions: sanitizeTemplate(
+      value?.process_pending_feed_reactions,
+      defaults.process_pending_feed_reactions,
+    ),
+    check_channels_schedule: sanitizeTemplate(
+      value?.check_channels_schedule,
+      defaults.check_channels_schedule,
+    ),
+    update_character_status: sanitizeTemplate(
+      value?.update_character_status,
+      defaults.update_character_status,
+    ),
+    trigger_memory_proactive_messages: sanitizeTemplate(
+      value?.trigger_memory_proactive_messages,
+      defaults.trigger_memory_proactive_messages,
+    ),
+  };
+}
+
 function normalizePromptTemplates(
   value: Partial<ReplyLogicPromptTemplates> | undefined,
 ): ReplyLogicPromptTemplates {
@@ -1071,6 +1217,10 @@ export function normalizeReplyLogicRuntimeRules(
     inspectorTemplates: normalizeInspectorTemplates(input?.inspectorTemplates),
     schedulerDescriptions: normalizeSchedulerDescriptions(
       input?.schedulerDescriptions,
+    ),
+    schedulerNames: normalizeSchedulerNames(input?.schedulerNames),
+    schedulerNextRunHints: normalizeSchedulerNextRunHints(
+      input?.schedulerNextRunHints,
     ),
   };
 }

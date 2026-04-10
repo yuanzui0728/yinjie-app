@@ -36,6 +36,15 @@ export class SchedulerTelemetryService {
     }
   }
 
+  private getPresentation(jobId: SchedulerJobId) {
+    const cachedRules = this.replyLogicRules.getCachedRules();
+    return {
+      name: cachedRules.schedulerNames[jobId] ?? jobId,
+      description: cachedRules.schedulerDescriptions[jobId] ?? '',
+      nextRunHint: cachedRules.schedulerNextRunHints[jobId] ?? '',
+    };
+  }
+
   getStartedAt() {
     return this.startedAt.toISOString();
   }
@@ -54,9 +63,14 @@ export class SchedulerTelemetryService {
       const job = this.jobs.get(definition.id);
       return {
         ...definition,
+        name:
+          runtimeRules.schedulerNames[definition.id] ?? definition.name,
         description:
           runtimeRules.schedulerDescriptions[definition.id] ??
           definition.description,
+        nextRunHint:
+          runtimeRules.schedulerNextRunHints[definition.id] ??
+          definition.nextRunHint,
         runCount: job?.runCount ?? 0,
         running: job?.running ?? false,
         lastRunAt: job?.lastRunAt,
@@ -71,11 +85,19 @@ export class SchedulerTelemetryService {
     const filtered = jobIdSet
       ? this.recentRuns.filter((item) => jobIdSet.has(item.jobId))
       : this.recentRuns;
-    return filtered.slice(0, options?.limit ?? 10);
+    return filtered.slice(0, options?.limit ?? 10).map((item) => ({
+      ...item,
+      jobName: this.getPresentation(item.jobId).name,
+    }));
   }
 
   listCharacterEvents(characterId: string, limit = 10) {
-    return [...(this.characterEvents.get(characterId) ?? [])].slice(0, limit);
+    return [...(this.characterEvents.get(characterId) ?? [])]
+      .slice(0, limit)
+      .map((item) => ({
+        ...item,
+        jobName: this.getPresentation(item.jobId).name,
+      }));
   }
 
   startJob(jobId: SchedulerJobId): SchedulerJobRunHandle {
@@ -118,7 +140,7 @@ export class SchedulerTelemetryService {
       summary: input.summary,
       createdAt: new Date().toISOString(),
       jobId: input.jobId,
-      jobName: definition?.name ?? input.jobId,
+      jobName: this.getPresentation(input.jobId).name ?? definition?.name ?? input.jobId,
       characterId: input.characterId,
       characterName: input.characterName,
     };
@@ -149,7 +171,7 @@ export class SchedulerTelemetryService {
     const run: SchedulerRunRecordValue = {
       id: `scheduler_run_${randomUUID()}`,
       jobId: handle.jobId,
-      jobName: job?.name ?? handle.jobId,
+      jobName: this.getPresentation(handle.jobId).name ?? job?.name ?? handle.jobId,
       status,
       startedAt: handle.startedAt.toISOString(),
       finishedAt: finishedAt.toISOString(),
