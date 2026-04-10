@@ -9,6 +9,7 @@ import {
   getCharacter,
   getConversations,
   getFriends,
+  hideConversation,
   sendFriendRequest,
   setConversationMuted,
   setConversationPinned,
@@ -150,6 +151,16 @@ export function ChatDetailsPage() {
       ]);
     },
   });
+  const hideMutation = useMutation({
+    mutationFn: () => hideConversation(conversationId, baseUrl),
+    onSuccess: async () => {
+      setNotice("聊天已隐藏。");
+      await queryClient.invalidateQueries({
+        queryKey: ["app-conversations", baseUrl],
+      });
+      void navigate({ to: "/tabs/chat" });
+    },
+  });
 
   const reportMutation = useMutation({
     mutationFn: async () => {
@@ -206,6 +217,7 @@ export function ChatDetailsPage() {
     muteMutation.isPending ||
     pinMutation.isPending ||
     saveToContactsMutation.isPending ||
+    hideMutation.isPending ||
     clearMutation.isPending ||
     reportMutation.isPending ||
     blockMutation.isPending;
@@ -361,6 +373,20 @@ export function ChatDetailsPage() {
           <ChatDetailsSection title="危险操作">
             <div className="divide-y divide-black/5">
               <ChatSettingRow
+                label="隐藏聊天"
+                disabled={busy}
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      "确认将这段聊天从消息列表中隐藏吗？有新消息时会再次出现。",
+                    )
+                  ) {
+                    return;
+                  }
+                  hideMutation.mutate();
+                }}
+              />
+              <ChatSettingRow
                 label="清空聊天记录"
                 danger
                 disabled={busy}
@@ -403,6 +429,11 @@ export function ChatDetailsPage() {
           {clearMutation.isError && clearMutation.error instanceof Error ? (
             <div className="px-3">
               <ErrorBlock message={clearMutation.error.message} />
+            </div>
+          ) : null}
+          {hideMutation.isError && hideMutation.error instanceof Error ? (
+            <div className="px-3">
+              <ErrorBlock message={hideMutation.error.message} />
             </div>
           ) : null}
           {pinMutation.isError && pinMutation.error instanceof Error ? (
