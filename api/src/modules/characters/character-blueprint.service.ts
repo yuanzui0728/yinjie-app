@@ -578,7 +578,7 @@ export class CharacterBlueprintService {
       input.personName?.trim() ||
       blueprint.draftRecipe.identity.name.trim() ||
       character.name;
-    const prompt = this.promptBuilder.buildPersonalityExtractionPrompt(
+    const prompt = await this.promptBuilder.buildPersonalityExtractionPrompt(
       chatSample,
       personName,
     );

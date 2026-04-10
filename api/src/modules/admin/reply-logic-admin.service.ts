@@ -757,8 +757,8 @@ export class ReplyLogicAdminService {
             lastChatAt: input.lastChatAt,
           },
     });
-    const promptSections = this.promptBuilder
-      .buildChatSystemPromptSections(
+    const promptSections = (
+      await this.promptBuilder.buildChatSystemPromptSections(
         character.profile,
         input.isGroupChat,
         input.isGroupChat
@@ -768,7 +768,7 @@ export class ReplyLogicAdminService {
               lastChatAt: input.lastChatAt,
             },
       )
-      .map(
+    ).map(
         (section): ReplyLogicPromptSection => ({
           key: section.key,
           label: section.label,

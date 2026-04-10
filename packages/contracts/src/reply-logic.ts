@@ -47,6 +47,22 @@ export interface ReplyLogicProviderSummary {
   notes: string[];
 }
 
+export interface ReplyLogicPromptTemplates {
+  identityFallback: string;
+  chainOfThoughtInstruction: string;
+  reflectionInstruction: string;
+  collaborationRouting: string;
+  emptyMemory: string;
+  behavioralGuideline: string;
+  groupChatInstruction: string;
+  baseRules: string[];
+  momentPrompt: string;
+  personalityExtractionPrompt: string;
+  intentClassificationPrompt: string;
+  memoryCompressionPrompt: string;
+  groupCoordinatorPrompt: string;
+}
+
 export interface ReplyLogicConstantSummary {
   sleepHintMessages: string[];
   busyHintMessages: Record<string, string[]>;
@@ -71,6 +87,7 @@ export interface ReplyLogicConstantSummary {
     label: string;
     progress: number;
   }>;
+  promptTemplates: ReplyLogicPromptTemplates;
 }
 
 export interface ReplyLogicOverviewCharacterItem {

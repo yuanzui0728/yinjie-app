@@ -51,6 +51,22 @@ export interface ReplyLogicProviderSummary {
   notes: string[];
 }
 
+export interface ReplyLogicPromptTemplates {
+  identityFallback: string;
+  chainOfThoughtInstruction: string;
+  reflectionInstruction: string;
+  collaborationRouting: string;
+  emptyMemory: string;
+  behavioralGuideline: string;
+  groupChatInstruction: string;
+  baseRules: string[];
+  momentPrompt: string;
+  personalityExtractionPrompt: string;
+  intentClassificationPrompt: string;
+  memoryCompressionPrompt: string;
+  groupCoordinatorPrompt: string;
+}
+
 export interface ReplyLogicOverviewCharacterItem {
   id: string;
   name: string;
@@ -102,6 +118,7 @@ export interface ReplyLogicOverview {
       label: string;
       progress: number;
     }>;
+    promptTemplates: ReplyLogicPromptTemplates;
   };
   worldContext?: ReplyLogicWorldContextSummary | null;
   characters: ReplyLogicOverviewCharacterItem[];
