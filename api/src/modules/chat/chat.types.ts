@@ -115,6 +115,8 @@ export interface Conversation {
   messages: Message[];
   isPinned: boolean;
   pinnedAt?: Date;
+  isMuted: boolean;
+  mutedAt?: Date;
   lastReadAt?: Date;
   lastClearedAt?: Date;
   lastActivityAt: Date;
