@@ -11,6 +11,7 @@ export * from "./evals";
 export * from "./feed";
 export * from "./moments";
 export * from "./moderation";
+export * from "./official-accounts";
 export * from "./push";
 export * from "./social";
 export * from "./speech";

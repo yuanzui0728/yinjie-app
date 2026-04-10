@@ -54,6 +54,12 @@ import type {
   ToggleMomentLikeResult,
 } from "./moments";
 import type {
+  OfficialAccountArticleDetail,
+  OfficialAccountArticleSummary,
+  OfficialAccountDetail,
+  OfficialAccountSummary,
+} from "./official-accounts";
+import type {
   CreateModerationReportRequest,
   ModerationReport,
 } from "./moderation";
@@ -1272,6 +1278,71 @@ export function addFeedComment(
 export function likeFeedPost(id: string, baseUrl?: string) {
   return requestLegacyApi<void>(
     `/feed/${id}/like`,
+    {
+      method: "POST",
+    },
+    baseUrl,
+  );
+}
+
+export function listOfficialAccounts(baseUrl?: string) {
+  return requestLegacyApi<OfficialAccountSummary[]>(
+    "/official-accounts",
+    undefined,
+    baseUrl,
+  );
+}
+
+export function getOfficialAccount(id: string, baseUrl?: string) {
+  return requestLegacyApi<OfficialAccountDetail>(
+    `/official-accounts/${id}`,
+    undefined,
+    baseUrl,
+  );
+}
+
+export function followOfficialAccount(id: string, baseUrl?: string) {
+  return requestLegacyApi<OfficialAccountDetail>(
+    `/official-accounts/${id}/follow`,
+    {
+      method: "POST",
+    },
+    baseUrl,
+  );
+}
+
+export function unfollowOfficialAccount(id: string, baseUrl?: string) {
+  return requestLegacyApi<OfficialAccountDetail>(
+    `/official-accounts/${id}/unfollow`,
+    {
+      method: "POST",
+    },
+    baseUrl,
+  );
+}
+
+export function getOfficialAccountArticles(id: string, baseUrl?: string) {
+  return requestLegacyApi<OfficialAccountArticleSummary[]>(
+    `/official-accounts/${id}/articles`,
+    undefined,
+    baseUrl,
+  );
+}
+
+export function getOfficialAccountArticle(articleId: string, baseUrl?: string) {
+  return requestLegacyApi<OfficialAccountArticleDetail>(
+    `/official-accounts/articles/${articleId}`,
+    undefined,
+    baseUrl,
+  );
+}
+
+export function markOfficialAccountArticleRead(
+  articleId: string,
+  baseUrl?: string,
+) {
+  return requestLegacyApi<OfficialAccountArticleDetail>(
+    `/official-accounts/articles/${articleId}/read`,
     {
       method: "POST",
     },
