@@ -64,6 +64,9 @@ export function ConversationThreadPanel({
     baseUrl,
     conversationTitle,
     conversationType,
+    hasOlderMessages,
+    loadingOlderMessages,
+    loadOlderMessages,
     messagesQuery,
     participants,
     renderedMessages,
@@ -313,6 +316,11 @@ export function ConversationThreadPanel({
             groupMode={conversationType === "group"}
             variant={isDesktop ? "desktop" : "mobile"}
             highlightedMessageId={highlightedMessageId}
+            hasOlderMessages={hasOlderMessages}
+            loadingOlderMessages={loadingOlderMessages}
+            onLoadOlderMessages={() => {
+              void loadOlderMessages();
+            }}
             onReplyMessage={handleReplyMessage}
             onSelectionModeChange={setSelectionModeActive}
             emptyState={
