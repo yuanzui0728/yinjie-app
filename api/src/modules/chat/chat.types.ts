@@ -137,6 +137,7 @@ export interface Conversation {
   pinnedAt?: Date;
   isMuted: boolean;
   mutedAt?: Date;
+  strongReminderUntil?: Date;
   lastReadAt?: Date;
   lastClearedAt?: Date;
   lastActivityAt: Date;

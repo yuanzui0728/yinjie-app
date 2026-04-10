@@ -102,6 +102,18 @@ export class ChatController {
     return this.chatService.setConversationMuted(id, body.muted);
   }
 
+  @Post(':id/strong-reminder')
+  setStrongReminder(
+    @Param('id') id: string,
+    @Body() body: { enabled: boolean; durationHours?: number },
+  ) {
+    return this.chatService.setConversationStrongReminder(
+      id,
+      body.enabled,
+      body.durationHours,
+    );
+  }
+
   @Post(':id/hide')
   hideConversation(@Param('id') id: string) {
     return this.chatService.hideConversation(id);

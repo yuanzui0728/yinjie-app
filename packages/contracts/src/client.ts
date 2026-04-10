@@ -17,6 +17,7 @@ import type {
   Message,
   SetGroupPinnedRequest,
   SetConversationPinnedRequest,
+  SetConversationStrongReminderRequest,
   SetConversationMutedRequest,
   SendGroupMessageRequest,
   UploadChatAttachmentResponse,
@@ -894,6 +895,21 @@ export function setConversationMuted(
 ) {
   return requestLegacyApi<Conversation>(
     `/conversations/${id}/mute`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
+export function setConversationStrongReminder(
+  id: string,
+  payload: SetConversationStrongReminderRequest,
+  baseUrl?: string,
+) {
+  return requestLegacyApi<Conversation>(
+    `/conversations/${id}/strong-reminder`,
     {
       method: "POST",
       body: JSON.stringify(payload),

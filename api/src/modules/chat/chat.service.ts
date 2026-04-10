@@ -83,6 +83,8 @@ type UploadedAttachmentFile = {
 @Injectable()
 export class ChatService {
   private conversationHistory: Map<string, ChatMessage[]> = new Map();
+  private readonly defaultStrongReminderHours = 3;
+  private readonly maxStrongReminderHours = 24;
 
   constructor(
     private readonly ai: AiOrchestratorService,
@@ -354,6 +356,28 @@ export class ChatService {
       ...entity,
       isMuted: muted,
       mutedAt: muted ? new Date() : null,
+    });
+    return this._entityToConversation(updated);
+  }
+
+  async setConversationStrongReminder(
+    convId: string,
+    enabled: boolean,
+    durationHours?: number,
+  ): Promise<Conversation> {
+    const entity = await this.requireOwnedConversation(convId);
+    const nextStrongReminderUntil = enabled
+      ? new Date(
+          Date.now() +
+            this.resolveStrongReminderDurationHours(durationHours) *
+              60 *
+              60 *
+              1000,
+        )
+      : null;
+    const updated = await this.convRepo.save({
+      ...entity,
+      strongReminderUntil: nextStrongReminderUntil,
     });
     return this._entityToConversation(updated);
   }
@@ -1015,6 +1039,7 @@ export class ChatService {
       pinnedAt: entity.pinnedAt ?? undefined,
       isMuted: entity.isMuted ?? false,
       mutedAt: entity.mutedAt ?? undefined,
+      strongReminderUntil: entity.strongReminderUntil ?? undefined,
       lastReadAt: entity.lastReadAt ?? undefined,
       lastClearedAt: entity.lastClearedAt ?? undefined,
       lastActivityAt:
@@ -1080,6 +1105,14 @@ export class ChatService {
       updatedAt: group.updatedAt,
       lastMessage,
     };
+  }
+
+  private resolveStrongReminderDurationHours(durationHours?: number) {
+    if (!Number.isFinite(durationHours) || !durationHours || durationHours <= 0) {
+      return this.defaultStrongReminderHours;
+    }
+
+    return Math.min(durationHours, this.maxStrongReminderHours);
   }
 
   private groupMessageToConversationMessage(
