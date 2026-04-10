@@ -818,6 +818,20 @@ export function recallConversationMessage(
   );
 }
 
+export function deleteConversationMessage(
+  conversationId: string,
+  messageId: string,
+  baseUrl?: string,
+) {
+  return requestLegacyApi<SuccessResponse>(
+    `/conversations/${conversationId}/messages/${messageId}`,
+    {
+      method: "DELETE",
+    },
+    baseUrl,
+  );
+}
+
 export function markConversationRead(id: string, baseUrl?: string) {
   return requestLegacyApi<void>(
     `/conversations/${id}/read`,
@@ -1103,6 +1117,20 @@ export function recallGroupMessage(
     `/groups/${groupId}/messages/${messageId}/recall`,
     {
       method: "POST",
+    },
+    baseUrl,
+  );
+}
+
+export function deleteGroupMessage(
+  groupId: string,
+  messageId: string,
+  baseUrl?: string,
+) {
+  return requestLegacyApi<SuccessResponse>(
+    `/groups/${groupId}/messages/${messageId}`,
+    {
+      method: "DELETE",
     },
     baseUrl,
   );

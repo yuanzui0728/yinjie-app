@@ -329,7 +329,9 @@ export class GroupService {
       return this.toGroup(group);
     }
 
-    const previousReadAt = new Date(lastCharacterMessage.createdAt.getTime() - 1);
+    const previousReadAt = new Date(
+      lastCharacterMessage.createdAt.getTime() - 1,
+    );
     const lastClearedAt = group.lastClearedAt
       ? new Date(group.lastClearedAt)
       : null;
@@ -377,6 +379,26 @@ export class GroupService {
     });
 
     return this.toGroupMessage(recalled);
+  }
+
+  async deleteMessage(
+    groupId: string,
+    messageId: string,
+  ): Promise<{ success: true }> {
+    const group = await this.requireAccessibleGroup(groupId);
+    const message = await this.messageRepo.findOneBy({
+      id: messageId,
+      groupId,
+    });
+
+    if (!message) {
+      throw new NotFoundException(`Group message ${messageId} not found`);
+    }
+
+    await this.messageRepo.delete({ id: message.id });
+    await this.syncGroupLastActivity(group);
+
+    return { success: true };
   }
 
   async hideGroup(groupId: string): Promise<Group> {
@@ -934,6 +956,40 @@ export class GroupService {
     if (markRead) {
       group.lastReadAt = at;
     }
+    await this.groupRepo.save(group);
+  }
+
+  private async syncGroupLastActivity(group: GroupEntity): Promise<void> {
+    const lastMessage = await this.messageRepo.findOne({
+      where: group.lastClearedAt
+        ? {
+            groupId: group.id,
+            createdAt: MoreThan(group.lastClearedAt),
+          }
+        : { groupId: group.id },
+      order: { createdAt: 'DESC' },
+    });
+    const timestamps = [
+      lastMessage?.createdAt,
+      group.lastClearedAt ?? undefined,
+      group.createdAt,
+    ]
+      .filter((value): value is Date => Boolean(value))
+      .map((value) => new Date(value).getTime());
+
+    if (!timestamps.length) {
+      return;
+    }
+
+    const nextLastActivityAt = new Date(Math.max(...timestamps));
+    if (
+      group.lastActivityAt &&
+      group.lastActivityAt.getTime() === nextLastActivityAt.getTime()
+    ) {
+      return;
+    }
+
+    group.lastActivityAt = nextLastActivityAt;
     await this.groupRepo.save(group);
   }
 }
