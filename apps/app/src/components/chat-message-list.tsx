@@ -135,7 +135,7 @@ export function ChatMessageList({
                     className={`rounded-[18px] px-3.5 py-2.5 text-[15px] leading-6 ${
                       isUser
                         ? isDesktop
-                          ? "bg-[var(--brand-gradient)] text-white shadow-[var(--shadow-soft)]"
+                          ? "bg-[var(--brand-gradient)] text-[color:var(--text-on-brand)] shadow-[var(--shadow-soft)]"
                           : "bg-[#95ec69] text-[#111827] [animation:bubble-in_220ms_cubic-bezier(0.22,1,0.36,1)] shadow-none"
                         : isDesktop
                           ? "border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] text-[color:var(--text-primary)] shadow-[var(--shadow-soft)]"

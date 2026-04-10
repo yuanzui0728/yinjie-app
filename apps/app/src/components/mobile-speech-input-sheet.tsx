@@ -51,16 +51,26 @@ export function MobileSpeechInputSheet({
   }
 
   const listening = status === "listening";
-  const processing = status === "processing" || status === "requesting-permission";
+  const processing =
+    status === "processing" || status === "requesting-permission";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end bg-[rgba(30,24,12,0.22)] backdrop-blur-[2px]">
-      <button type="button" className="absolute inset-0" aria-label="关闭语音输入面板" onClick={onClose} />
+      <button
+        type="button"
+        className="absolute inset-0"
+        aria-label="关闭语音输入面板"
+        onClick={onClose}
+      />
       <div className="relative w-full rounded-t-[28px] border-t border-white/70 bg-[linear-gradient(180deg,rgba(255,253,247,0.98),rgba(255,247,235,0.98))] px-4 pb-6 pt-4 shadow-[0_-16px_36px_rgba(90,56,16,0.16)]">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-medium text-[color:var(--text-primary)]">语音输入</div>
-            <div className="mt-1 text-xs text-[color:var(--text-muted)]">{resolveStatusLabel(status)}</div>
+            <div className="text-sm font-medium text-[color:var(--text-primary)]">
+              语音输入
+            </div>
+            <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+              {resolveStatusLabel(status)}
+            </div>
           </div>
           <button
             type="button"
@@ -112,7 +122,11 @@ export function MobileSpeechInputSheet({
             )}
             aria-label={listening ? "停止录音" : "开始录音"}
           >
-            {listening ? <Square size={24} fill="currentColor" /> : <Mic size={28} />}
+            {listening ? (
+              <Square size={24} fill="currentColor" />
+            ) : (
+              <Mic size={28} />
+            )}
           </button>
         </div>
 
@@ -133,7 +147,7 @@ export function MobileSpeechInputSheet({
             {listening ? "停止" : "开始"}
           </Button>
           <Button
-            className="h-11 rounded-[16px] bg-[linear-gradient(135deg,#fbbf24,#f97316)] text-white shadow-[0_6px_16px_rgba(249,115,22,0.26)]"
+            className="h-11 rounded-[16px] bg-[linear-gradient(135deg,#fbbf24,#f97316)] text-[color:var(--text-on-brand)] shadow-[0_6px_16px_rgba(249,115,22,0.26)]"
             onClick={onCommit}
             disabled={!canCommit || listening || processing}
           >

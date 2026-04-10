@@ -29,7 +29,9 @@ export function DesktopRuntimeActions({
 }: DesktopRuntimeActionsProps) {
   return (
     <section className="rounded-[28px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-5 shadow-[var(--shadow-section)]">
-      <div className="text-sm font-medium text-[color:var(--text-primary)]">{title}</div>
+      <div className="text-sm font-medium text-[color:var(--text-primary)]">
+        {title}
+      </div>
       <div className="mt-4 flex flex-wrap gap-3">
         <button
           type="button"
@@ -43,7 +45,7 @@ export function DesktopRuntimeActions({
           type="button"
           onClick={onStart}
           disabled={busy}
-          className="rounded-full bg-[var(--brand-gradient)] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full bg-[var(--brand-gradient)] px-4 py-2 text-sm font-medium text-[color:var(--text-on-brand)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           {startLabel}
         </button>
@@ -66,8 +68,14 @@ export function DesktopRuntimeActions({
           </button>
         ) : null}
       </div>
-      <div className="mt-4 text-xs leading-6 text-[color:var(--text-muted)]">{message}</div>
-      {errorMessage ? <div className="mt-3 text-sm text-[color:var(--state-danger-text)]">{errorMessage}</div> : null}
+      <div className="mt-4 text-xs leading-6 text-[color:var(--text-muted)]">
+        {message}
+      </div>
+      {errorMessage ? (
+        <div className="mt-3 text-sm text-[color:var(--state-danger-text)]">
+          {errorMessage}
+        </div>
+      ) : null}
     </section>
   );
 }

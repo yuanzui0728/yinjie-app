@@ -569,7 +569,7 @@ export function ChatComposer({
               variant="primary"
               className={
                 isDesktop
-                  ? "h-10 rounded-[14px] bg-[var(--brand-gradient)] px-5 text-sm font-medium text-white shadow-[0_6px_16px_rgba(160,90,10,0.18)] hover:opacity-95"
+                  ? "h-10 rounded-[14px] bg-[var(--brand-gradient)] px-5 text-sm font-medium text-[color:var(--text-on-brand)] shadow-[0_6px_16px_rgba(160,90,10,0.18)] hover:opacity-95"
                   : "h-10 rounded-[18px] bg-[linear-gradient(135deg,#fbbf24,#f97316)] px-4 text-sm font-medium shadow-[0_4px_12px_rgba(249,115,22,0.30)]"
               }
             >

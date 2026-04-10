@@ -23,7 +23,10 @@ type ProviderSetupFormProps = {
   footerMessage: string;
   onSubmit: () => void;
   onProbe: () => void;
-  onChange: <K extends keyof ProviderConfig>(field: K, value: ProviderConfig[K]) => void;
+  onChange: <K extends keyof ProviderConfig>(
+    field: K,
+    value: ProviderConfig[K],
+  ) => void;
   savePending?: boolean;
   probePending?: boolean;
   className?: string;
@@ -58,11 +61,20 @@ export function ProviderSetupForm({
   className,
 }: ProviderSetupFormProps) {
   return (
-    <section className={className ?? "rounded-[28px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-5 shadow-[var(--shadow-section)]"}>
+    <section
+      className={
+        className ??
+        "rounded-[28px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-5 shadow-[var(--shadow-section)]"
+      }
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="text-sm font-medium text-[color:var(--text-primary)]">{title}</div>
-          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">{description}</div>
+          <div className="text-sm font-medium text-[color:var(--text-primary)]">
+            {title}
+          </div>
+          <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
+            {description}
+          </div>
         </div>
         <div
           className={`rounded-full px-3 py-1 text-[11px] ${statusLabel === "configured" ? "bg-emerald-500/15 text-emerald-700" : "bg-amber-500/15 text-amber-700"}`}
@@ -94,7 +106,12 @@ export function ProviderSetupForm({
             <span>{modeLabel}</span>
             <select
               value={draft.mode}
-              onChange={(event) => onChange("mode", event.target.value === "cloud" ? "cloud" : "local-compatible")}
+              onChange={(event) =>
+                onChange(
+                  "mode",
+                  event.target.value === "cloud" ? "cloud" : "local-compatible",
+                )
+              }
               disabled={disabled}
               className="w-full rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-input)] px-4 py-3 text-sm text-[color:var(--text-primary)] outline-none focus:border-[color:var(--border-brand)] focus:bg-white disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -163,13 +180,15 @@ export function ProviderSetupForm({
           <button
             type="submit"
             disabled={disabled || savePending}
-            className="rounded-full bg-[var(--brand-gradient)] px-4 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-full bg-[var(--brand-gradient)] px-4 py-2 text-sm font-medium text-[color:var(--text-on-brand)] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {saveLabel}
           </button>
         </div>
 
-        <div className="text-xs leading-6 text-[color:var(--text-muted)]">{footerMessage}</div>
+        <div className="text-xs leading-6 text-[color:var(--text-muted)]">
+          {footerMessage}
+        </div>
       </form>
     </section>
   );

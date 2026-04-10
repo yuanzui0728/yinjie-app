@@ -14,8 +14,13 @@ export function SplashPage() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const runtimeContext = resolveAppRuntimeContext(runtimeConfig.appPlatform);
-      if (runtimeContext.hostRole === "host" || requiresRemoteServiceConfiguration()) {
+      const runtimeContext = resolveAppRuntimeContext(
+        runtimeConfig.appPlatform,
+      );
+      if (
+        runtimeContext.hostRole === "host" ||
+        requiresRemoteServiceConfiguration()
+      ) {
         void navigate({ to: "/welcome", replace: true });
         return;
       }
@@ -34,7 +39,13 @@ export function SplashPage() {
     }, 900);
 
     return () => window.clearTimeout(timer);
-  }, [hydrateOwner, navigate, runtimeConfig.apiBaseUrl, runtimeConfig.appPlatform, runtimeConfig.worldAccessMode]);
+  }, [
+    hydrateOwner,
+    navigate,
+    runtimeConfig.apiBaseUrl,
+    runtimeConfig.appPlatform,
+    runtimeConfig.worldAccessMode,
+  ]);
 
   return (
     <AppPage className="flex min-h-full flex-col items-center justify-center py-10 text-center">
@@ -42,26 +53,40 @@ export function SplashPage() {
         <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-[rgba(249,115,22,0.24)] bg-white/88 px-3 py-1 text-[11px] uppercase tracking-[0.34em] text-[color:var(--brand-primary)]">
           Beyond Reality
         </div>
-        <div className="mx-auto mt-6 flex h-20 w-20 animate-pulse items-center justify-center rounded-[28px] bg-[linear-gradient(135deg,rgba(251,191,36,0.96),rgba(249,115,22,0.92))] text-2xl font-semibold text-white shadow-[var(--shadow-lift)]">
+        <div className="mx-auto mt-6 flex h-20 w-20 animate-pulse items-center justify-center rounded-[28px] bg-[linear-gradient(135deg,rgba(251,191,36,0.96),rgba(249,115,22,0.92))] text-2xl font-semibold text-[color:var(--text-on-brand)] shadow-[var(--shadow-lift)]">
           隐界
         </div>
-        <h1 className="mt-6 text-4xl font-semibold tracking-[0.08em] text-[color:var(--text-primary)]">欢迎回到你的世界</h1>
+        <h1 className="mt-6 text-4xl font-semibold tracking-[0.08em] text-[color:var(--text-primary)]">
+          欢迎回到你的世界
+        </h1>
         <p className="mt-4 text-sm leading-8 text-[color:var(--text-secondary)]">
           这里不是一串账号信息，而是一整片会继续生长、继续回应你的个人世界。
         </p>
 
         <div className="mt-6 grid gap-3 text-left sm:grid-cols-3">
           <div className="rounded-[22px] bg-white/90 px-4 py-3 shadow-[var(--shadow-soft)]">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-muted)]">Step 1</div>
-            <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">确认入口</div>
+            <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-muted)]">
+              Step 1
+            </div>
+            <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
+              确认入口
+            </div>
           </div>
           <div className="rounded-[22px] bg-white/90 px-4 py-3 shadow-[var(--shadow-soft)]">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-muted)]">Step 2</div>
-            <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">同步世界主人</div>
+            <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-muted)]">
+              Step 2
+            </div>
+            <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
+              同步世界主人
+            </div>
           </div>
           <div className="rounded-[22px] bg-white/90 px-4 py-3 shadow-[var(--shadow-soft)]">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-muted)]">Step 3</div>
-            <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">继续开启对话</div>
+            <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-muted)]">
+              Step 3
+            </div>
+            <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
+              继续开启对话
+            </div>
           </div>
         </div>
 
