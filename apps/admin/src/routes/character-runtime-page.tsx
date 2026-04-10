@@ -27,6 +27,7 @@ import {
   AdminSelectField as SelectFieldBlock,
   AdminTextArea as TextAreaBlock,
   AdminTextField as FieldBlock,
+  AdminValueCard as ValueCard,
 } from "../components/admin-workbench";
 import { adminApi } from "../lib/admin-api";
 import { resolveAdminCoreApiBaseUrl } from "../lib/core-api-base";
@@ -632,21 +633,6 @@ function HistoryItemCard({ item }: { item: ReplyLogicHistoryItem }) {
       </div>
       <div className="mt-3 text-sm text-[color:var(--text-secondary)]">{item.text}</div>
       <div className="mt-2 text-xs text-[color:var(--text-muted)]">{formatDateTime(item.createdAt)}</div>
-    </div>
-  );
-}
-
-function ValueCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <div className="rounded-[16px] border border-[color:var(--border-faint)] bg-white/70 px-3 py-3">
-      <div className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{label}</div>
-      <div className="mt-2 text-sm text-[color:var(--text-secondary)]">{value}</div>
     </div>
   );
 }
