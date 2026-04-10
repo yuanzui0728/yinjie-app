@@ -1,0 +1,45 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="144" fill="url(#bg)"/>
+  <circle cx="108" cy="114" r="92" fill="url(#glowA)" fill-opacity="0.84"/>
+  <circle cx="410" cy="118" r="82" fill="url(#glowB)" fill-opacity="0.82"/>
+  <circle cx="404" cy="410" r="118" fill="url(#glowC)" fill-opacity="0.7"/>
+  <path d="M88 412C110 346 171 304 244 304H280C351 304 410 346 428 410C432 423 422 436 407 436H109C94 436 83 423 88 412Z" fill="url(#body)"/>
+  <path d="M250 138C196 138 152 182 152 236C152 291 196 334 250 334C304 334 348 291 348 236C348 182 304 138 250 138Z" fill="url(#face)"/>
+  <path d="M160 222C154 166 196 120 252 120C304 120 346 157 348 210C349 220 341 228 332 228H176C168 228 161 227 160 222Z" fill="url(#hair)"/>
+  <path d="M178 240C192 271 219 290 250 290C281 290 307 271 320 240C303 246 281 250 250 250C220 250 196 247 178 240Z" fill="#F1C8B0"/>
+  <circle cx="210" cy="226" r="10" fill="#5F3B2E"/>
+  <circle cx="289" cy="226" r="10" fill="#5F3B2E"/>
+  <path d="M219 270C229 279 239 284 252 284C265 284 276 279 286 270" stroke="#A86451" stroke-width="12" stroke-linecap="round"/>
+  <path d="M166 210C187 197 211 186 239 176C263 168 290 165 321 170" stroke="#3F241C" stroke-width="18" stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="bg" x1="60" y1="54" x2="446" y2="470" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF1E8"/>
+      <stop offset="0.5" stop-color="#FBE2DA"/>
+      <stop offset="1" stop-color="#F5EFE4"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(108 114) rotate(90) scale(92)">
+      <stop stop-color="#FFCB98"/>
+      <stop offset="1" stop-color="#FFCB98" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(410 118) rotate(90) scale(82)">
+      <stop stop-color="#F0B3A8"/>
+      <stop offset="1" stop-color="#F0B3A8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowC" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(404 410) rotate(90) scale(118)">
+      <stop stop-color="#E7D3BA"/>
+      <stop offset="1" stop-color="#E7D3BA" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="body" x1="118" y1="318" x2="404" y2="442" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D7684B"/>
+      <stop offset="1" stop-color="#B54735"/>
+    </linearGradient>
+    <linearGradient id="face" x1="174" y1="156" x2="322" y2="314" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7D7C2"/>
+      <stop offset="1" stop-color="#E7B79A"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="160" y1="120" x2="347" y2="230" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5C372B"/>
+      <stop offset="1" stop-color="#2E1713"/>
+    </linearGradient>
+  </defs>
+</svg>
