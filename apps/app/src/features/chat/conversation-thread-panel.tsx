@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Users } from "lucide-react";
+import { Phone, Users, Video } from "lucide-react";
 import { Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
 import { ChatComposer } from "../../components/chat-composer";
 import {
@@ -64,6 +64,12 @@ export function ConversationThreadPanel({
 }: ConversationThreadPanelProps) {
   const navigate = useNavigate();
   const [replyDraft, setReplyDraft] = useState<ChatReplyMetadata | null>(null);
+  const [pendingCallFallback, setPendingCallFallback] =
+    useState<DesktopChatCallKind | null>(null);
+  const [mobileShortcutRequest, setMobileShortcutRequest] = useState<{
+    action: "voice-message" | "camera";
+    nonce: number;
+  } | null>(null);
   const [selectionModeActive, setSelectionModeActive] = useState(false);
   const {
     baseUrl,
@@ -252,8 +258,14 @@ export function ConversationThreadPanel({
       return;
     }
 
+    setPendingCallFallback(kind);
     onDesktopCallAction?.(kind);
   };
+
+  useEffect(() => {
+    setPendingCallFallback(null);
+    setMobileShortcutRequest(null);
+  }, [conversationId]);
 
   return (
     <div
@@ -288,6 +300,24 @@ export function ConversationThreadPanel({
           title={conversationTitle}
           subtitle={subtitle}
           onBack={onBack}
+          actions={
+            conversationType === "direct"
+              ? [
+                  {
+                    key: "voice-call",
+                    icon: Phone,
+                    label: "语音通话",
+                    onClick: () => handleDesktopCallAction("voice"),
+                  },
+                  {
+                    key: "video-call",
+                    icon: Video,
+                    label: "视频通话",
+                    onClick: () => handleDesktopCallAction("video"),
+                  },
+                ]
+              : undefined
+          }
           onMore={() => {
             void navigate({
               to: "/chat/$conversationId/details",
@@ -296,6 +326,53 @@ export function ConversationThreadPanel({
           }}
         />
       )}
+
+      {pendingCallFallback && !isDesktop ? (
+        <div className="border-b border-black/6 bg-white/82 px-3 py-2.5">
+          <InlineNotice tone="info" className="border-black/6 bg-white">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="text-xs font-medium leading-6 text-[color:var(--text-primary)]">
+                  {pendingCallFallback === "voice"
+                    ? "语音通话暂未开放"
+                    : "视频通话暂未开放"}
+                </div>
+                <div className="text-xs leading-6 text-[color:var(--text-secondary)]">
+                  {pendingCallFallback === "voice"
+                    ? "先切到底部按住说话，会更接近当前可用的体验。"
+                    : "先用拍摄或图片消息继续，把要表达的内容先发出去。"}
+                </div>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setMobileShortcutRequest({
+                      action:
+                        pendingCallFallback === "voice"
+                          ? "voice-message"
+                          : "camera",
+                      nonce: Date.now(),
+                    });
+                  }}
+                  className="rounded-full"
+                >
+                  {pendingCallFallback === "voice" ? "改发语音" : "改为拍摄"}
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setPendingCallFallback(null)}
+                  className="rounded-full"
+                >
+                  收起
+                </Button>
+              </div>
+            </div>
+          </InlineNotice>
+        </div>
+      ) : null}
 
       {routeContextNotice ? (
         <div
@@ -336,7 +413,9 @@ export function ConversationThreadPanel({
         />
         <div
           className={`absolute inset-0 ${
-            isDesktop ? "bg-[rgba(245,245,245,0.64)]" : "bg-[rgba(237,237,237,0.74)]"
+            isDesktop
+              ? "bg-[rgba(245,245,245,0.64)]"
+              : "bg-[rgba(237,237,237,0.74)]"
           }`}
         />
 
@@ -445,6 +524,11 @@ export function ConversationThreadPanel({
             await handleSendPresetText(presetText);
           }}
           onOpenDesktopHistory={onToggleDesktopHistory}
+          mobileShortcutRequest={mobileShortcutRequest}
+          onMobileShortcutHandled={() => {
+            setPendingCallFallback(null);
+            setMobileShortcutRequest(null);
+          }}
           replyPreview={replyPreview}
           onCancelReply={() => setReplyDraft(null)}
           onSubmit={() => void handleSubmit()}

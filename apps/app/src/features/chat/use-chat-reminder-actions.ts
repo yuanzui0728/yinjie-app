@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
-import type { ChatReminderEntry } from "./chat-reminder-entries";
+import {
+  getChatReminderActionErrorMessage,
+  getChatReminderActionNotice,
+  type ChatReminderEntry,
+} from "./chat-reminder-entries";
 import { removeLocalChatMessageReminder } from "./local-chat-message-actions";
 
-export const CHAT_REMINDER_COMPLETION_NOTICE = "已完成消息提醒。";
 export const CHAT_REMINDER_ACTION_NOTICE_DURATION_MS = 2_400;
 
 type UseChatReminderActionsOptions = {
@@ -38,15 +41,19 @@ export function useChatReminderActions({
     navigateToReminder(entry);
   }
 
-  async function completeReminder(messageId: string) {
+  async function completeReminder(entry: ChatReminderEntry) {
+    const noticeMessage = getChatReminderActionNotice(entry);
+
     try {
-      await (onCompleteReminder?.(messageId) ??
-        Promise.resolve(removeLocalChatMessageReminder(messageId)));
-      onNoticeChange?.(CHAT_REMINDER_COMPLETION_NOTICE);
-      setLocalNotice(CHAT_REMINDER_COMPLETION_NOTICE);
+      await (onCompleteReminder?.(entry.messageId) ??
+        Promise.resolve(removeLocalChatMessageReminder(entry.messageId)));
+      onNoticeChange?.(noticeMessage);
+      setLocalNotice(noticeMessage);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "完成提醒失败，请稍后再试。";
+        error instanceof Error
+          ? error.message
+          : getChatReminderActionErrorMessage(entry);
       onNoticeChange?.(message);
       setLocalNotice(message);
     }

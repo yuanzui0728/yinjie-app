@@ -55,6 +55,7 @@ import { OfficialAccountServiceThread } from "../../official-accounts/service/of
 import {
   buildChatReminderNavigation,
   formatReminderListTimestamp,
+  getChatReminderActionLabel,
   getChatReminderStatus,
   getChatReminderStatusLabel,
   isChatReminderGroupCollapsible,
@@ -754,8 +755,8 @@ export function DesktopChatWorkspace({
                                     entry.messageId === highlightedMessageId
                                   }
                                   onOpen={openReminder}
-                                  onDismiss={(messageId) => {
-                                    void completeReminder(messageId);
+                                  onDismiss={(targetEntry) => {
+                                    void completeReminder(targetEntry);
                                   }}
                                 />
                               ))}
@@ -1003,7 +1004,7 @@ function DesktopReminderCard({
   active: boolean;
   entry: ChatReminderEntry;
   onOpen: (entry: ChatReminderEntry) => void;
-  onDismiss: (messageId: string) => void;
+  onDismiss: (entry: ChatReminderEntry) => void;
 }) {
   return (
     <div
@@ -1062,10 +1063,10 @@ function DesktopReminderCard({
 
       <button
         type="button"
-        onClick={() => onDismiss(entry.messageId)}
+        onClick={() => onDismiss(entry)}
         className="shrink-0 rounded-full border border-black/8 bg-white px-3 py-1.5 text-[11px] text-[color:var(--text-secondary)] transition hover:border-[#07c160]/30 hover:text-[#07c160]"
       >
-        完成
+        {getChatReminderActionLabel(entry)}
       </button>
     </div>
   );
