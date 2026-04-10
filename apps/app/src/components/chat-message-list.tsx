@@ -118,6 +118,9 @@ type ChatMessageListProps = {
   variant?: "mobile" | "desktop";
   highlightedMessageId?: string;
   emptyState?: React.ReactNode;
+  hasOlderMessages?: boolean;
+  loadingOlderMessages?: boolean;
+  onLoadOlderMessages?: () => void;
   onReplyMessage?: (
     message: ChatRenderableMessage,
     options?: {
@@ -163,6 +166,9 @@ export function ChatMessageList({
   variant = "mobile",
   highlightedMessageId,
   emptyState,
+  hasOlderMessages = false,
+  loadingOlderMessages = false,
+  onLoadOlderMessages,
   onReplyMessage,
   onSelectionModeChange,
 }: ChatMessageListProps) {
@@ -1220,6 +1226,22 @@ export function ChatMessageList({
         <InlineNotice className="text-xs" tone={actionNotice.tone}>
           {actionNotice.message}
         </InlineNotice>
+      ) : null}
+      {hasOlderMessages || loadingOlderMessages ? (
+        <div className="flex justify-center">
+          <button
+            type="button"
+            onClick={() => onLoadOlderMessages?.()}
+            disabled={!onLoadOlderMessages || loadingOlderMessages}
+            className={
+              isDesktop
+                ? "inline-flex min-h-10 items-center justify-center rounded-full border border-black/6 bg-white/88 px-4 text-sm text-[color:var(--text-secondary)] shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+                : "inline-flex min-h-8 items-center justify-center rounded-full bg-[rgba(0,0,0,0.08)] px-3.5 text-[12px] text-[#7d7d7d] transition active:bg-[rgba(0,0,0,0.12)] disabled:opacity-60"
+            }
+          >
+            {loadingOlderMessages ? "正在加载更早消息..." : "查看更多消息"}
+          </button>
+        </div>
       ) : null}
       {selectionMode ? (
         isDesktop ? (

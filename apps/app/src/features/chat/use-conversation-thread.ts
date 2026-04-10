@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getConversationMessages,
@@ -42,11 +42,19 @@ export function useConversationThread(conversationId: string) {
     "direct",
   );
   const [participants, setParticipants] = useState<string[]>([]);
+  const [messageLimit, setMessageLimit] = useState(INITIAL_MESSAGE_LIMIT);
+  const [hasOlderMessages, setHasOlderMessages] = useState(true);
   const scrollAnchor = useScrollAnchor<HTMLDivElement>(messages.length);
+  const loadMoreRequestRef = useRef<{
+    previousCount: number;
+    scrollHeight: number;
+    scrollTop: number;
+  } | null>(null);
 
   const messagesQuery = useQuery({
-    queryKey: ["app-conversation-messages", baseUrl, conversationId],
-    queryFn: () => getConversationMessages(conversationId, baseUrl),
+    queryKey: ["app-conversation-messages", baseUrl, conversationId, messageLimit],
+    queryFn: () =>
+      getConversationMessages(conversationId, baseUrl, { limit: messageLimit }),
     enabled: Boolean(conversationId),
   });
 
@@ -59,6 +67,12 @@ export function useConversationThread(conversationId: string) {
   useEffect(() => {
     setMessages(messagesQuery.data ?? []);
   }, [messagesQuery.data]);
+
+  useEffect(() => {
+    setMessageLimit(INITIAL_MESSAGE_LIMIT);
+    setHasOlderMessages(true);
+    loadMoreRequestRef.current = null;
+  }, [conversationId]);
 
   useEffect(() => {
     const conversation = conversationsQuery.data?.find(
@@ -150,6 +164,38 @@ export function useConversationThread(conversationId: string) {
       offError();
     };
   }, [baseUrl, conversationId, ownerId, queryClient]);
+
+  useEffect(() => {
+    const loadedCount = messagesQuery.data?.length ?? 0;
+    const pendingLoad = loadMoreRequestRef.current;
+
+    if (loadedCount < messageLimit) {
+      setHasOlderMessages(false);
+    } else if (!pendingLoad) {
+      setHasOlderMessages(true);
+    }
+
+    if (!pendingLoad || messagesQuery.isFetching) {
+      return;
+    }
+
+    loadMoreRequestRef.current = null;
+    if (loadedCount <= pendingLoad.previousCount) {
+      setHasOlderMessages(false);
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      const element = scrollAnchor.ref.current;
+      if (!element) {
+        return;
+      }
+
+      const nextScrollTop =
+        pendingLoad.scrollTop + (element.scrollHeight - pendingLoad.scrollHeight);
+      element.scrollTop = nextScrollTop;
+    });
+  }, [messageLimit, messagesQuery.data, messagesQuery.isFetching, scrollAnchor.ref]);
 
   const sendMutation = useMutation({
     mutationFn: async (payload: SendMessagePayload) => {
@@ -349,10 +395,28 @@ export function useConversationThread(conversationId: string) {
     );
   }, [messages]);
 
+  const loadOlderMessages = async () => {
+    if (messagesQuery.isFetching || !hasOlderMessages) {
+      return;
+    }
+
+    const element = scrollAnchor.ref.current;
+    loadMoreRequestRef.current = {
+      previousCount: messagesQuery.data?.length ?? 0,
+      scrollHeight: element?.scrollHeight ?? 0,
+      scrollTop: element?.scrollTop ?? 0,
+    };
+    setMessageLimit((current) => current + HISTORY_PAGE_SIZE);
+  };
+
   return {
     baseUrl,
     conversationTitle,
     conversationType,
+    hasOlderMessages,
+    loadingOlderMessages:
+      messagesQuery.isFetching && loadMoreRequestRef.current !== null,
+    loadOlderMessages,
     messagesQuery,
     participants,
     renderedMessages,
@@ -368,6 +432,9 @@ export function useConversationThread(conversationId: string) {
     typingCharacterId,
   };
 }
+
+const INITIAL_MESSAGE_LIMIT = 60;
+const HISTORY_PAGE_SIZE = 40;
 
 function removePendingUserEcho(current: Message[], incoming: Message) {
   const pendingIndex = current.findIndex(
