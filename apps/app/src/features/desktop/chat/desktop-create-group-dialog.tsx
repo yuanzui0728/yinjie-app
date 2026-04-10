@@ -16,7 +16,10 @@ import {
   type FriendDirectoryItem,
 } from "../../contacts/contact-utils";
 import { useAppRuntimeConfig } from "../../../runtime/runtime-config-store";
-import { Button, ErrorBlock, LoadingBlock, cn } from "@yinjie/ui";
+import { Button, ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
+
+const MAX_SHARED_MESSAGE_COUNT = 100;
+const DEFAULT_SHARED_MESSAGE_COUNT = 3;
 
 type DesktopCreateGroupDialogProps = {
   open: boolean;
@@ -39,6 +42,9 @@ export function DesktopCreateGroupDialog({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [shareHistory, setShareHistory] = useState(false);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
+  const [messageSelectionNotice, setMessageSelectionNotice] = useState<
+    string | null
+  >(null);
   const seededSelectionRef = useRef("");
 
   const friendsQuery = useQuery({
@@ -48,8 +54,11 @@ export function DesktopCreateGroupDialog({
   });
   const shareableMessagesQuery = useQuery({
     queryKey: ["desktop-create-group-shareable-messages", baseUrl, conversationId],
-    queryFn: () => getConversationMessages(conversationId!, baseUrl, { limit: 20 }),
-    enabled: open && shareHistory && Boolean(conversationId),
+    queryFn: () =>
+      getConversationMessages(conversationId!, baseUrl, {
+        limit: MAX_SHARED_MESSAGE_COUNT,
+      }),
+    enabled: open && Boolean(conversationId),
   });
 
   const friendItems = useMemo(() => friendsQuery.data ?? [], [friendsQuery.data]);
@@ -97,7 +106,10 @@ export function DesktopCreateGroupDialog({
     [selectedFriends],
   );
   const shareableMessages = useMemo(
-    () => shareableMessagesQuery.data ?? [],
+    () =>
+      (shareableMessagesQuery.data ?? []).filter(
+        (message) => message.type !== "system",
+      ),
     [shareableMessagesQuery.data],
   );
 
@@ -132,9 +144,38 @@ export function DesktopCreateGroupDialog({
     setSelectedIds([]);
     setShareHistory(false);
     setSelectedMessageIds([]);
+    setMessageSelectionNotice(null);
     seededSelectionRef.current = "";
     createMutation.reset();
   }, [createMutation, open]);
+
+  useEffect(() => {
+    if (!messageSelectionNotice) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setMessageSelectionNotice(null), 2200);
+    return () => window.clearTimeout(timer);
+  }, [messageSelectionNotice]);
+
+  useEffect(() => {
+    if (!open || !shareHistory || selectedMessageIds.length > 0) {
+      return;
+    }
+
+    if (!shareableMessages.length) {
+      return;
+    }
+
+    const nextSelection = shareableMessages
+      .slice(-DEFAULT_SHARED_MESSAGE_COUNT)
+      .map((message) => message.id);
+    if (!nextSelection.length) {
+      return;
+    }
+
+    setSelectedMessageIds(nextSelection);
+  }, [open, selectedMessageIds.length, shareHistory, shareableMessages]);
 
   useEffect(() => {
     if (!open) {
@@ -203,11 +244,31 @@ export function DesktopCreateGroupDialog({
   };
 
   const toggleMessageSelection = (messageId: string) => {
-    setSelectedMessageIds((current) =>
-      current.includes(messageId)
-        ? current.filter((item) => item !== messageId)
-        : [...current, messageId],
-    );
+    setSelectedMessageIds((current) => {
+      if (current.includes(messageId)) {
+        return current.filter((item) => item !== messageId);
+      }
+
+      if (current.length >= MAX_SHARED_MESSAGE_COUNT) {
+        setMessageSelectionNotice(
+          `最多选择 ${MAX_SHARED_MESSAGE_COUNT} 条聊天记录。`,
+        );
+        return current;
+      }
+
+      return [...current, messageId];
+    });
+  };
+
+  const applyMessageSelection = (messageIds: string[]) => {
+    const dedupedIds = [...new Set(messageIds)];
+    if (dedupedIds.length > MAX_SHARED_MESSAGE_COUNT) {
+      setMessageSelectionNotice(
+        `最多选择 ${MAX_SHARED_MESSAGE_COUNT} 条聊天记录。`,
+      );
+    }
+
+    setSelectedMessageIds(dedupedIds.slice(0, MAX_SHARED_MESSAGE_COUNT));
   };
 
   if (!open) {
@@ -309,7 +370,14 @@ export function DesktopCreateGroupDialog({
                 <input
                   type="checkbox"
                   checked={shareHistory}
-                  onChange={(event) => setShareHistory(event.target.checked)}
+                  onChange={(event) => {
+                    const nextChecked = event.target.checked;
+                    setShareHistory(nextChecked);
+                    setMessageSelectionNotice(null);
+                    if (!nextChecked) {
+                      setSelectedMessageIds([]);
+                    }
+                  }}
                   className="mt-0.5 h-4 w-4 rounded border-black/20 text-[#07c160] focus:ring-[#07c160]"
                 />
                 <span className="min-w-0 flex-1">
@@ -324,6 +392,11 @@ export function DesktopCreateGroupDialog({
 
               {shareHistory ? (
                 <div className="mt-3">
+                  {messageSelectionNotice ? (
+                    <InlineNotice className="mb-3 text-xs" tone="muted">
+                      {messageSelectionNotice}
+                    </InlineNotice>
+                  ) : null}
                   {shareableMessagesQuery.isLoading ? (
                     <LoadingBlock
                       className="px-0 py-3 text-left"
@@ -345,8 +418,47 @@ export function DesktopCreateGroupDialog({
                   !shareableMessagesQuery.isError &&
                   shareableMessages.length ? (
                     <>
-                      <div className="mb-2 text-[12px] text-[color:var(--text-muted)]">
-                        已选择 {selectedMessageIds.length} 条
+                      <div className="mb-2 flex items-center justify-between gap-3">
+                        <div className="text-[12px] text-[color:var(--text-muted)]">
+                          已选择 {selectedMessageIds.length} /{" "}
+                          {Math.min(
+                            MAX_SHARED_MESSAGE_COUNT,
+                            shareableMessages.length,
+                          )} 条
+                        </div>
+                        <div className="flex items-center gap-2 text-[12px]">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              applyMessageSelection(
+                                shareableMessages
+                                  .slice(-DEFAULT_SHARED_MESSAGE_COUNT)
+                                  .map((message) => message.id),
+                              )
+                            }
+                            className="text-[color:var(--text-secondary)] transition hover:text-[color:var(--text-primary)]"
+                          >
+                            最近{DEFAULT_SHARED_MESSAGE_COUNT}条
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              applyMessageSelection(
+                                shareableMessages.map((message) => message.id),
+                              )
+                            }
+                            className="text-[color:var(--text-secondary)] transition hover:text-[color:var(--text-primary)]"
+                          >
+                            全选
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedMessageIds([])}
+                            className="text-[color:var(--text-secondary)] transition hover:text-[color:var(--text-primary)]"
+                          >
+                            清空
+                          </button>
+                        </div>
                       </div>
                       <div className="max-h-56 space-y-1 overflow-auto rounded-[10px] bg-white p-1.5">
                         {shareableMessages.map((message) => {
@@ -555,7 +667,7 @@ function getMessagePreviewText(message: Message) {
 }
 
 function formatMessageTypeLabel(message: Message) {
-  if (message.type === "text") {
+  if (message.type === "text" || message.type === "proactive") {
     return "文字";
   }
 
