@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -47,26 +47,33 @@ import { OfficialAccountArticleEntity } from './modules/official-accounts/offici
 import { OfficialAccountDeliveryEntity } from './modules/official-accounts/official-account-delivery.entity';
 import { OfficialAccountFollowEntity } from './modules/official-accounts/official-account-follow.entity';
 import { OfficialAccountServiceMessageEntity } from './modules/official-accounts/official-account-service-message.entity';
+import { prepareDatabasePath, resolveApiPath, resolveRepoPath } from './database/database-path';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [resolveApiPath('.env'), resolveRepoPath('.env')],
+    }),
     ScheduleModule.forRoot(),
     EventEmitterModule.forRoot(),
-    TypeOrmModule.forRoot({
-      type: 'better-sqlite3',
-      database: process.env.DATABASE_PATH ?? 'database.sqlite',
-      entities: [
-        CharacterEntity, UserEntity, ConversationEntity, MessageEntity,
-        CharacterBlueprintEntity, CharacterBlueprintRevisionEntity,
-        SystemConfigEntity, MomentEntity, MomentPostEntity, MomentCommentEntity,
-        MomentLikeEntity, FriendshipEntity, FriendRequestEntity, AIRelationshipEntity,
-        GroupEntity, GroupMemberEntity, GroupMessageEntity,
-        FeedPostEntity, FeedCommentEntity, WorldContextEntity,
-        NarrativeArcEntity, AIBehaviorLogEntity, UserFeedInteractionEntity,
-        OfficialAccountEntity, OfficialAccountArticleEntity, OfficialAccountDeliveryEntity, OfficialAccountFollowEntity, OfficialAccountServiceMessageEntity,
-      ],
-      synchronize: true,
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        type: 'better-sqlite3',
+        database: prepareDatabasePath(config.get<string>('DATABASE_PATH')),
+        entities: [
+          CharacterEntity, UserEntity, ConversationEntity, MessageEntity,
+          CharacterBlueprintEntity, CharacterBlueprintRevisionEntity,
+          SystemConfigEntity, MomentEntity, MomentPostEntity, MomentCommentEntity,
+          MomentLikeEntity, FriendshipEntity, FriendRequestEntity, AIRelationshipEntity,
+          GroupEntity, GroupMemberEntity, GroupMessageEntity,
+          FeedPostEntity, FeedCommentEntity, WorldContextEntity,
+          NarrativeArcEntity, AIBehaviorLogEntity, UserFeedInteractionEntity,
+          OfficialAccountEntity, OfficialAccountArticleEntity, OfficialAccountDeliveryEntity, OfficialAccountFollowEntity, OfficialAccountServiceMessageEntity,
+        ],
+        synchronize: true,
+      }),
     }),
     AiModule,
     AuthModule,

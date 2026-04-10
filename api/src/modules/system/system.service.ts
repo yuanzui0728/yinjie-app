@@ -10,6 +10,7 @@ import { CharacterEntity } from '../characters/character.entity';
 import { NarrativeArcEntity } from '../narrative/narrative-arc.entity';
 import { AIBehaviorLogEntity } from '../analytics/ai-behavior-log.entity';
 import { SystemConfigService } from '../config/config.service';
+import { resolveDatabasePath, resolveRepoPath } from '../../database/database-path';
 
 type ProviderPayload = {
   endpoint: string;
@@ -51,10 +52,7 @@ export class SystemService {
   ) {}
 
   private resolveDatabasePath() {
-    const configuredPath = this.config.get<string>('DATABASE_PATH') ?? 'database.sqlite';
-    return path.isAbsolute(configuredPath)
-      ? configuredPath
-      : path.resolve(process.cwd(), configuredPath);
+    return resolveDatabasePath(this.config.get<string>('DATABASE_PATH'));
   }
 
   private async resolveProviderConfig() {
@@ -313,7 +311,7 @@ export class SystemService {
 
   async createBackup() {
     const sourcePath = this.resolveDatabasePath();
-    const backupDir = path.resolve(process.cwd(), 'runtime-data', 'backups');
+    const backupDir = resolveRepoPath('runtime-data', 'backups');
     fs.mkdirSync(backupDir, { recursive: true });
     const backupPath = path.join(backupDir, `backup-${Date.now()}.sqlite`);
 
