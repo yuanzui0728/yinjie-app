@@ -46,7 +46,7 @@ import {
   type SendGroupMessageRequest,
   type SendMessagePayload,
 } from "@yinjie/contracts";
-import { Button, InlineNotice } from "@yinjie/ui";
+import { Button, InlineNotice, cn } from "@yinjie/ui";
 import { AvatarChip } from "./avatar-chip";
 import { GroupMessageContextMenu } from "../features/chat/group-message-context-menu";
 import {
@@ -90,6 +90,7 @@ import { requestNotificationPermission } from "../runtime/mobile-bridge";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { buildChatUnreadMarkerDomId } from "../features/chat/chat-unread-marker";
 import { useMessageReminders } from "../features/chat/use-message-reminders";
+import { parseGroupCallInviteMessage } from "../features/chat/group-call-message";
 import { parseGroupRelaySummaryMessage } from "../features/mini-programs/group-relay-message";
 
 export type ChatRenderableMessage = {
@@ -1606,6 +1607,7 @@ export function ChatMessageList({
             ? replyContent.body.trim()
             : sanitizeDisplayedChatText(message.text);
         const replyPreview = replyContent.reply;
+        const groupCallInvite = parseGroupCallInviteMessage(displayText);
         const groupRelaySummary = parseGroupRelaySummaryMessage(displayText);
 
         if (isSystem || isRecalled) {
@@ -1788,6 +1790,11 @@ export function ChatMessageList({
                           ? undefined
                           : () => openAttachment(message)
                       }
+                    />
+                  ) : groupCallInvite ? (
+                    <GroupCallInviteMessage
+                      own={isUser}
+                      invite={groupCallInvite}
                     />
                   ) : groupRelaySummary ? (
                     <GroupRelaySummaryMessage
@@ -3440,6 +3447,63 @@ function GroupRelaySummaryMessage({
     >
       {card}
     </button>
+  );
+}
+
+function GroupCallInviteMessage({
+  own,
+  invite,
+}: {
+  own: boolean;
+  invite: ReturnType<typeof parseGroupCallInviteMessage>;
+}) {
+  if (!invite) {
+    return null;
+  }
+
+  return (
+    <div
+      className={cn(
+        "w-[264px] rounded-[18px] border px-4 py-4 shadow-none",
+        own
+          ? "border-[rgba(110,168,62,0.22)] bg-[linear-gradient(180deg,rgba(237,248,223,0.98),rgba(255,255,255,0.94))]"
+          : "border-[rgba(59,130,246,0.16)] bg-[linear-gradient(180deg,rgba(239,246,255,0.98),rgba(255,255,255,0.94))]",
+      )}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-dim)]">
+            {invite.kind === "voice" ? "群语音通话" : "群视频通话"}
+          </div>
+          <div className="mt-1 text-sm font-medium text-[color:var(--text-primary)]">
+            {invite.groupName}
+          </div>
+        </div>
+        <div className="rounded-full bg-[rgba(59,130,246,0.12)] px-2.5 py-1 text-[10px] font-medium text-[#2563eb]">
+          桌面工作台
+        </div>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        {invite.summaryLines.map((line) => (
+          <div
+            key={line}
+            className="rounded-[14px] bg-white/72 px-3 py-2 text-[13px] leading-6 text-[color:var(--text-secondary)]"
+          >
+            {line}
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-black/6 pt-3">
+        <div className="text-[11px] leading-5 text-[color:var(--text-muted)]">
+          当前消息已转成群通话卡片，便于群成员识别状态。
+        </div>
+        <div className="text-[11px] font-medium text-[#2563eb]">
+          {invite.kind === "voice" ? "语音中" : "视频中"}
+        </div>
+      </div>
+    </div>
   );
 }
 
