@@ -44,6 +44,7 @@ import { OfficialServiceConversationCard } from "../components/official-service-
 import { SubscriptionInboxCard } from "../components/subscription-inbox-card";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import {
+  shouldHideSearchableChatMessage,
   removeLocalChatMessageReminder,
   useLocalChatMessageActionState,
 } from "../features/chat/local-chat-message-actions";
@@ -658,6 +659,7 @@ function MobileChatListPage() {
                 <ConversationListItemLink
                   key={conversation.id}
                   conversation={conversation}
+                  localMessageActionState={localMessageActionState}
                   open={openSwipeConversationId === conversation.id}
                   pending={
                     (pinMutation.isPending &&
@@ -735,6 +737,7 @@ function MobileChatListPage() {
 
 function ConversationListItemLink({
   conversation,
+  localMessageActionState,
   open,
   pending = false,
   onOpenChange,
@@ -745,6 +748,7 @@ function ConversationListItemLink({
   className,
 }: {
   conversation: ConversationListEntry;
+  localMessageActionState: ReturnType<typeof useLocalChatMessageActionState>;
   open: boolean;
   pending?: boolean;
   onOpenChange: (open: boolean) => void;
@@ -769,6 +773,10 @@ function ConversationListItemLink({
   const isPinned = conversation.isPinned;
   const isGroupConversation = isPersistedGroupConversation(conversation);
   const showMutedUnreadDot = conversation.isMuted && hasUnreadMessages;
+  const visibleLastMessage = resolveVisibleConversationLastMessage(
+    conversation,
+    localMessageActionState,
+  );
 
   useEffect(() => {
     if (!gestureRef.current?.dragging) {
@@ -851,13 +859,15 @@ function ConversationListItemLink({
               {conversation.title}
             </div>
             <div className="mt-1 truncate text-[13px] text-[color:var(--text-muted)]">
-              {formatConversationPreview(conversation)}
+              {formatConversationPreview(conversation, localMessageActionState)}
             </div>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
             <div className="text-[11px] text-[color:var(--text-dim)]">
               {formatConversationTimestamp(
-                conversation.lastMessage?.createdAt ?? conversation.updatedAt,
+                visibleLastMessage?.createdAt ??
+                  conversation.lastMessage?.createdAt ??
+                  conversation.updatedAt,
               )}
             </div>
             <div className="flex min-h-5 items-center gap-1.5">
@@ -1008,10 +1018,20 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
-function formatConversationPreview(conversation: ConversationListEntry) {
-  const lastMessage = conversation.lastMessage;
+function formatConversationPreview(
+  conversation: ConversationListEntry,
+  localMessageActionState: ReturnType<typeof useLocalChatMessageActionState>,
+) {
+  const lastMessage = resolveVisibleConversationLastMessage(
+    conversation,
+    localMessageActionState,
+  );
   if (!lastMessage) {
-    return "从这里开始第一句问候";
+    return conversation.lastMessage
+      ? isPersistedGroupConversation(conversation)
+        ? "打开群聊查看最近消息。"
+        : "打开这个会话查看最近聊天记录。"
+      : "从这里开始第一句问候";
   }
 
   const prefix = isPersistedGroupConversation(conversation)
@@ -1043,6 +1063,23 @@ function formatConversationPreview(conversation: ConversationListEntry) {
 
   const sanitizedText = sanitizeDisplayedChatText(lastMessage.text);
   return sanitizedText ? `${prefix}${sanitizedText}` : "从这里开始第一句问候";
+}
+
+function resolveVisibleConversationLastMessage(
+  conversation: ConversationListEntry,
+  localMessageActionState: ReturnType<typeof useLocalChatMessageActionState>,
+) {
+  const lastMessage = conversation.lastMessage;
+  if (!lastMessage) {
+    return null;
+  }
+
+  return shouldHideSearchableChatMessage(
+    lastMessage.id,
+    localMessageActionState,
+  )
+    ? null
+    : lastMessage;
 }
 
 function canConversationBeMarkedUnread(conversation: ConversationListEntry) {
