@@ -100,15 +100,6 @@ export function DesktopChatWorkspace({
     });
   }, [conversations, searchTerm]);
 
-  const unreadMessageCount = useMemo(
-    () =>
-      filteredConversations.reduce(
-        (total, conversation) => total + conversation.unreadCount,
-        0,
-      ),
-    [filteredConversations],
-  );
-
   const activeConversation = useMemo(() => {
     if (!filteredConversations.length) {
       return null;
@@ -171,12 +162,7 @@ export function DesktopChatWorkspace({
 
       <section className="flex w-[320px] shrink-0 flex-col border-r border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,253,248,0.98),rgba(255,248,239,0.98))]">
         <div className="border-b border-[color:var(--border-faint)] px-4 py-4">
-          <div className="flex items-center justify-end">
-            <div className="text-xs text-[color:var(--text-muted)]">
-              {filteredConversations.length} / {unreadMessageCount}
-            </div>
-          </div>
-          <div className="relative z-20 mt-3 flex items-center gap-2">
+          <div className="relative z-20 flex items-center gap-2">
             <TextField
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
