@@ -180,12 +180,12 @@ export function DesktopNotesWorkspace({
   }
 
   return (
-    <div className="flex h-full min-h-0 bg-[linear-gradient(180deg,rgba(255,253,247,0.92),rgba(250,248,243,0.96))]">
-      <aside className="flex w-[280px] shrink-0 flex-col border-r border-[color:var(--border-faint)] bg-[rgba(255,252,246,0.94)]">
-        <div className="border-b border-[color:var(--border-faint)] px-4 py-4">
+    <div className="flex h-full min-h-0 bg-[#f5f5f5]">
+      <aside className="flex w-[280px] shrink-0 flex-col border-r border-black/6 bg-[#ededed]">
+        <div className="border-b border-black/6 px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-lg font-semibold text-[color:var(--text-primary)]">
+              <div className="text-[15px] font-medium text-[color:var(--text-primary)]">
                 笔记
               </div>
               <div className="mt-1 text-xs text-[color:var(--text-muted)]">
@@ -196,7 +196,7 @@ export function DesktopNotesWorkspace({
               variant="secondary"
               size="icon"
               onClick={handleCreateNote}
-              className="h-10 w-10 rounded-full border-[color:var(--border-faint)] bg-white"
+              className="h-9 w-9 rounded-[10px] border-black/8 bg-white shadow-none hover:bg-[#efefef]"
               aria-label="新建笔记"
             >
               <Plus size={16} />
@@ -209,17 +209,17 @@ export function DesktopNotesWorkspace({
 
         <div className="min-h-0 flex-1 overflow-auto px-2 py-2">
           {notes.length ? (
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               {notes.map((note) => (
                 <button
                   key={note.id}
                   type="button"
                   onClick={() => handleSelectNote(note)}
                   className={cn(
-                    "w-full rounded-[18px] border px-4 py-3 text-left transition",
+                    "w-full rounded-[10px] border px-4 py-3 text-left transition",
                     note.id === activeNoteId
-                      ? "border-[rgba(249,115,22,0.28)] bg-[linear-gradient(135deg,rgba(255,237,213,0.94),rgba(255,251,235,0.96))] shadow-[var(--shadow-soft)]"
-                      : "border-transparent bg-transparent hover:border-[color:var(--border-faint)] hover:bg-white/80",
+                      ? "border-black/8 bg-white"
+                      : "border-transparent bg-transparent hover:border-black/6 hover:bg-white/72",
                   )}
                 >
                   <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">
@@ -248,7 +248,7 @@ export function DesktopNotesWorkspace({
       <section className="flex min-w-0 flex-1 flex-col">
         {activeNote ? (
           <>
-            <div className="border-b border-[color:var(--border-faint)] bg-[rgba(255,255,255,0.74)] px-6 py-4 backdrop-blur-xl">
+            <div className="border-b border-black/6 bg-[#f7f7f7] px-6 py-4">
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0">
                   <div className="truncate text-lg font-semibold text-[color:var(--text-primary)]">
@@ -264,7 +264,7 @@ export function DesktopNotesWorkspace({
                   variant="ghost"
                   size="icon"
                   onClick={handleDeleteNote}
-                  className="h-10 w-10 rounded-full text-[color:var(--text-secondary)] hover:bg-[rgba(239,68,68,0.10)] hover:text-[color:var(--state-danger-text)]"
+                  className="h-9 w-9 rounded-[10px] border border-black/6 bg-white text-[color:var(--text-secondary)] hover:bg-[rgba(239,68,68,0.08)] hover:text-[color:var(--state-danger-text)]"
                   aria-label="删除当前笔记"
                 >
                   <Trash2 size={16} />
@@ -279,7 +279,7 @@ export function DesktopNotesWorkspace({
                       key={action.key}
                       type="button"
                       onClick={() => handleInsertSnippet(action.snippet())}
-                      className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-faint)] bg-white/92 px-3 py-2 text-xs text-[color:var(--text-secondary)] transition hover:border-[rgba(249,115,22,0.24)] hover:text-[color:var(--text-primary)]"
+                      className="inline-flex items-center gap-2 rounded-[8px] border border-black/8 bg-white px-3 py-2 text-xs text-[color:var(--text-secondary)] transition hover:bg-[#efefef] hover:text-[color:var(--text-primary)]"
                     >
                       <Icon size={14} />
                       <span>{action.label}</span>
@@ -290,10 +290,10 @@ export function DesktopNotesWorkspace({
             </div>
 
             <div className="min-h-0 flex-1 overflow-auto px-6 py-6">
-              <div className="mx-auto flex min-h-full max-w-4xl flex-col rounded-[28px] border border-[color:var(--border-faint)] bg-white/88 p-6 shadow-[var(--shadow-section)]">
-                <div className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-[color:var(--brand-secondary)]">
+              <div className="mx-auto flex min-h-full max-w-4xl flex-col rounded-[16px] border border-black/6 bg-white p-6">
+                <div className="flex items-center gap-2 text-xs tracking-[0.12em] text-[color:var(--text-dim)]">
                   <FileText size={14} />
-                  <span>微信式桌面笔记</span>
+                  <span>桌面笔记</span>
                 </div>
                 <textarea
                   ref={editorRef}
@@ -307,7 +307,7 @@ export function DesktopNotesWorkspace({
           </>
         ) : (
           <div className="flex h-full items-center justify-center px-6">
-            <div className="w-full max-w-md rounded-[28px] border border-[color:var(--border-faint)] bg-white/84 p-8 shadow-[var(--shadow-section)]">
+            <div className="w-full max-w-md rounded-[16px] border border-black/6 bg-white p-8">
               <EmptyState
                 title="当前没有可编辑的笔记"
                 description="先新建一条笔记，再继续整理你的想法。"
@@ -316,7 +316,7 @@ export function DesktopNotesWorkspace({
                 variant="primary"
                 size="lg"
                 onClick={handleCreateNote}
-                className="mt-6 w-full rounded-2xl"
+                className="mt-6 h-10 w-full rounded-[10px] bg-[#07c160] text-white hover:bg-[#06ad56]"
               >
                 新建笔记
               </Button>
