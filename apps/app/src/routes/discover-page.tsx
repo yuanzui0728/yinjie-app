@@ -11,7 +11,13 @@ import {
   shake,
   triggerSceneFriendRequest,
 } from "@yinjie/contracts";
-import { ChevronRight, Newspaper, Sparkles, Users } from "lucide-react";
+import {
+  ChevronRight,
+  Newspaper,
+  PlaySquare,
+  Sparkles,
+  Users,
+} from "lucide-react";
 import {
   AppHeader,
   AppPage,
@@ -40,7 +46,7 @@ const scenes = [
 ];
 
 type MobileDiscoverEntry = {
-  key: "moments" | "encounter" | "scene" | "feed";
+  key: "moments" | "encounter" | "scene" | "feed" | "channels";
   label: string;
   description: string;
   detail: string;
@@ -50,7 +56,8 @@ type MobileDiscoverEntry = {
     | "/discover/moments"
     | "/discover/encounter"
     | "/discover/scene"
-    | "/discover/feed";
+    | "/discover/feed"
+    | "/discover/channels";
 };
 
 const mobileDiscoverEntries: MobileDiscoverEntry[] = [
@@ -82,6 +89,15 @@ const mobileDiscoverEntries: MobileDiscoverEntry[] = [
     icon: Newspaper,
     iconClassName: "bg-[linear-gradient(135deg,#5d67c9,#4951a3)] text-white",
     to: "/discover/feed",
+  },
+  {
+    key: "channels",
+    label: "视频号",
+    description: "AI 视频与内容流",
+    detail: "按微信视频号的浏览节奏收口 AI 生成短视频和内容卡片，移动端从这里进入沉浸式内容流。",
+    icon: PlaySquare,
+    iconClassName: "bg-[linear-gradient(135deg,#ff8a3d,#ff5f45)] text-white",
+    to: "/discover/channels",
   },
 ];
 
