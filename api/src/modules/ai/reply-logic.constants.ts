@@ -14,6 +14,48 @@ export type ReplyLogicPromptTemplates = {
   groupCoordinatorPrompt: string;
 };
 
+export type ReplyLogicSemanticLabels = {
+  domainLabels: {
+    law: string;
+    medicine: string;
+    finance: string;
+    tech: string;
+    psychology: string;
+    education: string;
+    management: string;
+    general: string;
+  };
+  activityLabels: {
+    working: string;
+    eating: string;
+    sleeping: string;
+    commuting: string;
+    resting: string;
+    free: string;
+  };
+  weekdayLabels: string[];
+  timeOfDayLabels: {
+    lateNight: string;
+    morning: string;
+    forenoon: string;
+    noon: string;
+    afternoon: string;
+    dusk: string;
+    evening: string;
+  };
+};
+
+export type ReplyLogicObservabilityTemplates = {
+  stateGateSleeping: string;
+  stateGateBusy: string;
+  stateGateImmediate: string;
+  stateGateNotApplied: string;
+  actorNoteApiAvailable: string;
+  actorNoteApiUnavailable: string;
+  actorNoteGroupContext: string;
+  actorNoteDirectContext: string;
+};
+
 export type ReplyLogicRuntimeRules = {
   sleepHintMessages: string[];
   busyHintMessages: {
@@ -42,6 +84,8 @@ export type ReplyLogicRuntimeRules = {
     progress: number;
   }>;
   promptTemplates: ReplyLogicPromptTemplates;
+  semanticLabels: ReplyLogicSemanticLabels;
+  observabilityTemplates: ReplyLogicObservabilityTemplates;
 };
 
 export const REPLY_LOGIC_RUNTIME_RULES_CONFIG_KEY =
@@ -181,6 +225,50 @@ export const DEFAULT_REPLY_LOGIC_PROMPT_TEMPLATES: ReplyLogicPromptTemplates =
 请用自然的方式说明为什么拉群，语气要像真实朋友一样，简短自然，不超过两句话。`,
   });
 
+export const DEFAULT_REPLY_LOGIC_SEMANTIC_LABELS: ReplyLogicSemanticLabels =
+  Object.freeze({
+    domainLabels: {
+      law: '法律、合同、劳动纠纷',
+      medicine: '医疗健康、常见病、心理健康',
+      finance: '理财投资、税务、财务规划',
+      tech: '技术开发、产品设计、AI',
+      psychology: '情绪疏导、人际关系、心理咨询',
+      education: '教育辅导、学习方法',
+      management: '职场管理、团队协作',
+      general: '日常生活',
+    },
+    activityLabels: {
+      working: '正在工作中',
+      eating: '正在吃饭',
+      sleeping: '正在睡觉',
+      commuting: '正在通勤路上',
+      resting: '正在休息',
+      free: '空闲中',
+    },
+    weekdayLabels: ['周日', '周一', '周二', '周三', '周四', '周五', '周六'],
+    timeOfDayLabels: {
+      lateNight: '深夜',
+      morning: '早上',
+      forenoon: '上午',
+      noon: '中午',
+      afternoon: '下午',
+      dusk: '傍晚',
+      evening: '晚上',
+    },
+  });
+
+export const DEFAULT_REPLY_LOGIC_OBSERVABILITY_TEMPLATES: ReplyLogicObservabilityTemplates =
+  Object.freeze({
+    stateGateSleeping: '当前活动为{{activity}}，先发系统提示，再进入延迟回复。',
+    stateGateBusy: '当前活动为{{activity}}，先发忙碌提示，再进入延迟回复。',
+    stateGateImmediate: '当前状态不会触发额外系统提示，下一条消息会直接进入回复链。',
+    stateGateNotApplied: '当前链路不经过单聊状态门控。',
+    actorNoteApiAvailable: '当前实例存在可用 API Key，预览使用真实生成链的 prompt 组装结果。',
+    actorNoteApiUnavailable: '当前实例没有可用 API Key，实际聊天会返回“先配置 API Key”的兜底提示。',
+    actorNoteGroupContext: '群聊 prompt 不会注入单聊 lastChatAt/currentActivity 的行为上下文。',
+    actorNoteDirectContext: '单聊 prompt 会注入 currentActivity 和距离上次聊天时间。',
+  });
+
 export const DEFAULT_REPLY_LOGIC_RUNTIME_RULES: ReplyLogicRuntimeRules =
   Object.freeze({
     sleepHintMessages: [...SLEEP_HINTS],
@@ -233,6 +321,17 @@ export const DEFAULT_REPLY_LOGIC_RUNTIME_RULES: ReplyLogicRuntimeRules =
       groupCoordinatorPrompt:
         DEFAULT_REPLY_LOGIC_PROMPT_TEMPLATES.groupCoordinatorPrompt,
     },
+    semanticLabels: {
+      domainLabels: { ...DEFAULT_REPLY_LOGIC_SEMANTIC_LABELS.domainLabels },
+      activityLabels: { ...DEFAULT_REPLY_LOGIC_SEMANTIC_LABELS.activityLabels },
+      weekdayLabels: [...DEFAULT_REPLY_LOGIC_SEMANTIC_LABELS.weekdayLabels],
+      timeOfDayLabels: {
+        ...DEFAULT_REPLY_LOGIC_SEMANTIC_LABELS.timeOfDayLabels,
+      },
+    },
+    observabilityTemplates: {
+      ...DEFAULT_REPLY_LOGIC_OBSERVABILITY_TEMPLATES,
+    },
   });
 
 function clamp(value: number, min: number, max: number) {
@@ -247,6 +346,146 @@ function sanitizeMessages(value: string[] | undefined, fallback: string[]) {
 function sanitizeTemplate(value: string | undefined, fallback: string) {
   const normalized = value?.trim();
   return normalized ? normalized : fallback;
+}
+
+function normalizeSemanticLabels(
+  value: Partial<ReplyLogicSemanticLabels> | undefined,
+): ReplyLogicSemanticLabels {
+  const defaults = DEFAULT_REPLY_LOGIC_SEMANTIC_LABELS;
+  const weekdayLabels = defaults.weekdayLabels.map((fallback, index) =>
+    sanitizeTemplate(value?.weekdayLabels?.[index], fallback),
+  );
+
+  return {
+    domainLabels: {
+      law: sanitizeTemplate(value?.domainLabels?.law, defaults.domainLabels.law),
+      medicine: sanitizeTemplate(
+        value?.domainLabels?.medicine,
+        defaults.domainLabels.medicine,
+      ),
+      finance: sanitizeTemplate(
+        value?.domainLabels?.finance,
+        defaults.domainLabels.finance,
+      ),
+      tech: sanitizeTemplate(
+        value?.domainLabels?.tech,
+        defaults.domainLabels.tech,
+      ),
+      psychology: sanitizeTemplate(
+        value?.domainLabels?.psychology,
+        defaults.domainLabels.psychology,
+      ),
+      education: sanitizeTemplate(
+        value?.domainLabels?.education,
+        defaults.domainLabels.education,
+      ),
+      management: sanitizeTemplate(
+        value?.domainLabels?.management,
+        defaults.domainLabels.management,
+      ),
+      general: sanitizeTemplate(
+        value?.domainLabels?.general,
+        defaults.domainLabels.general,
+      ),
+    },
+    activityLabels: {
+      working: sanitizeTemplate(
+        value?.activityLabels?.working,
+        defaults.activityLabels.working,
+      ),
+      eating: sanitizeTemplate(
+        value?.activityLabels?.eating,
+        defaults.activityLabels.eating,
+      ),
+      sleeping: sanitizeTemplate(
+        value?.activityLabels?.sleeping,
+        defaults.activityLabels.sleeping,
+      ),
+      commuting: sanitizeTemplate(
+        value?.activityLabels?.commuting,
+        defaults.activityLabels.commuting,
+      ),
+      resting: sanitizeTemplate(
+        value?.activityLabels?.resting,
+        defaults.activityLabels.resting,
+      ),
+      free: sanitizeTemplate(
+        value?.activityLabels?.free,
+        defaults.activityLabels.free,
+      ),
+    },
+    weekdayLabels,
+    timeOfDayLabels: {
+      lateNight: sanitizeTemplate(
+        value?.timeOfDayLabels?.lateNight,
+        defaults.timeOfDayLabels.lateNight,
+      ),
+      morning: sanitizeTemplate(
+        value?.timeOfDayLabels?.morning,
+        defaults.timeOfDayLabels.morning,
+      ),
+      forenoon: sanitizeTemplate(
+        value?.timeOfDayLabels?.forenoon,
+        defaults.timeOfDayLabels.forenoon,
+      ),
+      noon: sanitizeTemplate(
+        value?.timeOfDayLabels?.noon,
+        defaults.timeOfDayLabels.noon,
+      ),
+      afternoon: sanitizeTemplate(
+        value?.timeOfDayLabels?.afternoon,
+        defaults.timeOfDayLabels.afternoon,
+      ),
+      dusk: sanitizeTemplate(
+        value?.timeOfDayLabels?.dusk,
+        defaults.timeOfDayLabels.dusk,
+      ),
+      evening: sanitizeTemplate(
+        value?.timeOfDayLabels?.evening,
+        defaults.timeOfDayLabels.evening,
+      ),
+    },
+  };
+}
+
+function normalizeObservabilityTemplates(
+  value: Partial<ReplyLogicObservabilityTemplates> | undefined,
+): ReplyLogicObservabilityTemplates {
+  const defaults = DEFAULT_REPLY_LOGIC_OBSERVABILITY_TEMPLATES;
+  return {
+    stateGateSleeping: sanitizeTemplate(
+      value?.stateGateSleeping,
+      defaults.stateGateSleeping,
+    ),
+    stateGateBusy: sanitizeTemplate(
+      value?.stateGateBusy,
+      defaults.stateGateBusy,
+    ),
+    stateGateImmediate: sanitizeTemplate(
+      value?.stateGateImmediate,
+      defaults.stateGateImmediate,
+    ),
+    stateGateNotApplied: sanitizeTemplate(
+      value?.stateGateNotApplied,
+      defaults.stateGateNotApplied,
+    ),
+    actorNoteApiAvailable: sanitizeTemplate(
+      value?.actorNoteApiAvailable,
+      defaults.actorNoteApiAvailable,
+    ),
+    actorNoteApiUnavailable: sanitizeTemplate(
+      value?.actorNoteApiUnavailable,
+      defaults.actorNoteApiUnavailable,
+    ),
+    actorNoteGroupContext: sanitizeTemplate(
+      value?.actorNoteGroupContext,
+      defaults.actorNoteGroupContext,
+    ),
+    actorNoteDirectContext: sanitizeTemplate(
+      value?.actorNoteDirectContext,
+      defaults.actorNoteDirectContext,
+    ),
+  };
 }
 
 function normalizePromptTemplates(
@@ -428,6 +667,10 @@ export function normalizeReplyLogicRuntimeRules(
       input?.narrativeMilestones,
     ),
     promptTemplates: normalizePromptTemplates(input?.promptTemplates),
+    semanticLabels: normalizeSemanticLabels(input?.semanticLabels),
+    observabilityTemplates: normalizeObservabilityTemplates(
+      input?.observabilityTemplates,
+    ),
   };
 }
 

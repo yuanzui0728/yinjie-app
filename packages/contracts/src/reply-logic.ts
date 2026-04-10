@@ -63,6 +63,48 @@ export interface ReplyLogicPromptTemplates {
   groupCoordinatorPrompt: string;
 }
 
+export interface ReplyLogicSemanticLabels {
+  domainLabels: {
+    law: string;
+    medicine: string;
+    finance: string;
+    tech: string;
+    psychology: string;
+    education: string;
+    management: string;
+    general: string;
+  };
+  activityLabels: {
+    working: string;
+    eating: string;
+    sleeping: string;
+    commuting: string;
+    resting: string;
+    free: string;
+  };
+  weekdayLabels: string[];
+  timeOfDayLabels: {
+    lateNight: string;
+    morning: string;
+    forenoon: string;
+    noon: string;
+    afternoon: string;
+    dusk: string;
+    evening: string;
+  };
+}
+
+export interface ReplyLogicObservabilityTemplates {
+  stateGateSleeping: string;
+  stateGateBusy: string;
+  stateGateImmediate: string;
+  stateGateNotApplied: string;
+  actorNoteApiAvailable: string;
+  actorNoteApiUnavailable: string;
+  actorNoteGroupContext: string;
+  actorNoteDirectContext: string;
+}
+
 export interface ReplyLogicConstantSummary {
   sleepHintMessages: string[];
   busyHintMessages: Record<string, string[]>;
@@ -88,6 +130,8 @@ export interface ReplyLogicConstantSummary {
     progress: number;
   }>;
   promptTemplates: ReplyLogicPromptTemplates;
+  semanticLabels: ReplyLogicSemanticLabels;
+  observabilityTemplates: ReplyLogicObservabilityTemplates;
 }
 
 export interface ReplyLogicOverviewCharacterItem {
