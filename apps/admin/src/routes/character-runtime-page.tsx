@@ -15,17 +15,18 @@ import {
   LoadingBlock,
   MetricCard,
   SectionHeading,
-  SelectField as UiSelectField,
   StatusPill,
-  TextAreaField as UiTextAreaField,
-  TextField as UiTextField,
   ToggleChip,
 } from "@yinjie/ui";
 import {
   AdminActionFeedback,
+  AdminCodeBlock,
   AdminInfoRows,
   AdminPageHero,
   AdminSectionNav,
+  AdminSelectField,
+  AdminTextArea,
+  AdminTextField,
 } from "../components/admin-workbench";
 import { adminApi } from "../lib/admin-api";
 import { resolveAdminCoreApiBaseUrl } from "../lib/core-api-base";
@@ -665,18 +666,7 @@ function FieldBlock({
   min?: number;
   max?: number;
 }) {
-  return (
-    <label className="block">
-      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{label}</div>
-      <UiTextField
-        value={String(value)}
-        onChange={(event) => onChange(event.target.value)}
-        type={type}
-        min={min}
-        max={max}
-      />
-    </label>
-  );
+  return <AdminTextField label={label} value={value} onChange={onChange} type={type} min={min} max={max} />;
 }
 
 function TextAreaBlock({
@@ -688,12 +678,7 @@ function TextAreaBlock({
   value: string;
   onChange: (value: string) => void;
 }) {
-  return (
-    <label className="block">
-      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{label}</div>
-      <UiTextAreaField className="min-h-28" value={value} onChange={(event) => onChange(event.target.value)} />
-    </label>
-  );
+  return <AdminTextArea label={label} value={value} onChange={onChange} textareaClassName="min-h-28" />;
 }
 
 function SelectFieldBlock({
@@ -707,31 +692,11 @@ function SelectFieldBlock({
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
 }) {
-  return (
-    <label className="block">
-      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{label}</div>
-      <UiSelectField value={value} onChange={(event) => onChange(event.target.value)}>
-        {options.map((item) => (
-          <option key={`${label}-${item.value}`} value={item.value}>
-            {item.label}
-          </option>
-        ))}
-      </UiSelectField>
-    </label>
-  );
+  return <AdminSelectField label={label} value={value} onChange={onChange} options={options} />;
 }
 
 function CodeBlock({ value, className }: { value: string; className?: string }) {
-  return (
-    <pre
-      className={[
-        "overflow-x-auto whitespace-pre-wrap break-words rounded-[20px] border border-[color:var(--border-faint)] bg-white/90 p-4 text-xs leading-6 text-[color:var(--text-secondary)]",
-        className ?? "",
-      ].join(" ")}
-    >
-      {value}
-    </pre>
-  );
+  return <AdminCodeBlock value={value} className={className} />;
 }
 
 function csvToList(value: string) {

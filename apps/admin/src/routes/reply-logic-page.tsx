@@ -28,21 +28,22 @@ import {
   LoadingBlock,
   MetricCard,
   SectionHeading,
-  SelectField,
   SnapshotPanel,
   StatusPill,
-  TextAreaField as UiTextAreaField,
-  TextField as UiTextField,
   ToggleChip,
   useProviderSetup,
 } from "@yinjie/ui";
 import {
   AdminActionFeedback,
   AdminCallout,
+  AdminCodeBlock,
   AdminEmptyState,
   AdminInfoRows,
   AdminPageHero,
+  AdminSelectField,
   AdminSectionNav,
+  AdminTextArea,
+  AdminTextField,
 } from "../components/admin-workbench";
 import { adminApi } from "../lib/admin-api";
 import { resolveAdminCoreApiBaseUrl } from "../lib/core-api-base";
@@ -1658,7 +1659,7 @@ function ActorSnapshotCard({
             <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
               最终生效提示词
             </div>
-            <CodeBlock className="mt-4" value={actor.effectivePrompt} />
+            <AdminCodeBlock className="mt-4" value={actor.effectivePrompt} />
           </Card>
 
           <Card className="bg-[color:var(--surface-card)]">
@@ -1741,7 +1742,7 @@ function PromptSectionList({
                 {section.active ? "生效中" : "未生效"}
               </StatusPill>
             </div>
-            <CodeBlock
+            <AdminCodeBlock
               className="rounded-none border-0 bg-transparent p-4"
               value={section.content || "当前未注入该分段。"}
             />
@@ -1831,7 +1832,7 @@ function RequestMessageList({
                 {formatRequestRole(item.role)}
               </StatusPill>
             </div>
-            <CodeBlock className="mt-3" value={item.content} />
+            <AdminCodeBlock className="mt-3" value={item.content} />
           </div>
         ))}
       </div>
@@ -3445,20 +3446,16 @@ function FieldBlock({
   list?: string;
 }) {
   return (
-    <label className="block">
-      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
-        {label}
-      </div>
-      <UiTextField
-        value={String(value)}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        type={type}
-        min={min}
-        max={max}
-        list={list}
-      />
-    </label>
+    <AdminTextField
+      label={label}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      type={type}
+      min={min}
+      max={max}
+      list={list}
+    />
   );
 }
 
@@ -3474,17 +3471,13 @@ function TextAreaBlock({
   placeholder?: string;
 }) {
   return (
-    <label className="block">
-      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
-        {label}
-      </div>
-      <UiTextAreaField
-        className="min-h-28"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-      />
-    </label>
+    <AdminTextArea
+      label={label}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      textareaClassName="min-h-28"
+    />
   );
 }
 
@@ -3502,18 +3495,13 @@ function SelectFieldBlock({
   className?: string;
 }) {
   return (
-    <label className={className}>
-      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
-        {label}
-      </div>
-      <SelectField value={value} onChange={(event) => onChange(event.target.value)}>
-        {options.map((item) => (
-          <option key={`${label}-${item.value}`} value={item.value}>
-            {item.label}
-          </option>
-        ))}
-      </SelectField>
-    </label>
+    <AdminSelectField
+      label={label}
+      value={value}
+      onChange={onChange}
+      options={options}
+      className={className}
+    />
   );
 }
 
@@ -3539,25 +3527,6 @@ function NoteList({
         </li>
       ))}
     </ul>
-  );
-}
-
-function CodeBlock({
-  value,
-  className,
-}: {
-  value: string;
-  className?: string;
-}) {
-  return (
-    <pre
-      className={[
-        "overflow-x-auto whitespace-pre-wrap break-words rounded-[20px] border border-[color:var(--border-faint)] bg-white/90 p-4 text-xs leading-6 text-[color:var(--text-secondary)]",
-        className ?? "",
-      ].join(" ")}
-    >
-      {value}
-    </pre>
   );
 }
 

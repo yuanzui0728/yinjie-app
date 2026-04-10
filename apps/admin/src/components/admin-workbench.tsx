@@ -1,6 +1,15 @@
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { Card, MetricCard, SectionHeading, StatusPill, cn } from "@yinjie/ui";
+import {
+  Card,
+  MetricCard,
+  SectionHeading,
+  SelectField,
+  StatusPill,
+  TextAreaField,
+  TextField,
+  cn,
+} from "@yinjie/ui";
 
 export type AdminSectionNavItem = {
   label: string;
@@ -331,5 +340,125 @@ export function AdminHintCard({
       <div className="font-semibold text-[color:var(--text-primary)]">{title}</div>
       <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{detail}</div>
     </div>
+  );
+}
+
+export function AdminTextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  min,
+  max,
+  list,
+  disabled,
+  className,
+}: {
+  label: string;
+  value: string | number;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  type?: string;
+  min?: number;
+  max?: number;
+  list?: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <label className={className ?? "block"}>
+      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+        {label}
+      </div>
+      <TextField
+        value={String(value)}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        type={type}
+        min={min}
+        max={max}
+        list={list}
+        disabled={disabled}
+      />
+    </label>
+  );
+}
+
+export function AdminTextArea({
+  label,
+  value,
+  onChange,
+  placeholder,
+  className,
+  textareaClassName,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+  textareaClassName?: string;
+}) {
+  return (
+    <label className={className ?? "block"}>
+      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+        {label}
+      </div>
+      <TextAreaField
+        className={textareaClassName ?? "min-h-28"}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+      />
+    </label>
+  );
+}
+
+export function AdminSelectField({
+  label,
+  value,
+  onChange,
+  options,
+  className,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ value: string; label: string }>;
+  className?: string;
+}) {
+  return (
+    <label className={className ?? "block"}>
+      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+        {label}
+      </div>
+      <SelectField value={value} onChange={(event) => onChange(event.target.value)}>
+        {options.map((item) => (
+          <option key={`${label}-${item.value}`} value={item.value}>
+            {item.label}
+          </option>
+        ))}
+      </SelectField>
+    </label>
+  );
+}
+
+export function AdminCodeBlock({
+  value,
+  className,
+}: {
+  value: string;
+  className?: string;
+}) {
+  return (
+    <pre
+      className={[
+        "overflow-x-auto whitespace-pre-wrap break-words rounded-[20px] border border-[color:var(--border-faint)] bg-white/90 p-4 text-xs leading-6 text-[color:var(--text-secondary)]",
+        className ?? "",
+      ].join(" ")}
+    >
+      {value}
+    </pre>
   );
 }
