@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Button, ErrorBlock, TextAreaField } from "@yinjie/ui";
 import { X } from "lucide-react";
 import { AvatarChip } from "../../../components/avatar-chip";
@@ -23,8 +24,28 @@ export function DesktopMomentComposePanel({
   onCreate,
   onTextChange,
 }: DesktopMomentComposePanelProps) {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
   return (
-    <div className="absolute inset-0 z-20 flex justify-end bg-[rgba(15,23,42,0.16)] backdrop-blur-[2px]">
+    <div
+      className="absolute inset-0 z-20 flex justify-end bg-[rgba(15,23,42,0.16)] backdrop-blur-[2px]"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div className="flex h-full w-full max-w-[380px] flex-col border-l border-[rgba(15,23,42,0.06)] bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,248,239,0.98))] shadow-[-24px_0_48px_rgba(15,23,42,0.10)]">
         <div className="flex items-center justify-between border-b border-[rgba(15,23,42,0.06)] px-5 py-4">
           <div>
