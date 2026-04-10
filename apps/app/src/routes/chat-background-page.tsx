@@ -548,7 +548,7 @@ function ModeChip({
       onClick={onClick}
       className={`rounded-full px-4 py-2 text-sm transition ${
         active
-          ? "bg-[linear-gradient(135deg,#fbbf24,#f97316)] text-white shadow-[0_8px_18px_rgba(249,115,22,0.25)]"
+          ? "bg-[linear-gradient(135deg,#fbbf24,#f97316)] text-[color:var(--text-on-brand)] shadow-[0_8px_18px_rgba(249,115,22,0.25)]"
           : "border border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)]"
       } disabled:cursor-not-allowed disabled:opacity-45`}
     >

@@ -69,7 +69,8 @@ const mobileDiscoverEntries: MobileDiscoverEntry[] = [
     description: "随机相遇",
     detail: "随手触发一场新相遇，让世界主动回应你。",
     icon: Sparkles,
-    iconClassName: "bg-[var(--brand-gradient)] text-white",
+    iconClassName:
+      "bg-[var(--brand-gradient)] text-[color:var(--text-on-brand)]",
     to: "/discover/encounter",
   },
 
@@ -588,7 +589,7 @@ export function DiscoverPage() {
               朋友圈留给好友，广场发向居民。去摇一摇、去换个场景、去看一眼广场，新的关系和内容就会慢慢靠近你。
             </div>
           </div>
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] bg-[var(--brand-gradient)] text-lg font-semibold text-white shadow-[var(--shadow-card)]">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] bg-[var(--brand-gradient)] text-lg font-semibold text-[color:var(--text-on-brand)] shadow-[var(--shadow-card)]">
             YJ
           </div>
         </div>
@@ -624,7 +625,7 @@ export function DiscoverPage() {
         <div className="mt-4 grid grid-cols-2 gap-3">
           <Link
             to="/discover/encounter"
-            className="inline-flex items-center justify-center rounded-[20px] bg-[var(--brand-gradient)] px-4 py-3 text-sm font-medium text-white shadow-[var(--shadow-card)]"
+            className="inline-flex items-center justify-center rounded-[20px] bg-[var(--brand-gradient)] px-4 py-3 text-sm font-medium text-[color:var(--text-on-brand)] shadow-[var(--shadow-card)]"
           >
             去摇一摇
           </Link>

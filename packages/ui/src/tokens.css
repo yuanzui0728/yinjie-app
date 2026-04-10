@@ -5,11 +5,31 @@
   --bg-canvas: #fffcf5;
   --bg-canvas-elevated: #ffffff;
   --bg-accent:
-    radial-gradient(ellipse at 20% 0%, rgba(251, 191, 36, 0.22), transparent 55%),
-    radial-gradient(ellipse at 85% 20%, rgba(249, 115, 22, 0.14), transparent 50%),
-    radial-gradient(ellipse at 40% 95%, rgba(16, 185, 129, 0.10), transparent 50%);
-  --bg-glow-top: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0));
-  --bg-glow-bottom: linear-gradient(0deg, rgba(255, 255, 255, 0.64), rgba(255, 255, 255, 0));
+    radial-gradient(
+      ellipse at 20% 0%,
+      rgba(251, 191, 36, 0.22),
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse at 85% 20%,
+      rgba(249, 115, 22, 0.14),
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 40% 95%,
+      rgba(16, 185, 129, 0.1),
+      transparent 50%
+    );
+  --bg-glow-top: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.72),
+    rgba(255, 255, 255, 0)
+  );
+  --bg-glow-bottom: linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.64),
+    rgba(255, 255, 255, 0)
+  );
   --bg-grid:
     linear-gradient(rgba(255, 255, 255, 0.44) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.44) 1px, transparent 1px);
@@ -22,16 +42,16 @@
   --surface-card-hover: #fffbf0;
   --surface-soft: rgba(249, 115, 22, 0.08);
   --surface-secondary: rgba(255, 255, 255, 0.78);
-  --surface-tertiary: rgba(249, 115, 22, 0.10);
+  --surface-tertiary: rgba(249, 115, 22, 0.1);
   --surface-overlay: rgba(255, 253, 248, 0.96);
   --surface-console: #fffdf7;
   --surface-input: rgba(255, 255, 255, 0.94);
 
   /* === 边框：暖棕调 === */
-  --border-faint: rgba(120, 70, 20, 0.10);
+  --border-faint: rgba(120, 70, 20, 0.1);
   --border-subtle: rgba(120, 70, 20, 0.16);
   --border-strong: rgba(120, 70, 20, 0.24);
-  --border-brand: rgba(249, 115, 22, 0.30);
+  --border-brand: rgba(249, 115, 22, 0.3);
   --border-danger: rgba(239, 68, 68, 0.3);
   --border-success: rgba(16, 185, 129, 0.28);
   --hairline-light: rgba(255, 255, 255, 0.5);
@@ -41,20 +61,25 @@
   --text-secondary: #4a3728;
   --text-muted: #7a6454;
   --text-dim: #a0897a;
+  --text-on-brand: #3b2206;
 
   /* === 品牌色：晨光橙系 === */
   --brand-primary: #f97316;
   --brand-secondary: #fb923c;
   --brand-accent: #10b981;
   --brand-soft: rgba(249, 115, 22, 0.08);
-  --brand-gradient: linear-gradient(135deg, rgba(251, 191, 36, 0.96), rgba(249, 115, 22, 0.94));
+  --brand-gradient: linear-gradient(
+    135deg,
+    rgba(251, 191, 36, 0.96),
+    rgba(249, 115, 22, 0.94)
+  );
 
   /* === 状态色 === */
-  --state-success-bg: rgba(16, 185, 129, 0.10);
+  --state-success-bg: rgba(16, 185, 129, 0.1);
   --state-success-text: #065f46;
-  --state-warning-bg: rgba(245, 158, 11, 0.10);
+  --state-warning-bg: rgba(245, 158, 11, 0.1);
   --state-warning-text: #92400e;
-  --state-danger-bg: rgba(239, 68, 68, 0.10);
+  --state-danger-bg: rgba(239, 68, 68, 0.1);
   --state-danger-text: #991b1b;
   --state-info-bg: rgba(59, 130, 246, 0.09);
   --state-info-text: #1e40af;
@@ -62,11 +87,11 @@
   /* === 阴影：暖琥珀调（阳光透射感）=== */
   --shadow-shell: 0 20px 64px rgba(160, 90, 10, 0.14);
   --shadow-section: 0 12px 32px rgba(180, 100, 20, 0.08);
-  --shadow-card: 0 8px 24px rgba(180, 100, 20, 0.10);
+  --shadow-card: 0 8px 24px rgba(180, 100, 20, 0.1);
   --shadow-soft: 0 4px 16px rgba(180, 100, 20, 0.07);
   --shadow-lift: 0 18px 44px rgba(180, 100, 20, 0.12);
   --shadow-overlay: 0 24px 52px rgba(160, 90, 10, 0.16);
-  --shadow-focus: 0 0 0 3px rgba(249, 115, 22, 0.20);
+  --shadow-focus: 0 0 0 3px rgba(249, 115, 22, 0.2);
 
   --radius-sm: 0.75rem;
   --radius-md: 1rem;
@@ -93,7 +118,11 @@ html {
 }
 
 body {
-  background: linear-gradient(180deg, rgba(255, 253, 247, 0.94), rgba(255, 248, 238, 0.98));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 253, 247, 0.94),
+    rgba(255, 248, 238, 0.98)
+  );
   color: var(--text-primary);
   accent-color: var(--brand-primary);
 }

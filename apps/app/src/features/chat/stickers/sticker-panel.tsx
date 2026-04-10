@@ -1,4 +1,8 @@
-import { STICKER_PACKS, getStickerAttachment, type StickerAttachment } from "@yinjie/contracts";
+import {
+  STICKER_PACKS,
+  getStickerAttachment,
+  type StickerAttachment,
+} from "@yinjie/contracts";
 import type { RecentStickerItem } from "./recent-stickers";
 
 type StickerPanelProps = {
@@ -22,7 +26,8 @@ export function StickerPanel({
     .map((item) => getStickerAttachment(item.packId, item.stickerId))
     .filter((item): item is StickerAttachment => Boolean(item));
 
-  const activePack = STICKER_PACKS.find((item) => item.id === activePackId) ?? STICKER_PACKS[0];
+  const activePack =
+    STICKER_PACKS.find((item) => item.id === activePackId) ?? STICKER_PACKS[0];
   const isMobile = variant === "mobile";
 
   return (
@@ -43,7 +48,9 @@ export function StickerPanel({
         }
       >
         <div className="flex items-center justify-between px-1 pb-2">
-          <div className="text-sm font-medium text-[color:var(--text-primary)]">表情包</div>
+          <div className="text-sm font-medium text-[color:var(--text-primary)]">
+            表情包
+          </div>
           <button
             type="button"
             onClick={onClose}
@@ -60,7 +67,11 @@ export function StickerPanel({
             </div>
             <div className="grid grid-cols-4 gap-2">
               {recentStickers.slice(0, 4).map((sticker) => (
-                <StickerButton key={`recent-${sticker.packId}-${sticker.stickerId}`} sticker={sticker} onSelect={onSelect} />
+                <StickerButton
+                  key={`recent-${sticker.packId}-${sticker.stickerId}`}
+                  sticker={sticker}
+                  onSelect={onSelect}
+                />
               ))}
             </div>
           </section>
@@ -76,7 +87,7 @@ export function StickerPanel({
                 onClick={() => onPackChange(pack.id)}
                 className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
                   active
-                    ? "bg-[var(--brand-gradient)] text-white shadow-[0_6px_14px_rgba(160,90,10,0.20)]"
+                    ? "bg-[var(--brand-gradient)] text-[color:var(--text-on-brand)] shadow-[0_6px_14px_rgba(160,90,10,0.20)]"
                     : "border border-white/80 bg-white/72 text-[color:var(--text-secondary)]"
                 }`}
               >
@@ -86,7 +97,9 @@ export function StickerPanel({
           })}
         </div>
 
-        <div className={`grid ${isMobile ? "grid-cols-4" : "grid-cols-4"} gap-2`}>
+        <div
+          className={`grid ${isMobile ? "grid-cols-4" : "grid-cols-4"} gap-2`}
+        >
           {activePack.stickers.map((sticker) => (
             <StickerButton
               key={`${activePack.id}-${sticker.id}`}
@@ -128,7 +141,9 @@ function StickerButton({
         className="h-16 w-16 rounded-[16px] object-contain"
         loading="lazy"
       />
-      <span className="line-clamp-1 text-[11px] text-[color:var(--text-secondary)]">{sticker.label ?? sticker.stickerId}</span>
+      <span className="line-clamp-1 text-[11px] text-[color:var(--text-secondary)]">
+        {sticker.label ?? sticker.stickerId}
+      </span>
     </button>
   );
 }

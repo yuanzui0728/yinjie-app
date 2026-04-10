@@ -40,7 +40,7 @@ export function DesktopPlaceholderWorkspace({
           </div>
           <a
             href={mobileFallbackTo}
-            className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-[var(--brand-gradient)] px-4 text-sm font-medium text-white"
+            className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-2xl bg-[var(--brand-gradient)] px-4 text-sm font-medium text-[color:var(--text-on-brand)]"
           >
             返回继续使用
           </a>

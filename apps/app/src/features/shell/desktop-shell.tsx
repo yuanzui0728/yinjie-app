@@ -274,7 +274,7 @@ export function DesktopShell({ children }: PropsWithChildren) {
               }}
             >
               <div className="flex h-10 items-center gap-3 rounded-full border border-[color:var(--border-faint)] bg-[rgba(255,255,255,0.92)] px-3 shadow-[var(--shadow-soft)]">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--brand-gradient)] text-[11px] font-semibold text-white shadow-[0_10px_24px_rgba(255,138,61,0.24)]">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--brand-gradient)] text-[11px] font-semibold text-[color:var(--text-on-brand)] shadow-[0_10px_24px_rgba(255,138,61,0.24)]">
                   YJ
                 </div>
                 <div className="leading-none">
@@ -450,7 +450,7 @@ export function DesktopShell({ children }: PropsWithChildren) {
               <button
                 type="button"
                 onClick={() => setIsLocked(false)}
-                className="mt-6 inline-flex h-12 items-center justify-center rounded-2xl bg-[var(--brand-gradient)] px-6 text-sm font-medium text-white shadow-[0_12px_30px_rgba(249,115,22,0.24)]"
+                className="mt-6 inline-flex h-12 items-center justify-center rounded-2xl bg-[var(--brand-gradient)] px-6 text-sm font-medium text-[color:var(--text-on-brand)] shadow-[0_12px_30px_rgba(249,115,22,0.24)]"
               >
                 解锁继续使用
               </button>
