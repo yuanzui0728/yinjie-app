@@ -9,9 +9,36 @@ import { CharactersService } from '../characters/characters.service';
 import { WorldOwnerService } from '../auth/world-owner.service';
 import { SocialService } from '../social/social.service';
 
+type FeedSurface = 'feed' | 'channels';
+
 type FeedListItem = FeedPostEntity & {
   commentsPreview: FeedCommentEntity[];
 };
+
+const CHANNEL_DEMO_POSTS: Array<{
+  text: string;
+  mediaType: 'video';
+  mediaUrl: string;
+}> = [
+  {
+    text: 'AI 夜航日志：雾港上空的低空巡游短片，第一视角穿过霓虹塔群。',
+    mediaType: 'video',
+    mediaUrl:
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
+  },
+  {
+    text: 'AI 居民拍到的晨光海岸，海风、长桥和低饱和城市天际线被压进 20 秒短片里。',
+    mediaType: 'video',
+    mediaUrl:
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+  },
+  {
+    text: 'AI 合成的玻璃温室散步片段，镜头从花墙缓慢推到中央光井。',
+    mediaType: 'video',
+    mediaUrl:
+      'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
+  },
+];
 
 @Injectable()
 export class FeedService {
@@ -30,8 +57,17 @@ export class FeedService {
     private readonly socialService: SocialService,
   ) {}
 
-  async getFeed(page = 1, limit = 20): Promise<{ posts: FeedListItem[]; total: number }> {
+  async getFeed(
+    page = 1,
+    limit = 20,
+    surface: FeedSurface = 'feed',
+  ): Promise<{ posts: FeedListItem[]; total: number }> {
+    if (surface === 'channels') {
+      await this.ensureChannelSeedData();
+    }
+
     const [posts, total] = await this.postRepo.findAndCount({
+      where: { surface },
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
@@ -73,19 +109,49 @@ export class FeedService {
     return { ...post, comments };
   }
 
-  async createOwnerPost(text: string): Promise<FeedPostEntity> {
+  async createOwnerPost(
+    text: string,
+    options?: {
+      mediaType?: 'text' | 'image' | 'video';
+      mediaUrl?: string;
+      surface?: FeedSurface;
+    },
+  ): Promise<FeedPostEntity> {
     const owner = await this.worldOwnerService.getOwnerOrThrow();
     return this.createPost(
-      owner.id,
-      owner.username?.trim() || 'You',
-      owner.avatar ?? '',
-      text,
-      'user',
+      {
+        authorAvatar: owner.avatar ?? '',
+        authorId: owner.id,
+        authorName: owner.username?.trim() || 'You',
+        authorType: 'user',
+        mediaType: options?.mediaType,
+        mediaUrl: options?.mediaUrl,
+        surface: options?.surface,
+        text,
+      },
     );
   }
 
-  async createPost(authorId: string, authorName: string, authorAvatar: string, text: string, authorType = 'user'): Promise<FeedPostEntity> {
-    const post = this.postRepo.create({ authorId, authorName, authorAvatar, authorType, text });
+  async createPost(input: {
+    authorAvatar: string;
+    authorId: string;
+    authorName: string;
+    authorType?: 'user' | 'character';
+    mediaType?: 'text' | 'image' | 'video';
+    mediaUrl?: string;
+    surface?: FeedSurface;
+    text: string;
+  }): Promise<FeedPostEntity> {
+    const post = this.postRepo.create({
+      authorAvatar: input.authorAvatar,
+      authorId: input.authorId,
+      authorName: input.authorName,
+      authorType: input.authorType ?? 'user',
+      mediaType: input.mediaType ?? 'text',
+      mediaUrl: input.mediaUrl?.trim() || undefined,
+      surface: input.surface ?? 'feed',
+      text: input.text,
+    });
     return this.postRepo.save(post);
   }
 
@@ -129,7 +195,14 @@ export class FeedService {
     try {
       const text = await this.ai.generateMoment({ profile, currentTime: new Date() });
       if (!text) return null;
-      return this.createPost(char.id, char.name, char.avatar, text, 'character');
+      return this.createPost({
+        authorAvatar: char.avatar,
+        authorId: char.id,
+        authorName: char.name,
+        authorType: 'character',
+        surface: 'feed',
+        text,
+      });
     } catch (err) {
       this.logger.error(`Failed to generate feed post for ${characterId}`, err);
       return null;
@@ -155,7 +228,7 @@ export class FeedService {
         const reply = await this.ai.generateReply({
           profile,
           conversationHistory: [],
-          userMessage: `你在视频号看到一条内容："${post.text}"，用一句话自然地评论，不超过25字。`,
+          userMessage: `你在${post.surface === 'channels' ? '视频号' : '广场动态'}里看到一条内容："${post.text}"，用一句话自然地评论，不超过25字。`,
         });
         await this.addComment(post.id, char.id, char.name, char.avatar, reply.text, 'character');
       } catch {
@@ -163,5 +236,36 @@ export class FeedService {
       }
     }
     await this.postRepo.update(post.id, { aiReacted: true });
+  }
+
+  private async ensureChannelSeedData() {
+    const existingCount = await this.postRepo.count({
+      where: { surface: 'channels' },
+    });
+    if (existingCount > 0) {
+      return;
+    }
+
+    const authors = (await this.characters.findAll()).slice(
+      0,
+      CHANNEL_DEMO_POSTS.length,
+    );
+    if (!authors.length) {
+      return;
+    }
+
+    for (const [index, demoPost] of CHANNEL_DEMO_POSTS.entries()) {
+      const author = authors[index % authors.length];
+      await this.createPost({
+        authorAvatar: author.avatar,
+        authorId: author.id,
+        authorName: author.name,
+        authorType: 'character',
+        mediaType: demoPost.mediaType,
+        mediaUrl: demoPost.mediaUrl,
+        surface: 'channels',
+        text: demoPost.text,
+      });
+    }
   }
 }

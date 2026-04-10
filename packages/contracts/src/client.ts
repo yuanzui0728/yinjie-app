@@ -45,6 +45,7 @@ import type {
   FeedListResponse,
   FeedPost,
   FeedPostWithComments,
+  FeedSurface,
 } from "./feed";
 import type {
   CreateMomentCommentRequest,
@@ -1276,9 +1277,23 @@ export function generateAllMoments(baseUrl?: string) {
   );
 }
 
-export function getFeed(page = 1, limit = 20, baseUrl?: string) {
+export function getFeed(
+  page = 1,
+  limit = 20,
+  baseUrl?: string,
+  options?: { surface?: FeedSurface },
+) {
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+  });
+
+  if (options?.surface) {
+    params.set("surface", options.surface);
+  }
+
   return requestLegacyApi<FeedListResponse>(
-    `/feed?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`,
+    `/feed?${params.toString()}`,
     undefined,
     baseUrl,
   );

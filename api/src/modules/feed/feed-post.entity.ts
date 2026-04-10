@@ -17,6 +17,9 @@ export class FeedPostEntity {
   @Column({ default: 'character' })
   authorType: string; // 'user' | 'character'
 
+  @Column({ default: 'feed' })
+  surface: string; // 'feed' | 'channels'
+
   @Column('text')
   text: string;
 
