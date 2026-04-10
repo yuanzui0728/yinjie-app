@@ -45,6 +45,7 @@ export interface Conversation {
   pinnedAt?: string;
   isMuted: boolean;
   mutedAt?: string;
+  strongReminderUntil?: string;
   createdAt: string;
   updatedAt: string;
   lastReadAt?: string;
@@ -67,6 +68,11 @@ export interface SetConversationPinnedRequest {
 
 export interface SetConversationMutedRequest {
   muted: boolean;
+}
+
+export interface SetConversationStrongReminderRequest {
+  enabled: boolean;
+  durationHours?: number;
 }
 
 export interface Group {

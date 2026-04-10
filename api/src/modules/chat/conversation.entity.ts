@@ -39,6 +39,9 @@ export class ConversationEntity {
   mutedAt?: Date | null;
 
   @Column({ type: 'datetime', nullable: true })
+  strongReminderUntil?: Date | null;
+
+  @Column({ type: 'datetime', nullable: true })
   lastClearedAt?: Date | null;
 
   @Column({ default: 'inherit' })

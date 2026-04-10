@@ -129,7 +129,7 @@
 
 ## 会话管理结构（2026-04-08）
 
-- `Conversation` 表保留字段：`isPinned`、`pinnedAt`、`isHidden`、`hiddenAt`、`lastClearedAt`、`lastActivityAt`
+- `Conversation` 表保留字段：`isPinned`、`pinnedAt`、`isHidden`、`hiddenAt`、`strongReminderUntil`、`lastClearedAt`、`lastActivityAt`
 - `Conversation` 表现已扩展背景字段：`chatBackgroundMode`、`chatBackgroundPayload`，用于承载会话专属聊天背景配置
 - `Message` 表现已扩展附件字段：`attachmentKind`、`attachmentPayload`，用于承载 `sticker` 表情包消息元数据
 - `Group` 表现已扩展字段：`announcement`、`isMuted`、`mutedAt`、`isPinned`、`pinnedAt`、`savedToContacts`、`savedToContactsAt`、`showMemberNicknames`、`notifyOnAtMe`、`notifyOnAtAll`、`notifyOnAnnouncement`、`lastClearedAt`、`lastReadAt`、`isHidden`、`hiddenAt`、`lastActivityAt`
@@ -139,6 +139,7 @@
 - `Character` 表现已扩展字段：`onlineMode`、`activityMode`，用于区分在线状态 / 当前活动由调度器自动驱动还是后台人工锁定
 - 会话管理路由：
   - `POST /api/conversations/:id/pin`
+  - `POST /api/conversations/:id/strong-reminder`
   - `POST /api/conversations/:id/unread`
   - `POST /api/conversations/:id/hide`
   - `POST /api/conversations/:id/clear`
