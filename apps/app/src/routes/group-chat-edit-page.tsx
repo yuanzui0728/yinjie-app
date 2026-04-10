@@ -146,7 +146,10 @@ function GroupChatEditPage({
 
       {groupQuery.data ? (
         <>
-          <ChatDetailsSection title={mode === "name" ? "修改群聊名称" : "修改群昵称"}>
+          <ChatDetailsSection
+            title={mode === "name" ? "修改群聊名称" : "修改群昵称"}
+            variant="wechat"
+          >
             <div className="px-4 py-4">
               <input
                 value={draft}
