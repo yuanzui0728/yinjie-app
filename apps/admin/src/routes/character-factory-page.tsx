@@ -120,6 +120,8 @@ export function CharacterFactoryPage() {
 
   const snapshot = factoryQuery.data;
   const revisions = revisionsQuery.data ?? [];
+  const driftFieldCount = snapshot.fieldSources.filter((item) => item.status === "runtime_drift").length;
+  const changedPublishItems = snapshot.publishDiff.items.filter((item) => item.changed);
 
   return (
     <div className="space-y-6">
@@ -173,6 +175,8 @@ export function CharacterFactoryPage() {
           label="未发布变更"
           value={snapshot.diffSummary.hasUnpublishedChanges ? "有" : "无"}
         />
+        <MetricCard label="运行态漂移字段" value={driftFieldCount} />
+        <MetricCard label="发布将覆盖字段" value={snapshot.publishDiff.changedCount} />
       </div>
 
       <InlineNotice tone="muted">
@@ -777,6 +781,44 @@ export function CharacterFactoryPage() {
           </Card>
         </div>
       </div>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <Card className="bg-[color:var(--surface-console)]">
+          <SectionHeading>字段来源</SectionHeading>
+          <InlineNotice className="mt-4" tone={driftFieldCount > 0 ? "warning" : "muted"}>
+            这里展示运行时 `Character` 字段来自哪个配方字段，以及当前运行态是否已经偏离上次发布结果。
+          </InlineNotice>
+          <div className="mt-4 space-y-3">
+            {snapshot.fieldSources.map((item) => (
+              <FieldSourceCard key={`${item.targetField}-${item.recipeField}`} item={item} />
+            ))}
+          </div>
+        </Card>
+
+        <Card className="bg-[color:var(--surface-console)]">
+          <SectionHeading>发布映射 Diff</SectionHeading>
+          <InlineNotice className="mt-4" tone={changedPublishItems.length ? "warning" : "success"}>
+            {changedPublishItems.length
+              ? `当前草稿一旦发布，会覆盖 ${changedPublishItems.length} 个运行时字段。`
+              : "当前运行时与草稿发布结果一致，发布不会改动角色实体。"}
+          </InlineNotice>
+          <div className="mt-4 space-y-3">
+            {changedPublishItems.map((item) => (
+              <PublishDiffCard key={`${item.targetField}-${item.recipeField}`} item={item} />
+            ))}
+            {changedPublishItems.length === 0 ? (
+              <div className="rounded-[20px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4 text-sm text-[color:var(--text-secondary)]">
+                当前没有需要覆盖的运行态字段。
+              </div>
+            ) : null}
+            {snapshot.publishDiff.items.length > changedPublishItems.length ? (
+              <div className="text-sm text-[color:var(--text-muted)]">
+                其余 {snapshot.publishDiff.items.length - changedPublishItems.length} 个字段发布后保持不变。
+              </div>
+            ) : null}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -807,6 +849,71 @@ function RevisionCard({
           {restoring ? "恢复中..." : "恢复到草稿"}
         </Button>
       </div>
+    </div>
+  );
+}
+
+function FieldSourceCard({
+  item,
+}: {
+  item: CharacterFactorySnapshot["fieldSources"][number];
+}) {
+  return (
+    <div className="rounded-[20px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="text-sm font-medium text-[color:var(--text-primary)]">{item.label}</div>
+        <StatusPill tone={item.status === "runtime_drift" ? "warning" : item.status === "draft_only" ? "muted" : "healthy"}>
+          {formatFieldSourceStatus(item.status)}
+        </StatusPill>
+      </div>
+      <div className="mt-2 text-xs text-[color:var(--text-muted)]">
+        {item.targetField} ← {item.recipeField}
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <ValueSnapshot label="运行时" value={item.runtimeValue} />
+        <ValueSnapshot label="已发布" value={item.publishedValue} />
+        <ValueSnapshot label="草稿" value={item.draftValue} />
+      </div>
+      <div className="mt-3 text-sm text-[color:var(--text-secondary)]">{item.note}</div>
+    </div>
+  );
+}
+
+function PublishDiffCard({
+  item,
+}: {
+  item: CharacterFactorySnapshot["publishDiff"]["items"][number];
+}) {
+  return (
+    <div className="rounded-[20px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="text-sm font-medium text-[color:var(--text-primary)]">{item.label}</div>
+        <StatusPill tone="warning">发布后变更</StatusPill>
+      </div>
+      <div className="mt-2 text-xs text-[color:var(--text-muted)]">
+        {item.targetField} ← {item.recipeField}
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <ValueSnapshot label="当前运行时" value={item.currentValue} />
+        <ValueSnapshot label="发布后" value={item.nextValue} />
+      </div>
+    </div>
+  );
+}
+
+function ValueSnapshot({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-[16px] border border-[color:var(--border-faint)] bg-white/70 px-3 py-3">
+      <div className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+        {label}
+      </div>
+      <div className="mt-2 text-sm text-[color:var(--text-secondary)]">{value}</div>
     </div>
   );
 }
@@ -979,6 +1086,19 @@ function formatChangeSource(value: CharacterBlueprintRevision["changeSource"]) {
       return "回填";
     case "manual_snapshot":
       return "手工快照";
+    default:
+      return value;
+  }
+}
+
+function formatFieldSourceStatus(value: CharacterFactorySnapshot["fieldSources"][number]["status"]) {
+  switch (value) {
+    case "draft_only":
+      return "仅草稿";
+    case "published_sync":
+      return "已发布同步";
+    case "runtime_drift":
+      return "运行态漂移";
     default:
       return value;
   }

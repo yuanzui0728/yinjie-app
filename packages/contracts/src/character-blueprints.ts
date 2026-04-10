@@ -7,6 +7,10 @@ export type CharacterBlueprintSourceType =
   | "ai_generated";
 
 export type CharacterBlueprintStatus = "draft" | "published" | "archived";
+export type CharacterFactoryFieldSourceStatus =
+  | "draft_only"
+  | "published_sync"
+  | "runtime_drift";
 
 export interface CharacterBlueprintRecipe {
   identity: {
@@ -91,11 +95,36 @@ export interface CharacterBlueprintRevision {
   createdAt: string;
 }
 
+export interface CharacterFactoryFieldSource {
+  label: string;
+  targetField: string;
+  recipeField: string;
+  status: CharacterFactoryFieldSourceStatus;
+  runtimeValue: string;
+  publishedValue: string;
+  draftValue: string;
+  note: string;
+}
+
+export interface CharacterFactoryPublishDiffItem {
+  label: string;
+  targetField: string;
+  recipeField: string;
+  changed: boolean;
+  currentValue: string;
+  nextValue: string;
+}
+
 export interface CharacterFactorySnapshot {
   character: Character;
   blueprint: CharacterBlueprint;
   diffSummary: {
     hasUnpublishedChanges: boolean;
     changedFields: string[];
+  };
+  fieldSources: CharacterFactoryFieldSource[];
+  publishDiff: {
+    changedCount: number;
+    items: CharacterFactoryPublishDiffItem[];
   };
 }

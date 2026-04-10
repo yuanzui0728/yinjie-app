@@ -94,6 +94,26 @@ export interface CharacterBlueprintRevisionContract {
   createdAt: string;
 }
 
+export interface CharacterFactoryFieldSourceContract {
+  label: string;
+  targetField: string;
+  recipeField: string;
+  status: 'draft_only' | 'published_sync' | 'runtime_drift';
+  runtimeValue: string;
+  publishedValue: string;
+  draftValue: string;
+  note: string;
+}
+
+export interface CharacterFactoryPublishDiffItemContract {
+  label: string;
+  targetField: string;
+  recipeField: string;
+  changed: boolean;
+  currentValue: string;
+  nextValue: string;
+}
+
 export interface CharacterFactorySnapshotContract {
   character: {
     id: string;
@@ -125,5 +145,10 @@ export interface CharacterFactorySnapshotContract {
   diffSummary: {
     hasUnpublishedChanges: boolean;
     changedFields: string[];
+  };
+  fieldSources: CharacterFactoryFieldSourceContract[];
+  publishDiff: {
+    changedCount: number;
+    items: CharacterFactoryPublishDiffItemContract[];
   };
 }
