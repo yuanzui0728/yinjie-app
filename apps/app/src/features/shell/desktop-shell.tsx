@@ -6,19 +6,19 @@ import {
   Copy,
   MessageCircleMore,
   Minus,
-  UserRound,
   UsersRound,
   X,
 } from "lucide-react";
 import { cn } from "@yinjie/ui";
+import { AvatarChip } from "../../components/avatar-chip";
 import { useAppRuntimeConfig } from "../../runtime/runtime-config-store";
+import { useWorldOwnerStore } from "../../store/world-owner-store";
 
 const navItems = [
   { to: "/tabs/chat", label: "消息", icon: MessageCircleMore, shortLabel: "消息" },
   { to: "/tabs/contacts", label: "通讯录", icon: UsersRound, shortLabel: "联系人" },
   { to: "/tabs/moments", label: "朋友圈", icon: BellDot, shortLabel: "动态" },
   { to: "/tabs/discover", label: "发现", icon: Compass, shortLabel: "发现" },
-  { to: "/tabs/profile", label: "我", icon: UserRound, shortLabel: "我" },
 ];
 
 type DesktopWindowHandle = {
@@ -113,6 +113,8 @@ async function resolveDesktopWindowHandle(): Promise<DesktopWindowHandle | null>
 export function DesktopShell({ children }: PropsWithChildren) {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const runtimeConfig = useAppRuntimeConfig();
+  const ownerName = useWorldOwnerStore((state) => state.username);
+  const ownerAvatar = useWorldOwnerStore((state) => state.avatar);
   const nativeDesktopShell = runtimeConfig.appPlatform === "desktop";
   const [desktopWindow, setDesktopWindow] = useState<DesktopWindowHandle | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -282,6 +284,20 @@ export function DesktopShell({ children }: PropsWithChildren) {
 
         <div className="relative z-10 flex min-h-0 flex-1 gap-4 p-4 pt-3">
           <aside className="hidden w-[104px] shrink-0 rounded-[30px] border border-[rgba(249,115,22,0.10)] bg-[linear-gradient(180deg,rgba(255,254,250,0.95),rgba(255,249,238,0.90))] p-3 shadow-[var(--shadow-section)] backdrop-blur-2xl lg:flex lg:flex-col">
+            <Link
+              to="/tabs/profile"
+              className="group mb-3 flex justify-center rounded-[22px] px-2 py-1.5"
+              aria-label="打开我的资料"
+            >
+              <div className="rounded-[22px] border border-transparent p-1.5 transition-[background-color,border-color,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] group-hover:border-[color:var(--border-faint)] group-hover:bg-white/88 group-hover:shadow-[var(--shadow-card)]">
+                <AvatarChip
+                  name={ownerName ?? "世界主人"}
+                  src={ownerAvatar}
+                  size="wechat"
+                />
+              </div>
+            </Link>
+
             <nav className="flex flex-1 flex-col gap-2">
               {navItems.map(({ to, label, icon: Icon, shortLabel }) => {
                 const active = isActive(pathname, to);
