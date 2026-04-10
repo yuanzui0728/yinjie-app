@@ -252,7 +252,9 @@ export class ChatService {
       return this._entityToConversation(entity);
     }
 
-    const previousReadAt = new Date(lastCharacterMessage.createdAt.getTime() - 1);
+    const previousReadAt = new Date(
+      lastCharacterMessage.createdAt.getTime() - 1,
+    );
     const lastClearedAt = entity.lastClearedAt
       ? new Date(entity.lastClearedAt)
       : null;
@@ -300,6 +302,27 @@ export class ChatService {
 
     this.conversationHistory.delete(entity.id);
     return this._entityToMessage(recalled);
+  }
+
+  async deleteConversationMessage(
+    convId: string,
+    messageId: string,
+  ): Promise<{ success: true }> {
+    const entity = await this.requireOwnedConversation(convId);
+    const message = await this.msgRepo.findOneBy({
+      id: messageId,
+      conversationId: convId,
+    });
+
+    if (!message) {
+      throw new NotFoundException(`Message ${messageId} not found`);
+    }
+
+    await this.msgRepo.delete({ id: message.id });
+    this.conversationHistory.delete(entity.id);
+    await this.syncConversationLastActivity(entity);
+
+    return { success: true };
   }
 
   async setConversationPinned(
@@ -902,6 +925,40 @@ export class ChatService {
     }
 
     return new Date(value).getTime();
+  }
+
+  private async syncConversationLastActivity(
+    conversation: ConversationEntity,
+  ): Promise<void> {
+    const lastMessage = await this.msgRepo.findOne({
+      where: this.buildMessageWhere(
+        conversation.id,
+        this.getVisibleMessageCutoff(conversation),
+      ),
+      order: { createdAt: 'DESC' },
+    });
+    const timestamps = [
+      lastMessage?.createdAt,
+      conversation.lastClearedAt ?? undefined,
+      conversation.createdAt,
+    ]
+      .filter((value): value is Date => Boolean(value))
+      .map((value) => new Date(value).getTime());
+
+    if (!timestamps.length) {
+      return;
+    }
+
+    const nextLastActivityAt = new Date(Math.max(...timestamps));
+    if (
+      conversation.lastActivityAt &&
+      conversation.lastActivityAt.getTime() === nextLastActivityAt.getTime()
+    ) {
+      return;
+    }
+
+    conversation.lastActivityAt = nextLastActivityAt;
+    await this.convRepo.save(conversation);
   }
 
   private async touchConversationActivity(

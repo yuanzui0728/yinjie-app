@@ -139,6 +139,7 @@
   - `POST /api/conversations/:id/hide`
   - `POST /api/conversations/:id/clear`
   - `POST /api/conversations/:id/messages/:messageId/recall`
+  - `DELETE /api/conversations/:id/messages/:messageId`
   - `GET /api/conversations/:id/background`
   - `PATCH /api/conversations/:id/background`
   - `DELETE /api/conversations/:id/background`
@@ -154,6 +155,7 @@
   - `POST /api/groups/:id/unread`
   - `POST /api/groups/:id/hide`
   - `POST /api/groups/:id/messages/:messageId/recall`
+  - `DELETE /api/groups/:id/messages/:messageId`
   - `PATCH /api/groups/:id/me`
   - `POST /api/groups/:id/leave`
   - `DELETE /api/groups/:id/members/:memberId`

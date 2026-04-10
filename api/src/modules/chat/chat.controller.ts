@@ -50,7 +50,21 @@ export class ChatController {
     @Param('conversationId') conversationId: string,
     @Param('messageId') messageId: string,
   ) {
-    return this.chatService.recallConversationMessage(conversationId, messageId);
+    return this.chatService.recallConversationMessage(
+      conversationId,
+      messageId,
+    );
+  }
+
+  @Delete(':conversationId/messages/:messageId')
+  deleteMessage(
+    @Param('conversationId') conversationId: string,
+    @Param('messageId') messageId: string,
+  ) {
+    return this.chatService.deleteConversationMessage(
+      conversationId,
+      messageId,
+    );
   }
 
   @Post(':id/read')
@@ -192,6 +206,14 @@ export class GroupController {
     @Param('messageId') messageId: string,
   ) {
     return this.groupService.recallOwnerMessage(groupId, messageId);
+  }
+
+  @Delete(':groupId/messages/:messageId')
+  deleteGroupMessage(
+    @Param('groupId') groupId: string,
+    @Param('messageId') messageId: string,
+  ) {
+    return this.groupService.deleteMessage(groupId, messageId);
   }
 
   @Post(':id/pin')
