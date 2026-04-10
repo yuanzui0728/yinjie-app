@@ -8,6 +8,7 @@ import {
   Mic,
   Monitor,
   Plus,
+  Scissors,
   SendHorizontal,
   Smile,
   Star,
@@ -96,6 +97,22 @@ type ImageDraft = {
   height?: number;
 };
 
+type NormalizedCropRect = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+type ScreenshotSelectionDraft = {
+  anchorX: number;
+  anchorY: number;
+  currentX: number;
+  currentY: number;
+  boundsWidth: number;
+  boundsHeight: number;
+};
+
 type AttachmentDraft =
   | {
       kind: "images";
@@ -137,6 +154,12 @@ export function ChatComposer({
   const [plusPanelOpen, setPlusPanelOpen] = useState(false);
   const [attachmentDraft, setAttachmentDraft] =
     useState<AttachmentDraft | null>(null);
+  const [desktopScreenshotDraft, setDesktopScreenshotDraft] =
+    useState<ImageDraft | null>(null);
+  const [desktopScreenshotCrop, setDesktopScreenshotCrop] =
+    useState<NormalizedCropRect | null>(null);
+  const [desktopScreenshotSelection, setDesktopScreenshotSelection] =
+    useState<ScreenshotSelectionDraft | null>(null);
   const [attachmentBusy, setAttachmentBusy] = useState(false);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [mobilePlusNotice, setMobilePlusNotice] = useState<string | null>(null);
@@ -149,6 +172,7 @@ export function ChatComposer({
   const desktopPlusRef = useRef<HTMLDivElement | null>(null);
   const desktopDropDepthRef = useRef(0);
   const desktopInputRef = useRef<HTMLInputElement | null>(null);
+  const desktopScreenshotImageRef = useRef<HTMLImageElement | null>(null);
   const mobileTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const albumInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
@@ -566,6 +590,30 @@ export function ChatComposer({
   }, [attachmentDraft]);
 
   useEffect(() => {
+    return () => {
+      releaseImageDraft(desktopScreenshotDraft);
+    };
+  }, [desktopScreenshotDraft]);
+
+  useEffect(() => {
+    if (!isDesktop || !desktopScreenshotDraft) {
+      return;
+    }
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape" || attachmentBusy) {
+        return;
+      }
+
+      event.preventDefault();
+      closeDesktopScreenshotEditor();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [attachmentBusy, desktopScreenshotDraft, isDesktop]);
+
+  useEffect(() => {
     if (isDesktop && onSendAttachment && !attachmentBusy) {
       return;
     }
@@ -786,11 +834,16 @@ export function ChatComposer({
       const file = new File([blob], buildDesktopScreenshotFileName(), {
         type: "image/png",
       });
+      const screenshotDraft = await createImageDraft(file);
 
       video.pause();
       video.srcObject = null;
-
-      await applyImageDraftFiles([file]);
+      releaseAttachmentDraft(attachmentDraft);
+      setAttachmentDraft(null);
+      releaseImageDraft(desktopScreenshotDraft);
+      setDesktopScreenshotDraft(screenshotDraft);
+      setDesktopScreenshotCrop(null);
+      setDesktopScreenshotSelection(null);
     } catch (captureError) {
       const name =
         captureError instanceof DOMException ? captureError.name : undefined;
@@ -1033,6 +1086,128 @@ export function ChatComposer({
   const handleCancelAttachmentDraft = () => {
     releaseAttachmentDraft(attachmentDraft);
     setAttachmentDraft(null);
+  };
+
+  const closeDesktopScreenshotEditor = () => {
+    releaseImageDraft(desktopScreenshotDraft);
+    setDesktopScreenshotDraft(null);
+    setDesktopScreenshotCrop(null);
+    setDesktopScreenshotSelection(null);
+  };
+
+  const handleDesktopScreenshotPointerDown = (
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) => {
+    if (!desktopScreenshotDraft || attachmentBusy) {
+      return;
+    }
+
+    const bounds = desktopScreenshotImageRef.current?.getBoundingClientRect();
+    if (!bounds || !bounds.width || !bounds.height) {
+      return;
+    }
+
+    const x = clamp(event.clientX - bounds.left, 0, bounds.width);
+    const y = clamp(event.clientY - bounds.top, 0, bounds.height);
+
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    setDesktopScreenshotSelection({
+      anchorX: x,
+      anchorY: y,
+      currentX: x,
+      currentY: y,
+      boundsWidth: bounds.width,
+      boundsHeight: bounds.height,
+    });
+  };
+
+  const handleDesktopScreenshotPointerMove = (
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) => {
+    setDesktopScreenshotSelection((current) => {
+      if (!current) {
+        return current;
+      }
+
+      return {
+        ...current,
+        currentX: clamp(event.nativeEvent.offsetX, 0, current.boundsWidth),
+        currentY: clamp(event.nativeEvent.offsetY, 0, current.boundsHeight),
+      };
+    });
+  };
+
+  const finalizeDesktopScreenshotSelection = (
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) => {
+    if (
+      event.currentTarget.hasPointerCapture?.(event.pointerId)
+    ) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    setDesktopScreenshotSelection((current) => {
+      if (!current) {
+        return current;
+      }
+
+      const normalizedCrop = normalizeSelectionRect(current);
+      setDesktopScreenshotCrop(
+        normalizedCrop &&
+          normalizedCrop.width >= 0.02 &&
+          normalizedCrop.height >= 0.02
+          ? normalizedCrop
+          : null,
+      );
+      return null;
+    });
+  };
+
+  const handleSendDesktopScreenshot = async (mode: "original" | "cropped") => {
+    if (!desktopScreenshotDraft || !onSendAttachment || attachmentBusy) {
+      return;
+    }
+
+    try {
+      let imagePayload: {
+        file: File;
+        fileName: string;
+        width?: number;
+        height?: number;
+      };
+
+      if (mode === "cropped" && desktopScreenshotCrop) {
+        imagePayload = await createCroppedImagePayload(
+          desktopScreenshotDraft,
+          desktopScreenshotCrop,
+        );
+      } else {
+        imagePayload = {
+          file: desktopScreenshotDraft.file,
+          fileName: desktopScreenshotDraft.fileName,
+          width: desktopScreenshotDraft.width,
+          height: desktopScreenshotDraft.height,
+        };
+      }
+
+      const sent = await handleSendAttachment({
+        type: "image",
+        file: imagePayload.file,
+        fileName: imagePayload.fileName,
+        width: imagePayload.width,
+        height: imagePayload.height,
+      });
+
+      if (sent) {
+        closeDesktopScreenshotEditor();
+      }
+    } catch (screenshotError) {
+      setAttachmentError(
+        screenshotError instanceof Error
+          ? screenshotError.message
+          : "截图处理失败，请稍后再试。",
+      );
+    }
   };
 
   const applyMentionCandidate = (candidate: {
@@ -1294,6 +1469,28 @@ export function ChatComposer({
                 : undefined
             }
             onSend={handleSendDraftAttachment}
+          />
+        ) : null}
+        {isDesktop && desktopScreenshotDraft ? (
+          <DesktopScreenshotEditor
+            draft={desktopScreenshotDraft}
+            crop={desktopScreenshotCrop}
+            selection={desktopScreenshotSelection}
+            imageRef={desktopScreenshotImageRef}
+            pending={attachmentBusy}
+            error={attachmentError}
+            onCancel={closeDesktopScreenshotEditor}
+            onClearCrop={() => setDesktopScreenshotCrop(null)}
+            onPointerDown={handleDesktopScreenshotPointerDown}
+            onPointerMove={handleDesktopScreenshotPointerMove}
+            onPointerUp={finalizeDesktopScreenshotSelection}
+            onPointerCancel={finalizeDesktopScreenshotSelection}
+            onSendOriginal={() => {
+              void handleSendDesktopScreenshot("original");
+            }}
+            onSendCropped={() => {
+              void handleSendDesktopScreenshot("cropped");
+            }}
           />
         ) : null}
         {replyPreview ? (
@@ -1979,6 +2176,181 @@ function DesktopAttachmentDraftBar({
   );
 }
 
+function DesktopScreenshotEditor({
+  crop,
+  draft,
+  error,
+  imageRef,
+  pending,
+  selection,
+  onCancel,
+  onClearCrop,
+  onPointerCancel,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onSendCropped,
+  onSendOriginal,
+}: {
+  crop: NormalizedCropRect | null;
+  draft: ImageDraft;
+  error: string | null;
+  imageRef: React.RefObject<HTMLImageElement | null>;
+  pending: boolean;
+  selection: ScreenshotSelectionDraft | null;
+  onCancel: () => void;
+  onClearCrop: () => void;
+  onPointerCancel: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onSendCropped: () => void;
+  onSendOriginal: () => void;
+}) {
+  const selectionRect = selection ? getSelectionPreviewRect(selection) : null;
+  const cropRect = crop ? getNormalizedCropPreviewRect(crop) : null;
+  const activeRect = selectionRect ?? cropRect;
+  const cropPixelSize =
+    crop && draft.width && draft.height
+      ? {
+          width: Math.max(1, Math.round(crop.width * draft.width)),
+          height: Math.max(1, Math.round(crop.height * draft.height)),
+        }
+      : null;
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-[rgba(15,23,42,0.52)] p-6 backdrop-blur-sm">
+      <div className="flex h-[min(86vh,960px)] w-full max-w-6xl flex-col overflow-hidden rounded-[24px] border border-white/12 bg-[#1f1f1f] text-white shadow-[0_32px_80px_rgba(0,0,0,0.32)]">
+        <div className="flex items-start justify-between gap-4 border-b border-white/8 px-5 py-4">
+          <div className="min-w-0">
+            <div className="text-[16px] font-medium">截图预览</div>
+            <div className="mt-1 text-[12px] text-white/58">
+              拖拽框选裁剪范围，不框选时会按原图发送。
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={pending}
+            aria-label="关闭截图预览"
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-white/12 bg-white/6 text-white transition hover:bg-white/10 disabled:opacity-45"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="min-h-0 flex-1 px-5 py-4">
+          <div className="flex h-full min-h-0 flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-2 text-[12px] text-white/62">
+              <span className="rounded-full bg-white/8 px-2.5 py-1">
+                {draft.width && draft.height
+                  ? `${draft.width} × ${draft.height}`
+                  : "截图"}
+              </span>
+              {cropPixelSize ? (
+                <span className="rounded-full bg-[#153726] px-2.5 py-1 text-[#8ef0b2]">
+                  裁剪后 {cropPixelSize.width} × {cropPixelSize.height}
+                </span>
+              ) : (
+                <span className="rounded-full bg-white/8 px-2.5 py-1">
+                  暂未裁剪
+                </span>
+              )}
+            </div>
+
+            <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[18px] border border-white/8 bg-[#111] p-5">
+              <div className="relative inline-block max-h-full max-w-full">
+                <img
+                  ref={imageRef}
+                  src={draft.previewUrl}
+                  alt={draft.fileName}
+                  draggable={false}
+                  className="block max-h-[calc(86vh-240px)] max-w-full rounded-[14px] object-contain shadow-[0_24px_64px_rgba(0,0,0,0.32)]"
+                />
+                <div
+                  className="absolute inset-0 cursor-crosshair"
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerCancel={onPointerCancel}
+                >
+                  {activeRect ? (
+                    <div
+                      className="absolute border-2 border-[#07c160] bg-[rgba(7,193,96,0.14)] shadow-[0_0_0_1px_rgba(255,255,255,0.16)]"
+                      style={{
+                        left: `${activeRect.x * 100}%`,
+                        top: `${activeRect.y * 100}%`,
+                        width: `${activeRect.width * 100}%`,
+                        height: `${activeRect.height * 100}%`,
+                      }}
+                    />
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            {error ? (
+              <InlineNotice className="border-white/10 bg-white/8 text-xs text-white" tone="danger">
+                {error}
+              </InlineNotice>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t border-white/8 px-5 py-4">
+          <div className="text-[12px] text-white/54">
+            {crop
+              ? "重新拖拽可修改裁剪区域。"
+              : "拖拽图片区域即可创建裁剪选区。"}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {crop ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onClearCrop}
+                disabled={pending}
+                className="rounded-[9px] border-white/12 bg-white/6 text-white hover:bg-white/10"
+              >
+                还原
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onCancel}
+              disabled={pending}
+              className="rounded-[9px] border-white/12 bg-white/6 text-white hover:bg-white/10"
+            >
+              取消
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={onSendOriginal}
+              disabled={pending}
+              className="rounded-[9px] bg-[#2f855a] text-white hover:bg-[#276749]"
+            >
+              {pending ? "发送中..." : "按原图发送"}
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              onClick={onSendCropped}
+              disabled={pending || !crop}
+              className="rounded-[9px] bg-[#07c160] text-white hover:bg-[#06ad56]"
+            >
+              <Scissors size={14} />
+              {pending ? "发送中..." : "裁剪后发送"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ReplyPreviewBar({
   variant,
   senderName,
@@ -2216,6 +2588,110 @@ function releaseAttachmentDraft(draft: AttachmentDraft | null) {
   for (const item of draft.items) {
     URL.revokeObjectURL(item.previewUrl);
   }
+}
+
+function releaseImageDraft(draft: ImageDraft | null) {
+  if (!draft) {
+    return;
+  }
+
+  URL.revokeObjectURL(draft.previewUrl);
+}
+
+function getSelectionPreviewRect(selection: ScreenshotSelectionDraft) {
+  const left = Math.min(selection.anchorX, selection.currentX);
+  const top = Math.min(selection.anchorY, selection.currentY);
+  const width = Math.abs(selection.currentX - selection.anchorX);
+  const height = Math.abs(selection.currentY - selection.anchorY);
+
+  return {
+    x: left / selection.boundsWidth,
+    y: top / selection.boundsHeight,
+    width: width / selection.boundsWidth,
+    height: height / selection.boundsHeight,
+  } satisfies NormalizedCropRect;
+}
+
+function getNormalizedCropPreviewRect(crop: NormalizedCropRect) {
+  return crop;
+}
+
+function normalizeSelectionRect(selection: ScreenshotSelectionDraft) {
+  if (!selection.boundsWidth || !selection.boundsHeight) {
+    return null;
+  }
+
+  return getSelectionPreviewRect(selection);
+}
+
+async function createCroppedImagePayload(
+  draft: ImageDraft,
+  crop: NormalizedCropRect,
+) {
+  const width = draft.width ?? 0;
+  const height = draft.height ?? 0;
+  if (!width || !height) {
+    throw new Error("截图尺寸异常，请重新截图。");
+  }
+
+  const sourceX = Math.max(0, Math.floor(crop.x * width));
+  const sourceY = Math.max(0, Math.floor(crop.y * height));
+  const sourceWidth = Math.max(1, Math.round(crop.width * width));
+  const sourceHeight = Math.max(1, Math.round(crop.height * height));
+  const image = await loadImageElement(draft.previewUrl);
+  const canvas = document.createElement("canvas");
+  canvas.width = sourceWidth;
+  canvas.height = sourceHeight;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("截图画布初始化失败。");
+  }
+
+  context.drawImage(
+    image,
+    sourceX,
+    sourceY,
+    sourceWidth,
+    sourceHeight,
+    0,
+    0,
+    sourceWidth,
+    sourceHeight,
+  );
+
+  const blob = await canvasToBlob(canvas);
+
+  return {
+    file: new File([blob], buildCroppedScreenshotFileName(draft.fileName), {
+      type: "image/png",
+    }),
+    fileName: buildCroppedScreenshotFileName(draft.fileName),
+    width: sourceWidth,
+    height: sourceHeight,
+  };
+}
+
+function buildCroppedScreenshotFileName(fileName: string) {
+  const normalized = fileName.trim() || buildDesktopScreenshotFileName();
+  const extensionIndex = normalized.lastIndexOf(".");
+  if (extensionIndex <= 0) {
+    return `${normalized}-cropped.png`;
+  }
+
+  return `${normalized.slice(0, extensionIndex)}-cropped.png`;
+}
+
+function loadImageElement(url: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("截图解析失败，请重新截图。"));
+    image.src = url;
+  });
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
 }
 
 function extractClipboardFiles(clipboardData: DataTransfer | null) {
