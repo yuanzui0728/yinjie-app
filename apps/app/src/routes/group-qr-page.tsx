@@ -232,11 +232,23 @@ export function GroupQrPage() {
           batchId: string;
           batchStartedAt: string;
           items: GroupInviteDeliveryTarget[];
+          reopenedCount: number;
+          status: "closed" | "reopened" | "pending";
         }>
       >((result, record) => {
         const targetBatch = result.find((item) => item.batchId === record.batchId);
+        const hasReopened = reopenRecords.some(
+          (reopenRecord) => reopenRecord.conversationPath === record.conversationPath,
+        );
         if (targetBatch) {
           targetBatch.items.push(record);
+          targetBatch.reopenedCount += hasReopened ? 1 : 0;
+          targetBatch.status =
+            targetBatch.reopenedCount >= targetBatch.items.length
+              ? "closed"
+              : targetBatch.reopenedCount > 0
+                ? "reopened"
+                : "pending";
           return result;
         }
 
@@ -244,10 +256,12 @@ export function GroupQrPage() {
           batchId: record.batchId,
           batchStartedAt: record.batchStartedAt,
           items: [record],
+          reopenedCount: hasReopened ? 1 : 0,
+          status: hasReopened ? "closed" : "pending",
         });
         return result;
       }, []),
-    [deliveryTargets],
+    [deliveryTargets, reopenRecords],
   );
   const deliveryBatchRankById = useMemo(
     () =>
@@ -567,12 +581,32 @@ export function GroupQrPage() {
                     className="space-y-2 rounded-[18px] border border-[rgba(15,23,42,0.08)] bg-white/86 px-4 py-3"
                   >
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="text-xs font-medium tracking-[0.14em] text-[color:var(--brand-secondary)]">
-                        {index === 0 ? "最新发送批次" : `更早批次 ${index + 1}`}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="text-xs font-medium tracking-[0.14em] text-[color:var(--brand-secondary)]">
+                          {index === 0 ? "最新发送批次" : `更早批次 ${index + 1}`}
+                        </div>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${
+                            batch.status === "closed"
+                              ? "bg-[rgba(34,197,94,0.12)] text-[#15803d]"
+                              : batch.status === "reopened"
+                                ? "bg-[rgba(249,115,22,0.12)] text-[color:var(--brand-secondary)]"
+                                : "bg-[rgba(15,23,42,0.06)] text-[color:var(--text-muted)]"
+                          }`}
+                        >
+                          {batch.status === "closed"
+                            ? "本轮已闭环"
+                            : batch.status === "reopened"
+                              ? "已有回流"
+                              : "等待回流"}
+                        </span>
                       </div>
                       <div className="mt-1 text-xs text-[color:var(--text-muted)]">
                         {batch.items.length} 条会话 · 开始于{" "}
                         {formatConversationTimestamp(batch.batchStartedAt)}
+                        {batch.reopenedCount
+                          ? ` · 已回流 ${batch.reopenedCount} 条`
+                          : ""}
                       </div>
                     </div>
                     {batch.items.map((record) => (
