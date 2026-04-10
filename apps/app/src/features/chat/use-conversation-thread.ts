@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getConversationMessages,
@@ -42,6 +42,11 @@ export function useConversationThread(conversationId: string) {
     "direct",
   );
   const [participants, setParticipants] = useState<string[]>([]);
+  const [initialUnreadCount, setInitialUnreadCount] = useState(0);
+  const [initialUnreadCutoff, setInitialUnreadCutoff] = useState<string | null>(
+    null,
+  );
+  const [unreadSnapshotReady, setUnreadSnapshotReady] = useState(false);
   const [messageLimit, setMessageLimit] = useState(INITIAL_MESSAGE_LIMIT);
   const [hasOlderMessages, setHasOlderMessages] = useState(true);
   const scrollAnchor = useScrollAnchor<HTMLDivElement>(messages.length);
@@ -63,6 +68,9 @@ export function useConversationThread(conversationId: string) {
     queryFn: () => getConversations(baseUrl),
     enabled: Boolean(ownerId),
   });
+  const activeConversation = conversationsQuery.data?.find(
+    (item) => item.id === conversationId,
+  );
 
   useEffect(() => {
     setMessages(messagesQuery.data ?? []);
@@ -72,12 +80,13 @@ export function useConversationThread(conversationId: string) {
     setMessageLimit(INITIAL_MESSAGE_LIMIT);
     setHasOlderMessages(true);
     loadMoreRequestRef.current = null;
+    setInitialUnreadCount(0);
+    setInitialUnreadCutoff(null);
+    setUnreadSnapshotReady(false);
   }, [conversationId]);
 
   useEffect(() => {
-    const conversation = conversationsQuery.data?.find(
-      (item) => item.id === conversationId,
-    );
+    const conversation = activeConversation;
     if (!conversation) {
       return;
     }
@@ -85,10 +94,25 @@ export function useConversationThread(conversationId: string) {
     setConversationTitle(conversation.title);
     setConversationType(conversation.type);
     setParticipants(conversation.participants);
-  }, [conversationId, conversationsQuery.data]);
+  }, [activeConversation]);
 
   useEffect(() => {
-    if (!conversationId) {
+    if (unreadSnapshotReady || !conversationsQuery.isFetched) {
+      return;
+    }
+
+    setInitialUnreadCount(activeConversation?.unreadCount ?? 0);
+    setInitialUnreadCutoff(activeConversation?.lastReadAt ?? null);
+    setUnreadSnapshotReady(true);
+  }, [
+    activeConversation?.lastReadAt,
+    activeConversation?.unreadCount,
+    conversationsQuery.isFetched,
+    unreadSnapshotReady,
+  ]);
+
+  useEffect(() => {
+    if (!conversationId || !unreadSnapshotReady) {
       return;
     }
 
@@ -168,7 +192,7 @@ export function useConversationThread(conversationId: string) {
       offConversationUpdated();
       offError();
     };
-  }, [baseUrl, conversationId, ownerId, queryClient]);
+  }, [baseUrl, conversationId, ownerId, queryClient, unreadSnapshotReady]);
 
   useEffect(() => {
     const loadedCount = messagesQuery.data?.length ?? 0;
@@ -400,7 +424,7 @@ export function useConversationThread(conversationId: string) {
     );
   }, [messages]);
 
-  const loadOlderMessages = async () => {
+  const loadOlderMessages = useCallback(async () => {
     if (messagesQuery.isFetching || !hasOlderMessages) {
       return;
     }
@@ -412,12 +436,19 @@ export function useConversationThread(conversationId: string) {
       scrollTop: element?.scrollTop ?? 0,
     };
     setMessageLimit((current) => current + HISTORY_PAGE_SIZE);
-  };
+  }, [
+    hasOlderMessages,
+    messagesQuery.data?.length,
+    messagesQuery.isFetching,
+    scrollAnchor.ref,
+  ]);
 
   return {
     baseUrl,
     conversationTitle,
     conversationType,
+    initialUnreadCount,
+    initialUnreadCutoff,
     hasOlderMessages,
     loadingOlderMessages:
       messagesQuery.isFetching && loadMoreRequestRef.current !== null,
