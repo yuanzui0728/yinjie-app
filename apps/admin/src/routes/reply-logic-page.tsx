@@ -2813,6 +2813,41 @@ function RuntimeRulesEditorCard({
               />
             </ConfigSection>
 
+            <ConfigSection title="Provider 备注模板">
+              <InlineNotice tone="muted">
+                这里改的是回复逻辑总览里 Provider 差异备注，不影响真实推理请求，只影响后台解释文本。
+              </InlineNotice>
+              <TextAreaBlock
+                label="Provider 备注（key=value）"
+                value={recordToLines(draft.providerTemplates)}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    providerTemplates: parseKeyValueLines(value, current.providerTemplates),
+                  }))
+                }
+              />
+            </ConfigSection>
+
+            <ConfigSection title="角色运行备注模板">
+              <InlineNotice tone="muted">
+                这部分会出现在角色运行逻辑台的生活逻辑观测里，用来解释为什么某些调度会跳过角色。
+              </InlineNotice>
+              <TextAreaBlock
+                label="角色运行备注（key=value）"
+                value={recordToLines(draft.runtimeNoteTemplates)}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    runtimeNoteTemplates: parseKeyValueLines(
+                      value,
+                      current.runtimeNoteTemplates,
+                    ),
+                  }))
+                }
+              />
+            </ConfigSection>
+
             <ConfigSection title="调度器任务说明">
               <InlineNotice tone="muted">
                 这里改的是 Scheduler 任务列表里的描述文字，不改 cron 表达式和实际触发频率。
@@ -2850,6 +2885,39 @@ function RuntimeRulesEditorCard({
                       value,
                       current.schedulerNextRunHints,
                     ),
+                  }))
+                }
+              />
+            </ConfigSection>
+
+            <ConfigSection title="调度事件与摘要模板">
+              <InlineNotice tone="muted">
+                这里改的是调度执行结果、生活事件和主动提醒子链路里的文本模板。支持{" "}
+                <code>{"{{count}}"}</code>、<code>{"{{characterCount}}"}</code>、<code>{"{{scene}}"}</code>、<code>{"{{postId}}"}</code>、<code>{"{{activity}}"}</code>、<code>{"{{otherName}}"}</code> 等占位符。
+              </InlineNotice>
+              <TextAreaBlock
+                label="调度事件与摘要（key=value）"
+                value={schedulerTextTemplatesToLines(draft.schedulerTextTemplates)}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    schedulerTextTemplates: parseSchedulerTextTemplateLines(
+                      value,
+                      current.schedulerTextTemplates,
+                    ),
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="主动提醒检查 Prompt（{{characterName}} / {{memoryText}} / {{today}}）"
+                value={draft.schedulerTextTemplates.proactiveReminderCheckPrompt}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    schedulerTextTemplates: {
+                      ...current.schedulerTextTemplates,
+                      proactiveReminderCheckPrompt: value,
+                    },
                   }))
                 }
               />
@@ -3407,10 +3475,15 @@ function formatRuntimeConstants(constants: ReplyLogicOverview["constants"]) {
       预演DirectConversation: constants.inspectorTemplates.previewDirectConversation,
       预演FormalGroup: constants.inspectorTemplates.previewFormalGroup,
     },
+    Provider备注模板: { ...constants.providerTemplates },
+    角色运行备注模板: { ...constants.runtimeNoteTemplates },
     调度器任务配置: {
       任务名称: { ...constants.schedulerNames },
       任务说明: { ...constants.schedulerDescriptions },
       下一次执行提示: { ...constants.schedulerNextRunHints },
+    },
+    调度器文本模板: {
+      ...schedulerTextTemplatesSummary(constants.schedulerTextTemplates),
     },
   } as Record<string, unknown>;
 }
@@ -3461,6 +3534,34 @@ function parseKeyValueLines<T extends object>(value: string, fallback: T): T {
   }
 
   return next as T;
+}
+
+function schedulerTextTemplatesSummary(
+  value: ReplyLogicConstantSummary["schedulerTextTemplates"],
+) {
+  const { proactiveReminderCheckPrompt, ...rest } = value;
+  return {
+    ...rest,
+    proactiveReminderCheckPrompt,
+  };
+}
+
+function schedulerTextTemplatesToLines(
+  value: ReplyLogicConstantSummary["schedulerTextTemplates"],
+) {
+  const { proactiveReminderCheckPrompt, ...rest } = value;
+  return recordToLines(rest);
+}
+
+function parseSchedulerTextTemplateLines(
+  value: string,
+  fallback: ReplyLogicConstantSummary["schedulerTextTemplates"],
+) {
+  const { proactiveReminderCheckPrompt, ...rest } = fallback;
+  return {
+    ...parseKeyValueLines(value, rest),
+    proactiveReminderCheckPrompt,
+  };
 }
 
 function parseWeekdayLabels(value: string, fallback: string[]) {
@@ -3702,28 +3803,7 @@ function formatNarrativeMilestoneLabel(label: string) {
 }
 
 function formatReplyLogicText(value: string) {
-  switch (value) {
-    case "系统 Provider Endpoint 已配置，但当前聊天主链路仍优先使用世界主人自定义 Base 或环境变量 OPENAI_BASE_URL。":
-      return "系统接口地址已配置，但当前聊天主链路仍优先使用世界主人的自定义地址或环境变量 OPENAI_BASE_URL。";
-    case "Provider Model 与聊天主链路实际使用的 ai_model 不一致，页面展示的是当前 generateReply() 真正会拿到的模型。":
-      return "系统配置模型与聊天主链路实际使用的 ai_model 不一致，页面展示的是当前 generateReply() 实际会拿到的模型。";
-    case "当前实例存在可用 API Key，预览使用真实生成链的 prompt 组装结果。":
-      return "当前实例存在可用 API 密钥，预览使用真实生成链的提示词组装结果。";
-    case "当前实例没有可用 API Key，实际聊天会返回“先配置 API Key”的兜底提示。":
-      return "当前实例没有可用 API 密钥，实际聊天会返回“先配置 API 密钥”的兜底提示。";
-    case "群聊 prompt 不会注入单聊 lastChatAt/currentActivity 的行为上下文。":
-      return "群聊提示词不会注入单聊的上次聊天时间和当前活动上下文。";
-    case "单聊 prompt 会注入 currentActivity 和距离上次聊天时间。":
-      return "单聊提示词会注入当前活动以及距离上次聊天的时间。";
-    case "临时群聊已转为 stored conversation":
-      return "临时群聊已转为持久化会话";
-    case "当前会话来自 conversations 表，但类型已经升级为 group。":
-      return "当前会话来自 conversations 表，但类型已经升级为群聊。";
-    case "下一次用户消息会直接按 group 分支让所有参与角色回复。":
-      return "下一次用户消息会直接按群聊分支，让所有参与角色回复。";
-    default:
-      return value;
-  }
+  return value;
 }
 
 function formatDateTime(value?: string | null) {
