@@ -28,7 +28,7 @@ import {
   type GroupMember,
 } from "@yinjie/contracts";
 import { ChevronRight, Search, X } from "lucide-react";
-import { ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
+import { Button, ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
 import { AvatarChip } from "../../../components/avatar-chip";
 import { GroupAvatarChip } from "../../../components/group-avatar-chip";
 import {
@@ -49,6 +49,7 @@ import {
   useDefaultChatBackground,
 } from "../../chat/backgrounds/use-conversation-background";
 import { isPersistedGroupConversation } from "../../../lib/conversation-route";
+import { formatTimestamp } from "../../../lib/format";
 import { useAppRuntimeConfig } from "../../../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../../../store/world-owner-store";
 
@@ -81,6 +82,12 @@ type GroupDetailsEditorConfig = {
 type DirectDetailsConfirmAction = "hide" | "clear" | "report" | "block";
 
 type GroupDetailsConfirmAction = "hide" | "clear" | "leave";
+
+type DesktopGroupMemberBrowserFilter =
+  | "all"
+  | "owner"
+  | "admin"
+  | "character";
 
 export function DesktopChatDetailsPanel({
   conversation,
@@ -1314,6 +1321,17 @@ function GroupChatDetailsPanel({
         members={groupMembers}
         pending={busy}
         onClose={() => setMemberBrowserOpen(false)}
+        onAddMembers={() => {
+          setMemberBrowserOpen(false);
+          setMemberPickerMode("add");
+          setMemberPickerOpen(true);
+        }}
+        onRemoveMembers={() => {
+          setMemberBrowserOpen(false);
+          setMemberPickerMode("remove");
+          setMemberPickerOpen(true);
+        }}
+        canRemoveMembers={removableMembers.length > 0}
         onViewMember={(member) => {
           if (member.memberType !== "character") {
             return;
@@ -1493,6 +1511,9 @@ function DesktopGroupMemberBrowserDialog({
   members,
   pending = false,
   onClose,
+  onAddMembers,
+  onRemoveMembers,
+  canRemoveMembers = false,
   onViewMember,
 }: {
   open: boolean;
@@ -1500,9 +1521,14 @@ function DesktopGroupMemberBrowserDialog({
   members: GroupMember[];
   pending?: boolean;
   onClose: () => void;
+  onAddMembers: () => void;
+  onRemoveMembers: () => void;
+  canRemoveMembers?: boolean;
   onViewMember: (member: GroupMember) => void;
 }) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeFilter, setActiveFilter] =
+    useState<DesktopGroupMemberBrowserFilter>("all");
 
   useEffect(() => {
     if (!open) {
@@ -1510,15 +1536,54 @@ function DesktopGroupMemberBrowserDialog({
     }
 
     setSearchTerm("");
+    setActiveFilter("all");
   }, [groupName, open]);
+
+  const ownerCount = useMemo(
+    () => members.filter((member) => member.role === "owner").length,
+    [members],
+  );
+  const adminCount = useMemo(
+    () => members.filter((member) => member.role === "admin").length,
+    [members],
+  );
+  const characterCount = useMemo(
+    () => members.filter((member) => member.memberType === "character").length,
+    [members],
+  );
+  const filterTabs: Array<{
+    id: DesktopGroupMemberBrowserFilter;
+    label: string;
+    count: number;
+  }> = [
+    { id: "all", label: "全部", count: members.length },
+    { id: "owner", label: "群主", count: ownerCount },
+    { id: "admin", label: "管理员", count: adminCount },
+    { id: "character", label: "角色成员", count: characterCount },
+  ];
 
   const filteredMembers = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
-    if (!keyword) {
-      return members;
-    }
-
     return members.filter((member) => {
+      if (activeFilter === "owner" && member.role !== "owner") {
+        return false;
+      }
+
+      if (activeFilter === "admin" && member.role !== "admin") {
+        return false;
+      }
+
+      if (
+        activeFilter === "character" &&
+        member.memberType !== "character"
+      ) {
+        return false;
+      }
+
+      if (!keyword) {
+        return true;
+      }
+
       const name = (member.memberName ?? member.memberId).toLowerCase();
       const roleLabel =
         member.role === "owner"
@@ -1533,7 +1598,7 @@ function DesktopGroupMemberBrowserDialog({
         member.memberId.toLowerCase().includes(keyword)
       );
     });
-  }, [members, searchTerm]);
+  }, [activeFilter, members, searchTerm]);
 
   if (!open) {
     return null;
@@ -1578,7 +1643,43 @@ function DesktopGroupMemberBrowserDialog({
         </div>
 
         <div className="border-b border-black/6 px-6 py-4">
-          <label className="relative block">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <MemberBrowserStatCard
+              label="全部成员"
+              value={`${members.length} 人`}
+              detail="桌面端完整成员列表"
+            />
+            <MemberBrowserStatCard
+              label="角色成员"
+              value={`${characterCount} 人`}
+              detail="可直接跳转角色资料"
+            />
+            <MemberBrowserStatCard
+              label="管理角色"
+              value={`${ownerCount + adminCount} 人`}
+              detail="群主与管理员"
+            />
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            {filterTabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveFilter(tab.id)}
+                className={cn(
+                  "rounded-full border px-3 py-1.5 text-xs transition",
+                  activeFilter === tab.id
+                    ? "border-[rgba(47,122,63,0.18)] bg-[rgba(244,252,247,0.94)] text-[#2f7a3f]"
+                    : "border-black/8 bg-[#f7f7f7] text-[color:var(--text-secondary)] hover:bg-white",
+                )}
+              >
+                {tab.label} {tab.count}
+              </button>
+            ))}
+          </div>
+
+          <label className="relative mt-4 block">
             <Search
               size={16}
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--text-dim)]"
@@ -1587,10 +1688,34 @@ function DesktopGroupMemberBrowserDialog({
               type="search"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="搜索群成员"
+              placeholder="搜索昵称、角色或成员 ID"
               className="h-11 w-full rounded-2xl border border-black/8 bg-[#f7f7f7] pl-10 pr-4 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-dim)] focus:border-black/12 focus:bg-white"
             />
           </label>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              variant="primary"
+              onClick={onAddMembers}
+              disabled={pending}
+              className="rounded-full"
+            >
+              添加成员
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onRemoveMembers}
+              disabled={pending || !canRemoveMembers}
+              className="rounded-full"
+            >
+              移除成员
+            </Button>
+            <div className="text-xs leading-6 text-[color:var(--text-muted)]">
+              先在这里看完整列表，再决定继续加人、减人或跳转资料。
+            </div>
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto px-4 py-4">
@@ -1647,11 +1772,25 @@ function DesktopGroupMemberBrowserDialog({
                         >
                           {roleLabel}
                         </span>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-2 py-0.5 text-[10px]",
+                            member.memberType === "user"
+                              ? "bg-[rgba(15,23,42,0.06)] text-[color:var(--text-muted)]"
+                              : "bg-[rgba(47,122,63,0.10)] text-[#2f7a3f]",
+                          )}
+                        >
+                          {member.memberType === "user" ? "世界主人" : "角色"}
+                        </span>
                       </div>
                       <div className="mt-1 text-xs text-[color:var(--text-muted)]">
                         {member.memberType === "user"
-                          ? "世界主人"
+                          ? "世界主人资料当前在本地维护"
                           : "点击查看角色资料"}
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-[color:var(--text-dim)]">
+                        <span>ID: {member.memberId}</span>
+                        <span>加入于 {formatTimestamp(member.joinedAt)}</span>
                       </div>
                     </div>
                     {canViewProfile ? (
@@ -1670,6 +1809,30 @@ function DesktopGroupMemberBrowserDialog({
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function MemberBrowserStatCard({
+  label,
+  value,
+  detail,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-[18px] border border-black/6 bg-[#fafafa] px-4 py-3">
+      <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-dim)]">
+        {label}
+      </div>
+      <div className="mt-2 text-base font-medium text-[color:var(--text-primary)]">
+        {value}
+      </div>
+      <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
+        {detail}
       </div>
     </div>
   );
