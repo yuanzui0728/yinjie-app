@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Check, Search, X } from "lucide-react";
@@ -26,6 +26,7 @@ export function CreateGroupPage() {
   const [name, setName] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const previousBaseUrlRef = useRef(baseUrl);
 
   const friendsQuery = useQuery({
     queryKey: ["app-group-friends", baseUrl],
@@ -46,16 +47,17 @@ export function CreateGroupPage() {
     },
   });
 
-  const resetCreateGroupState = useEffectEvent(() => {
+  useEffect(() => {
+    if (previousBaseUrlRef.current === baseUrl) {
+      return;
+    }
+
+    previousBaseUrlRef.current = baseUrl;
     setName("");
     setSelectedIds([]);
     setSearchTerm("");
     createMutation.reset();
-  });
-
-  useEffect(() => {
-    resetCreateGroupState();
-  }, [baseUrl, resetCreateGroupState]);
+  }, [baseUrl, createMutation]);
 
   const friendItems = friendsQuery.data ?? [];
   const filteredFriends = useMemo(() => {
