@@ -5,6 +5,7 @@ import {
   type MouseEvent,
   type PointerEvent,
   type ReactNode,
+  type TouchEvent,
 } from "react";
 import {
   ChevronLeft,
@@ -1070,6 +1071,42 @@ function ImageViewerOverlay({
   onSave: () => void;
 }) {
   const isDesktop = variant === "desktop";
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const touchDeltaXRef = useRef(0);
+
+  const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    if (!touch) {
+      return;
+    }
+
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    touchDeltaXRef.current = 0;
+  };
+
+  const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    const start = touchStartRef.current;
+    if (!touch || !start) {
+      return;
+    }
+
+    touchDeltaXRef.current = touch.clientX - start.x;
+  };
+
+  const handleTouchEnd = () => {
+    const deltaX = touchDeltaXRef.current;
+    const threshold = 48;
+
+    if (deltaX <= -threshold && onNext) {
+      onNext();
+    } else if (deltaX >= threshold && onPrevious) {
+      onPrevious();
+    }
+
+    touchStartRef.current = null;
+    touchDeltaXRef.current = 0;
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-[rgba(15,23,42,0.86)] backdrop-blur-sm">
@@ -1145,6 +1182,9 @@ function ImageViewerOverlay({
         className={`absolute inset-0 flex items-center justify-center ${
           isDesktop ? "px-24 pb-10 pt-24" : "px-4 pb-8 pt-24"
         }`}
+        onTouchStart={isDesktop ? undefined : handleTouchStart}
+        onTouchMove={isDesktop ? undefined : handleTouchMove}
+        onTouchEnd={isDesktop ? undefined : handleTouchEnd}
       >
         <img
           src={activeImage.url}
