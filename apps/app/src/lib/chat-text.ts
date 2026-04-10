@@ -25,6 +25,11 @@ export type ChatTextSegment =
       tone: "member" | "all";
     };
 
+export type ChatMentionSummary = {
+  hasMentionAll: boolean;
+  mentions: string[];
+};
+
 export function sanitizeDisplayedChatText(text: string): string {
   const { body } = extractChatReplyMetadata(text);
   return sanitizeAssistantText(body);
@@ -126,6 +131,21 @@ export function splitChatTextSegments(text: string): ChatTextSegment[] {
           text: sanitized,
         },
       ];
+}
+
+export function summarizeChatMentions(text: string): ChatMentionSummary {
+  const segments = splitChatTextSegments(text);
+  const mentions = segments
+    .filter(
+      (segment): segment is Extract<ChatTextSegment, { kind: "mention" }> =>
+        segment.kind === "mention",
+    )
+    .map((segment) => segment.text);
+
+  return {
+    hasMentionAll: mentions.includes("@所有人"),
+    mentions,
+  };
 }
 
 function sanitizeAssistantText(text: string): string {
