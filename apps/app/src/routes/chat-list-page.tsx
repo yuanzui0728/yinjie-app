@@ -59,6 +59,7 @@ import {
 } from "../features/chat/chat-reminder-entries";
 import {
   ChatReminderCollapseIcon,
+  ChatReminderCollapseLabel,
   ChatReminderCountText,
   ChatReminderSummaryText,
 } from "../features/chat/chat-reminder-summary-text";
@@ -651,14 +652,18 @@ function MobileChatListPage() {
                                   (current) => !current,
                                 )
                               }
-                              className="flex items-center gap-1.5 text-[11px] text-[#8c8c8c]"
+                              className="group flex items-center gap-1.5 text-[11px] text-[#9aa29d] transition-colors hover:text-[#727b75]"
+                              aria-label={
+                                collapsed ? "展开已通知提醒" : "收起已通知提醒"
+                              }
                               aria-expanded={!collapsed}
                             >
                               <ChatReminderCountText count={group.count} />
-                              <span>{collapsed ? "展开" : "收起"}</span>
+                              <ChatReminderCollapseLabel collapsed={collapsed} />
                               <ChatReminderCollapseIcon
                                 collapsed={collapsed}
                                 size={13}
+                                className="opacity-80"
                               />
                             </button>
                           </div>
