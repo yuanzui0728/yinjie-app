@@ -2010,6 +2010,72 @@ function RuntimeRulesEditorCard({
                   }
                 />
               </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <FieldBlock
+                  label="睡眠时段（0-23，逗号分隔）"
+                  value={hourListToCsv(draft.activityScheduleHours.sleeping)}
+                  onChange={(value) =>
+                    onPatch((current) => ({
+                      ...current,
+                      activityScheduleHours: {
+                        ...current.activityScheduleHours,
+                        sleeping: parseHourCsv(
+                          value,
+                          current.activityScheduleHours.sleeping,
+                        ),
+                      },
+                    }))
+                  }
+                />
+                <FieldBlock
+                  label="通勤时段（0-23，逗号分隔）"
+                  value={hourListToCsv(draft.activityScheduleHours.commuting)}
+                  onChange={(value) =>
+                    onPatch((current) => ({
+                      ...current,
+                      activityScheduleHours: {
+                        ...current.activityScheduleHours,
+                        commuting: parseHourCsv(
+                          value,
+                          current.activityScheduleHours.commuting,
+                        ),
+                      },
+                    }))
+                  }
+                />
+                <FieldBlock
+                  label="工作时段（0-23，逗号分隔）"
+                  value={hourListToCsv(draft.activityScheduleHours.working)}
+                  onChange={(value) =>
+                    onPatch((current) => ({
+                      ...current,
+                      activityScheduleHours: {
+                        ...current.activityScheduleHours,
+                        working: parseHourCsv(
+                          value,
+                          current.activityScheduleHours.working,
+                        ),
+                      },
+                    }))
+                  }
+                />
+                <FieldBlock
+                  label="吃饭时段（0-23，逗号分隔）"
+                  value={hourListToCsv(draft.activityScheduleHours.eating)}
+                  onChange={(value) =>
+                    onPatch((current) => ({
+                      ...current,
+                      activityScheduleHours: {
+                        ...current.activityScheduleHours,
+                        eating: parseHourCsv(
+                          value,
+                          current.activityScheduleHours.eating,
+                        ),
+                      },
+                    }))
+                  }
+                />
+              </div>
               <TextAreaBlock
                 label="场景加好友候选（每行一个）"
                 value={listToLines(draft.sceneFriendRequestScenes)}
@@ -3401,6 +3467,24 @@ function listToCsv(items?: string[] | null) {
   return items?.join(", ") ?? "";
 }
 
+function hourListToCsv(items?: number[] | null) {
+  return items?.join(", ") ?? "";
+}
+
+function parseHourCsv(value: string, fallback: number[]) {
+  const next = value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .map((item) => Number(item))
+    .filter((item) => !Number.isNaN(item))
+    .map((item) => clamp(Math.round(item), 0, 23))
+    .filter((item, index, list) => list.indexOf(item) === index)
+    .sort((left, right) => left - right);
+
+  return next.length ? next : fallback;
+}
+
 function parseOptionalHour(value: string) {
   if (!value.trim()) {
     return null;
@@ -3554,6 +3638,12 @@ function formatRuntimeConstants(constants: ReplyLogicOverview["constants"]) {
       朋友圈生成概率: constants.momentGenerateChance,
       视频号生成概率: constants.channelGenerateChance,
       场景加好友概率: constants.sceneFriendRequestChance,
+      基础活动时段: {
+        sleeping: [...constants.activityScheduleHours.sleeping],
+        commuting: [...constants.activityScheduleHours.commuting],
+        working: [...constants.activityScheduleHours.working],
+        eating: [...constants.activityScheduleHours.eating],
+      },
       场景加好友候选: [...constants.sceneFriendRequestScenes],
       AI关系初始类型: constants.relationshipInitialType,
       AI关系初始强度: constants.relationshipInitialStrength,
