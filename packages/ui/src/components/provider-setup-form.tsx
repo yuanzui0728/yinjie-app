@@ -8,9 +8,17 @@ type ProviderSetupFormProps = {
   modeLabel: string;
   modelLabel: string;
   apiKeyLabel: string;
+  transcriptionSectionTitle?: string;
+  transcriptionSectionDescription?: string;
+  transcriptionEndpointLabel?: string;
+  transcriptionModelLabel?: string;
+  transcriptionApiKeyLabel?: string;
   apiKeyPlaceholder: string;
   endpointPlaceholder: string;
   modelPlaceholder: string;
+  transcriptionEndpointPlaceholder?: string;
+  transcriptionModelPlaceholder?: string;
+  transcriptionApiKeyPlaceholder?: string;
   probeLabel: string;
   saveLabel: string;
   draft: ProviderConfig;
@@ -40,9 +48,17 @@ export function ProviderSetupForm({
   modeLabel,
   modelLabel,
   apiKeyLabel,
+  transcriptionSectionTitle,
+  transcriptionSectionDescription,
+  transcriptionEndpointLabel,
+  transcriptionModelLabel,
+  transcriptionApiKeyLabel,
   apiKeyPlaceholder,
   endpointPlaceholder,
   modelPlaceholder,
+  transcriptionEndpointPlaceholder,
+  transcriptionModelPlaceholder,
+  transcriptionApiKeyPlaceholder,
   probeLabel,
   saveLabel,
   draft,
@@ -149,6 +165,71 @@ export function ProviderSetupForm({
             placeholder={apiKeyPlaceholder}
           />
         </label>
+
+        {transcriptionSectionTitle ? (
+          <div className="space-y-4 rounded-[24px] border border-[color:var(--border-faint)] bg-[color:var(--surface-secondary)]/70 p-4">
+            <div>
+              <div className="text-sm font-medium text-[color:var(--text-primary)]">
+                {transcriptionSectionTitle}
+              </div>
+              {transcriptionSectionDescription ? (
+                <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
+                  {transcriptionSectionDescription}
+                </div>
+              ) : null}
+            </div>
+
+            <label className="block space-y-2 text-sm text-[color:var(--text-primary)]">
+              <span>{transcriptionEndpointLabel ?? "转写接口地址"}</span>
+              <input
+                value={draft.transcriptionEndpoint ?? ""}
+                onChange={(event) =>
+                  onChange("transcriptionEndpoint", event.target.value)
+                }
+                disabled={disabled}
+                className="w-full rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-input)] px-4 py-3 text-sm text-[color:var(--text-primary)] outline-none focus:border-[color:var(--border-brand)] focus:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                placeholder={
+                  transcriptionEndpointPlaceholder ?? endpointPlaceholder
+                }
+              />
+            </label>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block space-y-2 text-sm text-[color:var(--text-primary)]">
+                <span>{transcriptionModelLabel ?? "转写模型"}</span>
+                <input
+                  value={draft.transcriptionModel ?? ""}
+                  onChange={(event) =>
+                    onChange("transcriptionModel", event.target.value)
+                  }
+                  disabled={disabled}
+                  list={availableModelsId}
+                  className="w-full rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-input)] px-4 py-3 text-sm text-[color:var(--text-primary)] outline-none focus:border-[color:var(--border-brand)] focus:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder={
+                    transcriptionModelPlaceholder ?? "gpt-4o-mini-transcribe"
+                  }
+                />
+              </label>
+
+              <label className="block space-y-2 text-sm text-[color:var(--text-primary)]">
+                <span>{transcriptionApiKeyLabel ?? "转写 API 密钥"}</span>
+                <input
+                  value={draft.transcriptionApiKey ?? ""}
+                  onChange={(event) =>
+                    onChange("transcriptionApiKey", event.target.value)
+                  }
+                  disabled={disabled}
+                  type="password"
+                  className="w-full rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-input)] px-4 py-3 text-sm text-[color:var(--text-primary)] outline-none focus:border-[color:var(--border-brand)] focus:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder={
+                    transcriptionApiKeyPlaceholder ??
+                    "为空时回退主推理服务 API 密钥"
+                  }
+                />
+              </label>
+            </div>
+          </div>
+        ) : null}
 
         {validationMessage ? (
           <div className="rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-700">

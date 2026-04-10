@@ -247,15 +247,23 @@ export function SetupPage() {
           <ProviderSetupForm
             className="rounded-[30px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-6 shadow-[var(--shadow-card)]"
             title="推理服务配置"
-            description="当世界主人没有配置个人 API 密钥时，这里保存实例级推理服务配置供当前世界兜底使用。"
+            description="当世界主人没有配置个人 API 密钥时，这里保存实例级推理服务配置供当前世界兜底使用；语音转写可额外指定独立网关。"
             statusLabel={providerReady ? "已配置" : "待配置"}
             endpointLabel="接口地址"
             modeLabel="模式"
             modelLabel="模型"
             apiKeyLabel="API 密钥"
+            transcriptionSectionTitle="独立语音转写"
+            transcriptionSectionDescription="可选。这里单独指定 STT 网关、模型和密钥；留空时回退主推理服务配置。适合聊天走 DeepSeek、语音转写走 OpenAI 兼容网关。"
+            transcriptionEndpointLabel="转写接口地址"
+            transcriptionModelLabel="转写模型"
+            transcriptionApiKeyLabel="转写 API 密钥"
             endpointPlaceholder="https://api.openai.com/v1"
             modelPlaceholder="gpt-4.1-mini"
             apiKeyPlaceholder="输入实例级推理服务 API 密钥"
+            transcriptionEndpointPlaceholder="https://api.openai.com/v1"
+            transcriptionModelPlaceholder="gpt-4o-mini-transcribe / whisper-1"
+            transcriptionApiKeyPlaceholder="留空则复用主推理服务 API 密钥"
             probeLabel="测试连接"
             saveLabel="保存配置"
             draft={providerSetup.providerDraft}
@@ -272,7 +280,7 @@ export function SetupPage() {
                   ? providerSetup.providerProbeMutation.data.message
                   : providerSetup.providerSaveMutation.data
                     ? `已保存推理服务 ${providerSetup.providerSaveMutation.data.model}（${formatProviderMode(providerSetup.providerSaveMutation.data.mode)}）`
-                    : "这里保存的是当前世界的实例级推理服务配置。"
+                    : "这里保存的是当前世界的实例级推理服务配置；语音转写也可以单独走另一条兼容网关。"
             }
             onSubmit={providerSetup.submitProviderSave}
             onProbe={providerSetup.submitProviderProbe}
