@@ -480,11 +480,11 @@ export class AiOrchestratorService {
   ) {
     let systemPrompt =
       profile.systemPrompt ??
-      this.promptBuilder.buildChatSystemPrompt(
+      (await this.promptBuilder.buildChatSystemPrompt(
         profile,
         isGroupChat,
         chatContext,
-      );
+      ));
 
     try {
       const worldCtx = await this.worldService.getLatest();
@@ -573,7 +573,7 @@ export class AiOrchestratorService {
 
   async generateMoment(options: GenerateMomentOptions): Promise<string> {
     const { profile, currentTime, recentTopics } = options;
-    const prompt = this.promptBuilder.buildMomentPrompt(
+    const prompt = await this.promptBuilder.buildMomentPrompt(
       profile,
       currentTime,
       recentTopics,
@@ -594,7 +594,7 @@ export class AiOrchestratorService {
     chatSample: string,
     personName: string,
   ): Promise<Record<string, unknown>> {
-    const prompt = this.promptBuilder.buildPersonalityExtractionPrompt(
+    const prompt = await this.promptBuilder.buildPersonalityExtractionPrompt(
       chatSample,
       personName,
     );
@@ -626,15 +626,10 @@ export class AiOrchestratorService {
       .map((m) => `${m.role === 'user' ? '用户' : profile.name}：${m.content}`)
       .join('\n');
 
-    const prompt = `以下是${profile.name}和用户的对话片段：
-${chatHistory}
-
-请从${profile.name}的视角，用100字以内总结：
-1. 用户是什么样的人（性格、喜好、习惯）
-2. 两人聊过什么重要的事
-3. ${profile.name}对用户的印象
-
-只输出总结文字，不要加标题或格式。`;
+    const prompt = await this.promptBuilder.buildMemoryCompressionPrompt(
+      chatHistory,
+      profile,
+    );
 
     try {
       const model = await this.configService.getAiModel();
@@ -665,7 +660,7 @@ ${chatHistory}
       return { needsGroupChat: false, reason: '', requiredDomains: [] };
     }
 
-    const prompt = this.promptBuilder.buildIntentClassificationPrompt(
+    const prompt = await this.promptBuilder.buildIntentClassificationPrompt(
       userMessage,
       characterName,
       characterDomains,
