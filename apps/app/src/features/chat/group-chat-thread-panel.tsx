@@ -33,7 +33,7 @@ import { MobileChatScrollBottomButton } from "./mobile-chat-scroll-bottom-button
 import { MobileChatThreadHeader } from "./mobile-chat-thread-header";
 import { useGroupBackground } from "./backgrounds/use-conversation-background";
 import { useScrollAnchor } from "../../hooks/use-scroll-anchor";
-import { parseTimestamp } from "../../lib/format";
+import { formatTimestamp, parseTimestamp } from "../../lib/format";
 import { useAppRuntimeConfig } from "../../runtime/runtime-config-store";
 
 type GroupChatThreadPanelProps = {
@@ -364,6 +364,31 @@ export function GroupChatThreadPanel({
           }}
         />
       )}
+
+      {isDesktop && announcement ? (
+        <button
+          type="button"
+          onClick={() => {
+            void navigate({
+              to: "/group/$groupId/announcement",
+              params: { groupId },
+            });
+          }}
+          className="flex items-start gap-3 border-b border-black/5 bg-[#f7f7f7] px-6 py-3 text-left transition hover:bg-white"
+        >
+          <span className="mt-0.5 shrink-0 rounded-full bg-[rgba(7,193,96,0.10)] px-2.5 py-1 text-[10px] font-medium tracking-[0.08em] text-[#07a35a]">
+            群公告
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13px] text-[color:var(--text-primary)]">
+              {announcement}
+            </div>
+            <div className="mt-1 text-[11px] text-[color:var(--text-muted)]">
+              最近更新 {formatTimestamp(groupQuery.data?.updatedAt)}
+            </div>
+          </div>
+        </button>
+      ) : null}
 
       {!isDesktop && announcement ? (
         <button
