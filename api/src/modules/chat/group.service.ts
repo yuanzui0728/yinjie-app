@@ -26,6 +26,7 @@ import { ReplyLogicRulesService } from '../ai/reply-logic-rules.service';
 import { sanitizeAiText } from '../ai/ai-text-sanitizer';
 import { CharactersService } from '../characters/characters.service';
 import { WorldOwnerService } from '../auth/world-owner.service';
+import { ChatGateway } from './chat.gateway';
 
 export interface CreateGroupDto {
   name: string;
@@ -104,6 +105,7 @@ export class GroupService {
     private readonly characters: CharactersService,
     private readonly worldOwnerService: WorldOwnerService,
     private readonly replyLogicRules: ReplyLogicRulesService,
+    private readonly chatGateway: ChatGateway,
   ) {}
 
   async createGroup(dto: CreateGroupDto): Promise<Group> {
@@ -170,6 +172,7 @@ export class GroupService {
 
     await this.memberRepo.save(member);
     this.logger.log(`Added member ${dto.memberId} to group ${groupId}`);
+    await this.emitGroupConversationUpdated(groupId);
     return member;
   }
 
@@ -255,6 +258,7 @@ export class GroupService {
           : nextAnnouncement,
     });
 
+    await this.emitGroupConversationUpdated(groupId);
     return this.toGroup(updated);
   }
 
@@ -285,6 +289,7 @@ export class GroupService {
         dto.notifyOnAnnouncement ?? group.notifyOnAnnouncement ?? true,
     });
 
+    await this.emitGroupConversationUpdated(groupId);
     return this.toGroup(updated);
   }
 
@@ -308,6 +313,7 @@ export class GroupService {
       lastReadAt: now,
     });
 
+    await this.emitGroupConversationUpdated(groupId);
     return this.toGroup(updated);
   }
 
@@ -390,7 +396,9 @@ export class GroupService {
       attachmentPayload: null,
     });
 
-    return this.toGroupMessage(recalled);
+    const recalledMessage = this.toGroupMessage(recalled);
+    this.chatGateway.emitThreadMessage(groupId, recalledMessage);
+    return recalledMessage;
   }
 
   async deleteMessage(
@@ -409,6 +417,7 @@ export class GroupService {
 
     await this.messageRepo.delete({ id: message.id });
     await this.syncGroupLastActivity(group);
+    await this.emitGroupConversationUpdated(groupId);
 
     return { success: true };
   }
@@ -475,6 +484,7 @@ export class GroupService {
     }
 
     await this.memberRepo.delete({ id: member.id });
+    await this.emitGroupConversationUpdated(groupId);
     return { success: true as const };
   }
 
@@ -508,7 +518,9 @@ export class GroupService {
       message.createdAt ?? new Date(),
       senderType === 'user',
     );
-    return this.toGroupMessage(message);
+    const nextMessage = this.toGroupMessage(message);
+    this.chatGateway.emitThreadMessage(groupId, nextMessage);
+    return nextMessage;
   }
 
   async sendOwnerMessage(groupId: string, input: SendGroupMessageInput) {
@@ -986,6 +998,25 @@ export class GroupService {
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
     };
+  }
+
+  private async emitGroupConversationUpdated(groupId: string) {
+    const group = await this.groupRepo.findOneBy({ id: groupId });
+    if (!group) {
+      return;
+    }
+
+    const members = await this.memberRepo.find({
+      where: { groupId },
+      order: { joinedAt: 'ASC' },
+    });
+
+    this.chatGateway.emitConversationUpdated({
+      id: groupId,
+      type: 'group',
+      title: group.name,
+      participants: members.map((member) => member.memberId),
+    });
   }
 
   private async touchGroupActivity(

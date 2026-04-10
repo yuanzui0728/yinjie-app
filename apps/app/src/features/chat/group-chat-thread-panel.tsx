@@ -5,6 +5,7 @@ import {
   getGroup,
   getGroupMembers,
   getGroupMessages,
+  type GroupMessage,
   markGroupRead,
   sendGroupMessage,
   type StickerAttachment,
@@ -34,6 +35,11 @@ import { MobileChatThreadHeader } from "./mobile-chat-thread-header";
 import { useGroupBackground } from "./backgrounds/use-conversation-background";
 import { useScrollAnchor } from "../../hooks/use-scroll-anchor";
 import { formatTimestamp, parseTimestamp } from "../../lib/format";
+import {
+  joinConversationRoom,
+  onChatMessage,
+  onConversationUpdated,
+} from "../../lib/socket";
 import { useAppRuntimeConfig } from "../../runtime/runtime-config-store";
 
 type GroupChatThreadPanelProps = {
@@ -89,7 +95,6 @@ export function GroupChatThreadPanel({
   const messagesQuery = useQuery({
     queryKey: ["app-group-messages", baseUrl, groupId, messageLimit],
     queryFn: () => getGroupMessages(groupId, baseUrl, { limit: messageLimit }),
-    refetchInterval: 3_000,
   });
   const {
     ref: scrollAnchorRef,
@@ -106,6 +111,54 @@ export function GroupChatThreadPanel({
     setHasOlderMessages(true);
     loadMoreRequestRef.current = null;
   }, [baseUrl, groupId]);
+
+  useEffect(() => {
+    if (!groupId) {
+      return;
+    }
+
+    joinConversationRoom({ conversationId: groupId });
+
+    const offMessage = onChatMessage((payload) => {
+      if (!("groupId" in payload) || payload.groupId !== groupId) {
+        return;
+      }
+
+      queryClient.setQueriesData<GroupMessage[] | undefined>(
+        {
+          queryKey: ["app-group-messages", baseUrl, groupId],
+        },
+        (current) => upsertGroupMessage(current, payload),
+      );
+      void queryClient.invalidateQueries({
+        queryKey: ["app-conversations", baseUrl],
+      });
+    });
+
+    const offConversationUpdated = onConversationUpdated((payload) => {
+      if (payload.type !== "group" || payload.id !== groupId) {
+        return;
+      }
+
+      void queryClient.invalidateQueries({
+        queryKey: ["app-group", baseUrl, groupId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["app-group-members", baseUrl, groupId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["app-group-messages", baseUrl, groupId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["app-conversations", baseUrl],
+      });
+    });
+
+    return () => {
+      offMessage();
+      offConversationUpdated();
+    };
+  }, [baseUrl, groupId, queryClient]);
 
   useEffect(() => {
     if (!groupId) {
@@ -655,6 +708,24 @@ function describeReplyPreview(message: ChatRenderableMessage) {
   }
 
   return "消息";
+}
+
+function upsertGroupMessage(
+  current: GroupMessage[] | undefined,
+  incoming: GroupMessage,
+) {
+  if (!current?.length) {
+    return [incoming];
+  }
+
+  const existingIndex = current.findIndex((message) => message.id === incoming.id);
+  if (existingIndex < 0) {
+    return [...current, incoming];
+  }
+
+  const nextMessages = [...current];
+  nextMessages[existingIndex] = incoming;
+  return nextMessages;
 }
 
 const INITIAL_MESSAGE_LIMIT = 60;
