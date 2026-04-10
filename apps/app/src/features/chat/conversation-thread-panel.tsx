@@ -56,7 +56,9 @@ export function ConversationThreadPanel({
       ? `${participants.length || 0} 人群聊`
       : typingCharacterId
         ? "对方正在输入..."
-        : "连接顺畅";
+        : isDesktop
+          ? undefined
+          : "连接顺畅";
 
   const hasHighlightedMessage = renderedMessages.some(
     (message) => message.id === highlightedMessageId,
@@ -91,10 +93,12 @@ export function ConversationThreadPanel({
             <div className="truncate text-[17px] font-medium text-[color:var(--text-primary)]">
               {conversationTitle}
             </div>
-            <div className="mt-1 flex items-center gap-2 text-[11px] text-[color:var(--text-muted)]">
-              {conversationType === "group" ? <Users size={12} /> : null}
-              <span>{subtitle}</span>
-            </div>
+            {subtitle ? (
+              <div className="mt-1 flex items-center gap-2 text-[11px] text-[color:var(--text-muted)]">
+                {conversationType === "group" ? <Users size={12} /> : null}
+                <span>{subtitle}</span>
+              </div>
+            ) : null}
           </div>
 
           <div className="hidden items-center gap-1.5 xl:flex">
