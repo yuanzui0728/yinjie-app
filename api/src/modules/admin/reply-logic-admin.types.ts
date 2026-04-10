@@ -109,6 +109,36 @@ export interface ReplyLogicObservabilityTemplates {
   actorNoteDirectContext: string;
 }
 
+export interface ReplyLogicWorldContextRules {
+  seasonLabels: {
+    spring: string;
+    summer: string;
+    autumn: string;
+    winter: string;
+  };
+  weatherOptions: {
+    spring: string[];
+    summer: string[];
+    autumn: string[];
+    winter: string[];
+  };
+  holidays: Array<{
+    month: number;
+    day: number;
+    label: string;
+  }>;
+  localTimeTemplate: string;
+  contextFieldTemplates: {
+    currentTime: string;
+    season: string;
+    weather: string;
+    location: string;
+    holiday: string;
+  };
+  contextSeparator: string;
+  promptContextTemplate: string;
+}
+
 export interface ReplyLogicOverviewCharacterItem {
   id: string;
   name: string;
@@ -163,6 +193,7 @@ export interface ReplyLogicOverview {
     promptTemplates: ReplyLogicPromptTemplates;
     semanticLabels: ReplyLogicSemanticLabels;
     observabilityTemplates: ReplyLogicObservabilityTemplates;
+    worldContextRules: ReplyLogicWorldContextRules;
   };
   worldContext?: ReplyLogicWorldContextSummary | null;
   characters: ReplyLogicOverviewCharacterItem[];
