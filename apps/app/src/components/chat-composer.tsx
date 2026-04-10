@@ -2592,6 +2592,13 @@ function DesktopScreenshotEditor({
           height: Math.max(1, Math.round(crop.height * draft.height)),
         }
       : null;
+  const previewPixelSize =
+    previewRect && draft.width && draft.height
+      ? {
+          width: Math.max(1, Math.round(previewRect.width * draft.width)),
+          height: Math.max(1, Math.round(previewRect.height * draft.height)),
+        }
+      : null;
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-[rgba(15,23,42,0.52)] p-6 backdrop-blur-sm">
@@ -2703,6 +2710,11 @@ function DesktopScreenshotEditor({
                         height: `${cropRect.height * 100}%`,
                       }}
                     >
+                      {cropPixelSize ? (
+                        <div className="pointer-events-none absolute -top-10 left-0 rounded-full border border-[#0a7d45] bg-[rgba(6,48,27,0.9)] px-2.5 py-1 text-[11px] font-medium text-[#98f5ba] shadow-[0_10px_24px_rgba(0,0,0,0.28)]">
+                          {cropPixelSize.width} × {cropPixelSize.height}
+                        </div>
+                      ) : null}
                       <button
                         type="button"
                         onPointerDown={onCropMoveStart}
@@ -2770,7 +2782,13 @@ function DesktopScreenshotEditor({
                         width: `${previewRect.width * 100}%`,
                         height: `${previewRect.height * 100}%`,
                       }}
-                    />
+                    >
+                      {selection?.mode === "crop" && previewPixelSize ? (
+                        <div className="pointer-events-none absolute -top-10 left-0 rounded-full border border-[#0a7d45] bg-[rgba(6,48,27,0.88)] px-2.5 py-1 text-[11px] font-medium text-[#98f5ba] shadow-[0_10px_24px_rgba(0,0,0,0.28)]">
+                          {previewPixelSize.width} × {previewPixelSize.height}
+                        </div>
+                      ) : null}
+                    </div>
                   ) : null}
                   <svg
                     viewBox="0 0 1 1"
