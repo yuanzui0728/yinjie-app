@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
 import { SocialService } from './social.service';
 
 @Controller('social')
@@ -45,6 +45,11 @@ export class SocialController {
     },
   ) {
     return this.socialService.updateFriendProfile(characterId, body);
+  }
+
+  @Delete('friends/:characterId')
+  deleteFriend(@Param('characterId') characterId: string) {
+    return this.socialService.deleteFriend(characterId);
   }
 
   @Get('blocks')

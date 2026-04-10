@@ -30,6 +30,8 @@ type ContactDetailPaneProps = {
   isBlocked?: boolean;
   blockPending?: boolean;
   onToggleBlock?: () => void;
+  deletePending?: boolean;
+  onDeleteFriend?: () => void;
 };
 
 type FriendProfileFormState = {
@@ -59,6 +61,8 @@ export function ContactDetailPane({
   isBlocked = false,
   blockPending = false,
   onToggleBlock,
+  deletePending = false,
+  onDeleteFriend,
 }: ContactDetailPaneProps) {
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
@@ -338,7 +342,17 @@ export function ContactDetailPane({
                   disabled={blockPending}
                 />
               ) : null}
-              <StaticDetailRow label="删除联系人" value="后续接入" muted />
+              {onDeleteFriend ? (
+                <ActionDetailRow
+                  label="删除联系人"
+                  value={deletePending ? "正在删除..." : "从通讯录移除"}
+                  onClick={onDeleteFriend}
+                  danger
+                  disabled={deletePending}
+                />
+              ) : (
+                <StaticDetailRow label="删除联系人" value="后续接入" muted />
+              )}
             </DetailSection>
           ) : null}
         </section>

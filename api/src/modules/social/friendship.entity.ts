@@ -15,7 +15,7 @@ export class FriendshipEntity {
   intimacyLevel: number; // 0-100
 
   @Column({ default: 'friend' })
-  status: string; // 'friend' | 'close' | 'best'
+  status: string; // 'friend' | 'close' | 'best' | 'blocked' | 'removed'
 
   @Column({ default: false })
   isStarred: boolean;

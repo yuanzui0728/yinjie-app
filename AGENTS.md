@@ -206,6 +206,9 @@
   - `POST /api/social/friends/:characterId/star`
 - 社交联系人资料路由已提供：
   - `PATCH /api/social/friends/:characterId/profile`
+- 社交删除联系人路由已提供：
+  - `DELETE /api/social/friends/:characterId`
+- `Friendship.status` 现已支持 `removed`，用于承载已从通讯录移除但需保留关系记录的联系人状态
 - `packages/contracts/src/evals.ts` now uses `ownerId` for trace owner semantics.
 - `ConversationEntity` now uses runtime field `ownerId`, while the physical database column remains `userId`.
 - `FriendshipEntity`, `FriendRequestEntity`, and `NarrativeArcEntity` now use runtime field `ownerId`, while their physical columns remain `userId`.

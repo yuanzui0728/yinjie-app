@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Not, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import { FriendshipEntity } from './friendship.entity';
 import { FriendRequestEntity } from './friend-request.entity';
 import { AIRelationshipEntity } from './ai-relationship.entity';
@@ -46,8 +46,9 @@ export class SocialService {
 
     const existing = await this.friendshipRepo.findOneBy({ ownerId: owner.id, characterId: req.characterId });
     if (existing) {
+      existing.status = 'friend';
       await this.narrativeService.ensureArc(req.characterId, req.characterName);
-      return existing;
+      return this.friendshipRepo.save(existing);
     }
 
     const friendship = this.friendshipRepo.create({
@@ -69,7 +70,7 @@ export class SocialService {
     const owner = await this.worldOwnerService.getOwnerOrThrow();
     await this.ensureDefaultFriendships(owner.id);
     const friendships = await this.friendshipRepo.find({
-      where: { ownerId: owner.id, status: Not('blocked') },
+      where: { ownerId: owner.id, status: Not(In(['blocked', 'removed'])) },
     });
     const result = await Promise.all(
       friendships.map(async (friendship) => ({
@@ -84,7 +85,7 @@ export class SocialService {
     const owner = await this.worldOwnerService.getOwnerOrThrow();
     const friendship = await this.friendshipRepo.findOneBy({ ownerId: owner.id, characterId });
 
-    if (!friendship || friendship.status === 'blocked') {
+    if (!friendship || friendship.status === 'blocked' || friendship.status === 'removed') {
       throw new Error('Friend not found');
     }
 
@@ -105,7 +106,7 @@ export class SocialService {
     const owner = await this.worldOwnerService.getOwnerOrThrow();
     const friendship = await this.friendshipRepo.findOneBy({ ownerId: owner.id, characterId });
 
-    if (!friendship || friendship.status === 'blocked') {
+    if (!friendship || friendship.status === 'blocked' || friendship.status === 'removed') {
       throw new Error('Friend not found');
     }
 
@@ -121,7 +122,7 @@ export class SocialService {
     const resolvedOwnerId = ownerId ?? (await this.worldOwnerService.getOwnerOrThrow()).id;
     await this.ensureDefaultFriendships(resolvedOwnerId);
     const friendships = await this.friendshipRepo.find({
-      where: { ownerId: resolvedOwnerId, status: Not('blocked') },
+      where: { ownerId: resolvedOwnerId, status: Not(In(['blocked', 'removed'])) },
     });
     return friendships.map((friendship) => friendship.characterId);
   }
@@ -333,6 +334,21 @@ export class SocialService {
     }
 
     await this.friendshipRepo.remove(existing);
+  }
+
+  async deleteFriend(characterId: string): Promise<{ success: true }> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
+    const existing = await this.friendshipRepo.findOneBy({ ownerId: owner.id, characterId });
+
+    if (!existing || existing.status === 'blocked' || existing.status === 'removed') {
+      return { success: true };
+    }
+
+    existing.status = 'removed';
+    existing.isStarred = false;
+    existing.starredAt = null;
+    await this.friendshipRepo.save(existing);
+    return { success: true };
   }
 
   async updateIntimacy(characterId: string, delta: number): Promise<void> {
