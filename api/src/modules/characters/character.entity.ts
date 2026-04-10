@@ -60,7 +60,7 @@ export class CharacterEntity {
   @Column({ default: 0 })
   intimacyLevel: number; // 0-100
 
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   lastActiveAt?: Date;
 
   // AI relationship network

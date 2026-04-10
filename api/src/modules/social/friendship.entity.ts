@@ -20,7 +20,7 @@ export class FriendshipEntity {
   @Column({ default: false })
   isStarred: boolean;
 
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   starredAt?: Date | null;
 
   @Column({ nullable: true })
@@ -38,6 +38,6 @@ export class FriendshipEntity {
   @CreateDateColumn()
   createdAt: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   lastInteractedAt?: Date;
 }

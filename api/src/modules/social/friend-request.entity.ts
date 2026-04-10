@@ -29,6 +29,6 @@ export class FriendRequestEntity {
   @CreateDateColumn()
   createdAt: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   expiresAt?: Date; // daily expiry
 }
