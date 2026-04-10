@@ -7,6 +7,8 @@ export type ContactShortcutListItem = {
   label: string;
   subtitle?: string;
   badgeCount?: number;
+  disabled?: boolean;
+  disabledLabel?: string;
   icon: LucideIcon;
   iconClassName: string;
   onClick: () => void;
@@ -36,12 +38,18 @@ export function ContactShortcutList({
           <button
             key={item.key}
             type="button"
+            disabled={item.disabled}
             onClick={item.onClick}
             className={cn(
               "flex w-full items-center gap-3 bg-[color:var(--bg-canvas-elevated)] text-left transition-colors",
               compact
-                ? "px-4 py-3.5 hover:bg-[rgba(249,115,22,0.05)]"
-                : "px-4 py-3 hover:bg-[#f7f7f7]",
+                ? item.disabled
+                  ? "cursor-not-allowed px-4 py-3.5"
+                  : "px-4 py-3.5 hover:bg-[rgba(249,115,22,0.05)]"
+                : item.disabled
+                  ? "cursor-not-allowed px-4 py-3"
+                  : "px-4 py-3 hover:bg-[#f7f7f7]",
+              item.disabled ? "opacity-60" : "",
               index > 0
                 ? "border-t border-[color:var(--border-faint)]"
                 : undefined,
@@ -61,9 +69,19 @@ export function ContactShortcutList({
               <div className="truncate text-[16px] text-[color:var(--text-primary)]">
                 {item.label}
               </div>
+              {!compact && item.disabledLabel ? (
+                <div className="mt-0.5 truncate text-[11px] text-[color:var(--text-dim)]">
+                  {item.disabledLabel}
+                </div>
+              ) : null}
               {compact && item.subtitle ? (
                 <div className="mt-0.5 truncate text-xs text-[color:var(--text-muted)]">
                   {item.subtitle}
+                </div>
+              ) : null}
+              {compact && item.disabledLabel ? (
+                <div className="mt-0.5 truncate text-[11px] text-[color:var(--text-dim)]">
+                  {item.disabledLabel}
                 </div>
               ) : null}
             </div>
@@ -74,7 +92,12 @@ export function ContactShortcutList({
               </div>
             ) : null}
 
-            <ChevronRight size={16} className="shrink-0 text-[color:var(--text-dim)]" />
+            {item.disabled ? null : (
+              <ChevronRight
+                size={16}
+                className="shrink-0 text-[color:var(--text-dim)]"
+              />
+            )}
           </button>
         );
       })}

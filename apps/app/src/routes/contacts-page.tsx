@@ -560,10 +560,6 @@ export function ContactsPage() {
     void navigate({ to });
   }
 
-  function handleUnavailableAction(message: string) {
-    setNotice(message);
-  }
-
   function handleOpenWorldCharacters() {
     setNotice(null);
 
@@ -711,10 +707,12 @@ export function ContactsPage() {
     {
       key: "tags",
       label: "标签",
-      subtitle: "暂未开放",
+      subtitle: "待接入真实标签能力",
+      disabled: true,
+      disabledLabel: "暂未开放",
       icon: Tag,
       iconClassName: "bg-[linear-gradient(135deg,#fb923c,#f97316)]",
-      onClick: () => handleUnavailableAction("标签功能暂未开放。"),
+      onClick: () => {},
     },
     {
       key: "official-accounts",
