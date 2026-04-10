@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Check, Search, X } from "lucide-react";
@@ -45,7 +51,12 @@ export function DesktopCreateGroupDialog({
   const [messageSelectionNotice, setMessageSelectionNotice] = useState<
     string | null
   >(null);
+  const [focusedFriendIndex, setFocusedFriendIndex] = useState(0);
+  const [focusedMessageIndex, setFocusedMessageIndex] = useState(0);
   const seededSelectionRef = useRef("");
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const friendItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const messageItemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const friendsQuery = useQuery({
     queryKey: ["desktop-create-group-friends", baseUrl],
@@ -145,9 +156,21 @@ export function DesktopCreateGroupDialog({
     setShareHistory(false);
     setSelectedMessageIds([]);
     setMessageSelectionNotice(null);
+    setFocusedFriendIndex(0);
+    setFocusedMessageIndex(0);
     seededSelectionRef.current = "";
     createMutation.reset();
   }, [createMutation, open]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+  }, [open]);
 
   useEffect(() => {
     if (!messageSelectionNotice) {
@@ -176,6 +199,50 @@ export function DesktopCreateGroupDialog({
 
     setSelectedMessageIds(nextSelection);
   }, [open, selectedMessageIds.length, shareHistory, shareableMessages]);
+
+  useEffect(() => {
+    if (!filteredFriends.length) {
+      setFocusedFriendIndex(0);
+      return;
+    }
+
+    setFocusedFriendIndex((current) =>
+      Math.min(Math.max(current, 0), filteredFriends.length - 1),
+    );
+  }, [filteredFriends.length]);
+
+  useEffect(() => {
+    if (!shareableMessages.length) {
+      setFocusedMessageIndex(0);
+      return;
+    }
+
+    setFocusedMessageIndex((current) =>
+      Math.min(Math.max(current, 0), shareableMessages.length - 1),
+    );
+  }, [shareableMessages.length]);
+
+  useEffect(() => {
+    const focusedFriend = filteredFriends[focusedFriendIndex];
+    if (!focusedFriend) {
+      return;
+    }
+
+    friendItemRefs.current[focusedFriend.character.id]?.scrollIntoView({
+      block: "nearest",
+    });
+  }, [filteredFriends, focusedFriendIndex]);
+
+  useEffect(() => {
+    const focusedMessage = shareableMessages[focusedMessageIndex];
+    if (!focusedMessage) {
+      return;
+    }
+
+    messageItemRefs.current[focusedMessage.id]?.scrollIntoView({
+      block: "nearest",
+    });
+  }, [focusedMessageIndex, shareableMessages]);
 
   useEffect(() => {
     if (!open) {
@@ -271,6 +338,109 @@ export function DesktopCreateGroupDialog({
     setSelectedMessageIds(dedupedIds.slice(0, MAX_SHARED_MESSAGE_COUNT));
   };
 
+  const handleCreate = () => {
+    if (!selectedIds.length || createMutation.isPending) {
+      return;
+    }
+
+    createMutation.mutate();
+  };
+
+  const handleDialogKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (
+      (event.metaKey || event.ctrlKey) &&
+      event.key === "Enter" &&
+      selectedIds.length &&
+      !createMutation.isPending
+    ) {
+      event.preventDefault();
+      handleCreate();
+    }
+  };
+
+  const handleSearchKeyDown = (
+    event: ReactKeyboardEvent<HTMLInputElement>,
+  ) => {
+    if (event.key === "ArrowDown") {
+      if (!filteredFriends.length) {
+        return;
+      }
+
+      event.preventDefault();
+      setFocusedFriendIndex((current) =>
+        current >= filteredFriends.length - 1 ? 0 : current + 1,
+      );
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      if (!filteredFriends.length) {
+        return;
+      }
+
+      event.preventDefault();
+      setFocusedFriendIndex((current) =>
+        current <= 0 ? filteredFriends.length - 1 : current - 1,
+      );
+      return;
+    }
+
+    if (
+      event.key === "Backspace" &&
+      !searchTerm.trim() &&
+      selectedIds.length &&
+      !createMutation.isPending
+    ) {
+      event.preventDefault();
+      setSelectedIds((current) => current.slice(0, -1));
+      return;
+    }
+
+    if (event.key === "Enter") {
+      const focusedFriend = filteredFriends[focusedFriendIndex];
+      if (!focusedFriend || createMutation.isPending) {
+        return;
+      }
+
+      event.preventDefault();
+      toggleSelection(focusedFriend.character.id);
+    }
+  };
+
+  const handleSharedMessagesKeyDown = (
+    event: ReactKeyboardEvent<HTMLDivElement>,
+  ) => {
+    if (!shareableMessages.length) {
+      return;
+    }
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setFocusedMessageIndex((current) =>
+        current >= shareableMessages.length - 1 ? 0 : current + 1,
+      );
+      return;
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setFocusedMessageIndex((current) =>
+        current <= 0 ? shareableMessages.length - 1 : current - 1,
+      );
+      return;
+    }
+
+    if (event.key === "Enter" || event.key === " ") {
+      const focusedMessage = shareableMessages[focusedMessageIndex];
+      if (!focusedMessage) {
+        return;
+      }
+
+      event.preventDefault();
+      toggleMessageSelection(focusedMessage.id);
+    }
+  };
+
   if (!open) {
     return null;
   }
@@ -288,7 +458,10 @@ export function DesktopCreateGroupDialog({
         className="absolute inset-0"
       />
 
-      <div className="relative flex h-[min(720px,82vh)] w-full max-w-[640px] flex-col overflow-hidden rounded-[20px] border border-black/8 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.18)]">
+      <div
+        className="relative flex h-[min(720px,82vh)] w-full max-w-[640px] flex-col overflow-hidden rounded-[20px] border border-black/8 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.18)]"
+        onKeyDown={handleDialogKeyDown}
+      >
         <div className="flex items-start justify-between gap-4 border-b border-black/6 px-6 py-5">
           <div>
             <div className="text-[18px] font-medium text-[color:var(--text-primary)]">
@@ -326,9 +499,11 @@ export function DesktopCreateGroupDialog({
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--text-dim)]"
             />
             <input
+              ref={searchInputRef}
               type="search"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
+              onKeyDown={handleSearchKeyDown}
               placeholder="搜索联系人"
               className="h-11 w-full rounded-[12px] border border-black/8 bg-[#f8f8f8] pl-10 pr-4 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-dim)] focus:border-black/12 focus:bg-white"
             />
@@ -460,17 +635,35 @@ export function DesktopCreateGroupDialog({
                           </button>
                         </div>
                       </div>
-                      <div className="max-h-56 space-y-1 overflow-auto rounded-[10px] bg-white p-1.5">
+                      <div
+                        tabIndex={0}
+                        onKeyDown={handleSharedMessagesKeyDown}
+                        className="max-h-56 space-y-1 overflow-auto rounded-[10px] bg-white p-1.5 outline-none ring-offset-0 focus:ring-2 focus:ring-[rgba(7,193,96,0.22)]"
+                        aria-label="可分享聊天记录列表"
+                      >
                         {shareableMessages.map((message) => {
                           const checked = selectedMessageIds.includes(message.id);
+                          const focused =
+                            focusedMessageIndex ===
+                            shareableMessages.findIndex(
+                              (item) => item.id === message.id,
+                            );
                           return (
                             <button
                               key={message.id}
                               type="button"
+                              ref={(node) => {
+                                messageItemRefs.current[message.id] = node;
+                              }}
                               onClick={() => toggleMessageSelection(message.id)}
                               className={cn(
                                 "flex w-full items-start gap-3 rounded-[10px] px-3 py-2.5 text-left transition",
-                                checked ? "bg-[rgba(7,193,96,0.08)]" : "hover:bg-[#f7f7f7]",
+                                checked
+                                  ? "bg-[rgba(7,193,96,0.08)]"
+                                  : "hover:bg-[#f7f7f7]",
+                                focused
+                                  ? "ring-1 ring-[rgba(7,193,96,0.24)]"
+                                  : "",
                               )}
                             >
                               <div
@@ -547,13 +740,17 @@ export function DesktopCreateGroupDialog({
           ) : null}
 
           <div className="space-y-1">
-            {filteredFriends.map((item) => {
+            {filteredFriends.map((item, index) => {
               const displayName = getFriendDisplayName(item);
               const checked = selectedIds.includes(item.character.id);
+              const focused = index === focusedFriendIndex;
               return (
                 <button
                   key={item.character.id}
                   type="button"
+                  ref={(node) => {
+                    friendItemRefs.current[item.character.id] = node;
+                  }}
                   disabled={createMutation.isPending}
                   onClick={() => toggleSelection(item.character.id)}
                   className={cn(
@@ -561,6 +758,7 @@ export function DesktopCreateGroupDialog({
                     checked
                       ? "bg-[rgba(7,193,96,0.08)]"
                       : "hover:bg-[#f7f7f7]",
+                    focused ? "ring-1 ring-[rgba(7,193,96,0.24)]" : "",
                   )}
                 >
                   <AvatarChip
@@ -599,6 +797,7 @@ export function DesktopCreateGroupDialog({
             {shareHistory && selectedMessageIds.length
               ? ` 会同步 ${selectedMessageIds.length} 条聊天记录。`
               : ""}
+            {" "}快捷键：`↑/↓` 选联系人，`Enter` 勾选，`Backspace` 删除最后一个已选，`Ctrl/Cmd+Enter` 创建。
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -613,7 +812,7 @@ export function DesktopCreateGroupDialog({
             <Button
               type="button"
               variant="primary"
-              onClick={() => createMutation.mutate()}
+              onClick={handleCreate}
               disabled={!selectedIds.length || createMutation.isPending}
               className="rounded-2xl px-6"
             >
