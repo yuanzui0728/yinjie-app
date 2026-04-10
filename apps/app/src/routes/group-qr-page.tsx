@@ -818,23 +818,35 @@ export function GroupQrPage() {
                         </span>
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                        {resolvePendingReturnRecommendationTags(
-                          conversation,
-                          target.deliveredAt,
-                        ).map((tag) => (
-                          <span
-                            key={`${conversation.id}:${tag.label}`}
-                            className={`rounded-full px-2.5 py-1 font-medium ${tag.tone}`}
-                          >
-                            {tag.label}
-                          </span>
-                        ))}
+                        <span className="text-[color:var(--text-muted)]">
+                          优先补发理由
+                        </span>
+                        <span
+                          className={`rounded-full px-2.5 py-1 font-medium ${resolvePendingReturnPrimaryReason(
+                            conversation,
+                            target.deliveredAt,
+                          ).tone}`}
+                        >
+                          {
+                            resolvePendingReturnPrimaryReason(
+                              conversation,
+                              target.deliveredAt,
+                            ).label
+                          }
+                        </span>
                       </div>
                       <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
                         {resolvePendingReturnRecommendationSummary(
                           conversation,
                           target.deliveredAt,
                         )}
+                      </div>
+                      <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                        辅助判断：
+                        {resolvePendingReturnSecondaryHints(
+                          conversation,
+                          target.deliveredAt,
+                        ).join(" · ")}
                       </div>
                       {isPendingReturnCoolingDown(target.deliveredAt) ? (
                         <div className="mt-1 text-xs text-[color:var(--text-muted)]">
@@ -1201,7 +1213,7 @@ function resolvePendingReturnBadgeTone(deliveredAt: string) {
   return "bg-[rgba(15,23,42,0.06)] text-[color:var(--text-muted)]";
 }
 
-function resolvePendingReturnRecommendationTags(
+function resolvePendingReturnPrimaryReason(
   conversation: ConversationListItem,
   deliveredAt: string,
 ) {
@@ -1209,35 +1221,74 @@ function resolvePendingReturnRecommendationTags(
   const recentActivityMinutes = resolveConversationRecentActivityMinutes(
     conversation.lastActivityAt,
   );
-  const tags: Array<{ label: string; tone: string }> = [];
+  const isGroupConversation = isPersistedGroupConversation(conversation);
+
+  if (isPendingReturnCoolingDown(deliveredAt)) {
+    return {
+      label: "先等回流",
+      tone: "bg-[rgba(15,23,42,0.06)] text-[color:var(--text-muted)]",
+    };
+  }
+
+  if (
+    elapsedMinutes !== null &&
+    elapsedMinutes >= 60 &&
+    recentActivityMinutes !== null &&
+    recentActivityMinutes <= 6 * 60
+  ) {
+    return {
+      label: "超时且活跃",
+      tone: "bg-[rgba(220,38,38,0.12)] text-[#b91c1c]",
+    };
+  }
+
+  if (elapsedMinutes !== null && elapsedMinutes >= 60) {
+    return {
+      label: "长时间未回流",
+      tone: "bg-[rgba(220,38,38,0.12)] text-[#b91c1c]",
+    };
+  }
+
+  if (recentActivityMinutes !== null && recentActivityMinutes <= 6 * 60) {
+    return {
+      label: isGroupConversation ? "活跃群聊扩散" : "活跃单聊触达",
+      tone: "bg-[rgba(34,197,94,0.12)] text-[#15803d]",
+    };
+  }
+
+  return {
+    label: isGroupConversation ? "群聊扩散优先" : "单聊定向补发",
+    tone: "bg-[rgba(15,23,42,0.06)] text-[color:var(--text-muted)]",
+  };
+}
+
+function resolvePendingReturnSecondaryHints(
+  conversation: ConversationListItem,
+  deliveredAt: string,
+) {
+  const elapsedMinutes = resolvePendingReturnElapsedMinutes(deliveredAt);
+  const recentActivityMinutes = resolveConversationRecentActivityMinutes(
+    conversation.lastActivityAt,
+  );
+  const hints: string[] = [];
 
   if (!isPendingReturnCoolingDown(deliveredAt) && elapsedMinutes !== null) {
     if (elapsedMinutes >= 60) {
-      tags.push({
-        label: "超时优先",
-        tone: "bg-[rgba(220,38,38,0.12)] text-[#b91c1c]",
-      });
+      hints.push("超时优先");
     } else if (elapsedMinutes >= 15) {
-      tags.push({
-        label: "可补一轮",
-        tone: "bg-[rgba(249,115,22,0.12)] text-[color:var(--brand-secondary)]",
-      });
+      hints.push("可补一轮");
     }
   }
 
   if (recentActivityMinutes !== null && recentActivityMinutes <= 6 * 60) {
-    tags.push({
-      label: "近期活跃",
-      tone: "bg-[rgba(34,197,94,0.12)] text-[#15803d]",
-    });
+    hints.push("近期活跃");
   }
 
-  tags.push({
-    label: isPersistedGroupConversation(conversation) ? "群聊扩散" : "单聊触达",
-    tone: "bg-[rgba(15,23,42,0.06)] text-[color:var(--text-muted)]",
-  });
+  hints.push(
+    isPersistedGroupConversation(conversation) ? "群聊扩散" : "单聊触达",
+  );
 
-  return tags.slice(0, 3);
+  return hints;
 }
 
 function resolvePendingReturnRecommendationSummary(
