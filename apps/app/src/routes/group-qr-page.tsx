@@ -154,6 +154,52 @@ export function GroupQrPage() {
       (conversation) => conversation.id !== currentReturnSourceConversation.id,
     );
   }, [currentReturnSourceConversation, recentConversations]);
+  const relatedReturnConversations = useMemo(() => {
+    if (!currentReturnSourceConversation) {
+      return [] as ConversationListItem[];
+    }
+
+    const sourceIsGroup = isPersistedGroupConversation(
+      currentReturnSourceConversation,
+    );
+    const reopenPaths = new Set(
+      reopenRecords.map((record) => record.conversationPath),
+    );
+
+    return [...(conversationsQuery.data ?? [])]
+      .filter(
+        (conversation) =>
+          conversation.id !== groupId &&
+          conversation.id !== currentReturnSourceConversation.id,
+      )
+      .filter(
+        (conversation) =>
+          isPersistedGroupConversation(conversation) === sourceIsGroup,
+      )
+      .sort((left, right) => {
+        const leftReopenWeight = reopenPaths.has(buildConversationPath(left))
+          ? 1
+          : 0;
+        const rightReopenWeight = reopenPaths.has(buildConversationPath(right))
+          ? 1
+          : 0;
+
+        if (leftReopenWeight !== rightReopenWeight) {
+          return rightReopenWeight - leftReopenWeight;
+        }
+
+        return (
+          (parseTimestamp(right.lastActivityAt) ?? 0) -
+          (parseTimestamp(left.lastActivityAt) ?? 0)
+        );
+      })
+      .slice(0, 3);
+  }, [
+    conversationsQuery.data,
+    currentReturnSourceConversation,
+    groupId,
+    reopenRecords,
+  ]);
 
   useEffect(() => {
     setDeliveredConversation(readGroupInviteDeliveryRecord(groupId));
@@ -525,6 +571,39 @@ export function GroupQrPage() {
                   立即回发
                 </span>
               </button>
+            ) : null}
+            {relatedReturnConversations.length ? (
+              <div className="space-y-2">
+                <div className="text-xs font-medium tracking-[0.14em] text-[color:var(--brand-secondary)]">
+                  来源会话附近相关会话
+                </div>
+                {relatedReturnConversations.map((conversation) => (
+                  <button
+                    key={conversation.id}
+                    type="button"
+                    onClick={() => {
+                      void sendToConversation(conversation);
+                    }}
+                    className="flex w-full items-center justify-between gap-3 rounded-[18px] border border-[rgba(249,115,22,0.14)] bg-[rgba(255,252,246,0.88)] px-4 py-3 text-left shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-card)]"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">
+                        {conversation.title}
+                      </div>
+                      <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                        {isPersistedGroupConversation(conversation)
+                          ? "同类群聊"
+                          : "同类单聊"}{" "}
+                        · 最近活跃{" "}
+                        {formatConversationTimestamp(conversation.lastActivityAt)}
+                      </div>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-[rgba(249,115,22,0.1)] px-3 py-1 text-xs text-[color:var(--brand-secondary)]">
+                      发到相关会话
+                    </span>
+                  </button>
+                ))}
+              </div>
             ) : null}
             {prioritizedRecentConversations.length ? (
               <div className="space-y-2">
