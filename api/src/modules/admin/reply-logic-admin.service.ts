@@ -126,6 +126,7 @@ export class ReplyLogicAdminService {
         }),
         this.buildCharacterObservability(character),
       ]);
+    const runtimeRules = await this.replyLogicRules.getRules();
 
     const relatedConversationIds = conversations
       .filter((conversation) => conversation.participants.includes(characterId))
@@ -155,10 +156,10 @@ export class ReplyLogicAdminService {
       observability,
       relatedConversationIds,
       notes: [
-        '角色视图使用“单聊直回”逻辑展示 prompt 和状态门控。',
+        runtimeRules.inspectorTemplates.characterViewIntro,
         primaryConversation
-          ? '已找到与该角色关联的单聊，会使用该会话的可见历史和最近一次用户发言时间。'
-          : '未找到现有单聊，当前视图仅展示角色默认直聊快照。',
+          ? runtimeRules.inspectorTemplates.characterViewHistoryFound
+          : runtimeRules.inspectorTemplates.characterViewHistoryMissing,
       ],
     };
   }
@@ -167,9 +168,10 @@ export class ReplyLogicAdminService {
     conversationId: string,
   ): Promise<ReplyLogicConversationSnapshot> {
     const owner = await this.getOwnerOrThrow();
-    const [provider, worldContext] = await Promise.all([
+    const [provider, worldContext, runtimeRules] = await Promise.all([
       this.resolveProviderSummary(owner),
       this.resolveWorldContextSummary(),
+      this.replyLogicRules.getRules(),
     ]);
 
     const storedConversation = await this.conversationRepo.findOneBy({
@@ -219,8 +221,8 @@ export class ReplyLogicAdminService {
                 (message) => message.id === item.id,
               ),
               note: actors[0].windowMessages.some((message) => message.id === item.id)
-                ? '进入第一个角色的当前上下文窗口'
-                : '在当前可见历史中，但超出第一个角色的窗口',
+                ? runtimeRules.inspectorTemplates.historyIncludedNote
+                : runtimeRules.inspectorTemplates.historyExcludedNote,
             }))
           : visibleHistory,
         actors,
@@ -229,17 +231,15 @@ export class ReplyLogicAdminService {
           kind: storedConversation.type === 'group' ? 'stored_group' : 'direct',
           title:
             storedConversation.type === 'group'
-              ? '临时群聊已转为 stored conversation'
-              : '单聊直回链路',
+              ? runtimeRules.inspectorTemplates.storedGroupTitle
+              : runtimeRules.inspectorTemplates.directBranchTitle,
           notes:
             storedConversation.type === 'group'
               ? [
-                  '当前会话来自 conversations 表，但类型已经升级为 group。',
-                  '下一次用户消息会直接按 group 分支让所有参与角色回复。',
+                  runtimeRules.inspectorTemplates.storedGroupUpgradedNote,
+                  runtimeRules.inspectorTemplates.storedGroupNextReplyNote,
                 ]
-              : [
-                  '下一次用户消息会先经过当前状态门控，再进入意图分类与单聊回复链。',
-                ],
+              : [runtimeRules.inspectorTemplates.directBranchNextReplyNote],
         },
       };
     }
@@ -302,10 +302,10 @@ export class ReplyLogicAdminService {
       narrativeArcs: arcs.map((item) => this.toNarrativeSummary(item)),
       branchSummary: {
         kind: 'formal_group',
-        title: '正式群聊异步回复链路',
+        title: runtimeRules.inspectorTemplates.formalGroupTitle,
         notes: [
-          '正式群聊不会经过单聊状态门控。',
-          '角色是否回复取决于 activityFrequency，对应不同的随机回复概率和延迟。',
+          runtimeRules.inspectorTemplates.formalGroupStateGateNote,
+          runtimeRules.inspectorTemplates.formalGroupReplyRuleNote,
         ],
       },
     };
@@ -340,6 +340,7 @@ export class ReplyLogicAdminService {
       includeStateGate: true,
       previewUserMessage: userMessage,
     });
+    const runtimeRules = await this.replyLogicRules.getRules();
 
     return {
       scope: 'character',
@@ -348,10 +349,10 @@ export class ReplyLogicAdminService {
       userMessage,
       actor,
       notes: [
-        '这是基于当前角色配置和当前可见历史，对这条候选消息做的即时预演。',
+        runtimeRules.inspectorTemplates.previewCharacterIntro,
         primaryConversation
-          ? '预演使用了该角色当前单聊的真实可见历史。'
-          : '该角色还没有现成单聊，预演基于空历史进行。',
+          ? runtimeRules.inspectorTemplates.previewCharacterWithHistory
+          : runtimeRules.inspectorTemplates.previewCharacterWithoutHistory,
       ],
     };
   }
@@ -362,6 +363,7 @@ export class ReplyLogicAdminService {
     actorCharacterId?: string,
   ): Promise<ReplyLogicPreviewResult> {
     const owner = await this.getOwnerOrThrow();
+    const runtimeRules = await this.replyLogicRules.getRules();
     const storedConversation = await this.conversationRepo.findOneBy({
       id: conversationId,
       ownerId: owner.id,
@@ -409,10 +411,8 @@ export class ReplyLogicAdminService {
         actor,
         notes:
           storedConversation.type === 'group'
-            ? [
-                '这是 stored conversation 群聊分支下，按当前选中角色进行的候选消息预演。',
-              ]
-            : ['这是单聊分支下，按当前选中角色进行的候选消息预演。'],
+            ? [runtimeRules.inspectorTemplates.previewStoredGroup]
+            : [runtimeRules.inspectorTemplates.previewDirectConversation],
       };
     }
 
@@ -471,7 +471,7 @@ export class ReplyLogicAdminService {
       actorCharacterId: selectedCharacter.id,
       userMessage,
       actor,
-      notes: ['这是正式群聊异步回复分支下，按当前选中角色进行的候选消息预演。'],
+      notes: [runtimeRules.inspectorTemplates.previewFormalGroup],
     };
   }
 
@@ -728,9 +728,9 @@ export class ReplyLogicAdminService {
           ? '已具备记忆种子，晚间主动提醒调度会判断是否需要发消息。'
           : '当前缺少足够的记忆种子，主动提醒不会触发。',
       },
-      relevantJobs: this.schedulerTelemetry
-        .listJobs()
-        .filter((job) => relevantJobIds.includes(job.id)),
+      relevantJobs: (await this.schedulerTelemetry.listJobs()).filter((job) =>
+        relevantJobIds.includes(job.id),
+      ),
       recentRuns: this.schedulerTelemetry.listRecentRuns({
         limit: 12,
         jobIds: relevantJobIds,

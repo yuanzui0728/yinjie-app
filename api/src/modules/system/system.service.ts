@@ -105,7 +105,7 @@ export class SystemService {
     const databasePath = this.resolveDatabasePath();
     const publicBaseUrl = this.config.get<string>('PUBLIC_API_BASE_URL')?.trim();
 
-    const scheduler = this.getSchedulerPayload();
+    const scheduler = await this.getSchedulerPayload();
 
     return {
       coreApi: {
@@ -158,14 +158,14 @@ export class SystemService {
     return this.schedulerService.runJobNow(id);
   }
 
-  private getSchedulerPayload() {
+  private async getSchedulerPayload() {
     return {
       healthy: true,
       mode: 'production' as const,
       coldStartEnabled: false,
       worldSnapshots: this.schedulerTelemetry.getWorldSnapshotCount(),
       lastWorldSnapshotAt: this.schedulerTelemetry.getLastWorldSnapshotAt(),
-      jobs: this.schedulerTelemetry.listJobs(),
+      jobs: await this.schedulerTelemetry.listJobs(),
       startedAt: this.schedulerTelemetry.getStartedAt(),
       recentRuns: this.schedulerTelemetry.listRecentRuns({ limit: 12 }),
     };
