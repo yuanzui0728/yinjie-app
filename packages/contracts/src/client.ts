@@ -796,9 +796,20 @@ export function getOrCreateConversation(
   );
 }
 
-export function getConversationMessages(id: string, baseUrl?: string) {
+export function getConversationMessages(
+  id: string,
+  baseUrl?: string,
+  query: {
+    limit?: number;
+  } = {},
+) {
+  const params = new URLSearchParams();
+  if (typeof query.limit === "number") {
+    params.set("limit", String(query.limit));
+  }
+
   return requestLegacyApi<Message[]>(
-    `/conversations/${id}/messages`,
+    `/conversations/${id}/messages${params.size ? `?${params.toString()}` : ""}`,
     undefined,
     baseUrl,
   );
@@ -1100,9 +1111,20 @@ export function removeGroupMember(
   );
 }
 
-export function getGroupMessages(id: string, baseUrl?: string) {
+export function getGroupMessages(
+  id: string,
+  baseUrl?: string,
+  query: {
+    limit?: number;
+  } = {},
+) {
+  const params = new URLSearchParams();
+  if (typeof query.limit === "number") {
+    params.set("limit", String(query.limit));
+  }
+
   return requestLegacyApi<GroupMessage[]>(
-    `/groups/${id}/messages`,
+    `/groups/${id}/messages${params.size ? `?${params.toString()}` : ""}`,
     undefined,
     baseUrl,
   );

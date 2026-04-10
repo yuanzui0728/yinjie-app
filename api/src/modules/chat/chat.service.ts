@@ -376,19 +376,29 @@ export class ChatService {
     return this._entityToConversation(updated);
   }
 
-  async getMessages(conversationId: string): Promise<Message[]> {
+  async getMessages(conversationId: string, limit?: number): Promise<Message[]> {
     const conversation = await this.convRepo.findOneBy({ id: conversationId });
     if (!conversation) {
       throw new NotFoundException(`Conversation ${conversationId} not found`);
     }
 
-    const entities = await this.msgRepo.find({
-      where: this.buildMessageWhere(
-        conversationId,
-        this.getVisibleMessageCutoff(conversation),
-      ),
-      order: { createdAt: 'ASC' },
-    });
+    const where = this.buildMessageWhere(
+      conversationId,
+      this.getVisibleMessageCutoff(conversation),
+    );
+    const entities =
+      typeof limit === 'number' && Number.isFinite(limit) && limit > 0
+        ? (
+            await this.msgRepo.find({
+              where,
+              order: { createdAt: 'DESC' },
+              take: limit,
+            })
+          ).reverse()
+        : await this.msgRepo.find({
+            where,
+            order: { createdAt: 'ASC' },
+          });
 
     return entities.map((entity) => this._entityToMessage(entity));
   }

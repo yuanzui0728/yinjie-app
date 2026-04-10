@@ -41,8 +41,12 @@ export class ChatController {
   }
 
   @Get(':id/messages')
-  getMessages(@Param('id') id: string) {
-    return this.chatService.getMessages(id);
+  getMessages(@Param('id') id: string, @Query('limit') limit?: string) {
+    const parsedLimit = Number(limit);
+    return this.chatService.getMessages(
+      id,
+      Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : undefined,
+    );
   }
 
   @Post(':conversationId/messages/:messageId/recall')
