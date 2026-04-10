@@ -36,6 +36,7 @@ import { AvatarChip } from "./avatar-chip";
 type MobileChatPlusPanelProps = {
   open: boolean;
   busy?: boolean;
+  onStartVoiceCall?: () => void;
   onPickAlbum: () => void;
   onPickCamera: () => void;
   onPickFile: () => void;
@@ -185,6 +186,7 @@ const ROOT_ACTION_PAGE_KEYS: RootAction["key"][][] = [
 export function MobileChatPlusPanel({
   open,
   busy = false,
+  onStartVoiceCall,
   onPickAlbum,
   onPickCamera,
   onPickFile,
@@ -294,8 +296,16 @@ export function MobileChatPlusPanel({
                       );
                     }
 
+                    const itemDisabled =
+                      item.key === "voice-call"
+                        ? !onStartVoiceCall
+                        : (item.disabled ?? false);
+                    const itemDisabledLabel =
+                      item.key === "voice-call" && onStartVoiceCall
+                        ? undefined
+                        : item.disabledLabel;
                     const Icon = item.icon;
-                    const handleClick = item.disabled
+                    const handleClick = itemDisabled
                       ? () => {
                           setUnavailableAction(item);
                           onUnavailableAction?.(
@@ -328,10 +338,15 @@ export function MobileChatPlusPanel({
                                     setUnavailableAction(null);
                                     onPickFile();
                                   }
-                                : () => {
-                                    setUnavailableAction(null);
-                                    setActiveView("locations");
-                                  };
+                                : item.key === "voice-call"
+                                  ? () => {
+                                      setUnavailableAction(null);
+                                      onStartVoiceCall?.();
+                                    }
+                                  : () => {
+                                      setUnavailableAction(null);
+                                      setActiveView("locations");
+                                    };
 
                     return (
                       <button
@@ -339,18 +354,18 @@ export function MobileChatPlusPanel({
                         type="button"
                         onClick={handleClick}
                         disabled={busy}
-                        aria-disabled={item.disabled ? "true" : undefined}
+                        aria-disabled={itemDisabled ? "true" : undefined}
                         className={cn(
                           "flex flex-col items-center gap-2 text-center",
-                          item.disabled ? "opacity-80" : "disabled:opacity-60",
+                          itemDisabled ? "opacity-80" : "disabled:opacity-60",
                         )}
                       >
                         <div
                           className={cn(
                             "flex h-14 w-14 items-center justify-center rounded-[14px] border bg-white text-white shadow-none",
-                            item.disabled ? "border-black/6" : "border-black/6",
-                            item.disabled ? null : item.iconClassName,
-                            item.disabled ? "bg-[#cfcfcf]" : null,
+                            itemDisabled ? "border-black/6" : "border-black/6",
+                            itemDisabled ? null : item.iconClassName,
+                            itemDisabled ? "bg-[#cfcfcf]" : null,
                           )}
                         >
                           <Icon size={22} />
@@ -359,9 +374,9 @@ export function MobileChatPlusPanel({
                           <div className="text-[12px] text-[#5f5f5f]">
                             {item.label}
                           </div>
-                          {item.disabledLabel ? (
+                          {itemDisabledLabel ? (
                             <div className="mt-0.5 text-[10px] text-[#a0a0a0]">
-                              {item.disabledLabel}
+                              {itemDisabledLabel}
                             </div>
                           ) : null}
                         </div>

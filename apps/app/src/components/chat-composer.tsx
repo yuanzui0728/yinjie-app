@@ -123,6 +123,16 @@ type ScreenshotAnnotation = {
   y2: number;
 };
 
+type ScreenshotCropResizeDraft = {
+  pointerId: number;
+  handle: "nw" | "ne" | "sw" | "se";
+  startX: number;
+  startY: number;
+  boundsWidth: number;
+  boundsHeight: number;
+  crop: NormalizedCropRect;
+};
+
 type AttachmentDraft =
   | {
       kind: "images";
@@ -175,6 +185,8 @@ export function ChatComposer({
     useState<ScreenshotAnnotation[]>([]);
   const [desktopScreenshotSelection, setDesktopScreenshotSelection] =
     useState<ScreenshotSelectionDraft | null>(null);
+  const [desktopScreenshotCropResize, setDesktopScreenshotCropResize] =
+    useState<ScreenshotCropResizeDraft | null>(null);
   const [desktopScreenshotNotice, setDesktopScreenshotNotice] = useState<
     string | null
   >(null);
@@ -896,6 +908,7 @@ export function ChatComposer({
       setDesktopScreenshotTool("crop");
       setDesktopScreenshotAnnotations([]);
       setDesktopScreenshotSelection(null);
+      setDesktopScreenshotCropResize(null);
       setDesktopScreenshotNotice(null);
     } catch (captureError) {
       const name =
@@ -1148,6 +1161,7 @@ export function ChatComposer({
     setDesktopScreenshotTool("crop");
     setDesktopScreenshotAnnotations([]);
     setDesktopScreenshotSelection(null);
+    setDesktopScreenshotCropResize(null);
     setDesktopScreenshotNotice(null);
   };
 
@@ -1194,12 +1208,69 @@ export function ChatComposer({
     });
   };
 
+  const handleDesktopScreenshotCropResizeStart = (
+    handle: "nw" | "ne" | "sw" | "se",
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    if (!desktopScreenshotCrop || attachmentBusy) {
+      return;
+    }
+
+    const bounds = desktopScreenshotImageRef.current?.getBoundingClientRect();
+    if (!bounds || !bounds.width || !bounds.height) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    setDesktopScreenshotCropResize({
+      pointerId: event.pointerId,
+      handle,
+      startX: event.clientX,
+      startY: event.clientY,
+      boundsWidth: bounds.width,
+      boundsHeight: bounds.height,
+      crop: desktopScreenshotCrop,
+    });
+  };
+
+  const handleDesktopScreenshotCropResizeMove = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    setDesktopScreenshotCropResize((current) => {
+      if (!current || current.pointerId !== event.pointerId) {
+        return current;
+      }
+
+      event.preventDefault();
+      const deltaX =
+        (event.clientX - current.startX) / Math.max(1, current.boundsWidth);
+      const deltaY =
+        (event.clientY - current.startY) / Math.max(1, current.boundsHeight);
+      setDesktopScreenshotCrop(
+        resizeScreenshotCrop(current.crop, current.handle, deltaX, deltaY),
+      );
+      return current;
+    });
+  };
+
+  const finishDesktopScreenshotCropResize = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    setDesktopScreenshotCropResize((current) =>
+      current?.pointerId === event.pointerId ? null : current,
+    );
+  };
+
   const finalizeDesktopScreenshotSelection = (
     event: ReactPointerEvent<HTMLDivElement>,
   ) => {
-    if (
-      event.currentTarget.hasPointerCapture?.(event.pointerId)
-    ) {
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
 
@@ -1635,13 +1706,19 @@ export function ChatComposer({
             notice={desktopScreenshotNotice}
             onCancel={closeDesktopScreenshotEditor}
             onToolChange={setDesktopScreenshotTool}
-            onClearCrop={() => setDesktopScreenshotCrop(null)}
+            onClearCrop={() => {
+              setDesktopScreenshotCrop(null);
+              setDesktopScreenshotCropResize(null);
+            }}
             onClearAnnotations={handleClearScreenshotAnnotations}
             onUndoAnnotation={handleUndoScreenshotAnnotation}
             onPointerDown={handleDesktopScreenshotPointerDown}
             onPointerMove={handleDesktopScreenshotPointerMove}
             onPointerUp={finalizeDesktopScreenshotSelection}
             onPointerCancel={finalizeDesktopScreenshotSelection}
+            onCropResizeStart={handleDesktopScreenshotCropResizeStart}
+            onCropResizeMove={handleDesktopScreenshotCropResizeMove}
+            onCropResizeEnd={finishDesktopScreenshotCropResize}
             onSendOriginal={() => {
               void handleSendDesktopScreenshot("original");
             }}
@@ -2380,6 +2457,9 @@ function DesktopScreenshotEditor({
   onClearCrop,
   onCopyCropped,
   onCopyOriginal,
+  onCropResizeEnd,
+  onCropResizeMove,
+  onCropResizeStart,
   onPointerCancel,
   onPointerDown,
   onPointerMove,
@@ -2403,6 +2483,12 @@ function DesktopScreenshotEditor({
   onClearCrop: () => void;
   onCopyCropped: () => void;
   onCopyOriginal: () => void;
+  onCropResizeEnd: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+  onCropResizeMove: (event: ReactPointerEvent<HTMLButtonElement>) => void;
+  onCropResizeStart: (
+    handle: "nw" | "ne" | "sw" | "se",
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => void;
   onPointerCancel: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
@@ -2539,7 +2625,36 @@ function DesktopScreenshotEditor({
                         width: `${cropRect.width * 100}%`,
                         height: `${cropRect.height * 100}%`,
                       }}
-                    />
+                    >
+                      {(["nw", "ne", "sw", "se"] as const).map((handle) => (
+                        <button
+                          key={handle}
+                          type="button"
+                          onPointerDown={(event) =>
+                            onCropResizeStart(handle, event)
+                          }
+                          onPointerMove={onCropResizeMove}
+                          onPointerUp={onCropResizeEnd}
+                          onPointerCancel={onCropResizeEnd}
+                          className={cn(
+                            "absolute h-3.5 w-3.5 rounded-full border-2 border-white bg-[#07c160] shadow-[0_6px_14px_rgba(7,193,96,0.28)]",
+                            handle === "nw"
+                              ? "-left-2 -top-2 cursor-nwse-resize"
+                              : "",
+                            handle === "ne"
+                              ? "-right-2 -top-2 cursor-nesw-resize"
+                              : "",
+                            handle === "sw"
+                              ? "-bottom-2 -left-2 cursor-nesw-resize"
+                              : "",
+                            handle === "se"
+                              ? "-bottom-2 -right-2 cursor-nwse-resize"
+                              : "",
+                          )}
+                          aria-label="调整裁剪区域"
+                        />
+                      ))}
+                    </div>
                   ) : null}
                   {previewRect ? (
                     <div
@@ -2984,6 +3099,42 @@ function getSelectionPreviewRect(selection: ScreenshotSelectionDraft) {
 
 function getNormalizedCropPreviewRect(crop: NormalizedCropRect) {
   return crop;
+}
+
+function resizeScreenshotCrop(
+  crop: NormalizedCropRect,
+  handle: "nw" | "ne" | "sw" | "se",
+  deltaX: number,
+  deltaY: number,
+) {
+  const minSize = 0.02;
+  let left = crop.x;
+  let top = crop.y;
+  let right = crop.x + crop.width;
+  let bottom = crop.y + crop.height;
+
+  if (handle === "nw" || handle === "sw") {
+    left = clamp(left + deltaX, 0, right - minSize);
+  }
+
+  if (handle === "ne" || handle === "se") {
+    right = clamp(right + deltaX, left + minSize, 1);
+  }
+
+  if (handle === "nw" || handle === "ne") {
+    top = clamp(top + deltaY, 0, bottom - minSize);
+  }
+
+  if (handle === "sw" || handle === "se") {
+    bottom = clamp(bottom + deltaY, top + minSize, 1);
+  }
+
+  return {
+    x: left,
+    y: top,
+    width: right - left,
+    height: bottom - top,
+  } satisfies NormalizedCropRect;
 }
 
 function normalizeSelectionRect(selection: ScreenshotSelectionDraft) {

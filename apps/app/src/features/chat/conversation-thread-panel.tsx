@@ -25,7 +25,10 @@ import { buildChatBackgroundStyle } from "./backgrounds/chat-background-helpers"
 import { ChatCallFallbackNotice } from "./chat-call-fallback-notice";
 import { type ChatComposeShortcutAction } from "./chat-compose-shortcut-route";
 import { type ChatComposerAttachmentPayload } from "./chat-plus-types";
-import { buildDirectCallInviteMessage } from "./group-call-message";
+import {
+  buildDirectCallInviteMessage,
+  type DirectCallInviteStatus,
+} from "./group-call-message";
 import { MobileChatThreadHeader } from "./mobile-chat-thread-header";
 import { MobileChatScrollBottomButton } from "./mobile-chat-scroll-bottom-button";
 import {
@@ -149,11 +152,16 @@ export function ConversationThreadPanel({
       }
     : null;
   const sendCallInviteMutation = useMutation({
-    mutationFn: (input: { kind: DesktopChatCallKind; remoteJoined: boolean }) =>
+    mutationFn: (input: {
+      kind: DesktopChatCallKind;
+      status: DirectCallInviteStatus;
+    }) =>
       sendTextMessage(
-        buildDirectCallInviteMessage(input.kind, conversationTitle, {
-          remoteJoined: input.remoteJoined,
-        }),
+        buildDirectCallInviteMessage(
+          input.kind,
+          conversationTitle,
+          input.status,
+        ),
       ),
     onSuccess: async () => {
       scrollToBottom("smooth");
@@ -434,6 +442,7 @@ export function ConversationThreadPanel({
               kind={desktopCallPanelKind}
               conversationTitle={conversationTitle}
               inviteNoticePending={sendCallInviteMutation.isPending}
+              endNoticePending={sendCallInviteMutation.isPending}
               onClose={() => setDesktopCallPanelKind(null)}
               onOpenMobileHandoff={() => {
                 void navigate({
@@ -450,8 +459,18 @@ export function ConversationThreadPanel({
               onSendInviteNotice={(status) => {
                 void sendCallInviteMutation.mutateAsync({
                   kind: desktopCallPanelKind,
-                  remoteJoined: status.remoteJoined,
+                  status: status.remoteJoined ? "connected" : "waiting",
                 });
+              }}
+              onEndCall={() => {
+                void sendCallInviteMutation
+                  .mutateAsync({
+                    kind: desktopCallPanelKind,
+                    status: "ended",
+                  })
+                  .then(() => {
+                    setDesktopCallPanelKind(null);
+                  });
               }}
             />
           </div>

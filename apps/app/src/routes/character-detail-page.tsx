@@ -163,6 +163,26 @@ export function CharacterDetailPage() {
       });
     },
   });
+  const openVoiceCallMutation = useMutation({
+    mutationFn: async () => {
+      if (!character) {
+        return null;
+      }
+
+      return getOrCreateConversation({ characterId: character.id }, baseUrl);
+    },
+    onSuccess: (conversation) => {
+      if (!conversation) {
+        return;
+      }
+
+      setPendingCallFallback(null);
+      void navigate({
+        to: "/chat/$conversationId/voice-call",
+        params: { conversationId: conversation.id },
+      });
+    },
+  });
   const sendFriendRequestMutation = useMutation({
     mutationFn: () =>
       sendFriendRequest(
@@ -266,7 +286,7 @@ export function CharacterDetailPage() {
 
   const handleVoiceCall = () => {
     setNotice(null);
-    setPendingCallFallback("voice");
+    openVoiceCallMutation.mutate();
   };
 
   const handleVideoCall = () => {
@@ -341,6 +361,10 @@ export function CharacterDetailPage() {
           startChatMutation.error instanceof Error ? (
             <ErrorBlock message={startChatMutation.error.message} />
           ) : null}
+          {openVoiceCallMutation.isError &&
+          openVoiceCallMutation.error instanceof Error ? (
+            <ErrorBlock message={openVoiceCallMutation.error.message} />
+          ) : null}
           {sendFriendRequestMutation.isError &&
           sendFriendRequestMutation.error instanceof Error ? (
             <ErrorBlock message={sendFriendRequestMutation.error.message} />
@@ -413,8 +437,13 @@ export function CharacterDetailPage() {
                 <>
                   <ActionPanelButton
                     icon={<Phone size={18} />}
-                    label="语音通话"
+                    label={
+                      openVoiceCallMutation.isPending
+                        ? "正在接通..."
+                        : "语音通话"
+                    }
                     onClick={handleVoiceCall}
+                    disabled={openVoiceCallMutation.isPending}
                   />
                   <ActionPanelButton
                     icon={<Video size={18} />}
