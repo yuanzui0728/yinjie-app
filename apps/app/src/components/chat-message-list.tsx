@@ -78,6 +78,7 @@ type ChatMessageListProps = {
   highlightedMessageId?: string;
   emptyState?: React.ReactNode;
   onReplyMessage?: (message: ChatRenderableMessage) => void;
+  onSelectionModeChange?: (active: boolean) => void;
 };
 
 export function ChatMessageList({
@@ -88,6 +89,7 @@ export function ChatMessageList({
   highlightedMessageId,
   emptyState,
   onReplyMessage,
+  onSelectionModeChange,
 }: ChatMessageListProps) {
   const isDesktop = variant === "desktop";
   const queryClient = useQueryClient();
@@ -212,6 +214,10 @@ export function ChatMessageList({
 
     setSelectedMessageIds([]);
   }, [selectionMode]);
+
+  useEffect(() => {
+    onSelectionModeChange?.(selectionMode);
+  }, [onSelectionModeChange, selectionMode]);
 
   const forwardConversationsQuery = useQuery({
     queryKey: ["desktop-message-forward-conversations", baseUrl],
@@ -342,7 +348,7 @@ export function ChatMessageList({
     event: PointerEvent<HTMLDivElement>,
     message: ChatRenderableMessage,
   ) => {
-    if (isDesktop || event.pointerType === "mouse") {
+    if (isDesktop || event.pointerType === "mouse" || selectionMode) {
       return;
     }
 
@@ -560,31 +566,54 @@ export function ChatMessageList({
         </InlineNotice>
       ) : null}
       {selectionMode ? (
-        <div className="sticky top-0 z-20 flex items-center justify-between gap-3 rounded-[20px] border border-black/6 bg-white/92 px-4 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.08)] backdrop-blur">
-          <div className="text-sm text-[color:var(--text-primary)]">
-            已选择 {selectedMessageIds.length} 条消息
+        isDesktop ? (
+          <div className="sticky top-0 z-20 flex items-center justify-between gap-3 rounded-[20px] border border-black/6 bg-white/92 px-4 py-3 shadow-[0_12px_28px_rgba(15,23,42,0.08)] backdrop-blur">
+            <div className="text-sm text-[color:var(--text-primary)]">
+              已选择 {selectedMessageIds.length} 条消息
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setSelectionMode(false)}
+                className="rounded-full"
+              >
+                取消
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={!selectedMessageIds.length}
+                onClick={() => setForwardMessages(selectedMessages)}
+                className="rounded-full"
+              >
+                逐条转发
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
+        ) : (
+          <div className="sticky top-0 z-20 flex items-center justify-between border-b border-black/6 bg-[rgba(247,247,247,0.96)] px-1 py-2.5 backdrop-blur-xl">
+            <button
               type="button"
-              variant="secondary"
-              size="sm"
               onClick={() => setSelectionMode(false)}
-              className="rounded-full"
+              className="flex h-10 min-w-12 items-center justify-start rounded-[10px] px-2 text-[16px] text-[#111827]"
             >
               取消
-            </Button>
-            <Button
+            </button>
+            <div className="text-[16px] font-medium text-[#111827]">
+              已选 {selectedMessageIds.length} 条
+            </div>
+            <button
               type="button"
-              size="sm"
               disabled={!selectedMessageIds.length}
               onClick={() => setForwardMessages(selectedMessages)}
-              className="rounded-full"
+              className="flex h-10 min-w-12 items-center justify-end rounded-[10px] px-2 text-[16px] font-medium text-[#07c160] disabled:text-[#b8b8b8]"
             >
-              逐条转发
-            </Button>
+              转发
+            </button>
           </div>
-        </div>
+        )
       ) : null}
       {messages.map((message, index) => {
         const previousMessage = index > 0 ? messages[index - 1] : undefined;
@@ -989,10 +1018,7 @@ export function ChatMessageList({
             isDesktop
               ? () => {
                   if (
-                    openUrlInNewWindow(
-                      activeImage.url,
-                      "noopener,noreferrer",
-                    )
+                    openUrlInNewWindow(activeImage.url, "noopener,noreferrer")
                   ) {
                     setActionNotice({
                       message: "已在新窗口打开图片。",
@@ -1038,6 +1064,7 @@ export function ChatMessageList({
         open={Boolean(forwardMessages?.length)}
         messages={forwardPreviewItems}
         conversations={forwardConversationsQuery.data ?? []}
+        variant={variant}
         loading={forwardConversationsQuery.isLoading}
         pending={forwardMutation.isPending}
         error={

@@ -57,6 +57,7 @@ export function ConversationThreadPanel({
 }: ConversationThreadPanelProps) {
   const navigate = useNavigate();
   const [replyDraft, setReplyDraft] = useState<ChatReplyMetadata | null>(null);
+  const [selectionModeActive, setSelectionModeActive] = useState(false);
   const {
     baseUrl,
     conversationTitle,
@@ -113,6 +114,7 @@ export function ConversationThreadPanel({
 
   useEffect(() => {
     setReplyDraft(null);
+    setSelectionModeActive(false);
   }, [conversationId]);
 
   const handleReplyMessage = (message: ChatRenderableMessage) => {
@@ -142,7 +144,9 @@ export function ConversationThreadPanel({
     setReplyDraft(null);
   };
 
-  const handleSendAttachment = async (payload: ChatComposerAttachmentPayload) => {
+  const handleSendAttachment = async (
+    payload: ChatComposerAttachmentPayload,
+  ) => {
     await sendAttachmentMessage(
       payload,
       replyDraft ? encodeChatReplyText("", replyDraft) : undefined,
@@ -269,8 +273,11 @@ export function ConversationThreadPanel({
             variant={isDesktop ? "desktop" : "mobile"}
             highlightedMessageId={highlightedMessageId}
             onReplyMessage={handleReplyMessage}
+            onSelectionModeChange={setSelectionModeActive}
             emptyState={
-              !isDesktop && !messagesQuery.isLoading && !messagesQuery.isError ? (
+              !isDesktop &&
+              !messagesQuery.isLoading &&
+              !messagesQuery.isError ? (
                 <EmptyState
                   title="还没有消息"
                   description="先发一句开场白，把这段对话真正聊起来。"
@@ -290,43 +297,45 @@ export function ConversationThreadPanel({
         </div>
       </div>
 
-      <ChatComposer
-        value={text}
-        placeholder="输入消息"
-        variant={isDesktop ? "desktop" : "mobile"}
-        pending={sendMutation.isPending}
-        error={
-          sendMutation.error instanceof Error
-            ? sendMutation.error.message
-            : null
-        }
-        speechInput={{
-          baseUrl,
-          conversationId,
-          enabled: runtimeConfig.appPlatform === "web",
-        }}
-        onChange={(value) => {
-          if (socketError) {
-            setSocketError(null);
+      {!selectionModeActive ? (
+        <ChatComposer
+          value={text}
+          placeholder="输入消息"
+          variant={isDesktop ? "desktop" : "mobile"}
+          pending={sendMutation.isPending}
+          error={
+            sendMutation.error instanceof Error
+              ? sendMutation.error.message
+              : null
           }
-          setText(value);
-        }}
-        onSendSticker={async (sticker) => {
-          if (socketError) {
-            setSocketError(null);
-          }
-          await handleSendSticker(sticker);
-        }}
-        onSendAttachment={async (payload) => {
-          if (socketError) {
-            setSocketError(null);
-          }
-          await handleSendAttachment(payload);
-        }}
-        replyPreview={replyPreview}
-        onCancelReply={() => setReplyDraft(null)}
-        onSubmit={() => void handleSubmit()}
-      />
+          speechInput={{
+            baseUrl,
+            conversationId,
+            enabled: runtimeConfig.appPlatform === "web",
+          }}
+          onChange={(value) => {
+            if (socketError) {
+              setSocketError(null);
+            }
+            setText(value);
+          }}
+          onSendSticker={async (sticker) => {
+            if (socketError) {
+              setSocketError(null);
+            }
+            await handleSendSticker(sticker);
+          }}
+          onSendAttachment={async (payload) => {
+            if (socketError) {
+              setSocketError(null);
+            }
+            await handleSendAttachment(payload);
+          }}
+          replyPreview={replyPreview}
+          onCancelReply={() => setReplyDraft(null)}
+          onSubmit={() => void handleSubmit()}
+        />
+      ) : null}
     </div>
   );
 }
