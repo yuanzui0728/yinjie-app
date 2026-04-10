@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import {
@@ -10,6 +10,7 @@ import {
   setGroupPinned,
   updateGroup,
   updateGroupOwnerProfile,
+  updateGroupPreferences,
 } from "@yinjie/contracts";
 import { ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
@@ -18,10 +19,6 @@ import { useDefaultChatBackground } from "../features/chat/backgrounds/use-conve
 import { ChatDetailsShell } from "../features/chat-details/chat-details-shell";
 import { ChatDetailsSection } from "../features/chat-details/chat-details-section";
 import { ChatMemberGrid } from "../features/chat-details/chat-member-grid";
-import {
-  readGroupChatDetailPreferences,
-  writeGroupChatDetailPreferences,
-} from "../features/chat-details/chat-detail-preferences";
 import { ChatSettingRow } from "../features/chat-details/chat-setting-row";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
@@ -32,19 +29,7 @@ export function GroupChatDetailsPage() {
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
   const [notice, setNotice] = useState<string | null>(null);
-  const [preferences, setPreferences] = useState(() =>
-    readGroupChatDetailPreferences(groupId),
-  );
   const ownerQuery = useDefaultChatBackground();
-
-  useEffect(() => {
-    setPreferences(readGroupChatDetailPreferences(groupId));
-    setNotice(null);
-  }, [groupId]);
-
-  useEffect(() => {
-    writeGroupChatDetailPreferences(groupId, preferences);
-  }, [groupId, preferences]);
 
   const groupQuery = useQuery({
     queryKey: ["app-group", baseUrl, groupId],
@@ -56,11 +41,10 @@ export function GroupChatDetailsPage() {
     queryFn: () => getGroupMembers(groupId, baseUrl),
   });
 
-  const updateGroupMutation = useMutation({
-    mutationFn: (payload: { name?: string; announcement?: string | null }) =>
-      updateGroup(groupId, payload, baseUrl),
-    onSuccess: async (_, payload) => {
-      setNotice(payload.name ? "群聊名称已更新。" : "群公告已更新。");
+  const updateNameMutation = useMutation({
+    mutationFn: (name: string) => updateGroup(groupId, { name }, baseUrl),
+    onSuccess: async () => {
+      setNotice("群聊名称已更新。");
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ["app-group", baseUrl, groupId],
@@ -77,6 +61,49 @@ export function GroupChatDetailsPage() {
       setGroupPinned(groupId, { pinned }, baseUrl),
     onSuccess: async (_, pinned) => {
       setNotice(pinned ? "群聊已置顶。" : "群聊已取消置顶。");
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["app-group", baseUrl, groupId],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["app-conversations", baseUrl],
+        }),
+      ]);
+    },
+  });
+
+  const preferencesMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof updateGroupPreferences>[1]) =>
+      updateGroupPreferences(groupId, payload, baseUrl),
+    onSuccess: async (_, payload) => {
+      const nextNotice =
+        payload.isMuted !== undefined
+          ? payload.isMuted
+            ? "已开启群消息免打扰。"
+            : "已关闭群消息免打扰。"
+          : payload.savedToContacts !== undefined
+            ? payload.savedToContacts
+              ? "已保存到通讯录。"
+              : "已从通讯录移除。"
+            : payload.showMemberNicknames !== undefined
+              ? payload.showMemberNicknames
+                ? "已开启显示群成员昵称。"
+                : "已关闭显示群成员昵称。"
+              : payload.notifyOnAtMe !== undefined
+                ? payload.notifyOnAtMe
+                  ? "开启了 @我 通知。"
+                  : "关闭了 @我 通知。"
+                : payload.notifyOnAtAll !== undefined
+                  ? payload.notifyOnAtAll
+                    ? "开启了 @所有人 通知。"
+                    : "关闭了 @所有人 通知。"
+                  : payload.notifyOnAnnouncement !== undefined
+                    ? payload.notifyOnAnnouncement
+                      ? "开启了群公告通知。"
+                      : "关闭了群公告通知。"
+                    : "群聊设置已更新。";
+
+      setNotice(nextNotice);
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ["app-group", baseUrl, groupId],
@@ -160,13 +187,6 @@ export function GroupChatDetailsPage() {
       ),
     [membersQuery.data],
   );
-  const busy =
-    updateGroupMutation.isPending ||
-    pinMutation.isPending ||
-    updateNicknameMutation.isPending ||
-    clearMutation.isPending ||
-    leaveMutation.isPending ||
-    hideMutation.isPending;
 
   const memberItems = useMemo(() => {
     const members = (membersQuery.data ?? []).slice(0, 10).map((member) => ({
@@ -182,7 +202,10 @@ export function GroupChatDetailsPage() {
         label: "添加",
         kind: "add" as const,
         onClick: () => {
-          setNotice("群成员添加能力需要后端补接口，当前先保留微信式入口。");
+          void navigate({
+            to: "/group/$groupId/members/add",
+            params: { groupId },
+          });
         },
       },
       {
@@ -190,11 +213,23 @@ export function GroupChatDetailsPage() {
         label: "移除",
         kind: "remove" as const,
         onClick: () => {
-          setNotice("群成员移除能力需要后端补接口，当前先保留微信式入口。");
+          void navigate({
+            to: "/group/$groupId/members/remove",
+            params: { groupId },
+          });
         },
       },
     ];
-  }, [membersQuery.data]);
+  }, [groupId, membersQuery.data, navigate]);
+
+  const busy =
+    updateNameMutation.isPending ||
+    pinMutation.isPending ||
+    preferencesMutation.isPending ||
+    updateNicknameMutation.isPending ||
+    clearMutation.isPending ||
+    leaveMutation.isPending ||
+    hideMutation.isPending;
 
   return (
     <ChatDetailsShell
@@ -253,23 +288,26 @@ export function GroupChatDetailsPage() {
                   if (!nextName || nextName.trim() === groupQuery.data.name) {
                     return;
                   }
-                  updateGroupMutation.mutate({ name: nextName.trim() });
+                  updateNameMutation.mutate(nextName.trim());
                 }}
               />
               <ChatSettingRow
                 label="群公告"
                 value={groupQuery.data.announcement?.trim() || "暂无"}
                 onClick={() => {
-                  const nextAnnouncement = window.prompt(
-                    "编辑群公告",
-                    groupQuery.data.announcement ?? "",
-                  );
-                  if (nextAnnouncement === null) {
-                    return;
-                  }
-                  updateGroupMutation.mutate({
-                    announcement: nextAnnouncement.trim() || null,
+                  void navigate({
+                    to: "/group/$groupId/announcement",
+                    params: { groupId },
                   });
+                }}
+              />
+              <ChatSettingRow
+                label="群二维码"
+                value="暂未开放"
+                onClick={() => {
+                  setNotice(
+                    "群二维码能力下一步补。当前先打通群公告和成员管理。",
+                  );
                 }}
               />
             </div>
@@ -293,14 +331,38 @@ export function GroupChatDetailsPage() {
             <div className="divide-y divide-black/5">
               <ChatSettingRow
                 label="消息免打扰"
-                checked={preferences.muted}
+                checked={groupQuery.data.isMuted}
                 onToggle={(checked) => {
-                  setPreferences((current) => ({ ...current, muted: checked }));
-                  setNotice(
-                    checked ? "已开启群消息免打扰。" : "已关闭群消息免打扰。",
-                  );
+                  preferencesMutation.mutate({ isMuted: checked });
                 }}
               />
+              {groupQuery.data.isMuted ? (
+                <>
+                  <ChatSettingRow
+                    label="@我仍通知"
+                    checked={groupQuery.data.notifyOnAtMe}
+                    onToggle={(checked) => {
+                      preferencesMutation.mutate({ notifyOnAtMe: checked });
+                    }}
+                  />
+                  <ChatSettingRow
+                    label="@所有人仍通知"
+                    checked={groupQuery.data.notifyOnAtAll}
+                    onToggle={(checked) => {
+                      preferencesMutation.mutate({ notifyOnAtAll: checked });
+                    }}
+                  />
+                  <ChatSettingRow
+                    label="群公告仍通知"
+                    checked={groupQuery.data.notifyOnAnnouncement}
+                    onToggle={(checked) => {
+                      preferencesMutation.mutate({
+                        notifyOnAnnouncement: checked,
+                      });
+                    }}
+                  />
+                </>
+              ) : null}
               <ChatSettingRow
                 label="置顶聊天"
                 checked={groupQuery.data.isPinned}
@@ -308,11 +370,9 @@ export function GroupChatDetailsPage() {
               />
               <ChatSettingRow
                 label="保存到通讯录"
-                value="暂不支持"
-                onClick={() => {
-                  setNotice(
-                    "群聊保存到通讯录能力当前未接入，先保留微信式入口。",
-                  );
+                checked={groupQuery.data.savedToContacts}
+                onToggle={(checked) => {
+                  preferencesMutation.mutate({ savedToContacts: checked });
                 }}
               />
             </div>
@@ -339,17 +399,11 @@ export function GroupChatDetailsPage() {
               />
               <ChatSettingRow
                 label="显示群成员昵称"
-                checked={preferences.showMemberNicknames}
+                checked={groupQuery.data.showMemberNicknames}
                 onToggle={(checked) => {
-                  setPreferences((current) => ({
-                    ...current,
+                  preferencesMutation.mutate({
                     showMemberNicknames: checked,
-                  }));
-                  setNotice(
-                    checked
-                      ? "已开启显示群成员昵称。"
-                      : "已关闭显示群成员昵称。",
-                  );
+                  });
                 }}
               />
             </div>
@@ -416,15 +470,21 @@ export function GroupChatDetailsPage() {
             </div>
           </ChatDetailsSection>
 
-          {updateGroupMutation.isError &&
-          updateGroupMutation.error instanceof Error ? (
+          {updateNameMutation.isError &&
+          updateNameMutation.error instanceof Error ? (
             <div className="px-3">
-              <ErrorBlock message={updateGroupMutation.error.message} />
+              <ErrorBlock message={updateNameMutation.error.message} />
             </div>
           ) : null}
           {pinMutation.isError && pinMutation.error instanceof Error ? (
             <div className="px-3">
               <ErrorBlock message={pinMutation.error.message} />
+            </div>
+          ) : null}
+          {preferencesMutation.isError &&
+          preferencesMutation.error instanceof Error ? (
+            <div className="px-3">
+              <ErrorBlock message={preferencesMutation.error.message} />
             </div>
           ) : null}
           {updateNicknameMutation.isError &&

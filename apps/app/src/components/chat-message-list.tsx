@@ -19,6 +19,7 @@ type ChatRenderableMessage = {
 type ChatMessageListProps = {
   messages: ChatRenderableMessage[];
   groupMode?: boolean;
+  showGroupMemberNicknames?: boolean;
   variant?: "mobile" | "desktop";
   highlightedMessageId?: string;
   emptyState?: React.ReactNode;
@@ -27,6 +28,7 @@ type ChatMessageListProps = {
 export function ChatMessageList({
   messages,
   groupMode = false,
+  showGroupMemberNicknames = true,
   variant = "mobile",
   highlightedMessageId,
   emptyState,
@@ -107,7 +109,7 @@ export function ChatMessageList({
               <div
                 className={`flex max-w-[78%] flex-col ${isUser ? "items-end" : "items-start"}`}
               >
-                {!isUser && groupMode ? (
+                {!isUser && groupMode && showGroupMemberNicknames ? (
                   <div className="mb-1 px-1 text-[11px] text-[color:var(--text-muted)]">
                     {message.senderName}
                   </div>

@@ -63,7 +63,10 @@
 - `chat/$conversationId/details`：单聊右上角三个点详情页，对齐微信式聊天信息页
 - `chat/$conversationId/search`：单聊聊天记录检索页，由聊天信息页进入
 - `group/$groupId/details`：群聊右上角三个点详情页，对齐微信式群聊信息页
+- `group/$groupId/announcement`：群公告独立页，承载群公告阅读与编辑
 - `group/$groupId/search`：群聊聊天记录检索页，由群聊信息页进入
+- `group/$groupId/members/add`：群成员添加页，承载群成员微信式多选添加
+- `group/$groupId/members/remove`：群成员移除页，承载群成员微信式减号选择移除
 - `notes-page.tsx`：桌面端微信式笔记页，由消息页搜索框右侧 `+` 入口进入
 - `moments-page.tsx`：保留独立朋友圈页能力，当前主要作为发现页内二级能力的兼容承载
 - `chat-room-page` · `group-chat-page` · `character-detail-page` · `friend-requests-page` · `create-group-page`

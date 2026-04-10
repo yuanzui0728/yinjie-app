@@ -198,9 +198,24 @@ const GroupChatDetailsPage = lazy(async () => {
   return { default: mod.GroupChatDetailsPage };
 });
 
+const GroupAnnouncementPage = lazy(async () => {
+  const mod = await import("./routes/group-announcement-page");
+  return { default: mod.GroupAnnouncementPage };
+});
+
 const GroupMessageSearchPage = lazy(async () => {
   const mod = await import("./routes/group-message-search-page");
   return { default: mod.GroupMessageSearchPage };
+});
+
+const GroupMemberAddPage = lazy(async () => {
+  const mod = await import("./routes/group-member-picker-page");
+  return { default: mod.GroupMemberAddPage };
+});
+
+const GroupMemberRemovePage = lazy(async () => {
+  const mod = await import("./routes/group-member-picker-page");
+  return { default: mod.GroupMemberRemovePage };
 });
 
 const CreateGroupPage = lazy(async () => {
@@ -437,11 +452,32 @@ const groupChatDetailsRoute = createRoute({
   component: GroupChatDetailsPage,
 });
 
+const groupAnnouncementRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/group/$groupId/announcement",
+  beforeLoad: requireWorldReady,
+  component: GroupAnnouncementPage,
+});
+
 const groupMessageSearchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/group/$groupId/search",
   beforeLoad: requireWorldReady,
   component: GroupMessageSearchPage,
+});
+
+const groupMemberAddRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/group/$groupId/members/add",
+  beforeLoad: requireWorldReady,
+  component: GroupMemberAddPage,
+});
+
+const groupMemberRemoveRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/group/$groupId/members/remove",
+  beforeLoad: requireWorldReady,
+  component: GroupMemberRemovePage,
 });
 
 const createGroupRoute = createRoute({
@@ -606,7 +642,10 @@ const routeTree = rootRoute.addChildren([
   officialAccountServiceRoute,
   groupChatRoute,
   groupChatDetailsRoute,
+  groupAnnouncementRoute,
   groupMessageSearchRoute,
+  groupMemberAddRoute,
+  groupMemberRemoveRoute,
   createGroupRoute,
   notesRoute,
   discoverMomentsRoute,
