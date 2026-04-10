@@ -202,7 +202,7 @@ export function ConversationThreadPanel({
             variant={isDesktop ? "desktop" : "mobile"}
             highlightedMessageId={highlightedMessageId}
             emptyState={
-              !messagesQuery.isLoading && !messagesQuery.isError ? (
+              !isDesktop && !messagesQuery.isLoading && !messagesQuery.isError ? (
                 <EmptyState
                   title="还没有消息"
                   description="先发一句开场白，把这段对话真正聊起来。"
