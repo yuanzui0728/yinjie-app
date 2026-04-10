@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Phone, Users, Video } from "lucide-react";
 import { Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
@@ -18,6 +19,7 @@ import {
   type DesktopChatCallKind,
   type DesktopChatSidePanelMode,
 } from "../desktop/chat/desktop-chat-header-actions";
+import { DesktopDirectCallPanel } from "../desktop/chat/desktop-direct-call-panel";
 import { buildDesktopMobileCallHandoffHash } from "../desktop/chat/desktop-mobile-call-handoff-route-state";
 import { buildChatBackgroundStyle } from "./backgrounds/chat-background-helpers";
 import { ChatCallFallbackNotice } from "./chat-call-fallback-notice";
@@ -65,6 +67,8 @@ export function ConversationThreadPanel({
 }: ConversationThreadPanelProps) {
   const navigate = useNavigate();
   const [replyDraft, setReplyDraft] = useState<ChatReplyMetadata | null>(null);
+  const [desktopCallPanelKind, setDesktopCallPanelKind] =
+    useState<DesktopChatCallKind | null>(null);
   const [pendingCallFallback, setPendingCallFallback] =
     useState<DesktopChatCallKind | null>(null);
   const [mobileShortcutRequest, setMobileShortcutRequest] = useState<{
@@ -138,6 +142,13 @@ export function ConversationThreadPanel({
         modeLabel: replyDraft.quotedText ? "部分引用" : undefined,
       }
     : null;
+  const sendCallInviteMutation = useMutation({
+    mutationFn: (kind: DesktopChatCallKind) =>
+      sendTextMessage(buildDirectCallInviteMessage(kind, conversationTitle)),
+    onSuccess: async () => {
+      scrollToBottom("smooth");
+    },
+  });
 
   useEffect(() => {
     if (!highlightedMessageId || !hasHighlightedMessage) {
@@ -247,15 +258,7 @@ export function ConversationThreadPanel({
 
   const handleDesktopCallAction = (kind: DesktopChatCallKind) => {
     if (isDesktop) {
-      void navigate({
-        to: "/desktop/mobile",
-        hash: buildDesktopMobileCallHandoffHash({
-          kind,
-          conversationId,
-          conversationType: conversationType === "group" ? "group" : "direct",
-          title: conversationTitle,
-        }),
-      });
+      setDesktopCallPanelKind(kind);
       return;
     }
 
@@ -271,6 +274,7 @@ export function ConversationThreadPanel({
   };
 
   useEffect(() => {
+    setDesktopCallPanelKind(null);
     setPendingCallFallback(null);
     setMobileShortcutRequest(null);
   }, [conversationId]);
@@ -402,56 +406,86 @@ export function ConversationThreadPanel({
           }`}
         />
 
-        <div
-          ref={scrollAnchorRef}
-          className={
-            isDesktop
-              ? "relative flex h-full flex-col space-y-4 overflow-auto px-7 py-5"
-              : "relative flex h-full flex-col overflow-auto px-3 py-4"
-          }
-        >
-          {messagesQuery.isLoading ? (
-            <LoadingBlock label="正在读取会话..." />
-          ) : null}
-          {messagesQuery.isError && messagesQuery.error instanceof Error ? (
-            <ErrorBlock message={messagesQuery.error.message} />
-          ) : null}
-          {socketError ? <ErrorBlock message={socketError} /> : null}
-          {sendMutation.isError && sendMutation.error instanceof Error ? (
-            <ErrorBlock message={sendMutation.error.message} />
-          ) : null}
-
-          <ChatMessageList
-            messages={renderedMessages}
-            threadContext={{
-              id: conversationId,
-              type: "direct",
-              title: conversationTitle,
-            }}
-            groupMode={conversationType === "group"}
-            variant={isDesktop ? "desktop" : "mobile"}
-            highlightedMessageId={highlightedMessageId}
-            hasOlderMessages={hasOlderMessages}
-            loadingOlderMessages={loadingOlderMessages}
-            onLoadOlderMessages={() => {
-              void loadOlderMessages();
-            }}
-            unreadMarkerMessageId={unreadMarkerMessageId}
-            unreadMarkerCount={initialUnreadCount}
-            onReplyMessage={handleReplyMessage}
-            onSelectionModeChange={setSelectionModeActive}
-            emptyState={
-              !isDesktop &&
-              !messagesQuery.isLoading &&
-              !messagesQuery.isError ? (
-                <EmptyState
-                  title="还没有消息"
-                  description="先发一句开场白，把这段对话真正聊起来。"
-                />
-              ) : null
+        {isDesktop && desktopCallPanelKind ? (
+          <div className="relative h-full p-5">
+            <DesktopDirectCallPanel
+              kind={desktopCallPanelKind}
+              conversationTitle={conversationTitle}
+              inviteNoticePending={sendCallInviteMutation.isPending}
+              onClose={() => setDesktopCallPanelKind(null)}
+              onOpenMobileHandoff={() => {
+                void navigate({
+                  to: "/desktop/mobile",
+                  hash: buildDesktopMobileCallHandoffHash({
+                    kind: desktopCallPanelKind,
+                    conversationId,
+                    conversationType:
+                      conversationType === "group" ? "group" : "direct",
+                    title: conversationTitle,
+                  }),
+                });
+              }}
+              onSendInviteNotice={() => {
+                void sendCallInviteMutation.mutateAsync(desktopCallPanelKind);
+              }}
+            />
+          </div>
+        ) : (
+          <div
+            ref={scrollAnchorRef}
+            className={
+              isDesktop
+                ? "relative flex h-full flex-col space-y-4 overflow-auto px-7 py-5"
+                : "relative flex h-full flex-col overflow-auto px-3 py-4"
             }
-          />
-        </div>
+          >
+            {messagesQuery.isLoading ? (
+              <LoadingBlock label="正在读取会话..." />
+            ) : null}
+            {messagesQuery.isError && messagesQuery.error instanceof Error ? (
+              <ErrorBlock message={messagesQuery.error.message} />
+            ) : null}
+            {socketError ? <ErrorBlock message={socketError} /> : null}
+            {sendMutation.isError && sendMutation.error instanceof Error ? (
+              <ErrorBlock message={sendMutation.error.message} />
+            ) : null}
+            {sendCallInviteMutation.isError &&
+            sendCallInviteMutation.error instanceof Error ? (
+              <ErrorBlock message={sendCallInviteMutation.error.message} />
+            ) : null}
+
+            <ChatMessageList
+              messages={renderedMessages}
+              threadContext={{
+                id: conversationId,
+                type: "direct",
+                title: conversationTitle,
+              }}
+              groupMode={conversationType === "group"}
+              variant={isDesktop ? "desktop" : "mobile"}
+              highlightedMessageId={highlightedMessageId}
+              hasOlderMessages={hasOlderMessages}
+              loadingOlderMessages={loadingOlderMessages}
+              onLoadOlderMessages={() => {
+                void loadOlderMessages();
+              }}
+              unreadMarkerMessageId={unreadMarkerMessageId}
+              unreadMarkerCount={initialUnreadCount}
+              onReplyMessage={handleReplyMessage}
+              onSelectionModeChange={setSelectionModeActive}
+              emptyState={
+                !isDesktop &&
+                !messagesQuery.isLoading &&
+                !messagesQuery.isError ? (
+                  <EmptyState
+                    title="还没有消息"
+                    description="先发一句开场白，把这段对话真正聊起来。"
+                  />
+                ) : null
+              }
+            />
+          </div>
+        )}
         {!isDesktop &&
         !selectionModeActive &&
         (!isAtBottom || pendingCount > 0) ? (
@@ -519,6 +553,18 @@ export function ConversationThreadPanel({
       ) : null}
     </div>
   );
+}
+
+function buildDirectCallInviteMessage(
+  kind: DesktopChatCallKind,
+  conversationTitle: string,
+) {
+  return [
+    kind === "voice" ? "[语音通话]" : "[视频通话]",
+    `${conversationTitle}`,
+    "已从桌面端打开单聊通话工作台，可直接查看当前通话状态。",
+    "如需继续加入或转到手机，请在当前聊天顶部的通话面板里操作。",
+  ].join("\n");
 }
 
 function describeReplyPreview(message: ChatRenderableMessage) {
