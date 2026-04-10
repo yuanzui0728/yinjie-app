@@ -52,6 +52,11 @@ export type ReplyLogicActivityScheduleRules = {
   eating: number[];
 };
 
+export type ReplyLogicDefaultCharacterRules = {
+  isOnline: boolean;
+  activity: string;
+};
+
 export type ReplyLogicObservabilityTemplates = {
   stateGateSleeping: string;
   stateGateBusy: string;
@@ -237,6 +242,7 @@ export type ReplyLogicRuntimeRules = {
   relationshipStrengthMax: number;
   activityScheduleHours: ReplyLogicActivityScheduleRules;
   activityRandomPool: string[];
+  defaultCharacterRules: ReplyLogicDefaultCharacterRules;
   activityBaseWeight: number;
   proactiveReminderHour: number;
   relationshipInitialBackstory: string;
@@ -341,6 +347,11 @@ export const DEFAULT_ACTIVITY_RANDOM_POOL = [
   'free',
   'sleeping',
 ] as const;
+export const DEFAULT_CHARACTER_RUNTIME_RULES: ReplyLogicDefaultCharacterRules =
+  Object.freeze({
+    isOnline: true,
+    activity: 'free',
+  });
 export const ACTIVITY_BASE_WEIGHT = 0.8;
 export const PROACTIVE_REMINDER_HOUR = 20;
 export const HISTORY_WINDOW_BASE = 8;
@@ -598,8 +609,8 @@ export const DEFAULT_REPLY_LOGIC_SCHEDULER_TEXT_TEMPLATES: ReplyLogicSchedulerTe
     eventTitleChannelPosted: '视频号内容生成',
     eventTitleProactiveMessage: '主动提醒已发送',
     eventTitleRelationshipUpdated: 'AI 关系更新',
-    eventSummaryDefaultOnlineKept: '默认角色已强制保持在线。',
-    eventSummaryDefaultActivityReset: '默认角色活动已重置为空闲。',
+    eventSummaryDefaultOnlineKept: '默认角色在线状态已强制设为{{onlineState}}。',
+    eventSummaryDefaultActivityReset: '默认角色活动已重置为{{activity}}。',
     eventSummaryOnlineWindowEntered: '已进入活跃时间窗 {{startHour}}:00-{{endHour}}:00，切换为在线。',
     eventSummaryOnlineWindowExited: '已离开活跃时间窗 {{startHour}}:00-{{endHour}}:00，切换为离线。',
     eventSummaryMomentPosted: '调度器为该角色生成了新的朋友圈内容 {{postId}}。',
@@ -691,6 +702,9 @@ export const DEFAULT_REPLY_LOGIC_RUNTIME_RULES: ReplyLogicRuntimeRules =
       eating: [...DEFAULT_ACTIVITY_SCHEDULE_HOURS.eating],
     },
     activityRandomPool: [...DEFAULT_ACTIVITY_RANDOM_POOL],
+    defaultCharacterRules: {
+      ...DEFAULT_CHARACTER_RUNTIME_RULES,
+    },
     activityBaseWeight: ACTIVITY_BASE_WEIGHT,
     proactiveReminderHour: PROACTIVE_REMINDER_HOUR,
     relationshipInitialBackstory: RELATIONSHIP_INITIAL_BACKSTORY_TEMPLATE,
@@ -1572,6 +1586,17 @@ function normalizeHourList(value: number[] | undefined, fallback: number[]) {
   return next.length ? next : fallback;
 }
 
+function normalizeDefaultCharacterRules(
+  value: Partial<ReplyLogicDefaultCharacterRules> | undefined,
+): ReplyLogicDefaultCharacterRules {
+  const defaults = DEFAULT_CHARACTER_RUNTIME_RULES;
+  return {
+    isOnline:
+      typeof value?.isOnline === 'boolean' ? value.isOnline : defaults.isOnline,
+    activity: sanitizeTemplate(value?.activity, defaults.activity),
+  };
+}
+
 function normalizeNarrativeMilestones(
   value: ReplyLogicRuntimeRules['narrativeMilestones'] | undefined,
 ) {
@@ -1710,6 +1735,9 @@ export function normalizeReplyLogicRuntimeRules(
     activityRandomPool: sanitizeMessages(
       input?.activityRandomPool,
       defaults.activityRandomPool,
+    ),
+    defaultCharacterRules: normalizeDefaultCharacterRules(
+      input?.defaultCharacterRules,
     ),
     activityBaseWeight: clamp(
       Number(input?.activityBaseWeight ?? defaults.activityBaseWeight),
