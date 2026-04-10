@@ -13,6 +13,7 @@ export type LocalChatMessageReminderRecord = {
   threadType: "direct" | "group";
   threadTitle?: string;
   previewText?: string;
+  notifiedAt?: string;
 };
 
 const STORAGE_KEY = "yinjie-chat-local-message-actions";
@@ -89,6 +90,27 @@ export function upsertLocalChatMessageReminder(
         (item) => item.messageId !== reminder.messageId,
       ),
     ],
+  });
+  writeState(nextState);
+  return nextState;
+}
+
+export function markLocalChatMessageReminderNotified(
+  messageId: string,
+  notifiedAt = new Date().toISOString(),
+) {
+  const current = readLocalChatMessageActionState();
+  const nextState = normalizeState({
+    hiddenMessageIds: current.hiddenMessageIds,
+    recalledMessageIds: current.recalledMessageIds,
+    reminders: current.reminders.map((item) =>
+      item.messageId === messageId
+        ? {
+            ...item,
+            notifiedAt,
+          }
+        : item,
+    ),
   });
   writeState(nextState);
   return nextState;
@@ -220,5 +242,7 @@ function normalizeReminderList(input: unknown) {
         typeof item.threadTitle === "string" ? item.threadTitle : undefined,
       previewText:
         typeof item.previewText === "string" ? item.previewText : undefined,
+      notifiedAt:
+        typeof item.notifiedAt === "string" ? item.notifiedAt : undefined,
     }));
 }
