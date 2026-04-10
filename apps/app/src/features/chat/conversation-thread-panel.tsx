@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Phone, Users, Video } from "lucide-react";
 import { Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
@@ -20,15 +19,11 @@ import {
   type DesktopChatSidePanelMode,
 } from "../desktop/chat/desktop-chat-header-actions";
 import { DesktopDirectCallPanel } from "../desktop/chat/desktop-direct-call-panel";
-import { buildDesktopMobileCallHandoffHash } from "../desktop/chat/desktop-mobile-call-handoff-route-state";
 import { buildChatBackgroundStyle } from "./backgrounds/chat-background-helpers";
 import { ChatCallFallbackNotice } from "./chat-call-fallback-notice";
 import { type ChatComposeShortcutAction } from "./chat-compose-shortcut-route";
 import { type ChatComposerAttachmentPayload } from "./chat-plus-types";
-import {
-  buildDirectCallInviteMessage,
-  type DirectCallInviteStatus,
-} from "./group-call-message";
+import { buildDirectCallInviteMessage } from "./group-call-message";
 import { MobileChatThreadHeader } from "./mobile-chat-thread-header";
 import { MobileChatScrollBottomButton } from "./mobile-chat-scroll-bottom-button";
 import {
@@ -151,22 +146,6 @@ export function ConversationThreadPanel({
         modeLabel: replyDraft.quotedText ? "部分引用" : undefined,
       }
     : null;
-  const sendCallInviteMutation = useMutation({
-    mutationFn: (input: {
-      kind: DesktopChatCallKind;
-      status: DirectCallInviteStatus;
-    }) =>
-      sendTextMessage(
-        buildDirectCallInviteMessage(
-          input.kind,
-          conversationTitle,
-          input.status,
-        ),
-      ),
-    onSuccess: async () => {
-      scrollToBottom("smooth");
-    },
-  });
 
   useEffect(() => {
     if (!highlightedMessageId || !hasHighlightedMessage) {
@@ -449,37 +428,19 @@ export function ConversationThreadPanel({
           <div className="relative h-full p-5">
             <DesktopDirectCallPanel
               kind={desktopCallPanelKind}
+              conversationId={conversationId}
+              characterId={participants[0]}
               conversationTitle={conversationTitle}
-              inviteNoticePending={sendCallInviteMutation.isPending}
-              endNoticePending={sendCallInviteMutation.isPending}
               onClose={() => setDesktopCallPanelKind(null)}
-              onOpenMobileHandoff={() => {
-                void navigate({
-                  to: "/desktop/mobile",
-                  hash: buildDesktopMobileCallHandoffHash({
-                    kind: desktopCallPanelKind,
-                    conversationId,
-                    conversationType:
-                      conversationType === "group" ? "group" : "direct",
-                    title: conversationTitle,
-                  }),
-                });
-              }}
-              onSendInviteNotice={(status) => {
-                void sendCallInviteMutation.mutateAsync({
-                  kind: desktopCallPanelKind,
-                  status: status.remoteJoined ? "connected" : "waiting",
-                });
-              }}
-              onEndCall={() => {
-                void sendCallInviteMutation
-                  .mutateAsync({
-                    kind: desktopCallPanelKind,
-                    status: "ended",
-                  })
-                  .then(() => {
-                    setDesktopCallPanelKind(null);
-                  });
+              onEndCall={async () => {
+                await sendTextMessage(
+                  buildDirectCallInviteMessage(
+                    desktopCallPanelKind,
+                    conversationTitle,
+                    "ended",
+                  ),
+                );
+                scrollToBottom("smooth");
               }}
             />
           </div>
@@ -501,10 +462,6 @@ export function ConversationThreadPanel({
             {socketError ? <ErrorBlock message={socketError} /> : null}
             {sendMutation.isError && sendMutation.error instanceof Error ? (
               <ErrorBlock message={sendMutation.error.message} />
-            ) : null}
-            {sendCallInviteMutation.isError &&
-            sendCallInviteMutation.error instanceof Error ? (
-              <ErrorBlock message={sendCallInviteMutation.error.message} />
             ) : null}
 
             <ChatMessageList
