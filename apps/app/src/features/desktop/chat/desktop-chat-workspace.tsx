@@ -37,6 +37,10 @@ import { DesktopSubscriptionWorkspace } from "../official-accounts/desktop-subsc
 import { OfficialAccountServiceThread } from "../../official-accounts/service/official-account-service-thread";
 import { buildSearchRouteHash } from "../../search/search-route-state";
 import {
+  shouldHideSearchableChatMessage,
+  useLocalChatMessageActionState,
+} from "../../chat/local-chat-message-actions";
+import {
   sanitizeDisplayedChatText,
   splitChatTextSegments,
   summarizeChatMentions,
@@ -104,6 +108,7 @@ export function DesktopChatWorkspace({
   const ownerId = useWorldOwnerStore((state) => state.id);
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
+  const localMessageActionState = useLocalChatMessageActionState();
   const [searchTerm, setSearchTerm] = useState("");
   const [rightPanelMode, setRightPanelMode] =
     useState<DesktopChatSidePanelMode>(null);
@@ -157,12 +162,13 @@ export function DesktopChatWorkspace({
 
     return conversations.filter((conversation) => {
       const title = conversation.title.toLowerCase();
-      const preview = sanitizeDisplayedChatText(
-        conversation.lastMessage?.text ?? "",
-      ).toLowerCase();
+      const preview = buildConversationPreview(
+        conversation,
+        localMessageActionState,
+      ).text.toLowerCase();
       return title.includes(keyword) || preview.includes(keyword);
     });
-  }, [conversations, searchTerm]);
+  }, [conversations, localMessageActionState, searchTerm]);
   const subscriptionInboxSummary = messageEntriesQuery.data?.subscriptionInbox;
   const serviceConversations = useMemo(
     () => messageEntriesQuery.data?.serviceConversations ?? [],
@@ -542,6 +548,7 @@ export function DesktopChatWorkspace({
                 key={conversation.id}
                 active={conversation.id === activeConversation?.id}
                 conversation={conversation}
+                localMessageActionState={localMessageActionState}
                 onContextMenu={handleConversationContextMenu}
               />
             ))}
@@ -690,10 +697,12 @@ export function DesktopChatWorkspace({
 function ConversationCard({
   active,
   conversation,
+  localMessageActionState,
   onContextMenu,
 }: {
   active: boolean;
   conversation: ConversationListItem;
+  localMessageActionState: ReturnType<typeof useLocalChatMessageActionState>;
   onContextMenu: (
     event: MouseEvent<HTMLElement>,
     conversation: ConversationListItem,
@@ -703,6 +712,7 @@ function ConversationCard({
     <ConversationCardLink
       active={active}
       conversation={conversation}
+      localMessageActionState={localMessageActionState}
       onContextMenu={onContextMenu}
     />
   );
@@ -711,10 +721,12 @@ function ConversationCard({
 function ConversationCardLink({
   active,
   conversation,
+  localMessageActionState,
   onContextMenu,
 }: {
   active: boolean;
   conversation: ConversationListItem;
+  localMessageActionState: ReturnType<typeof useLocalChatMessageActionState>;
   onContextMenu: (
     event: MouseEvent<HTMLElement>,
     conversation: ConversationListItem,
@@ -725,10 +737,17 @@ function ConversationCardLink({
     : conversation.isPinned
       ? "flex items-center gap-3 rounded-[12px] border border-transparent bg-[#ededed] px-4 py-3 transition-[background-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[#e7e7e7]"
       : "flex items-center gap-3 rounded-[12px] border border-transparent bg-transparent px-4 py-3 transition-[background-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-white";
-  const preview = buildConversationPreview(conversation);
+  const preview = buildConversationPreview(
+    conversation,
+    localMessageActionState,
+  );
+  const visibleLastMessage = resolveVisibleConversationLastMessage(
+    conversation,
+    localMessageActionState,
+  );
   const isGroupConversation = isPersistedGroupConversation(conversation);
   const mentionSummary = isGroupConversation
-    ? summarizeChatMentions(conversation.lastMessage?.text ?? "")
+    ? summarizeChatMentions(visibleLastMessage?.text ?? "")
     : null;
   const hasMentionAllReminder = Boolean(
     isGroupConversation &&
@@ -760,7 +779,9 @@ function ConversationCardLink({
           </div>
           <div className="shrink-0 text-[11px] text-[color:var(--text-muted)]">
             {formatConversationTimestamp(
-              conversation.lastMessage?.createdAt ?? conversation.updatedAt,
+              visibleLastMessage?.createdAt ??
+                conversation.lastMessage?.createdAt ??
+                conversation.updatedAt,
             )}
           </div>
         </div>
@@ -862,14 +883,24 @@ function canConversationBeMarkedUnread(conversation: ConversationListItem) {
   );
 }
 
-function buildConversationPreview(conversation: ConversationListItem) {
-  const lastMessage = conversation.lastMessage;
+function buildConversationPreview(
+  conversation: ConversationListItem,
+  localMessageActionState: ReturnType<typeof useLocalChatMessageActionState>,
+) {
+  const lastMessage = resolveVisibleConversationLastMessage(
+    conversation,
+    localMessageActionState,
+  );
   if (!lastMessage) {
     return {
       prefix: "",
-      text: isPersistedGroupConversation(conversation)
-        ? "打开群聊查看最近消息。"
-        : "打开这个会话查看最近聊天记录。",
+      text: conversation.lastMessage
+        ? isPersistedGroupConversation(conversation)
+          ? "打开群聊查看最近消息。"
+          : "打开这个会话查看最近聊天记录。"
+        : isPersistedGroupConversation(conversation)
+          ? "打开群聊查看最近消息。"
+          : "打开这个会话查看最近聊天记录。",
     };
   }
 
@@ -897,6 +928,23 @@ function buildConversationPreview(conversation: ConversationListItem) {
     prefix: senderLabel,
     text,
   };
+}
+
+function resolveVisibleConversationLastMessage(
+  conversation: ConversationListItem,
+  localMessageActionState: ReturnType<typeof useLocalChatMessageActionState>,
+) {
+  const lastMessage = conversation.lastMessage;
+  if (!lastMessage) {
+    return null;
+  }
+
+  return shouldHideSearchableChatMessage(
+    lastMessage.id,
+    localMessageActionState,
+  )
+    ? null
+    : lastMessage;
 }
 
 function formatMessagePreviewText(type: string | undefined, text: string) {
