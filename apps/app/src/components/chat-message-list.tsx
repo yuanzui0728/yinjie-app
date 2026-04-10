@@ -22,6 +22,8 @@ import {
   X,
 } from "lucide-react";
 import {
+  deleteConversationMessage,
+  deleteGroupMessage,
   getConversations,
   recallConversationMessage,
   recallGroupMessage,
@@ -40,7 +42,6 @@ import {
   hideLocalChatMessage,
   type LocalChatMessageReminderRecord,
   readLocalChatMessageActionState,
-  recallLocalChatMessage,
   upsertLocalChatMessageReminder,
 } from "../features/chat/local-chat-message-actions";
 import {
@@ -399,6 +400,70 @@ export function ChatMessageList({
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (message: ChatRenderableMessage) => {
+      if (!threadContext) {
+        throw new Error("当前线程暂不支持删除消息。");
+      }
+
+      if (threadContext.type === "group") {
+        await deleteGroupMessage(threadContext.id, message.id, baseUrl);
+
+        return {
+          threadType: "group" as const,
+        };
+      }
+
+      await deleteConversationMessage(threadContext.id, message.id, baseUrl);
+
+      return {
+        threadType: "direct" as const,
+      };
+    },
+    onSuccess: async (result, message) => {
+      if (!threadContext) {
+        return;
+      }
+
+      clearTransientMessageState(message.id);
+      if (result.threadType === "group") {
+        queryClient.setQueryData<GroupMessage[] | undefined>(
+          ["app-group-messages", baseUrl, threadContext.id],
+          (current) =>
+            current?.filter((item) => item.id !== message.id) ?? current,
+        );
+        await queryClient.invalidateQueries({
+          queryKey: ["app-group-messages", baseUrl, threadContext.id],
+        });
+      } else {
+        queryClient.setQueryData<Message[] | undefined>(
+          ["app-conversation-messages", baseUrl, threadContext.id],
+          (current) =>
+            current?.filter((item) => item.id !== message.id) ?? current,
+        );
+        await queryClient.invalidateQueries({
+          queryKey: ["app-conversation-messages", baseUrl, threadContext.id],
+        });
+      }
+
+      setActionNotice({
+        message: "已删除这条消息。",
+        tone: "success",
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["app-conversations", baseUrl],
+      });
+    },
+    onError: (error) => {
+      setActionNotice({
+        message:
+          error instanceof Error ? error.message : "删除失败，请稍后再试。",
+        tone: "danger",
+      });
+    },
+  });
+
   const copyToClipboard = async (text: string, successMessage: string) => {
     if (
       typeof navigator === "undefined" ||
@@ -665,22 +730,12 @@ export function ChatMessageList({
     });
   };
 
-  const showUnavailableActionNotice = (message: string) => {
-    setActionNotice({
-      message,
-      tone: "danger",
-    });
-  };
-
-  const applyLocalMessageActionState = (
-    nextState: ReturnType<typeof readLocalChatMessageActionState>,
-    targetMessageId: string,
-  ) => {
-    setHiddenMessageIds(nextState.hiddenMessageIds);
-    setRecalledMessageIds(nextState.recalledMessageIds);
-    setMessageReminders(nextState.reminders);
+  const clearTransientMessageState = (targetMessageId: string) => {
     setSelectedMessageIds((current) =>
       current.filter((item) => item !== targetMessageId),
+    );
+    setSelectionAnchorMessageId((current) =>
+      current === targetMessageId ? null : current,
     );
     setForwardMessages(
       (current) =>
@@ -691,20 +746,26 @@ export function ChatMessageList({
     );
   };
 
+  const applyLocalMessageActionState = (
+    nextState: ReturnType<typeof readLocalChatMessageActionState>,
+    targetMessageId: string,
+  ) => {
+    setHiddenMessageIds(nextState.hiddenMessageIds);
+    setRecalledMessageIds(nextState.recalledMessageIds);
+    setMessageReminders(nextState.reminders);
+    clearTransientMessageState(targetMessageId);
+  };
+
   const handleDeleteMessage = (message: ChatRenderableMessage) => {
+    if (threadContext) {
+      deleteMutation.mutate(message);
+      return;
+    }
+
     const nextState = hideLocalChatMessage(message.id);
     applyLocalMessageActionState(nextState, message.id);
     setActionNotice({
       message: "已从当前设备删除这条消息。",
-      tone: "success",
-    });
-  };
-
-  const handleRecallMessage = (message: ChatRenderableMessage) => {
-    const nextState = recallLocalChatMessage(message.id);
-    applyLocalMessageActionState(nextState, message.id);
-    setActionNotice({
-      message: "已撤回这条消息。",
       tone: "success",
     });
   };
