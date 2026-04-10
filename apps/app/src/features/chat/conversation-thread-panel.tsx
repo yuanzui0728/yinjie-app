@@ -20,6 +20,7 @@ import {
 } from "../desktop/chat/desktop-chat-header-actions";
 import { buildDesktopMobileCallHandoffHash } from "../desktop/chat/desktop-mobile-call-handoff-route-state";
 import { buildChatBackgroundStyle } from "./backgrounds/chat-background-helpers";
+import { ChatCallFallbackNotice } from "./chat-call-fallback-notice";
 import { type ChatComposerAttachmentPayload } from "./chat-plus-types";
 import { MobileChatThreadHeader } from "./mobile-chat-thread-header";
 import { MobileChatScrollBottomButton } from "./mobile-chat-scroll-bottom-button";
@@ -261,6 +262,13 @@ export function ConversationThreadPanel({
     setPendingCallFallback(kind);
     onDesktopCallAction?.(kind);
   };
+  const handleApplyMobileCallFallback = (kind: DesktopChatCallKind) => {
+    setMobileShortcutRequest({
+      action: kind === "voice" ? "voice-message" : "camera",
+      nonce: Date.now(),
+    });
+    setPendingCallFallback(null);
+  };
 
   useEffect(() => {
     setPendingCallFallback(null);
@@ -330,48 +338,22 @@ export function ConversationThreadPanel({
 
       {pendingCallFallback && !isDesktop ? (
         <div className="border-b border-black/6 bg-white/82 px-3 py-2.5">
-          <InlineNotice tone="info" className="border-black/6 bg-white">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-xs font-medium leading-6 text-[color:var(--text-primary)]">
-                  {pendingCallFallback === "voice"
-                    ? "语音通话暂未开放"
-                    : "视频通话暂未开放"}
-                </div>
-                <div className="text-xs leading-6 text-[color:var(--text-secondary)]">
-                  {pendingCallFallback === "voice"
-                    ? "先切到底部按住说话，会更接近当前可用的体验。"
-                    : "先用拍摄或图片消息继续，把要表达的内容先发出去。"}
-                </div>
-              </div>
-              <div className="flex shrink-0 gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    setMobileShortcutRequest({
-                      action:
-                        pendingCallFallback === "voice"
-                          ? "voice-message"
-                          : "camera",
-                      nonce: Date.now(),
-                    });
-                  }}
-                  className="rounded-full"
-                >
-                  {pendingCallFallback === "voice" ? "改发语音" : "改为拍摄"}
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setPendingCallFallback(null)}
-                  className="rounded-full"
-                >
-                  收起
-                </Button>
-              </div>
-            </div>
-          </InlineNotice>
+          <ChatCallFallbackNotice
+            kind={pendingCallFallback}
+            description={
+              pendingCallFallback === "voice"
+                ? "先切到底部按住说话，会更接近当前可用的体验。"
+                : "先用拍摄或图片消息继续，把要表达的内容先发出去。"
+            }
+            primaryLabel={
+              pendingCallFallback === "voice" ? "改发语音" : "改为拍摄"
+            }
+            secondaryLabel="收起"
+            onPrimaryAction={() =>
+              handleApplyMobileCallFallback(pendingCallFallback)
+            }
+            onSecondaryAction={() => setPendingCallFallback(null)}
+          />
         </div>
       ) : null}
 
