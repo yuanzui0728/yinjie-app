@@ -351,6 +351,30 @@ export function ChatMessageList({
     enabled: Boolean(forwardMessages?.length),
   });
 
+  const updateGroupMessageQueries = (
+    groupId: string,
+    updater: (messages: GroupMessage[] | undefined) => GroupMessage[] | undefined,
+  ) => {
+    queryClient.setQueriesData<GroupMessage[] | undefined>(
+      {
+        queryKey: ["app-group-messages", baseUrl, groupId],
+      },
+      updater,
+    );
+  };
+
+  const updateConversationMessageQueries = (
+    conversationId: string,
+    updater: (messages: Message[] | undefined) => Message[] | undefined,
+  ) => {
+    queryClient.setQueriesData<Message[] | undefined>(
+      {
+        queryKey: ["app-conversation-messages", baseUrl, conversationId],
+      },
+      updater,
+    );
+  };
+
   const forwardMutation = useMutation({
     mutationFn: async (conversation: ConversationListItem) => {
       const messageQueue = forwardMessages ?? [];
@@ -437,8 +461,8 @@ export function ChatMessageList({
       }
 
       if (result.threadType === "group") {
-        queryClient.setQueryData<GroupMessage[] | undefined>(
-          ["app-group-messages", baseUrl, threadContext.id],
+        updateGroupMessageQueries(
+          threadContext.id,
           (current) =>
             current?.map((item) =>
               item.id === result.recalledMessage.id
@@ -447,8 +471,8 @@ export function ChatMessageList({
             ) ?? current,
         );
       } else {
-        queryClient.setQueryData<Message[] | undefined>(
-          ["app-conversation-messages", baseUrl, threadContext.id],
+        updateConversationMessageQueries(
+          threadContext.id,
           (current) =>
             current?.map((item) =>
               item.id === result.recalledMessage.id
@@ -506,8 +530,8 @@ export function ChatMessageList({
 
       clearTransientMessageState(message.id);
       if (result.threadType === "group") {
-        queryClient.setQueryData<GroupMessage[] | undefined>(
-          ["app-group-messages", baseUrl, threadContext.id],
+        updateGroupMessageQueries(
+          threadContext.id,
           (current) =>
             current?.filter((item) => item.id !== message.id) ?? current,
         );
@@ -515,8 +539,8 @@ export function ChatMessageList({
           queryKey: ["app-group-messages", baseUrl, threadContext.id],
         });
       } else {
-        queryClient.setQueryData<Message[] | undefined>(
-          ["app-conversation-messages", baseUrl, threadContext.id],
+        updateConversationMessageQueries(
+          threadContext.id,
           (current) =>
             current?.filter((item) => item.id !== message.id) ?? current,
         );
@@ -1163,8 +1187,8 @@ export function ChatMessageList({
         }
 
         if (threadContext.type === "group") {
-          queryClient.setQueryData<GroupMessage[] | undefined>(
-            ["app-group-messages", baseUrl, threadContext.id],
+          updateGroupMessageQueries(
+            threadContext.id,
             (current) =>
               current?.filter((item) => !deletedMessageIdSet.has(item.id)) ??
               current,
@@ -1173,8 +1197,8 @@ export function ChatMessageList({
             queryKey: ["app-group-messages", baseUrl, threadContext.id],
           });
         } else {
-          queryClient.setQueryData<Message[] | undefined>(
-            ["app-conversation-messages", baseUrl, threadContext.id],
+          updateConversationMessageQueries(
+            threadContext.id,
             (current) =>
               current?.filter((item) => !deletedMessageIdSet.has(item.id)) ??
               current,
