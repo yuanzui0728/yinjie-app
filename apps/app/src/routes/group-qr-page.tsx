@@ -346,6 +346,14 @@ export function GroupQrPage() {
     pendingCurrentBatchConversations[0] ?? null;
   const fallbackPendingReturnConversation =
     pendingCurrentBatchConversations[1] ?? null;
+  const deferredPendingReturnConversation =
+    pendingCurrentBatchConversations.find(
+      (item) =>
+        isPendingReturnCoolingDown(item.target.deliveredAt) &&
+        item.conversation.id !== topPendingReturnConversation?.conversation.id &&
+        item.conversation.id !==
+          fallbackPendingReturnConversation?.conversation.id,
+    ) ?? null;
 
   useEffect(() => {
     setDeliveredConversation(readGroupInviteDeliveryRecord(groupId));
@@ -890,6 +898,40 @@ export function GroupQrPage() {
                             className="shrink-0 rounded-full border border-[rgba(15,23,42,0.08)] bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--text-secondary)] transition hover:border-[rgba(249,115,22,0.18)] hover:text-[color:var(--brand-secondary)]"
                           >
                             看这条
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                    {deferredPendingReturnConversation ? (
+                      <div className="mt-3 rounded-[16px] border border-[rgba(15,23,42,0.08)] bg-[rgba(15,23,42,0.04)] px-3 py-3">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-[11px] font-medium tracking-[0.12em] text-[color:var(--text-muted)]">
+                              暂缓处理
+                            </div>
+                            <div className="mt-1 truncate text-sm font-medium text-[color:var(--text-primary)]">
+                              {deferredPendingReturnConversation.conversation.title}
+                            </div>
+                            <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
+                              刚补发过 · 冷却剩余{" "}
+                              {formatPendingReturnCooldownRemaining(
+                                deferredPendingReturnConversation.target.deliveredAt,
+                              )}
+                            </div>
+                            <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
+                              这条会话已经在当前轮次里补发过，先给它一点回流时间，冷却结束后会重新参与优先排序。
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              void sendToConversation(
+                                deferredPendingReturnConversation.conversation,
+                              );
+                            }}
+                            className="shrink-0 rounded-full border border-[rgba(15,23,42,0.08)] bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--text-muted)] transition hover:border-[rgba(15,23,42,0.14)] hover:text-[color:var(--text-primary)]"
+                          >
+                            先不动
                           </button>
                         </div>
                       </div>
