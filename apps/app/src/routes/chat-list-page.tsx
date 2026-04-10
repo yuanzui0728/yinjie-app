@@ -18,6 +18,7 @@ import {
   LoadingBlock,
   cn,
 } from "@yinjie/ui";
+
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
@@ -249,18 +250,8 @@ function MobileChatListPage() {
                 }
                 description={
                   hasSearchResult
-                    ? "换一个关键词试试，或者直接去通讯录发起新的对话。"
-                    : "先去通讯录认识角色，或者从发现页触发第一次相遇。"
-                }
-                action={
-                  <div className="flex flex-wrap justify-center gap-3">
-                    <Link to="/tabs/contacts">
-                      <Button variant="secondary">去通讯录看看</Button>
-                    </Link>
-                    <Link to="/tabs/discover">
-                      <Button variant="primary">去发现页</Button>
-                    </Link>
-                  </div>
+                    ? "换一个关键词试试"
+                    : "去通讯录认识角色，或从发现页触发第一次相遇"
                 }
               />
             </div>
