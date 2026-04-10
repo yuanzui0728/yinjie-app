@@ -6,6 +6,7 @@ export type GameCenterStoredState = {
   lastOpenedAtById: Record<string, string>;
   eventActionStatusById: Record<string, string>;
   lastInviteConversationIdByActivityId: Record<string, string>;
+  lastInviteConversationPathByActivityId: Record<string, string>;
   lastInviteConversationTitleByActivityId: Record<string, string>;
   friendInviteStatusByActivityId: Record<string, string>;
   friendInviteSentAtByActivityId: Record<string, string>;
@@ -65,6 +66,9 @@ export function getDefaultGameCenterState(): GameCenterStoredState {
     lastInviteConversationIdByActivityId: {
       "activity-lu": "group-weekend",
     },
+    lastInviteConversationPathByActivityId: {
+      "activity-lu": "/group/group-weekend",
+    },
     lastInviteConversationTitleByActivityId: {
       "activity-lu": "周末搭子群",
     },
@@ -104,6 +108,9 @@ export function readGameCenterState() {
       eventActionStatusById: sanitizeTimestampRecord(parsed.eventActionStatusById),
       lastInviteConversationIdByActivityId: sanitizeTimestampRecord(
         parsed.lastInviteConversationIdByActivityId,
+      ),
+      lastInviteConversationPathByActivityId: sanitizeTimestampRecord(
+        parsed.lastInviteConversationPathByActivityId,
       ),
       lastInviteConversationTitleByActivityId: sanitizeTimestampRecord(
         parsed.lastInviteConversationTitleByActivityId,
@@ -151,6 +158,8 @@ export function markGameOpened(
     },
     eventActionStatusById: state.eventActionStatusById,
     lastInviteConversationIdByActivityId: state.lastInviteConversationIdByActivityId,
+    lastInviteConversationPathByActivityId:
+      state.lastInviteConversationPathByActivityId,
     lastInviteConversationTitleByActivityId:
       state.lastInviteConversationTitleByActivityId,
     friendInviteStatusByActivityId: state.friendInviteStatusByActivityId,
@@ -219,6 +228,7 @@ export function markGameCenterInviteDelivered(
   input: {
     activityId: string;
     conversationId: string;
+    conversationPath: string;
     conversationTitle: string;
   },
 ): GameCenterStoredState {
@@ -227,6 +237,10 @@ export function markGameCenterInviteDelivered(
     lastInviteConversationIdByActivityId: {
       ...state.lastInviteConversationIdByActivityId,
       [input.activityId]: input.conversationId,
+    },
+    lastInviteConversationPathByActivityId: {
+      ...state.lastInviteConversationPathByActivityId,
+      [input.activityId]: input.conversationPath,
     },
     lastInviteConversationTitleByActivityId: {
       ...state.lastInviteConversationTitleByActivityId,

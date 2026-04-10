@@ -47,12 +47,14 @@ export function useGameCenterState() {
     markInviteDelivered(
       activityId: string,
       conversationId: string,
+      conversationPath: string,
       conversationTitle: string,
     ) {
       setState((current) =>
         markGameCenterInviteDelivered(current, {
           activityId,
           conversationId,
+          conversationPath,
           conversationTitle,
         }),
       );
