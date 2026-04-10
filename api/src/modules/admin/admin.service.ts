@@ -7,7 +7,7 @@ import { MessageEntity } from '../chat/message.entity';
 import { SystemConfigEntity } from '../config/config.entity';
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs';
-import * as path from 'path';
+import { resolveDatabasePath } from '../../database/database-path';
 
 @Injectable()
 export class AdminService {
@@ -37,11 +37,10 @@ export class AdminService {
   }
 
   async getSystemInfo() {
-    const dbPath = this.config.get<string>('DATABASE_PATH') ?? 'database.sqlite';
+    const dbPath = resolveDatabasePath(this.config.get<string>('DATABASE_PATH'));
     let dbSizeBytes = 0;
     try {
-      const resolvedPath = path.isAbsolute(dbPath) ? dbPath : path.resolve(process.cwd(), dbPath);
-      const stat = fs.statSync(resolvedPath);
+      const stat = fs.statSync(dbPath);
       dbSizeBytes = stat.size;
     } catch {
       // ignore if file not accessible
