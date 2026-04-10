@@ -12,12 +12,24 @@ type ChatMemberGridItem = {
 type ChatMemberGridProps = {
   items: ChatMemberGridItem[];
   className?: string;
+  variant?: "default" | "wechat";
 };
 
-export function ChatMemberGrid({ items, className }: ChatMemberGridProps) {
+export function ChatMemberGrid({
+  items,
+  className,
+  variant = "default",
+}: ChatMemberGridProps) {
+  const isWechat = variant === "wechat";
+
   return (
-    <div className={cn("px-4 py-4", className)}>
-      <div className="grid grid-cols-5 gap-x-3 gap-y-4">
+    <div className={cn("px-4 py-4", isWechat && "px-3 py-3", className)}>
+      <div
+        className={cn(
+          "grid grid-cols-5 gap-x-3 gap-y-4",
+          isWechat && "gap-x-2.5 gap-y-4",
+        )}
+      >
         {items.map((item) => {
           const isAction = item.kind === "add" || item.kind === "remove";
           return (
@@ -31,9 +43,12 @@ export function ChatMemberGrid({ items, className }: ChatMemberGridProps) {
                 <div
                   className={cn(
                     "flex h-11 w-11 items-center justify-center rounded-[12px] border border-dashed text-2xl shadow-none transition-colors",
+                    isWechat && "h-10 w-10 rounded-[10px] text-[24px]",
                     item.kind === "remove"
                       ? "border-[rgba(220,38,38,0.25)] bg-[rgba(254,242,242,0.8)] text-red-500"
-                      : "border-black/10 bg-[#f7f7f7] text-[color:var(--text-secondary)]",
+                      : isWechat
+                        ? "border-[#d9d9d9] bg-white text-[#8c8c8c]"
+                        : "border-black/10 bg-[#f7f7f7] text-[color:var(--text-secondary)]",
                   )}
                 >
                   {item.kind === "remove" ? "−" : "+"}
@@ -41,7 +56,12 @@ export function ChatMemberGrid({ items, className }: ChatMemberGridProps) {
               ) : (
                 <AvatarChip name={item.label} src={item.src} size="wechat" />
               )}
-              <span className="w-full truncate text-[11px] text-[color:var(--text-secondary)]">
+              <span
+                className={cn(
+                  "w-full truncate text-[11px] text-[color:var(--text-secondary)]",
+                  isWechat && "text-[#7a7a7a]",
+                )}
+              >
                 {item.label}
               </span>
             </button>

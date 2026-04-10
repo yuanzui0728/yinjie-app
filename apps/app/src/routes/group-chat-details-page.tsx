@@ -259,8 +259,8 @@ export function GroupChatDetailsPage() {
 
       {groupQuery.data ? (
         <>
-          <ChatDetailsSection title="群聊成员">
-            <ChatMemberGrid items={memberItems} />
+          <ChatDetailsSection title="群聊成员" variant="wechat">
+            <ChatMemberGrid items={memberItems} variant="wechat" />
             {hasCollapsedMembers || memberGridExpanded ? (
               <button
                 type="button"
@@ -272,11 +272,12 @@ export function GroupChatDetailsPage() {
             ) : null}
           </ChatDetailsSection>
 
-          <ChatDetailsSection title="群聊资料">
+          <ChatDetailsSection title="群聊资料" variant="wechat">
             <div className="divide-y divide-black/5">
               <ChatSettingRow
                 label="群聊名称"
                 value={groupQuery.data.name}
+                variant="wechat"
                 onClick={() => {
                   void navigate({
                     to: "/group/$groupId/edit/name",
@@ -287,6 +288,7 @@ export function GroupChatDetailsPage() {
               <ChatSettingRow
                 label="群公告"
                 value={groupQuery.data.announcement?.trim() || "暂无"}
+                variant="wechat"
                 onClick={() => {
                   void navigate({
                     to: "/group/$groupId/announcement",
@@ -297,6 +299,7 @@ export function GroupChatDetailsPage() {
               <ChatSettingRow
                 label="群二维码"
                 value="查看邀请卡"
+                variant="wechat"
                 onClick={() => {
                   void navigate({
                     to: "/group/$groupId/qr",
@@ -307,10 +310,11 @@ export function GroupChatDetailsPage() {
             </div>
           </ChatDetailsSection>
 
-          <ChatDetailsSection title="聊天记录">
+          <ChatDetailsSection title="聊天记录" variant="wechat">
             <div className="divide-y divide-black/5">
               <ChatSettingRow
                 label="查找聊天记录"
+                variant="wechat"
                 onClick={() => {
                   void navigate({
                     to: "/group/$groupId/search",
@@ -321,10 +325,11 @@ export function GroupChatDetailsPage() {
             </div>
           </ChatDetailsSection>
 
-          <ChatDetailsSection title="消息设置">
+          <ChatDetailsSection title="消息设置" variant="wechat">
             <div className="divide-y divide-black/5">
               <ChatSettingRow
                 label="消息免打扰"
+                variant="wechat"
                 checked={groupQuery.data.isMuted}
                 onToggle={(checked) => {
                   preferencesMutation.mutate({ isMuted: checked });
@@ -334,6 +339,7 @@ export function GroupChatDetailsPage() {
                 <>
                   <ChatSettingRow
                     label="@我仍通知"
+                    variant="wechat"
                     checked={groupQuery.data.notifyOnAtMe}
                     onToggle={(checked) => {
                       preferencesMutation.mutate({ notifyOnAtMe: checked });
@@ -341,6 +347,7 @@ export function GroupChatDetailsPage() {
                   />
                   <ChatSettingRow
                     label="@所有人仍通知"
+                    variant="wechat"
                     checked={groupQuery.data.notifyOnAtAll}
                     onToggle={(checked) => {
                       preferencesMutation.mutate({ notifyOnAtAll: checked });
@@ -348,6 +355,7 @@ export function GroupChatDetailsPage() {
                   />
                   <ChatSettingRow
                     label="群公告仍通知"
+                    variant="wechat"
                     checked={groupQuery.data.notifyOnAnnouncement}
                     onToggle={(checked) => {
                       preferencesMutation.mutate({
@@ -359,11 +367,13 @@ export function GroupChatDetailsPage() {
               ) : null}
               <ChatSettingRow
                 label="置顶聊天"
+                variant="wechat"
                 checked={groupQuery.data.isPinned}
                 onToggle={(checked) => pinMutation.mutate(checked)}
               />
               <ChatSettingRow
                 label="保存到通讯录"
+                variant="wechat"
                 checked={groupQuery.data.savedToContacts}
                 onToggle={(checked) => {
                   preferencesMutation.mutate({ savedToContacts: checked });
@@ -372,11 +382,12 @@ export function GroupChatDetailsPage() {
             </div>
           </ChatDetailsSection>
 
-          <ChatDetailsSection title="群内资料">
+          <ChatDetailsSection title="群内资料" variant="wechat">
             <div className="divide-y divide-black/5">
               <ChatSettingRow
                 label="我在本群的昵称"
                 value={ownerMember?.memberName ?? "未设置"}
+                variant="wechat"
                 onClick={() => {
                   void navigate({
                     to: "/group/$groupId/edit/nickname",
@@ -386,6 +397,7 @@ export function GroupChatDetailsPage() {
               />
               <ChatSettingRow
                 label="显示群成员昵称"
+                variant="wechat"
                 checked={groupQuery.data.showMemberNicknames}
                 onToggle={(checked) => {
                   preferencesMutation.mutate({
@@ -396,13 +408,14 @@ export function GroupChatDetailsPage() {
             </div>
           </ChatDetailsSection>
 
-          <ChatDetailsSection title="聊天背景">
+          <ChatDetailsSection title="聊天背景" variant="wechat">
             <div className="divide-y divide-black/5">
               <ChatSettingRow
                 label="聊天背景"
                 value={getChatBackgroundLabel(
                   ownerQuery.data?.defaultChatBackground,
                 )}
+                variant="wechat"
                 onClick={() => {
                   void navigate({
                     to: "/group/$groupId/background",
@@ -413,11 +426,12 @@ export function GroupChatDetailsPage() {
             </div>
           </ChatDetailsSection>
 
-          <ChatDetailsSection title="危险操作">
+          <ChatDetailsSection title="危险操作" variant="wechat">
             <div className="divide-y divide-black/5">
               <ChatSettingRow
                 label="隐藏聊天"
                 disabled={busy}
+                variant="wechat"
                 onClick={() => {
                   if (
                     !window.confirm(
@@ -433,6 +447,7 @@ export function GroupChatDetailsPage() {
                 label="清空聊天记录"
                 danger
                 disabled={busy}
+                variant="wechat"
                 onClick={() => {
                   if (!window.confirm("确认清空这个群聊的聊天记录吗？")) {
                     return;
@@ -444,6 +459,7 @@ export function GroupChatDetailsPage() {
                 label="删除并退出"
                 danger
                 disabled={busy}
+                variant="wechat"
                 onClick={() => {
                   if (
                     !window.confirm(

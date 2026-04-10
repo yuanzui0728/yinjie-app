@@ -10,6 +10,7 @@ type ChatSettingRowProps = {
   checked?: boolean;
   onToggle?: (checked: boolean) => void;
   className?: string;
+  variant?: "default" | "wechat";
 };
 
 export function ChatSettingRow({
@@ -21,8 +22,10 @@ export function ChatSettingRow({
   checked,
   onToggle,
   className,
+  variant = "default",
 }: ChatSettingRowProps) {
   const isSwitch = typeof checked === "boolean" && Boolean(onToggle);
+  const isWechat = variant === "wechat";
 
   return (
     <button
@@ -41,15 +44,27 @@ export function ChatSettingRow({
         "flex min-h-14 w-full items-center justify-between gap-3 px-4 text-left",
         danger ? "text-[#d74b45]" : "text-[color:var(--text-primary)]",
         disabled ? "opacity-60" : undefined,
+        isWechat && "min-h-[56px] px-4",
         className,
       )}
       role={isSwitch ? "switch" : undefined}
       aria-checked={isSwitch ? checked : undefined}
       aria-disabled={disabled}
     >
-      <span className="text-[16px]">{label}</span>
+      <span className={cn("text-[16px]", isWechat && "text-[#111827]")}>
+        {label}
+      </span>
       <span className="flex shrink-0 items-center gap-2">
-        {value ? <span className="max-w-[11rem] truncate text-[14px] text-[color:var(--text-muted)]">{value}</span> : null}
+        {value ? (
+          <span
+            className={cn(
+              "max-w-[11rem] truncate text-[14px] text-[color:var(--text-muted)]",
+              isWechat && "max-w-[12rem] text-[#8c8c8c]",
+            )}
+          >
+            {value}
+          </span>
+        ) : null}
         {isSwitch ? (
           <span
             className={cn(
@@ -65,7 +80,13 @@ export function ChatSettingRow({
             />
           </span>
         ) : danger ? null : (
-          <ChevronRight size={18} className="text-[color:var(--text-dim)]" />
+          <ChevronRight
+            size={18}
+            className={cn(
+              "text-[color:var(--text-dim)]",
+              isWechat && "text-[#c7c7cc]",
+            )}
+          />
         )}
       </span>
     </button>
