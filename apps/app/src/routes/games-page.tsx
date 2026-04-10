@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   getConversations,
   sendGroupMessage,
+  type ConversationListItem,
 } from "@yinjie/contracts";
 import {
   AppPage,
@@ -85,6 +86,7 @@ export function GamesPage() {
   const {
     activeGameId,
     eventActionStatusById,
+    lastInviteConversationPathByActivityId,
     lastInviteConversationTitleByActivityId,
     friendInviteSentAtByActivityId,
     friendInviteStatusByActivityId,
@@ -264,6 +266,12 @@ export function GamesPage() {
     ].join(" ");
   }
 
+  function resolveConversationPath(conversation: ConversationListItem) {
+    return isPersistedGroupConversation(conversation)
+      ? `/group/${conversation.id}`
+      : `/chat/${conversation.id}`;
+  }
+
   async function handleSendInviteToConversation(
     activityId: string,
     conversationId: string,
@@ -279,6 +287,7 @@ export function GamesPage() {
 
     const game = getGameCenterGame(activity.gameId);
     const text = buildInviteMessage(activity, game);
+    const conversationPath = resolveConversationPath(conversation);
 
     if (isPersistedGroupConversation(conversation)) {
       await sendGroupInviteMutation.mutateAsync({
@@ -306,11 +315,32 @@ export function GamesPage() {
       }, 500);
     }
 
-    markInviteDelivered(activityId, conversation.id, conversation.title);
+    markInviteDelivered(
+      activityId,
+      conversation.id,
+      conversationPath,
+      conversation.title,
+    );
     setSelectedGameId(activity.gameId);
     setActiveInviteActivityId(null);
     setNoticeTone("success");
     setSuccessNotice(`已把 ${activity.friendName} 的组局邀约发到 ${conversation.title}。`);
+  }
+
+  function handleOpenDeliveredConversation(activityId: string) {
+    const path = lastInviteConversationPathByActivityId[activityId];
+    const title = lastInviteConversationTitleByActivityId[activityId];
+    if (!path) {
+      setNoticeTone("info");
+      setSuccessNotice("这条组局邀约还没有可回跳的会话。");
+      return;
+    }
+
+    void navigate({ to: path });
+    if (title) {
+      setNoticeTone("success");
+      setSuccessNotice(`正在回到 ${title}。`);
+    }
   }
 
   async function handleCopyInviteToMobile(activityId: string) {
@@ -389,6 +419,9 @@ export function GamesPage() {
         eventActionStatusById={eventActionStatusById}
         friendInviteSentAtByActivityId={friendInviteSentAtByActivityId}
         friendInviteStatusByActivityId={friendInviteStatusByActivityId}
+        lastInviteConversationPathByActivityId={
+          lastInviteConversationPathByActivityId
+        }
         lastInviteConversationTitleByActivityId={
           lastInviteConversationTitleByActivityId
         }
@@ -405,6 +438,7 @@ export function GamesPage() {
         onCompleteEventAction={handleCompleteEventAction}
         onCopyInviteToMobile={handleCopyInviteToMobile}
         onOpenInviteToChat={handleOpenInviteToChat}
+        onOpenDeliveredConversation={handleOpenDeliveredConversation}
         onSendInviteToConversation={handleSendInviteToConversation}
         onInviteFriend={handleInviteFriend}
         onCopyGameToMobile={handleCopyGameToMobile}

@@ -46,6 +46,7 @@ type DesktopGamesWorkspaceProps = {
   eventActionStatusById: Record<string, string>;
   friendInviteSentAtByActivityId: Record<string, string>;
   friendInviteStatusByActivityId: Record<string, string>;
+  lastInviteConversationPathByActivityId: Record<string, string>;
   lastInviteConversationTitleByActivityId: Record<string, string>;
   inviteConversationCandidates: ConversationListItem[];
   inviteConversationCandidatesLoading: boolean;
@@ -60,6 +61,7 @@ type DesktopGamesWorkspaceProps = {
   onCompleteEventAction: (eventId: string) => void;
   onCopyInviteToMobile: (activityId: string) => void;
   onOpenInviteToChat: (activityId: string) => void;
+  onOpenDeliveredConversation: (activityId: string) => void;
   onSendInviteToConversation: (
     activityId: string,
     conversationId: string,
@@ -85,6 +87,7 @@ export function DesktopGamesWorkspace({
   eventActionStatusById,
   friendInviteSentAtByActivityId,
   friendInviteStatusByActivityId,
+  lastInviteConversationPathByActivityId,
   lastInviteConversationTitleByActivityId,
   inviteConversationCandidates,
   inviteConversationCandidatesLoading,
@@ -99,6 +102,7 @@ export function DesktopGamesWorkspace({
   onCompleteEventAction,
   onCopyInviteToMobile,
   onOpenInviteToChat,
+  onOpenDeliveredConversation,
   onSendInviteToConversation,
   onInviteFriend,
   onCopyGameToMobile,
@@ -551,6 +555,16 @@ export function DesktopGamesWorkspace({
                         >
                           发到手机
                         </Button>
+                        {lastInviteConversationPathByActivityId[activity.id] ? (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => onOpenDeliveredConversation(activity.id)}
+                            className="shrink-0 rounded-full"
+                          >
+                            回到会话
+                          </Button>
+                        ) : null}
                       </div>
                     );
                   })}
