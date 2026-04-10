@@ -6,8 +6,12 @@ export class FeedController {
   constructor(private readonly feedService: FeedService) {}
 
   @Get()
-  getFeed(@Query('page') page = '1', @Query('limit') limit = '20') {
-    return this.feedService.getFeed(Number(page), Number(limit));
+  getFeed(
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
+    @Query('surface') surface: 'feed' | 'channels' | undefined,
+  ) {
+    return this.feedService.getFeed(Number(page), Number(limit), surface);
   }
 
   @Get(':id')
@@ -16,8 +20,20 @@ export class FeedController {
   }
 
   @Post()
-  createPost(@Body() body: { text: string }) {
-    return this.feedService.createOwnerPost(body.text);
+  createPost(
+    @Body()
+    body: {
+      text: string;
+      mediaType?: 'text' | 'image' | 'video';
+      mediaUrl?: string;
+      surface?: 'feed' | 'channels';
+    },
+  ) {
+    return this.feedService.createOwnerPost(body.text, {
+      mediaType: body.mediaType,
+      mediaUrl: body.mediaUrl,
+      surface: body.surface,
+    });
   }
 
   @Post(':id/comment')

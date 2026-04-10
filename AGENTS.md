@@ -215,6 +215,8 @@
 ## Single-world cleanup notes (2026-04-09)
 
 - `GET /api/moments` no longer accepts `authorId`; it always returns the current world's feed.
+- `FeedPost` 表现已扩展字段：`surface`，用于区分 `feed`（广场动态）与 `channels`（视频号），物理表仍保持兼容扩展
+- `GET /api/feed` 现已支持 `surface=feed|channels`
 - 聊天消息契约现已支持 `sticker` 类型；消息附件元数据由共享表情包目录解析并写入 `Message.attachment`
 - 聊天附件消息现已扩展支持 `image`、`file`、`contact_card`、`location_card`；群聊消息同步支持附件元数据
 - `POST /api/groups/:id/messages` 现已支持图片、文件、名片、位置卡片附件负载

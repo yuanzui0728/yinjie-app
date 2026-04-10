@@ -1,9 +1,12 @@
+export type FeedSurface = "feed" | "channels";
+
 export interface FeedPost {
   id: string;
   authorId: string;
   authorName: string;
   authorAvatar: string;
   authorType: "user" | "character";
+  surface: FeedSurface;
   text: string;
   mediaUrl?: string;
   mediaType: "text" | "image" | "video";
@@ -39,6 +42,9 @@ export interface FeedListResponse {
 
 export interface CreateFeedPostRequest {
   text: string;
+  surface?: FeedSurface;
+  mediaUrl?: string;
+  mediaType?: "text" | "image" | "video";
 }
 
 export interface CreateFeedCommentRequest {
