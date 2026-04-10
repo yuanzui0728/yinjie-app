@@ -5,11 +5,12 @@ import {
   type PropsWithChildren,
 } from "react";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { Copy, Minus, X } from "lucide-react";
-import { cn } from "@yinjie/ui";
+import { Clock3, Copy, LockKeyhole, Minus, ShieldCheck, X } from "lucide-react";
+import { Button, TextField, cn } from "@yinjie/ui";
 import { AvatarChip } from "../../components/avatar-chip";
 import { useAppRuntimeConfig } from "../../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../../store/world-owner-store";
+import { formatTimestamp } from "../../lib/format";
 import {
   desktopBottomNavItems,
   desktopMoreMenuItems,
@@ -17,6 +18,13 @@ import {
   isDesktopNavItemActive,
   type DesktopNavActionItem,
 } from "./desktop-nav-config";
+import {
+  clearDesktopLocked,
+  readDesktopLockSnapshot,
+  saveDesktopLockPasscode,
+  setDesktopLocked,
+  verifyDesktopLockPasscode,
+} from "./desktop-lock-storage";
 
 type DesktopWindowHandle = {
   close: () => Promise<void>;
@@ -99,7 +107,23 @@ export function DesktopShell({ children }: PropsWithChildren) {
     useState<DesktopWindowHandle | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-  const [isLocked, setIsLocked] = useState(false);
+  const [isLocked, setIsLocked] = useState(
+    () => readDesktopLockSnapshot().isLocked,
+  );
+  const [lockMode, setLockMode] = useState<"unlock" | "setup">(() =>
+    readDesktopLockSnapshot().passcodeDigest ? "unlock" : "setup",
+  );
+  const [lockedAt, setLockedAt] = useState<string | null>(
+    () => readDesktopLockSnapshot().lockedAt,
+  );
+  const [lockPasscodeLength, setLockPasscodeLength] = useState<number | null>(
+    () => readDesktopLockSnapshot().passcodeLength,
+  );
+  const [unlockPasscode, setUnlockPasscode] = useState("");
+  const [setupPasscode, setSetupPasscode] = useState("");
+  const [setupPasscodeConfirm, setSetupPasscodeConfirm] = useState("");
+  const [lockError, setLockError] = useState<string | null>(null);
+  const [lockNotice, setLockNotice] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof document === "undefined") {
@@ -167,6 +191,15 @@ export function DesktopShell({ children }: PropsWithChildren) {
   }, [pathname]);
 
   useEffect(() => {
+    if (!lockNotice) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setLockNotice(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [lockNotice]);
+
+  useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
@@ -178,6 +211,10 @@ export function DesktopShell({ children }: PropsWithChildren) {
           "input, textarea, select, [contenteditable='true'], [role='textbox']",
         )
       ) {
+        return;
+      }
+
+      if (isLocked) {
         return;
       }
 
@@ -203,8 +240,7 @@ export function DesktopShell({ children }: PropsWithChildren) {
 
       if (event.key.toLowerCase() === "l") {
         event.preventDefault();
-        setIsLocked(true);
-        setIsMoreMenuOpen(false);
+        openDesktopLock();
         return;
       }
 
@@ -219,7 +255,7 @@ export function DesktopShell({ children }: PropsWithChildren) {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [navigate]);
+  }, [isLocked, navigate]);
 
   const shellInsetClass = nativeDesktopShell
     ? "rounded-none"
@@ -238,6 +274,69 @@ export function DesktopShell({ children }: PropsWithChildren) {
     }
 
     void desktopWindow.startDragging();
+  };
+
+  const openDesktopLock = () => {
+    const snapshot = setDesktopLocked(true);
+
+    setIsLocked(true);
+    setLockedAt(snapshot.lockedAt);
+    setLockPasscodeLength(snapshot.passcodeLength);
+    setLockMode(snapshot.passcodeDigest ? "unlock" : "setup");
+    setUnlockPasscode("");
+    setSetupPasscode("");
+    setSetupPasscodeConfirm("");
+    setLockError(null);
+    setLockNotice(null);
+    setIsMoreMenuOpen(false);
+  };
+
+  const closeDesktopLock = () => {
+    clearDesktopLocked();
+    setIsLocked(false);
+    setUnlockPasscode("");
+    setSetupPasscode("");
+    setSetupPasscodeConfirm("");
+    setLockError(null);
+    setLockNotice(null);
+  };
+
+  const submitUnlock = () => {
+    if (!lockPasscodeLength) {
+      closeDesktopLock();
+      return;
+    }
+
+    if (!verifyDesktopLockPasscode(unlockPasscode)) {
+      setLockError("口令不正确，请重新输入。");
+      return;
+    }
+
+    closeDesktopLock();
+  };
+
+  const submitSetupLock = () => {
+    const normalizedPasscode = setupPasscode.trim();
+    const normalizedConfirm = setupPasscodeConfirm.trim();
+
+    if (!/^\d{4,6}$/.test(normalizedPasscode)) {
+      setLockError("请设置 4 到 6 位数字口令。");
+      return;
+    }
+
+    if (normalizedPasscode !== normalizedConfirm) {
+      setLockError("两次输入的口令不一致。");
+      return;
+    }
+
+    const snapshot = saveDesktopLockPasscode(normalizedPasscode);
+    setLockPasscodeLength(snapshot.passcodeLength);
+    setLockMode("unlock");
+    setUnlockPasscode("");
+    setSetupPasscode("");
+    setSetupPasscodeConfirm("");
+    setLockError(null);
+    setLockNotice("桌面锁定口令已设置，请输入口令解锁。");
   };
 
   return (
@@ -433,27 +532,160 @@ export function DesktopShell({ children }: PropsWithChildren) {
 
         {isLocked ? (
           <div className="absolute inset-0 z-40 flex items-center justify-center bg-[rgba(22,18,14,0.48)] p-6 backdrop-blur-md">
-            <div className="w-full max-w-md rounded-[32px] border border-[rgba(255,255,255,0.28)] bg-[rgba(255,252,247,0.92)] p-8 text-center shadow-[0_28px_80px_rgba(15,23,42,0.22)]">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(249,115,22,0.10)] text-[color:var(--brand-primary)]">
-                <AvatarChip
-                  name={ownerName ?? "世界主人"}
-                  src={ownerAvatar}
-                  size="wechat"
-                />
+            <div className="w-full max-w-md rounded-[32px] border border-[rgba(255,255,255,0.28)] bg-[rgba(255,252,247,0.94)] p-8 shadow-[0_28px_80px_rgba(15,23,42,0.22)]">
+              <div className="flex items-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(249,115,22,0.10)]">
+                  <AvatarChip
+                    name={ownerName ?? "世界主人"}
+                    src={ownerAvatar}
+                    size="wechat"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-2xl font-semibold text-[color:var(--text-primary)]">
+                    {lockMode === "setup" ? "设置桌面锁定口令" : "桌面已锁定"}
+                  </div>
+                  <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
+                    {ownerName ?? "世界主人"}
+                  </div>
+                </div>
               </div>
-              <div className="mt-5 text-2xl font-semibold text-[color:var(--text-primary)]">
-                已锁定桌面端
+
+              <div className="mt-5 rounded-[24px] border border-[color:var(--border-faint)] bg-[rgba(255,249,242,0.88)] p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
+                  {lockMode === "setup" ? (
+                    <ShieldCheck
+                      size={16}
+                      className="text-[color:var(--brand-primary)]"
+                    />
+                  ) : (
+                    <LockKeyhole
+                      size={16}
+                      className="text-[color:var(--brand-primary)]"
+                    />
+                  )}
+                  <span>
+                    {lockMode === "setup"
+                      ? "首次锁定需要先设置本机口令"
+                      : "输入本机口令后恢复桌面访问"}
+                  </span>
+                </div>
+                <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
+                  {lockMode === "setup"
+                    ? "口令仅保存在当前浏览器或桌面客户端本地，用来阻止离开座位时工作区继续暴露。"
+                    : lockPasscodeLength
+                      ? `当前已启用 ${lockPasscodeLength} 位本地锁定口令。`
+                      : "当前设备尚未保存锁定口令。"}
+                </div>
+                {lockedAt ? (
+                  <div className="mt-3 flex items-center gap-2 text-xs text-[color:var(--text-muted)]">
+                    <Clock3 size={14} />
+                    <span>锁定时间 {formatTimestamp(lockedAt)}</span>
+                  </div>
+                ) : null}
               </div>
-              <div className="mt-3 text-sm leading-7 text-[color:var(--text-secondary)]">
-                当前先提供本地锁定层，避免桌面端离开时工作区继续暴露。后续再补本地口令或系统级验证。
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsLocked(false)}
-                className="mt-6 inline-flex h-12 items-center justify-center rounded-2xl bg-[var(--brand-gradient)] px-6 text-sm font-medium text-[color:var(--text-on-brand)] shadow-[0_12px_30px_rgba(249,115,22,0.24)]"
-              >
-                解锁继续使用
-              </button>
+
+              {lockNotice ? (
+                <div className="mt-4 rounded-[18px] bg-[rgba(34,197,94,0.10)] px-4 py-3 text-sm text-[#15803d]">
+                  {lockNotice}
+                </div>
+              ) : null}
+              {lockError ? (
+                <div className="mt-4 rounded-[18px] bg-[rgba(239,68,68,0.10)] px-4 py-3 text-sm text-[color:var(--state-danger-text)]">
+                  {lockError}
+                </div>
+              ) : null}
+
+              {lockMode === "setup" ? (
+                <div className="mt-5 space-y-3">
+                  <TextField
+                    value={setupPasscode}
+                    onChange={(event) => {
+                      setSetupPasscode(
+                        event.target.value.replace(/\D/g, "").slice(0, 6),
+                      );
+                      setLockError(null);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        submitSetupLock();
+                      }
+                    }}
+                    type="password"
+                    inputMode="numeric"
+                    placeholder="设置 4 到 6 位数字口令"
+                    className="h-12 rounded-[18px] border-[color:var(--border-faint)] bg-white px-4 shadow-none"
+                  />
+                  <TextField
+                    value={setupPasscodeConfirm}
+                    onChange={(event) => {
+                      setSetupPasscodeConfirm(
+                        event.target.value.replace(/\D/g, "").slice(0, 6),
+                      );
+                      setLockError(null);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        submitSetupLock();
+                      }
+                    }}
+                    type="password"
+                    inputMode="numeric"
+                    placeholder="再次输入口令确认"
+                    className="h-12 rounded-[18px] border-[color:var(--border-faint)] bg-white px-4 shadow-none"
+                  />
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      type="button"
+                      onClick={submitSetupLock}
+                      className="rounded-2xl"
+                    >
+                      设置口令并锁定
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={closeDesktopLock}
+                      className="rounded-2xl"
+                    >
+                      取消锁定
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5 space-y-3">
+                  <TextField
+                    value={unlockPasscode}
+                    onChange={(event) => {
+                      setUnlockPasscode(
+                        event.target.value.replace(/\D/g, "").slice(0, 6),
+                      );
+                      setLockError(null);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        submitUnlock();
+                      }
+                    }}
+                    type="password"
+                    inputMode="numeric"
+                    placeholder="输入桌面锁定口令"
+                    className="h-12 rounded-[18px] border-[color:var(--border-faint)] bg-white px-4 shadow-none"
+                  />
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      type="button"
+                      onClick={submitUnlock}
+                      className="rounded-2xl"
+                    >
+                      解锁继续使用
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) : null}
@@ -490,7 +722,7 @@ export function DesktopShell({ children }: PropsWithChildren) {
     }
 
     if (action === "lock") {
-      setIsLocked(true);
+      openDesktopLock();
     }
   }
 }
