@@ -15,6 +15,7 @@ import { useAppRuntimeConfig } from "../../../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../../../store/world-owner-store";
 import { ConversationThreadPanel } from "../../chat/conversation-thread-panel";
 import GroupChatThreadPanel from "../../chat/group-chat-thread-panel-view";
+import { createDesktopNote } from "./desktop-notes-storage";
 
 type DesktopChatWorkspaceProps = {
   selectedConversationId?: string;
@@ -25,8 +26,6 @@ type DesktopQuickActionItem = {
   key: string;
   label: string;
   icon: typeof Users;
-  to?: "/group/new" | "/friend-requests";
-  unavailableNotice?: string;
 };
 
 const desktopQuickActionItems: DesktopQuickActionItem[] = [
@@ -34,19 +33,16 @@ const desktopQuickActionItems: DesktopQuickActionItem[] = [
     key: "create-group",
     label: "发起群聊",
     icon: Users,
-    to: "/group/new",
   },
   {
     key: "add-friend",
     label: "添加朋友",
     icon: UserPlus,
-    to: "/friend-requests",
   },
   {
     key: "create-note",
     label: "新建笔记",
     icon: FileText,
-    unavailableNotice: "新建笔记功能暂未接入。",
   },
 ];
 
@@ -144,15 +140,22 @@ export function DesktopChatWorkspace({
     return () => window.clearTimeout(timer);
   }, [notice]);
 
-  function handleUnavailableAction(message: string) {
-    setIsQuickMenuOpen(false);
-    setNotice(message);
-  }
-
-  function handleNavigate(to: "/group/new" | "/friend-requests") {
+  function handleQuickAction(key: DesktopQuickActionItem["key"]) {
     setIsQuickMenuOpen(false);
     setNotice(null);
-    void navigate({ to });
+
+    if (key === "create-group") {
+      void navigate({ to: "/group/new" });
+      return;
+    }
+
+    if (key === "add-friend") {
+      void navigate({ to: "/friend-requests" });
+      return;
+    }
+
+    const note = createDesktopNote();
+    void navigate({ to: "/notes", hash: note.id });
   }
 
   return (
@@ -195,30 +198,11 @@ export function DesktopChatWorkspace({
                   {desktopQuickActionItems.map((item) => {
                     const Icon = item.icon;
 
-                    if (item.to) {
-                      const to = item.to;
-                      return (
-                        <button
-                          key={item.key}
-                          type="button"
-                          onClick={() => handleNavigate(to)}
-                          className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm text-white transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-white/10"
-                        >
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-white/10 text-white">
-                            <Icon size={16} />
-                          </div>
-                          <span>{item.label}</span>
-                        </button>
-                      );
-                    }
-
                     return (
                       <button
                         key={item.key}
                         type="button"
-                        onClick={() =>
-                          handleUnavailableAction(item.unavailableNotice!)
-                        }
+                        onClick={() => handleQuickAction(item.key)}
                         className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm text-white transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-white/10"
                       >
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-white/10 text-white">
