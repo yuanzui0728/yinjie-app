@@ -23,6 +23,11 @@ type ChatReminderCollapseIconProps = {
   className?: string;
 };
 
+type ChatReminderCollapseLabelProps = {
+  collapsed: boolean;
+  className?: string;
+};
+
 const SUMMARY_FADE_OUT_MS = 120;
 
 export function ChatReminderFadeText({
@@ -89,6 +94,18 @@ export function ChatReminderCollapseIcon({
         collapsed ? "rotate-0" : "rotate-90",
         className,
       )}
+    />
+  );
+}
+
+export function ChatReminderCollapseLabel({
+  collapsed,
+  className,
+}: ChatReminderCollapseLabelProps) {
+  return (
+    <ChatReminderFadeText
+      text={collapsed ? "展开" : "收起"}
+      className={cn("min-w-[2em] justify-end opacity-70", className)}
     />
   );
 }

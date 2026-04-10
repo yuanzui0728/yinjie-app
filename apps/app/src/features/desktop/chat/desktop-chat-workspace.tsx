@@ -71,6 +71,7 @@ import { useChatReminderActions } from "../../chat/use-chat-reminder-actions";
 import { useChatReminderEntries } from "../../chat/use-chat-reminder-entries";
 import {
   ChatReminderCollapseIcon,
+  ChatReminderCollapseLabel,
   ChatReminderCountText,
   ChatReminderSummaryText,
 } from "../../chat/chat-reminder-summary-text";
@@ -855,14 +856,20 @@ export function DesktopChatWorkspace({
                                         (current) => !current,
                                       )
                                     }
-                                    className="flex items-center gap-1.5 text-[10px] text-[color:var(--text-dim)]"
+                                    className="group flex items-center gap-1.5 text-[10px] text-[color:var(--text-dim)] opacity-80 transition-opacity hover:opacity-100"
+                                    aria-label={
+                                      collapsed ? "展开已通知提醒" : "收起已通知提醒"
+                                    }
                                     aria-expanded={!collapsed}
                                   >
                                     <ChatReminderCountText count={group.count} />
-                                    <span>{collapsed ? "展开" : "收起"}</span>
+                                    <ChatReminderCollapseLabel
+                                      collapsed={collapsed}
+                                    />
                                     <ChatReminderCollapseIcon
                                       collapsed={collapsed}
                                       size={12}
+                                      className="opacity-80"
                                     />
                                   </button>
                                 </span>
