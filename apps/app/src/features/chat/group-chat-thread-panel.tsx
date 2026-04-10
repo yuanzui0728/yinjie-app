@@ -31,7 +31,9 @@ import { buildDesktopMobileCallHandoffHash } from "../desktop/chat/desktop-mobil
 import { DesktopGroupCallPanel } from "../desktop/chat/desktop-group-call-panel";
 import { type ChatRenderableMessage } from "../../components/chat-message-list";
 import { type ChatRouteContextNotice } from "./conversation-thread-panel";
+import { ChatCallFallbackNotice } from "./chat-call-fallback-notice";
 import { type ChatComposerAttachmentPayload } from "./chat-plus-types";
+import { buildGroupCallInviteMessage } from "./group-call-message";
 import { buildChatBackgroundStyle } from "./backgrounds/chat-background-helpers";
 import {
   buildChatUnreadMarkerDomId,
@@ -586,6 +588,13 @@ export function GroupChatThreadPanel({
     setPendingCallFallback(kind);
     onDesktopCallAction?.(kind);
   };
+  const handleApplyMobileCallFallback = (kind: DesktopChatCallKind) => {
+    setMobileShortcutRequest({
+      action: kind === "voice" ? "voice-message" : "camera",
+      nonce: Date.now(),
+    });
+    setPendingCallFallback(null);
+  };
 
   return (
     <div
@@ -642,48 +651,23 @@ export function GroupChatThreadPanel({
 
       {pendingCallFallback && !isDesktop ? (
         <div className="border-b border-black/6 bg-white/82 px-3 py-2.5">
-          <InlineNotice tone="info" className="border-black/6 bg-white">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-xs font-medium leading-6 text-[color:var(--text-primary)]">
-                  {pendingCallFallback === "voice"
-                    ? "群语音通话暂未开放"
-                    : "群视频通话暂未开放"}
-                </div>
-                <div className="text-xs leading-6 text-[color:var(--text-secondary)]">
-                  {pendingCallFallback === "voice"
-                    ? "先在群里发语音消息继续，后续再补群实时语音通话。"
-                    : "先用拍摄或图片消息继续，把当前内容先同步到群里。"}
-                </div>
-              </div>
-              <div className="flex shrink-0 gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    setMobileShortcutRequest({
-                      action:
-                        pendingCallFallback === "voice"
-                          ? "voice-message"
-                          : "camera",
-                      nonce: Date.now(),
-                    });
-                  }}
-                  className="rounded-full"
-                >
-                  {pendingCallFallback === "voice" ? "改发语音" : "改为拍摄"}
-                </Button>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setPendingCallFallback(null)}
-                  className="rounded-full"
-                >
-                  收起
-                </Button>
-              </div>
-            </div>
-          </InlineNotice>
+          <ChatCallFallbackNotice
+            kind={pendingCallFallback}
+            scope="group"
+            description={
+              pendingCallFallback === "voice"
+                ? "先在群里发语音消息继续，后续再补群实时语音通话。"
+                : "先用拍摄或图片消息继续，把当前内容先同步到群里。"
+            }
+            primaryLabel={
+              pendingCallFallback === "voice" ? "改发语音" : "改为拍摄"
+            }
+            secondaryLabel="收起"
+            onPrimaryAction={() =>
+              handleApplyMobileCallFallback(pendingCallFallback)
+            }
+            onSecondaryAction={() => setPendingCallFallback(null)}
+          />
         </div>
       ) : null}
 
@@ -966,15 +950,3 @@ function upsertGroupMessage(
 
 const INITIAL_MESSAGE_LIMIT = 60;
 const HISTORY_PAGE_SIZE = 40;
-
-function buildGroupCallInviteMessage(
-  kind: DesktopChatCallKind,
-  groupName: string,
-) {
-  return [
-    kind === "voice" ? "[群语音通话]" : "[群视频通话]",
-    `${groupName}`,
-    "已从桌面端打开群通话工作台，可直接在聊天页继续查看成员状态。",
-    "如需继续加入或转到手机，请在当前群聊顶部的通话面板里操作。",
-  ].join("\n");
-}
