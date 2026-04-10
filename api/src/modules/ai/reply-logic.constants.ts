@@ -225,6 +225,9 @@ export type ReplyLogicRuntimeRules = {
   sceneFriendRequestScenes: string[];
   relationshipInitialType: string;
   relationshipInitialStrength: number;
+  relationshipUpdateChance: number;
+  relationshipUpdateStep: number;
+  relationshipStrengthMax: number;
   activityBaseWeight: number;
   proactiveReminderHour: number;
   relationshipInitialBackstory: string;
@@ -311,6 +314,9 @@ export const SCENE_FRIEND_REQUEST_SCENES = [
 ] as const;
 export const RELATIONSHIP_INITIAL_TYPE = 'acquaintance';
 export const RELATIONSHIP_INITIAL_STRENGTH = 18;
+export const RELATIONSHIP_UPDATE_CHANCE = 0.08;
+export const RELATIONSHIP_UPDATE_STEP = 4;
+export const RELATIONSHIP_STRENGTH_MAX = 100;
 export const ACTIVITY_BASE_WEIGHT = 0.8;
 export const PROACTIVE_REMINDER_HOUR = 20;
 export const HISTORY_WINDOW_BASE = 8;
@@ -651,6 +657,9 @@ export const DEFAULT_REPLY_LOGIC_RUNTIME_RULES: ReplyLogicRuntimeRules =
     sceneFriendRequestScenes: [...SCENE_FRIEND_REQUEST_SCENES],
     relationshipInitialType: RELATIONSHIP_INITIAL_TYPE,
     relationshipInitialStrength: RELATIONSHIP_INITIAL_STRENGTH,
+    relationshipUpdateChance: RELATIONSHIP_UPDATE_CHANCE,
+    relationshipUpdateStep: RELATIONSHIP_UPDATE_STEP,
+    relationshipStrengthMax: RELATIONSHIP_STRENGTH_MAX,
     activityBaseWeight: ACTIVITY_BASE_WEIGHT,
     proactiveReminderHour: PROACTIVE_REMINDER_HOUR,
     relationshipInitialBackstory: RELATIONSHIP_INITIAL_BACKSTORY_TEMPLATE,
@@ -1623,6 +1632,21 @@ export function normalizeReplyLogicRuntimeRules(
           defaults.relationshipInitialStrength,
       ),
       0,
+      100,
+    ),
+    relationshipUpdateChance: clamp(
+      Number(input?.relationshipUpdateChance ?? defaults.relationshipUpdateChance),
+      0,
+      1,
+    ),
+    relationshipUpdateStep: clamp(
+      Math.round(input?.relationshipUpdateStep ?? defaults.relationshipUpdateStep),
+      0,
+      100,
+    ),
+    relationshipStrengthMax: clamp(
+      Math.round(input?.relationshipStrengthMax ?? defaults.relationshipStrengthMax),
+      1,
       100,
     ),
     activityBaseWeight: clamp(

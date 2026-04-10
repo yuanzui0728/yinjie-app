@@ -302,6 +302,9 @@ export interface ReplyLogicOverview {
     sceneFriendRequestScenes: string[];
     relationshipInitialType: string;
     relationshipInitialStrength: number;
+    relationshipUpdateChance: number;
+    relationshipUpdateStep: number;
+    relationshipStrengthMax: number;
     activityBaseWeight: number;
     proactiveReminderHour: number;
     relationshipInitialBackstory: string;
