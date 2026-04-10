@@ -40,7 +40,10 @@ export class WorldService {
   }
 
   async getLatest(): Promise<WorldContextEntity | null> {
-    return this.repo.findOne({ order: { timestamp: 'DESC' } });
+    return this.repo.findOne({
+      where: {},
+      order: { timestamp: 'DESC' },
+    });
   }
 
   buildContextString(ctx: WorldContextEntity | null): string {
