@@ -71,6 +71,7 @@ export class FeedService {
   ): Promise<{ posts: FeedListItem[]; total: number }> {
     if (surface === 'channels') {
       await this.ensureChannelSeedData();
+      await this.topUpChannelsIfNeeded();
     }
 
     const [posts, total] = await this.postRepo.findAndCount({
@@ -218,6 +219,7 @@ export class FeedService {
 
   async generateChannelPost(
     characterId?: string,
+    options?: { skipAi?: boolean },
   ): Promise<FeedPostEntity | null> {
     const candidates = await this.characters.findAll();
     const eligibleCharacters = candidates.filter((character) =>
@@ -233,6 +235,19 @@ export class FeedService {
     const profile = await this.characters.getProfile(selectedCharacter.id);
     const media = this.pickChannelMedia(selectedCharacter.id);
     if (!profile) {
+      return this.createPost({
+        authorAvatar: selectedCharacter.avatar,
+        authorId: selectedCharacter.id,
+        authorName: selectedCharacter.name,
+        authorType: 'character',
+        mediaType: 'video',
+        mediaUrl: media.mediaUrl,
+        surface: 'channels',
+        text: this.buildFallbackChannelText(selectedCharacter.name),
+      });
+    }
+
+    if (options?.skipAi) {
       return this.createPost({
         authorAvatar: selectedCharacter.avatar,
         authorId: selectedCharacter.id,
@@ -356,7 +371,7 @@ export class FeedService {
 
     const missingCount = targetCount - recentCount;
     for (let index = 0; index < missingCount; index += 1) {
-      await this.generateChannelPost();
+      await this.generateChannelPost(undefined, { skipAi: true });
     }
   }
 
