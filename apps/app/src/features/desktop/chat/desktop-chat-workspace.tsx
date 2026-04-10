@@ -144,15 +144,11 @@ export function DesktopChatWorkspace({
             ))}
           </div>
 
-          {!conversationsQuery.isLoading && !filteredConversations.length ? (
+          {!conversationsQuery.isLoading && !filteredConversations.length && searchTerm.trim() ? (
             <div className="pt-4">
               <EmptyState
-                title={searchTerm.trim() ? "没有匹配的会话" : "还没有任何会话"}
-                description={
-                  searchTerm.trim()
-                    ? "换个关键词试试。"
-                    : "等第一条消息出现后，这里就会开始热起来。"
-                }
+                title="没有匹配的会话"
+                description="换个关键词试试。"
               />
             </div>
           ) : null}
@@ -185,12 +181,7 @@ export function DesktopChatWorkspace({
             />
           )
         ) : (
-          <div className="flex h-full items-center justify-center px-10">
-            <EmptyState
-              title="先选择一个会话"
-              description="会话列表会固定停留在左侧，当前对话会始终停留在中间区域。"
-            />
-          </div>
+          <div className="flex h-full items-center justify-center px-10" />
         )}
       </section>
 
