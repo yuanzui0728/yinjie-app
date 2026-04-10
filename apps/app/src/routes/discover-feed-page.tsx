@@ -20,6 +20,11 @@ import {
   TextField,
 } from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
+import {
+  readDesktopFavorites,
+  removeDesktopFavorite,
+  upsertDesktopFavorite,
+} from "../features/desktop/favorites/desktop-favorites-storage";
 import { SocialPostCard } from "../components/social-post-card";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
@@ -39,6 +44,7 @@ export function DiscoverFeedPage() {
     {},
   );
   const [successNotice, setSuccessNotice] = useState("");
+  const [favoriteSourceIds, setFavoriteSourceIds] = useState<string[]>([]);
 
   const feedQuery = useQuery({
     queryKey: ["app-feed", baseUrl],
@@ -109,6 +115,10 @@ export function DiscoverFeedPage() {
     setCommentDrafts({});
     setSuccessNotice("");
   }, [baseUrl]);
+
+  useEffect(() => {
+    setFavoriteSourceIds(readDesktopFavorites().map((item) => item.sourceId));
+  }, []);
 
   useEffect(() => {
     if (!successNotice) {
@@ -195,78 +205,113 @@ export function DiscoverFeedPage() {
               <ErrorBlock message={feedQuery.error.message} />
             ) : null}
 
-            {visiblePosts.map((post) => (
-              <SocialPostCard
-                key={post.id}
-                authorName={post.authorName}
-                authorAvatar={post.authorAvatar}
-                meta={`${formatTimestamp(post.createdAt)} · ${post.authorType === "user" ? "世界主人" : "居民动态"}`}
-                body={
-                  <>
-                    {post.authorType === "user" ? (
-                      <div className="mb-3 inline-flex rounded-full bg-[rgba(93,103,201,0.12)] px-2.5 py-1 text-[11px] font-medium text-[#4951a3]">
-                        居民公开可见
-                      </div>
-                    ) : null}
-                    <div>{post.text}</div>
-                  </>
-                }
-                summary={`${post.likeCount} 赞 · ${post.commentCount} 评论${post.aiReacted ? " · AI 已参与回应" : ""}`}
-                actions={
-                  <Button
-                    disabled={likeMutation.isPending}
-                    onClick={() => likeMutation.mutate(post.id)}
-                    variant="secondary"
-                    size="sm"
-                  >
-                    {pendingLikePostId === post.id ? "处理中..." : "点赞"}
-                  </Button>
-                }
-                secondary={
-                  post.commentsPreview.length > 0 ? (
-                    <div className="space-y-2 rounded-[22px] bg-[color:var(--surface-soft)] p-3">
-                      {post.commentsPreview.map((comment) => (
-                        <div
-                          key={comment.id}
-                          className="text-xs leading-6 text-[color:var(--text-secondary)]"
-                        >
-                          <span className="text-[color:var(--text-primary)]">
-                            {comment.authorName}
-                          </span>
-                          {`：${comment.text}`}
+            {visiblePosts.map((post) => {
+              const sourceId = `feed-${post.id}`;
+              const collected = favoriteSourceIds.includes(sourceId);
+
+              return (
+                <SocialPostCard
+                  key={post.id}
+                  authorName={post.authorName}
+                  authorAvatar={post.authorAvatar}
+                  meta={`${formatTimestamp(post.createdAt)} · ${post.authorType === "user" ? "世界主人" : "居民动态"}`}
+                  body={
+                    <>
+                      {post.authorType === "user" ? (
+                        <div className="mb-3 inline-flex rounded-full bg-[rgba(93,103,201,0.12)] px-2.5 py-1 text-[11px] font-medium text-[#4951a3]">
+                          居民公开可见
                         </div>
-                      ))}
+                      ) : null}
+                      <div>{post.text}</div>
+                    </>
+                  }
+                  summary={`${post.likeCount} 赞 · ${post.commentCount} 评论${post.aiReacted ? " · AI 已参与回应" : ""}`}
+                  actions={
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        disabled={likeMutation.isPending}
+                        onClick={() => likeMutation.mutate(post.id)}
+                        variant="secondary"
+                        size="sm"
+                      >
+                        {pendingLikePostId === post.id ? "处理中..." : "点赞"}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => {
+                          const nextFavorites = collected
+                            ? removeDesktopFavorite(sourceId)
+                            : upsertDesktopFavorite({
+                                id: `favorite-${sourceId}`,
+                                sourceId,
+                                category: "feed",
+                                title: post.authorName,
+                                description: post.text,
+                                meta: `广场动态 · ${formatTimestamp(post.createdAt)}`,
+                                to: "/tabs/feed",
+                                badge: "广场动态",
+                                avatarName: post.authorName,
+                                avatarSrc: post.authorAvatar,
+                              });
+
+                          setFavoriteSourceIds(
+                            nextFavorites.map((favorite) => favorite.sourceId),
+                          );
+                        }}
+                      >
+                        {collected ? "取消收藏" : "收藏"}
+                      </Button>
                     </div>
-                  ) : null
-                }
-                composer={
-                  <>
-                    <TextField
-                      value={commentDrafts[post.id] ?? ""}
-                      onChange={(event) =>
-                        setCommentDrafts((current) => ({
-                          ...current,
-                          [post.id]: event.target.value,
-                        }))
-                      }
-                      placeholder="写评论..."
-                      className="min-w-0 flex-1 rounded-full py-2 text-xs"
-                    />
-                    <Button
-                      disabled={
-                        !(commentDrafts[post.id] ?? "").trim() ||
-                        commentMutation.isPending
-                      }
-                      onClick={() => commentMutation.mutate(post.id)}
-                      variant="primary"
-                      size="sm"
-                    >
-                      {pendingCommentPostId === post.id ? "发送中..." : "发送"}
-                    </Button>
-                  </>
-                }
-              />
-            ))}
+                  }
+                  secondary={
+                    post.commentsPreview.length > 0 ? (
+                      <div className="space-y-2 rounded-[22px] bg-[color:var(--surface-soft)] p-3">
+                        {post.commentsPreview.map((comment) => (
+                          <div
+                            key={comment.id}
+                            className="text-xs leading-6 text-[color:var(--text-secondary)]"
+                          >
+                            <span className="text-[color:var(--text-primary)]">
+                              {comment.authorName}
+                            </span>
+                            {`：${comment.text}`}
+                          </div>
+                        ))}
+                      </div>
+                    ) : null
+                  }
+                  composer={
+                    <>
+                      <TextField
+                        value={commentDrafts[post.id] ?? ""}
+                        onChange={(event) =>
+                          setCommentDrafts((current) => ({
+                            ...current,
+                            [post.id]: event.target.value,
+                          }))
+                        }
+                        placeholder="写评论..."
+                        className="min-w-0 flex-1 rounded-full py-2 text-xs"
+                      />
+                      <Button
+                        disabled={
+                          !(commentDrafts[post.id] ?? "").trim() ||
+                          commentMutation.isPending
+                        }
+                        onClick={() => commentMutation.mutate(post.id)}
+                        variant="primary"
+                        size="sm"
+                      >
+                        {pendingCommentPostId === post.id
+                          ? "发送中..."
+                          : "发送"}
+                      </Button>
+                    </>
+                  }
+                />
+              );
+            })}
 
             {likeMutation.isError && likeMutation.error instanceof Error ? (
               <ErrorBlock message={likeMutation.error.message} />
@@ -355,78 +400,111 @@ export function DiscoverFeedPage() {
           <ErrorBlock message={feedQuery.error.message} />
         ) : null}
 
-        {visiblePosts.map((post) => (
-          <SocialPostCard
-            key={post.id}
-            authorName={post.authorName}
-            authorAvatar={post.authorAvatar}
-            meta={`${formatTimestamp(post.createdAt)} · ${post.authorType === "user" ? "世界主人" : "居民动态"}`}
-            body={
-              <>
-                {post.authorType === "user" ? (
-                  <div className="mb-3 inline-flex rounded-full bg-[rgba(93,103,201,0.12)] px-2.5 py-1 text-[11px] font-medium text-[#4951a3]">
-                    居民公开可见
-                  </div>
-                ) : null}
-                <div>{post.text}</div>
-              </>
-            }
-            summary={`${post.likeCount} 赞 · ${post.commentCount} 评论${post.aiReacted ? " · AI 已参与回应" : ""}`}
-            actions={
-              <Button
-                disabled={likeMutation.isPending}
-                onClick={() => likeMutation.mutate(post.id)}
-                variant="secondary"
-                size="sm"
-              >
-                {pendingLikePostId === post.id ? "处理中..." : "点赞"}
-              </Button>
-            }
-            secondary={
-              post.commentsPreview.length > 0 ? (
-                <div className="space-y-2 rounded-[22px] bg-[color:var(--surface-soft)] p-3">
-                  {post.commentsPreview.map((comment) => (
-                    <div
-                      key={comment.id}
-                      className="text-xs leading-6 text-[color:var(--text-secondary)]"
-                    >
-                      <span className="text-[color:var(--text-primary)]">
-                        {comment.authorName}
-                      </span>
-                      {`：${comment.text}`}
+        {visiblePosts.map((post) => {
+          const sourceId = `feed-${post.id}`;
+          const collected = favoriteSourceIds.includes(sourceId);
+
+          return (
+            <SocialPostCard
+              key={post.id}
+              authorName={post.authorName}
+              authorAvatar={post.authorAvatar}
+              meta={`${formatTimestamp(post.createdAt)} · ${post.authorType === "user" ? "世界主人" : "居民动态"}`}
+              body={
+                <>
+                  {post.authorType === "user" ? (
+                    <div className="mb-3 inline-flex rounded-full bg-[rgba(93,103,201,0.12)] px-2.5 py-1 text-[11px] font-medium text-[#4951a3]">
+                      居民公开可见
                     </div>
-                  ))}
+                  ) : null}
+                  <div>{post.text}</div>
+                </>
+              }
+              summary={`${post.likeCount} 赞 · ${post.commentCount} 评论${post.aiReacted ? " · AI 已参与回应" : ""}`}
+              actions={
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    disabled={likeMutation.isPending}
+                    onClick={() => likeMutation.mutate(post.id)}
+                    variant="secondary"
+                    size="sm"
+                  >
+                    {pendingLikePostId === post.id ? "处理中..." : "点赞"}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      const nextFavorites = collected
+                        ? removeDesktopFavorite(sourceId)
+                        : upsertDesktopFavorite({
+                            id: `favorite-${sourceId}`,
+                            sourceId,
+                            category: "feed",
+                            title: post.authorName,
+                            description: post.text,
+                            meta: `广场动态 · ${formatTimestamp(post.createdAt)}`,
+                            to: "/tabs/feed",
+                            badge: "广场动态",
+                            avatarName: post.authorName,
+                            avatarSrc: post.authorAvatar,
+                          });
+
+                      setFavoriteSourceIds(
+                        nextFavorites.map((favorite) => favorite.sourceId),
+                      );
+                    }}
+                  >
+                    {collected ? "取消收藏" : "收藏"}
+                  </Button>
                 </div>
-              ) : null
-            }
-            composer={
-              <>
-                <TextField
-                  value={commentDrafts[post.id] ?? ""}
-                  onChange={(event) =>
-                    setCommentDrafts((current) => ({
-                      ...current,
-                      [post.id]: event.target.value,
-                    }))
-                  }
-                  placeholder="写评论..."
-                  className="min-w-0 flex-1 rounded-full py-2 text-xs"
-                />
-                <Button
-                  disabled={
-                    !(commentDrafts[post.id] ?? "").trim() ||
-                    commentMutation.isPending
-                  }
-                  onClick={() => commentMutation.mutate(post.id)}
-                  variant="primary"
-                  size="sm"
-                >
-                  {pendingCommentPostId === post.id ? "发送中..." : "发送"}
-                </Button>
-              </>
-            }
-          />
-        ))}
+              }
+              secondary={
+                post.commentsPreview.length > 0 ? (
+                  <div className="space-y-2 rounded-[22px] bg-[color:var(--surface-soft)] p-3">
+                    {post.commentsPreview.map((comment) => (
+                      <div
+                        key={comment.id}
+                        className="text-xs leading-6 text-[color:var(--text-secondary)]"
+                      >
+                        <span className="text-[color:var(--text-primary)]">
+                          {comment.authorName}
+                        </span>
+                        {`：${comment.text}`}
+                      </div>
+                    ))}
+                  </div>
+                ) : null
+              }
+              composer={
+                <>
+                  <TextField
+                    value={commentDrafts[post.id] ?? ""}
+                    onChange={(event) =>
+                      setCommentDrafts((current) => ({
+                        ...current,
+                        [post.id]: event.target.value,
+                      }))
+                    }
+                    placeholder="写评论..."
+                    className="min-w-0 flex-1 rounded-full py-2 text-xs"
+                  />
+                  <Button
+                    disabled={
+                      !(commentDrafts[post.id] ?? "").trim() ||
+                      commentMutation.isPending
+                    }
+                    onClick={() => commentMutation.mutate(post.id)}
+                    variant="primary"
+                    size="sm"
+                  >
+                    {pendingCommentPostId === post.id ? "发送中..." : "发送"}
+                  </Button>
+                </>
+              }
+            />
+          );
+        })}
 
         {likeMutation.isError && likeMutation.error instanceof Error ? (
           <ErrorBlock message={likeMutation.error.message} />

@@ -9,10 +9,15 @@ import {
   type MessageAttachment,
 } from "@yinjie/contracts";
 import { FileText, ImageIcon } from "lucide-react";
-import { ErrorBlock, LoadingBlock, TextField, cn } from "@yinjie/ui";
+import { Button, ErrorBlock, LoadingBlock, TextField, cn } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
 import { DesktopEntryShell } from "../features/desktop/desktop-entry-shell";
+import {
+  readDesktopFavorites,
+  removeDesktopFavorite,
+  upsertDesktopFavorite,
+} from "../features/desktop/favorites/desktop-favorites-storage";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import {
   formatConversationTimestamp,
@@ -40,6 +45,11 @@ export function DesktopChatFilesPage() {
   >(null);
   const [searchText, setSearchText] = useState("");
   const [filter, setFilter] = useState<FileFilter>("all");
+  const [favoriteSourceIds, setFavoriteSourceIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setFavoriteSourceIds(readDesktopFavorites().map((item) => item.sourceId));
+  }, []);
 
   const conversationsQuery = useQuery({
     queryKey: ["app-conversations", baseUrl],
@@ -227,40 +237,82 @@ export function DesktopChatFilesPage() {
                 <ErrorBlock message={messagesQuery.error.message} />
               ) : null}
 
-              {attachmentRows.map((item) => (
-                <a
-                  key={item.id}
-                  href={item.attachment.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block rounded-[24px] border border-[color:var(--border-faint)] bg-white/92 p-5 shadow-[var(--shadow-soft)] transition hover:border-[rgba(249,115,22,0.18)]"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-[rgba(255,138,61,0.10)] text-[color:var(--brand-primary)]">
-                      {item.attachment.kind === "image" ? (
-                        <ImageIcon size={18} />
-                      ) : (
-                        <FileText size={18} />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">
-                        {item.attachment.fileName}
+              {attachmentRows.map((item) => {
+                const sourceId = `chat-file-${item.id}`;
+                const collected = favoriteSourceIds.includes(sourceId);
+
+                return (
+                  <div
+                    key={item.id}
+                    className="rounded-[24px] border border-[color:var(--border-faint)] bg-white/92 p-5 shadow-[var(--shadow-soft)] transition hover:border-[rgba(249,115,22,0.18)]"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-[rgba(255,138,61,0.10)] text-[color:var(--brand-primary)]">
+                        {item.attachment.kind === "image" ? (
+                          <ImageIcon size={18} />
+                        ) : (
+                          <FileText size={18} />
+                        )}
                       </div>
-                      <div className="mt-1 text-xs text-[color:var(--text-muted)]">
-                        {item.senderName} ·{" "}
-                        {formatMessageTimestamp(item.createdAt)}
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">
+                          {item.attachment.fileName}
+                        </div>
+                        <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                          {item.senderName} ·{" "}
+                          {formatMessageTimestamp(item.createdAt)}
+                        </div>
+                        <div className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">
+                          {item.text.trim() || "这条消息没有额外正文。"}
+                        </div>
+                        <div className="mt-4 flex items-center gap-3">
+                          <a
+                            href={item.attachment.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex h-9 items-center justify-center rounded-full bg-[var(--brand-gradient)] px-4 text-xs font-medium text-white"
+                          >
+                            打开附件
+                          </a>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              const nextFavorites = collected
+                                ? removeDesktopFavorite(sourceId)
+                                : upsertDesktopFavorite({
+                                    id: `favorite-${sourceId}`,
+                                    sourceId,
+                                    category: "messages",
+                                    title: item.attachment.fileName,
+                                    description:
+                                      item.text.trim() ||
+                                      `${item.senderName} 分享的聊天附件`,
+                                    meta: `${selectedConversation.title} · ${formatMessageTimestamp(item.createdAt)}`,
+                                    to: "/desktop/chat-files",
+                                    badge: "聊天文件",
+                                    avatarName: selectedConversation.title,
+                                  });
+
+                              setFavoriteSourceIds(
+                                nextFavorites.map(
+                                  (favorite) => favorite.sourceId,
+                                ),
+                              );
+                            }}
+                            className="rounded-full"
+                          >
+                            {collected ? "取消收藏" : "收藏"}
+                          </Button>
+                        </div>
                       </div>
-                      <div className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">
-                        {item.text.trim() || "这条消息没有额外正文。"}
+                      <div className="shrink-0 text-xs text-[color:var(--text-muted)]">
+                        {formatAttachmentMeta(item.attachment)}
                       </div>
-                    </div>
-                    <div className="shrink-0 text-xs text-[color:var(--text-muted)]">
-                      {formatAttachmentMeta(item.attachment)}
                     </div>
                   </div>
-                </a>
-              ))}
+                );
+              })}
 
               {!messagesQuery.isLoading && !attachmentRows.length ? (
                 <EmptyState
