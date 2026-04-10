@@ -26,6 +26,6 @@ export class NarrativeArcEntity {
   @CreateDateColumn()
   createdAt: Date;
 
-  @Column({ nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   completedAt?: Date;
 }
