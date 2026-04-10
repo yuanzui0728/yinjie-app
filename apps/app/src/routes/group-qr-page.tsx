@@ -1237,41 +1237,6 @@ export function GroupQrPage() {
                             ).label
                           }
                         </span>
-                      </div>
-                      <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">
-                        {conversation.title}
-                      </div>
-                      <div className="mt-1 text-xs text-[color:var(--text-muted)]">
-                        {isPersistedGroupConversation(conversation)
-                          ? "群聊"
-                          : "单聊"}{" "}
-                        · 本轮批次 · 尚未回流 · 最近活跃{" "}
-                        {formatConversationTimestamp(conversation.lastActivityAt)}
-                      </div>
-                      <div className="mt-1 text-xs text-[color:var(--brand-secondary)]">
-                        上次发送于 {formatConversationTimestamp(target.deliveredAt)}
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                        <span
-                          className={`rounded-full px-2.5 py-1 font-medium ${resolvePendingReturnBadgeTone(
-                            target.deliveredAt,
-                          )}`}
-                        >
-                          {resolvePendingReturnBadgeLabel(target.deliveredAt)}
-                        </span>
-                        {isPendingReturnCoolingDown(target.deliveredAt) ? (
-                          <span className="rounded-full bg-[rgba(15,23,42,0.06)] px-2.5 py-1 font-medium text-[color:var(--text-muted)]">
-                            刚补发过
-                          </span>
-                        ) : null}
-                        <span className="text-[color:var(--text-muted)]">
-                          待回流 {formatPendingReturnDuration(target.deliveredAt)}
-                        </span>
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                        <span className="text-[color:var(--text-muted)]">
-                          优先补发理由
-                        </span>
                         <span
                           className={`rounded-full px-2.5 py-1 font-medium ${resolvePendingReturnPrimaryReason(
                             conversation,
@@ -1286,18 +1251,21 @@ export function GroupQrPage() {
                           }
                         </span>
                       </div>
+                      <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">
+                        {conversation.title}
+                      </div>
+                      <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                        {resolvePendingReturnMetaSummary(
+                          conversation,
+                          target,
+                          deliveryBatchRankById,
+                        )}
+                      </div>
                       <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
                         {resolvePendingReturnRecommendationSummary(
                           conversation,
                           target.deliveredAt,
                         )}
-                      </div>
-                      <div className="mt-1 text-xs text-[color:var(--text-muted)]">
-                        辅助判断：
-                        {resolvePendingReturnSecondaryHints(
-                          conversation,
-                          target.deliveredAt,
-                        ).join(" · ")}
                       </div>
                       {isPendingReturnCoolingDown(target.deliveredAt) ? (
                         <div className="mt-1 text-xs text-[color:var(--text-muted)]">
@@ -1632,6 +1600,20 @@ function resolveDeliveredBatchLabel(
   }
 
   return "更早批次";
+}
+
+function resolvePendingReturnMetaSummary(
+  conversation: ConversationListItem,
+  target: GroupInviteDeliveryTarget,
+  deliveryBatchRankById: Record<string, number>,
+) {
+  return [
+    isPersistedGroupConversation(conversation) ? "群聊" : "单聊",
+    resolveDeliveredBatchLabel(target, deliveryBatchRankById),
+    `待回流 ${formatPendingReturnDuration(target.deliveredAt)}`,
+    `上次发送于 ${formatConversationTimestamp(target.deliveredAt)}`,
+    `最近活跃 ${formatConversationTimestamp(conversation.lastActivityAt)}`,
+  ].join(" · ");
 }
 
 function formatPendingReturnDuration(deliveredAt: string) {
