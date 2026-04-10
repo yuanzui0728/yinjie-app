@@ -37,6 +37,10 @@ import {
 } from "../features/games/game-center-data";
 import { GameCenterSessionPanel } from "../features/games/game-center-session-panel";
 import { useGameCenterState } from "../features/games/use-game-center-state";
+import {
+  pushMobileHandoffRecord,
+  resolveMobileHandoffLink,
+} from "../features/shell/mobile-handoff-storage";
 import { AvatarChip } from "../components/avatar-chip";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { formatConversationTimestamp, formatTimestamp } from "../lib/format";
@@ -68,6 +72,7 @@ export function GamesPage() {
     gameCenterFeaturedGameIds[0] ?? "signal-squad",
   );
   const [successNotice, setSuccessNotice] = useState("");
+  const [noticeTone, setNoticeTone] = useState<"success" | "info">("success");
 
   useEffect(() => {
     if (!getGameCenterGame(selectedGameId)) {
@@ -97,6 +102,7 @@ export function GamesPage() {
     const game = getGameCenterGame(gameId);
     launchGame(gameId);
     setSelectedGameId(gameId);
+    setNoticeTone("success");
     setSuccessNotice(
       `${game?.name ?? "该游戏"} 已加入最近玩过。首期先以游戏中心内容工作区承接，后续再接小游戏容器。`,
     );
@@ -106,6 +112,7 @@ export function GamesPage() {
     const game = getGameCenterGame(gameId);
     const pinned = pinnedGameIds.includes(gameId);
     togglePinned(gameId);
+    setNoticeTone("success");
     setSuccessNotice(
       `${game?.name ?? "该游戏"} 已${pinned ? "取消固定常玩" : "固定到常玩"}。`,
     );
@@ -122,9 +129,40 @@ export function GamesPage() {
 
     applyEventAction(eventId, nextStatus);
     setSelectedGameId(event.relatedGameId);
+    setNoticeTone("success");
     setSuccessNotice(
       `${event.title} 已标记为${getGameCenterEventStatusLabel(event)}。`,
     );
+  }
+
+  async function handleCopyGameToMobile(gameId: string) {
+    const game = getGameCenterGame(gameId);
+    const path = "/games";
+    const link = resolveMobileHandoffLink(path);
+
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.clipboard ||
+      typeof navigator.clipboard.writeText !== "function"
+    ) {
+      setNoticeTone("info");
+      setSuccessNotice("当前环境暂不支持复制到手机。");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(link);
+      pushMobileHandoffRecord({
+        description: `把 ${game?.name ?? "游戏中心"} 的入口发到手机继续，保留最近玩过和活动状态。`,
+        label: `${game?.name ?? "游戏中心"} 接力`,
+        path,
+      });
+      setNoticeTone("success");
+      setSuccessNotice(`${game?.name ?? "该游戏"} 已复制到手机接力链接。`);
+    } catch {
+      setNoticeTone("info");
+      setSuccessNotice("复制到手机失败，请稍后重试。");
+    }
   }
 
   if (isDesktopLayout) {
@@ -139,8 +177,10 @@ export function GamesPage() {
         selectedGameId={selectedGameId}
         lastOpenedAtById={lastOpenedAtById}
         successNotice={successNotice}
+        noticeTone={noticeTone}
         onCategoryChange={setActiveCategory}
         onCompleteEventAction={handleCompleteEventAction}
+        onCopyGameToMobile={handleCopyGameToMobile}
         onDismissActiveGame={dismissActiveGame}
         onLaunchGame={handleLaunchGame}
         onSelectGame={setSelectedGameId}
@@ -263,7 +303,7 @@ export function GamesPage() {
         ))}
       </div>
 
-      {successNotice ? <InlineNotice tone="success">{successNotice}</InlineNotice> : null}
+      {successNotice ? <InlineNotice tone={noticeTone}>{successNotice}</InlineNotice> : null}
 
       <GameCenterSessionPanel
         game={selectedGame}
