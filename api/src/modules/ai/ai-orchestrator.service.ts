@@ -46,6 +46,8 @@ type ResolvedProviderConfig = {
   endpoint: string;
   model: string;
   apiKey: string;
+  transcriptionEndpoint: string;
+  transcriptionApiKey: string;
   transcriptionModel: string;
   ttsModel: string;
   ttsVoice: string;
@@ -125,6 +127,12 @@ export class AiOrchestratorService {
     const transcriptionModel =
       (await this.configService.getConfig('provider_transcription_model')) ??
       DEFAULT_TRANSCRIPTION_MODEL;
+    const transcriptionEndpoint =
+      (await this.configService.getConfig('provider_transcription_endpoint')) ??
+      endpoint;
+    const transcriptionApiKey =
+      (await this.configService.getConfig('provider_transcription_api_key')) ??
+      apiKey;
     const ttsModel =
       (await this.configService.getConfig('provider_tts_model')) ??
       DEFAULT_TTS_MODEL;
@@ -141,6 +149,10 @@ export class AiOrchestratorService {
       endpoint: this.normalizeProviderEndpoint(endpoint),
       model,
       apiKey: apiKey.trim(),
+      transcriptionEndpoint: this.normalizeProviderEndpoint(
+        (transcriptionEndpoint || endpoint).trim(),
+      ),
+      transcriptionApiKey: (transcriptionApiKey || apiKey).trim(),
       transcriptionModel,
       ttsModel,
       ttsVoice,
@@ -164,6 +176,8 @@ export class AiOrchestratorService {
         : provider.endpoint,
       apiKey: override?.apiKey?.trim() || provider.apiKey,
       model: provider.model,
+      transcriptionEndpoint: provider.transcriptionEndpoint,
+      transcriptionApiKey: provider.transcriptionApiKey,
       transcriptionModel: provider.transcriptionModel,
       ttsModel: provider.ttsModel,
       ttsVoice: provider.ttsVoice,
@@ -797,15 +811,15 @@ export class AiOrchestratorService {
     }
 
     const provider = await this.resolveProviderConfig();
-    if (!provider.apiKey.trim()) {
+    if (!provider.transcriptionApiKey.trim()) {
       throw new ServiceUnavailableException(
         '当前实例未配置可用的 AI Key，暂时无法转写语音。',
       );
     }
 
     const client = new OpenAI({
-      apiKey: provider.apiKey,
-      baseURL: provider.endpoint,
+      apiKey: provider.transcriptionApiKey,
+      baseURL: provider.transcriptionEndpoint,
     });
     const startedAt = Date.now();
 

@@ -39,6 +39,9 @@ export class SystemController {
       apiKey?: string;
       mode?: string;
       apiStyle?: string;
+      transcriptionEndpoint?: string;
+      transcriptionModel?: string;
+      transcriptionApiKey?: string;
     },
   ) {
     return this.systemService.setProviderConfig(body);
@@ -53,6 +56,9 @@ export class SystemController {
       apiKey?: string;
       mode?: string;
       apiStyle?: string;
+      transcriptionEndpoint?: string;
+      transcriptionModel?: string;
+      transcriptionApiKey?: string;
     },
   ) {
     return this.systemService.testProviderConnection(body);

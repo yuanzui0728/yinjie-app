@@ -20,6 +20,9 @@ type ProviderPayload = {
   apiKey?: string;
   mode?: string;
   apiStyle?: string;
+  transcriptionEndpoint?: string;
+  transcriptionModel?: string;
+  transcriptionApiKey?: string;
 };
 
 function normalizeProviderEndpoint(value: string) {
@@ -75,6 +78,12 @@ export class SystemService {
     const mode = (await this.systemConfig.getConfig('provider_mode')) ?? 'cloud';
     const apiStyle =
       (await this.systemConfig.getConfig('provider_api_style')) ?? 'openai-chat-completions';
+    const transcriptionEndpoint =
+      (await this.systemConfig.getConfig('provider_transcription_endpoint')) ?? '';
+    const transcriptionModel =
+      (await this.systemConfig.getConfig('provider_transcription_model')) ?? '';
+    const transcriptionApiKey =
+      (await this.systemConfig.getConfig('provider_transcription_api_key')) ?? '';
 
     return {
       endpoint: normalizeProviderEndpoint(endpoint),
@@ -82,6 +91,11 @@ export class SystemService {
       apiKey,
       mode,
       apiStyle,
+      transcriptionEndpoint: transcriptionEndpoint
+        ? normalizeProviderEndpoint(transcriptionEndpoint)
+        : undefined,
+      transcriptionModel: transcriptionModel || undefined,
+      transcriptionApiKey: transcriptionApiKey || undefined,
     };
   }
 
@@ -192,6 +206,9 @@ export class SystemService {
       apiKey: provider.apiKey || undefined,
       mode: provider.mode,
       apiStyle: provider.apiStyle,
+      transcriptionEndpoint: provider.transcriptionEndpoint,
+      transcriptionModel: provider.transcriptionModel,
+      transcriptionApiKey: provider.transcriptionApiKey,
     };
   }
 
@@ -202,6 +219,11 @@ export class SystemService {
       apiKey: payload.apiKey?.trim() ?? '',
       mode: payload.mode === 'local-compatible' ? 'local-compatible' : 'cloud',
       apiStyle: payload.apiStyle === 'openai-responses' ? 'openai-responses' : 'openai-chat-completions',
+      transcriptionEndpoint: payload.transcriptionEndpoint?.trim()
+        ? normalizeProviderEndpoint(payload.transcriptionEndpoint)
+        : '',
+      transcriptionModel: payload.transcriptionModel?.trim() ?? '',
+      transcriptionApiKey: payload.transcriptionApiKey?.trim() ?? '',
     };
 
     await Promise.all([
@@ -210,6 +232,18 @@ export class SystemService {
       this.systemConfig.setConfig('provider_api_key', nextConfig.apiKey),
       this.systemConfig.setConfig('provider_mode', nextConfig.mode),
       this.systemConfig.setConfig('provider_api_style', nextConfig.apiStyle),
+      this.systemConfig.setConfig(
+        'provider_transcription_endpoint',
+        nextConfig.transcriptionEndpoint,
+      ),
+      this.systemConfig.setConfig(
+        'provider_transcription_model',
+        nextConfig.transcriptionModel,
+      ),
+      this.systemConfig.setConfig(
+        'provider_transcription_api_key',
+        nextConfig.transcriptionApiKey,
+      ),
       this.systemConfig.setAiModel(nextConfig.model),
     ]);
 
@@ -219,6 +253,9 @@ export class SystemService {
       apiKey: nextConfig.apiKey || undefined,
       mode: nextConfig.mode,
       apiStyle: nextConfig.apiStyle,
+      transcriptionEndpoint: nextConfig.transcriptionEndpoint || undefined,
+      transcriptionModel: nextConfig.transcriptionModel || undefined,
+      transcriptionApiKey: nextConfig.transcriptionApiKey || undefined,
     };
   }
 
