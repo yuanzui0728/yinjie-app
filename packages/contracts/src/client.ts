@@ -1137,6 +1137,16 @@ export function updateFriendProfile(
   );
 }
 
+export function deleteFriend(characterId: string, baseUrl?: string) {
+  return requestLegacyApi<SuccessResponse>(
+    `/social/friends/${characterId}`,
+    {
+      method: "DELETE",
+    },
+    baseUrl,
+  );
+}
+
 export function getBlockedCharacters(baseUrl?: string) {
   return requestLegacyApi<BlockedCharacter[]>(
     "/social/blocks",

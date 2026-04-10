@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { BookText, BookUser, Search, Star, Tag, UserPlus, Users } from "lucide-react";
 import {
   blockCharacter,
+  deleteFriend,
   getBlockedCharacters,
   getConversations,
   getFriendRequests,
@@ -260,6 +261,16 @@ export function ContactsPage() {
     onSuccess: async (_, variables) => {
       setNotice(variables.muted ? "已开启消息免打扰。" : "已关闭消息免打扰。");
       await queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl] });
+    },
+  });
+  const deleteFriendMutation = useMutation({
+    mutationFn: (characterId: string) => deleteFriend(characterId, baseUrl),
+    onSuccess: async () => {
+      setNotice("已从通讯录删除联系人。");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["app-friends", baseUrl] }),
+        queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl] }),
+      ]);
     },
   });
 
@@ -572,6 +583,11 @@ export function ContactsPage() {
                     <ErrorBlock message={muteMutation.error.message} />
                   </div>
                 ) : null}
+                {deleteFriendMutation.isError && deleteFriendMutation.error instanceof Error ? (
+                  <div className="px-3 pb-3">
+                    <ErrorBlock message={deleteFriendMutation.error.message} />
+                  </div>
+                ) : null}
 
                 {friendsQuery.isLoading ? <LoadingBlock className="px-4 py-6 text-left" label="正在读取联系人..." /> : null}
 
@@ -685,6 +701,12 @@ export function ContactsPage() {
                 isBlocked={selectedFriendBlocked}
                 blockPending={blockMutation.isPending && blockMutation.variables?.characterId === selectedCharacterId}
                 onToggleBlock={selectedFriendItem ? handleToggleBlock : undefined}
+                deletePending={deleteFriendMutation.isPending && deleteFriendMutation.variables === selectedCharacterId}
+                onDeleteFriend={
+                  selectedFriendItem
+                    ? () => deleteFriendMutation.mutate(selectedFriendItem.character.id)
+                    : undefined
+                }
                 onOpenProfile={() => {
                   const characterId = selectedFriendItem?.character.id ?? selectedWorldCharacterItem?.character.id;
                   if (!characterId) {
