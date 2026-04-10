@@ -91,7 +91,12 @@ import type {
   UnblockCharacterRequest,
   UpdateFriendProfileRequest,
 } from "./social";
-import type { SpeechTranscriptionResult } from "./speech";
+import type {
+  SpeechSynthesisRequest,
+  SpeechSynthesisResult,
+  SpeechTranscriptionResult,
+  VoiceCallTurnResult,
+} from "./speech";
 import type {
   InferencePreviewRequest,
   InferencePreviewResponse,
@@ -243,6 +248,31 @@ export function getSystemStatus(baseUrl?: string) {
 export function createSpeechTranscription(payload: FormData, baseUrl?: string) {
   return requestLegacyApi<SpeechTranscriptionResult>(
     "/ai/transcriptions",
+    {
+      method: "POST",
+      body: payload,
+    },
+    baseUrl,
+  );
+}
+
+export function createSpeechSynthesis(
+  payload: SpeechSynthesisRequest,
+  baseUrl?: string,
+) {
+  return requestLegacyApi<SpeechSynthesisResult>(
+    "/ai/speech",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    baseUrl,
+  );
+}
+
+export function createVoiceCallTurn(payload: FormData, baseUrl?: string) {
+  return requestLegacyApi<VoiceCallTurnResult>(
+    "/chat/voice-calls/turns",
     {
       method: "POST",
       body: payload,
