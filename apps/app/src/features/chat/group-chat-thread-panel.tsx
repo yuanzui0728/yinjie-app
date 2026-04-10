@@ -104,6 +104,7 @@ export function GroupChatThreadPanel({
   const [selectionModeActive, setSelectionModeActive] = useState(false);
   const [lastPublishedCallCounts, setLastPublishedCallCounts] = useState<{
     kind: DesktopChatCallKind;
+    source: CallInviteSource | null;
     activeCount: number;
     totalCount: number;
   } | null>(null);
@@ -815,7 +816,8 @@ export function GroupChatThreadPanel({
               groupName={groupQuery.data?.name ?? "群聊"}
               members={membersQuery.data ?? []}
               lastSyncedCounts={
-                lastPublishedCallCounts?.kind === desktopCallPanelState.kind
+                lastPublishedCallCounts?.kind === desktopCallPanelState.kind &&
+                lastPublishedCallCounts?.source === desktopCallPanelState.source
                   ? {
                       activeCount: lastPublishedCallCounts.activeCount,
                       totalCount: lastPublishedCallCounts.totalCount,
@@ -837,6 +839,7 @@ export function GroupChatThreadPanel({
                   .then(() => {
                     setLastPublishedCallCounts({
                       kind: desktopCallPanelState.kind,
+                      source: desktopCallPanelState.source,
                       activeCount: counts.activeCount,
                       totalCount: counts.totalCount,
                     });
@@ -865,6 +868,7 @@ export function GroupChatThreadPanel({
                   .then(() => {
                     setLastPublishedCallCounts({
                       kind: desktopCallPanelState.kind,
+                      source: desktopCallPanelState.source,
                       activeCount: counts.activeCount,
                       totalCount: counts.totalCount,
                     });
