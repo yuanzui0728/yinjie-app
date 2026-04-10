@@ -201,6 +201,10 @@ export function ReplyLogicPage() {
     () => (overview?.constants ? JSON.stringify(overview.constants) : ""),
     [overview?.constants],
   );
+  const narrativePresentation =
+    runtimeRulesDraft?.narrativePresentationTemplates ??
+    overview?.constants.narrativePresentationTemplates ??
+    null;
 
   async function refreshAll() {
     await Promise.all([
@@ -476,16 +480,18 @@ export function ReplyLogicPage() {
                 onRunPreview={() => previewMutation.mutate()}
               />
               {scope === "character" ? (
-                <CharacterInspectorPanel
-                  selectedCharacter={selectedCharacter}
-                  query={characterSnapshotQuery}
-                />
-              ) : (
-                <ConversationInspectorPanel
-                  selectedConversation={selectedConversation}
-                  query={conversationSnapshotQuery}
-                />
-              )}
+              <CharacterInspectorPanel
+                selectedCharacter={selectedCharacter}
+                query={characterSnapshotQuery}
+                narrativePresentation={narrativePresentation}
+              />
+            ) : (
+              <ConversationInspectorPanel
+                selectedConversation={selectedConversation}
+                query={conversationSnapshotQuery}
+                narrativePresentation={narrativePresentation}
+              />
+            )}
             </div>
 
             <div className="space-y-6 xl:sticky xl:top-6 xl:self-start">
@@ -1232,9 +1238,11 @@ function OverviewMetrics({ overview }: { overview: ReplyLogicOverview }) {
 function CharacterInspectorPanel({
   selectedCharacter,
   query,
+  narrativePresentation,
 }: {
   selectedCharacter: ReplyLogicOverview["characters"][number] | null;
   query: ReturnType<typeof useQuery<ReplyLogicCharacterSnapshot>>;
+  narrativePresentation: ReplyLogicConstantSummary["narrativePresentationTemplates"] | null;
 }) {
   if (!selectedCharacter) {
     return <PanelEmpty message="当前没有可选角色。" />;
@@ -1266,7 +1274,10 @@ function CharacterInspectorPanel({
 
       <ActorSnapshotCard actor={query.data.actor} title="单聊回复角色快照" />
 
-      <NarrativeCard arcs={query.data.narrativeArc ? [query.data.narrativeArc] : []} />
+      <NarrativeCard
+        arcs={query.data.narrativeArc ? [query.data.narrativeArc] : []}
+        narrativePresentation={narrativePresentation}
+      />
 
       <Card className="bg-[color:var(--surface-console)]">
         <SectionHeading>备注</SectionHeading>
@@ -1365,9 +1376,11 @@ function ReplyPreviewPanel({
 function ConversationInspectorPanel({
   selectedConversation,
   query,
+  narrativePresentation,
 }: {
   selectedConversation: ReplyLogicOverview["conversations"][number] | null;
   query: ReturnType<typeof useQuery<ReplyLogicConversationSnapshot>>;
+  narrativePresentation: ReplyLogicConstantSummary["narrativePresentationTemplates"] | null;
 }) {
   if (!selectedConversation) {
     return <PanelEmpty message="当前没有可选会话。" />;
@@ -1418,7 +1431,10 @@ function ConversationInspectorPanel({
         ))}
       </div>
 
-      <NarrativeCard arcs={query.data.narrativeArcs} />
+      <NarrativeCard
+        arcs={query.data.narrativeArcs}
+        narrativePresentation={narrativePresentation}
+      />
     </>
   );
 }
@@ -1636,7 +1652,13 @@ function RequestMessageList({
   );
 }
 
-function NarrativeCard({ arcs }: { arcs: ReplyLogicNarrativeArcSummary[] }) {
+function NarrativeCard({
+  arcs,
+  narrativePresentation,
+}: {
+  arcs: ReplyLogicNarrativeArcSummary[];
+  narrativePresentation: ReplyLogicConstantSummary["narrativePresentationTemplates"] | null;
+}) {
   return (
     <Card className="bg-[color:var(--surface-console)]">
       <SectionHeading>记忆与叙事</SectionHeading>
@@ -1651,7 +1673,7 @@ function NarrativeCard({ arcs }: { arcs: ReplyLogicNarrativeArcSummary[] }) {
             >
               <div className="flex flex-wrap items-center gap-2">
                 <div className="text-sm font-medium text-[color:var(--text-primary)]">
-                  {formatNarrativeTitle(arc.title)}
+                  {formatNarrativeTitle(arc.title, narrativePresentation)}
                 </div>
                 <StatusPill tone={arc.status === "completed" ? "healthy" : "warning"}>
                   {formatNarrativeStatus(arc.status)}
@@ -1664,7 +1686,7 @@ function NarrativeCard({ arcs }: { arcs: ReplyLogicNarrativeArcSummary[] }) {
               <div className="mt-4 flex flex-wrap gap-2">
                 {arc.milestones.map((item) => (
                   <StatusPill key={`${arc.id}-${item.label}`} tone="healthy">
-                    {formatNarrativeMilestoneLabel(item.label)}
+                    {formatNarrativeMilestoneLabel(item.label, narrativePresentation)}
                   </StatusPill>
                 ))}
               </div>
@@ -1998,6 +2020,35 @@ function RuntimeRulesEditorCard({
                   }))
                 }
               />
+              <div className="grid gap-4 md:grid-cols-2">
+                <FieldBlock
+                  label="AI 关系初始类型"
+                  value={draft.relationshipInitialType}
+                  onChange={(value) =>
+                    onPatch((current) => ({
+                      ...current,
+                      relationshipInitialType: value,
+                    }))
+                  }
+                />
+                <FieldBlock
+                  label="AI 关系初始强度"
+                  value={draft.relationshipInitialStrength}
+                  type="number"
+                  min={0}
+                  max={100}
+                  onChange={(value) =>
+                    onPatch((current) => ({
+                      ...current,
+                      relationshipInitialStrength: clamp(
+                        parseNonNegativeInteger(value, current.relationshipInitialStrength),
+                        0,
+                        100,
+                      ),
+                    }))
+                  }
+                />
+              </div>
               <TextAreaBlock
                 label="AI 关系初始背景模板（{{leftName}} / {{rightName}}）"
                 value={draft.relationshipInitialBackstory}
@@ -2054,6 +2105,35 @@ function RuntimeRulesEditorCard({
                       value,
                       current.narrativeMilestones,
                     ),
+                  }))
+                }
+              />
+              <FieldBlock
+                label="关系弧线标题后缀"
+                value={draft.narrativePresentationTemplates.relationshipArcSuffix}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    narrativePresentationTemplates: {
+                      ...current.narrativePresentationTemplates,
+                      relationshipArcSuffix: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="里程碑显示标签（key=value）"
+                value={recordToLines(draft.narrativePresentationTemplates.milestoneLabels)}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    narrativePresentationTemplates: {
+                      ...current.narrativePresentationTemplates,
+                      milestoneLabels: parseKeyValueLines(
+                        value,
+                        current.narrativePresentationTemplates.milestoneLabels,
+                      ),
+                    },
                   }))
                 }
               />
@@ -3425,6 +3505,8 @@ function formatRuntimeConstants(constants: ReplyLogicOverview["constants"]) {
       视频号生成概率: constants.channelGenerateChance,
       场景加好友概率: constants.sceneFriendRequestChance,
       场景加好友候选: [...constants.sceneFriendRequestScenes],
+      AI关系初始类型: constants.relationshipInitialType,
+      AI关系初始强度: constants.relationshipInitialStrength,
       基础活动权重: constants.activityBaseWeight,
       主动提醒小时: constants.proactiveReminderHour,
       AI关系初始背景模板: constants.relationshipInitialBackstory,
@@ -3437,9 +3519,13 @@ function formatRuntimeConstants(constants: ReplyLogicOverview["constants"]) {
     },
     叙事里程碑: constants.narrativeMilestones.map((item) => ({
       阈值: item.threshold,
-      标签: formatNarrativeMilestoneLabel(item.label),
+      标签: formatNarrativeMilestoneLabel(item.label, constants.narrativePresentationTemplates),
       进度: item.progress,
     })),
+    叙事展示模板: {
+      关系弧线标题后缀: constants.narrativePresentationTemplates.relationshipArcSuffix,
+      里程碑显示标签: { ...constants.narrativePresentationTemplates.milestoneLabels },
+    },
     Prompt模板: {
       身份兜底: constants.promptTemplates.identityFallback,
       链路推理提示: constants.promptTemplates.chainOfThoughtInstruction,
@@ -3811,15 +3897,31 @@ function formatPromptSectionLabel(section: ReplyLogicPromptSection) {
   }
 }
 
-function formatNarrativeTitle(title: string) {
+function formatNarrativeTitle(
+  title: string,
+  narrativePresentation?: ReplyLogicConstantSummary["narrativePresentationTemplates"] | null,
+) {
   if (title.endsWith(" relationship arc")) {
-    return `${title.replace(/ relationship arc$/, "")} 关系弧线`;
+    const suffix = narrativePresentation?.relationshipArcSuffix ?? "关系弧线";
+    return `${title.replace(/ relationship arc$/, "")} ${suffix}`;
   }
 
   return title;
 }
 
-function formatNarrativeMilestoneLabel(label: string) {
+function formatNarrativeMilestoneLabel(
+  label: string,
+  narrativePresentation?: ReplyLogicConstantSummary["narrativePresentationTemplates"] | null,
+) {
+  const milestoneLabels = narrativePresentation?.milestoneLabels;
+  const mapped =
+    milestoneLabels && label in milestoneLabels
+      ? milestoneLabels[label as keyof typeof milestoneLabels]
+      : undefined;
+  if (mapped) {
+    return mapped;
+  }
+
   switch (label) {
     case "connected":
       return "已建立连接";
