@@ -56,6 +56,36 @@ export type ReplyLogicObservabilityTemplates = {
   actorNoteDirectContext: string;
 };
 
+export type ReplyLogicWorldContextRules = {
+  seasonLabels: {
+    spring: string;
+    summer: string;
+    autumn: string;
+    winter: string;
+  };
+  weatherOptions: {
+    spring: string[];
+    summer: string[];
+    autumn: string[];
+    winter: string[];
+  };
+  holidays: Array<{
+    month: number;
+    day: number;
+    label: string;
+  }>;
+  localTimeTemplate: string;
+  contextFieldTemplates: {
+    currentTime: string;
+    season: string;
+    weather: string;
+    location: string;
+    holiday: string;
+  };
+  contextSeparator: string;
+  promptContextTemplate: string;
+};
+
 export type ReplyLogicRuntimeRules = {
   sleepHintMessages: string[];
   busyHintMessages: {
@@ -86,6 +116,7 @@ export type ReplyLogicRuntimeRules = {
   promptTemplates: ReplyLogicPromptTemplates;
   semanticLabels: ReplyLogicSemanticLabels;
   observabilityTemplates: ReplyLogicObservabilityTemplates;
+  worldContextRules: ReplyLogicWorldContextRules;
 };
 
 export const REPLY_LOGIC_RUNTIME_RULES_CONFIG_KEY =
@@ -269,6 +300,40 @@ export const DEFAULT_REPLY_LOGIC_OBSERVABILITY_TEMPLATES: ReplyLogicObservabilit
     actorNoteDirectContext: '单聊 prompt 会注入 currentActivity 和距离上次聊天时间。',
   });
 
+export const DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES: ReplyLogicWorldContextRules =
+  Object.freeze({
+    seasonLabels: {
+      spring: '春天',
+      summer: '夏天',
+      autumn: '秋天',
+      winter: '冬天',
+    },
+    weatherOptions: {
+      spring: ['多云微暖', '小雨微凉', '阴天但空气清新'],
+      summer: ['晴朗偏热', '闷热多云', '阵雨将至'],
+      autumn: ['秋高气爽', '晴空微凉', '多云和风'],
+      winter: ['阴冷干燥', '晴冷微风', '多云偏寒'],
+    },
+    holidays: [
+      { month: 1, day: 1, label: '元旦' },
+      { month: 2, day: 14, label: '情人节' },
+      { month: 5, day: 1, label: '劳动节' },
+      { month: 6, day: 1, label: '儿童节' },
+      { month: 10, day: 1, label: '国庆节' },
+      { month: 12, day: 25, label: '圣诞节' },
+    ],
+    localTimeTemplate: '{{timeOfDay}}{{hour}}点{{minute}}分',
+    contextFieldTemplates: {
+      currentTime: '当前时间：{{localTime}}',
+      season: '季节：{{season}}',
+      weather: '天气：{{weather}}',
+      location: '位置：{{location}}',
+      holiday: '节日：{{holiday}}',
+    },
+    contextSeparator: '；',
+    promptContextTemplate: '【当前世界状态】{{context}}',
+  });
+
 export const DEFAULT_REPLY_LOGIC_RUNTIME_RULES: ReplyLogicRuntimeRules =
   Object.freeze({
     sleepHintMessages: [...SLEEP_HINTS],
@@ -331,6 +396,27 @@ export const DEFAULT_REPLY_LOGIC_RUNTIME_RULES: ReplyLogicRuntimeRules =
     },
     observabilityTemplates: {
       ...DEFAULT_REPLY_LOGIC_OBSERVABILITY_TEMPLATES,
+    },
+    worldContextRules: {
+      seasonLabels: { ...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.seasonLabels },
+      weatherOptions: {
+        spring: [...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.weatherOptions.spring],
+        summer: [...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.weatherOptions.summer],
+        autumn: [...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.weatherOptions.autumn],
+        winter: [...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.weatherOptions.winter],
+      },
+      holidays: DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.holidays.map((item) => ({
+        month: item.month,
+        day: item.day,
+        label: item.label,
+      })),
+      localTimeTemplate: DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.localTimeTemplate,
+      contextFieldTemplates: {
+        ...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.contextFieldTemplates,
+      },
+      contextSeparator: DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.contextSeparator,
+      promptContextTemplate:
+        DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.promptContextTemplate,
     },
   });
 
@@ -484,6 +570,103 @@ function normalizeObservabilityTemplates(
     actorNoteDirectContext: sanitizeTemplate(
       value?.actorNoteDirectContext,
       defaults.actorNoteDirectContext,
+    ),
+  };
+}
+
+function normalizeWorldContextRules(
+  value: Partial<ReplyLogicWorldContextRules> | undefined,
+): ReplyLogicWorldContextRules {
+  const defaults = DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES;
+  const normalizeHoliday = (
+    item: Partial<ReplyLogicWorldContextRules['holidays'][number]>,
+  ) => ({
+    month: clamp(Math.round(item.month ?? 1), 1, 12),
+    day: clamp(Math.round(item.day ?? 1), 1, 31),
+    label: sanitizeTemplate(item.label, ''),
+  });
+
+  const holidays = (value?.holidays ?? [])
+    .map((item) => normalizeHoliday(item))
+    .filter((item) => item.label);
+
+  return {
+    seasonLabels: {
+      spring: sanitizeTemplate(
+        value?.seasonLabels?.spring,
+        defaults.seasonLabels.spring,
+      ),
+      summer: sanitizeTemplate(
+        value?.seasonLabels?.summer,
+        defaults.seasonLabels.summer,
+      ),
+      autumn: sanitizeTemplate(
+        value?.seasonLabels?.autumn,
+        defaults.seasonLabels.autumn,
+      ),
+      winter: sanitizeTemplate(
+        value?.seasonLabels?.winter,
+        defaults.seasonLabels.winter,
+      ),
+    },
+    weatherOptions: {
+      spring: sanitizeMessages(
+        value?.weatherOptions?.spring,
+        defaults.weatherOptions.spring,
+      ),
+      summer: sanitizeMessages(
+        value?.weatherOptions?.summer,
+        defaults.weatherOptions.summer,
+      ),
+      autumn: sanitizeMessages(
+        value?.weatherOptions?.autumn,
+        defaults.weatherOptions.autumn,
+      ),
+      winter: sanitizeMessages(
+        value?.weatherOptions?.winter,
+        defaults.weatherOptions.winter,
+      ),
+    },
+    holidays: holidays.length
+      ? holidays
+      : defaults.holidays.map((item) => ({
+          month: item.month,
+          day: item.day,
+          label: item.label,
+        })),
+    localTimeTemplate: sanitizeTemplate(
+      value?.localTimeTemplate,
+      defaults.localTimeTemplate,
+    ),
+    contextFieldTemplates: {
+      currentTime: sanitizeTemplate(
+        value?.contextFieldTemplates?.currentTime,
+        defaults.contextFieldTemplates.currentTime,
+      ),
+      season: sanitizeTemplate(
+        value?.contextFieldTemplates?.season,
+        defaults.contextFieldTemplates.season,
+      ),
+      weather: sanitizeTemplate(
+        value?.contextFieldTemplates?.weather,
+        defaults.contextFieldTemplates.weather,
+      ),
+      location: sanitizeTemplate(
+        value?.contextFieldTemplates?.location,
+        defaults.contextFieldTemplates.location,
+      ),
+      holiday: sanitizeTemplate(
+        value?.contextFieldTemplates?.holiday,
+        defaults.contextFieldTemplates.holiday,
+      ),
+    },
+    contextSeparator: sanitizeTemplate(
+      value?.contextSeparator,
+      defaults.contextSeparator,
+    ),
+    promptContextTemplate: sanitizeTemplate(
+      value?.promptContextTemplate,
+      defaults.promptContextTemplate,
     ),
   };
 }
@@ -671,6 +854,7 @@ export function normalizeReplyLogicRuntimeRules(
     observabilityTemplates: normalizeObservabilityTemplates(
       input?.observabilityTemplates,
     ),
+    worldContextRules: normalizeWorldContextRules(input?.worldContextRules),
   };
 }
 

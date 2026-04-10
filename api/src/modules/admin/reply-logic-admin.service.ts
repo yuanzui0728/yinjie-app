@@ -627,7 +627,7 @@ export class ReplyLogicAdminService {
 
     return {
       id: worldContext.id,
-      text: this.worldService.buildContextString(worldContext),
+      text: await this.worldService.buildContextString(worldContext),
       timestamp: worldContext.timestamp.toISOString(),
     };
   }

@@ -460,7 +460,7 @@ export class AiOrchestratorService {
       },
     ];
     const worldCtx = await this.worldService.getLatest();
-    const worldContextText = this.worldService.buildContextString(worldCtx);
+    const worldContextText = await this.worldService.buildContextString(worldCtx);
 
     return {
       model: provider.model,
@@ -488,11 +488,17 @@ export class AiOrchestratorService {
 
     try {
       const worldCtx = await this.worldService.getLatest();
-      const ctxStr = this.worldService.buildContextString(worldCtx);
+      const ctxStr = await this.worldService.buildContextString(worldCtx);
       if (ctxStr) {
-        systemPrompt = systemPrompt.replace(/当前时间：[^\n]*/, ctxStr);
+        const replacementPattern =
+          await this.worldService.getCurrentTimeReplacementPattern();
+        if (replacementPattern) {
+          systemPrompt = systemPrompt.replace(replacementPattern, ctxStr);
+        }
         if (!systemPrompt.includes(ctxStr)) {
-          systemPrompt += `\n\n【当前世界状态】${ctxStr}`;
+          const contextBlock =
+            await this.worldService.buildPromptContextBlock(worldCtx);
+          systemPrompt += `\n\n${contextBlock}`;
         }
       }
     } catch {
