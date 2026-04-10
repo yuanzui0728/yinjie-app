@@ -78,6 +78,11 @@ const DiscoverFeedPage = lazy(async () => {
   return { default: mod.DiscoverFeedPage };
 });
 
+const DiscoverChannelsPage = lazy(async () => {
+  const mod = await import("./routes/channels-page");
+  return { default: mod.ChannelsPage };
+});
+
 const ContactsPage = lazy(async () => {
   const mod = await import("./routes/contacts-page");
   return { default: mod.ContactsPage };
@@ -481,6 +486,13 @@ const discoverFeedRoute = createRoute({
   component: DiscoverFeedPage,
 });
 
+const discoverChannelsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/discover/channels",
+  beforeLoad: requireWorldReady,
+  component: DiscoverChannelsPage,
+});
+
 const profileSettingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/profile/settings",
@@ -587,6 +599,7 @@ const routeTree = rootRoute.addChildren([
   discoverEncounterRoute,
   discoverSceneRoute,
   discoverFeedRoute,
+  discoverChannelsRoute,
   profileSettingsRoute,
   desktopMobileRoute,
   desktopChatFilesRoute,
