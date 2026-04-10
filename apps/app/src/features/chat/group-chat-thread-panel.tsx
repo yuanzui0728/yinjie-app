@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import {
+  getConversations,
   getGroup,
   getGroupMembers,
   getGroupMessages,
@@ -13,7 +14,9 @@ import {
 } from "@yinjie/contracts";
 import { Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
 import { ChatComposer } from "../../components/chat-composer";
-import { ChatMessageList } from "../../components/chat-message-list";
+import {
+  ChatMessageList,
+} from "../../components/chat-message-list";
 import { EmptyState } from "../../components/empty-state";
 import {
   encodeChatReplyText,
@@ -30,6 +33,11 @@ import { type ChatRenderableMessage } from "../../components/chat-message-list";
 import { type ChatRouteContextNotice } from "./conversation-thread-panel";
 import { type ChatComposerAttachmentPayload } from "./chat-plus-types";
 import { buildChatBackgroundStyle } from "./backgrounds/chat-background-helpers";
+import {
+  buildChatUnreadMarkerDomId,
+  findFirstUnreadMessageId,
+  hasLoadedReadBoundary,
+} from "./chat-unread-marker";
 import { MobileChatScrollBottomButton } from "./mobile-chat-scroll-bottom-button";
 import { MobileChatThreadHeader } from "./mobile-chat-thread-header";
 import { useGroupBackground } from "./backgrounds/use-conversation-background";
@@ -73,9 +81,15 @@ export function GroupChatThreadPanel({
   const [text, setText] = useState("");
   const [replyDraft, setReplyDraft] = useState<ChatReplyMetadata | null>(null);
   const [selectionModeActive, setSelectionModeActive] = useState(false);
+  const [initialUnreadCount, setInitialUnreadCount] = useState(0);
+  const [initialUnreadCutoff, setInitialUnreadCutoff] = useState<string | null>(
+    null,
+  );
+  const [unreadSnapshotReady, setUnreadSnapshotReady] = useState(false);
   const [messageLimit, setMessageLimit] = useState(INITIAL_MESSAGE_LIMIT);
   const [hasOlderMessages, setHasOlderMessages] = useState(true);
   const isDesktop = variant === "desktop";
+  const unreadMarkerScrolledRef = useRef(false);
   const loadMoreRequestRef = useRef<{
     previousCount: number;
     scrollHeight: number;
@@ -90,6 +104,10 @@ export function GroupChatThreadPanel({
   const membersQuery = useQuery({
     queryKey: ["app-group-members", baseUrl, groupId],
     queryFn: () => getGroupMembers(groupId, baseUrl),
+  });
+  const conversationsQuery = useQuery({
+    queryKey: ["app-conversations", baseUrl],
+    queryFn: () => getConversations(baseUrl),
   });
 
   const messagesQuery = useQuery({
@@ -107,10 +125,33 @@ export function GroupChatThreadPanel({
     setText("");
     setReplyDraft(null);
     setSelectionModeActive(false);
+    setInitialUnreadCount(0);
+    setInitialUnreadCutoff(null);
+    setUnreadSnapshotReady(false);
     setMessageLimit(INITIAL_MESSAGE_LIMIT);
     setHasOlderMessages(true);
+    unreadMarkerScrolledRef.current = false;
     loadMoreRequestRef.current = null;
   }, [baseUrl, groupId]);
+
+  const activeConversation = conversationsQuery.data?.find(
+    (item) => item.id === groupId && item.type === "group",
+  );
+
+  useEffect(() => {
+    if (unreadSnapshotReady || !conversationsQuery.isFetched) {
+      return;
+    }
+
+    setInitialUnreadCount(activeConversation?.unreadCount ?? 0);
+    setInitialUnreadCutoff(activeConversation?.lastReadAt ?? null);
+    setUnreadSnapshotReady(true);
+  }, [
+    activeConversation?.lastReadAt,
+    activeConversation?.unreadCount,
+    conversationsQuery.isFetched,
+    unreadSnapshotReady,
+  ]);
 
   useEffect(() => {
     if (!groupId) {
@@ -161,7 +202,7 @@ export function GroupChatThreadPanel({
   }, [baseUrl, groupId, queryClient]);
 
   useEffect(() => {
-    if (!groupId) {
+    if (!groupId || !unreadSnapshotReady) {
       return;
     }
 
@@ -170,7 +211,13 @@ export function GroupChatThreadPanel({
         queryKey: ["app-conversations", baseUrl],
       });
     });
-  }, [baseUrl, groupId, messagesQuery.data?.length, queryClient]);
+  }, [
+    baseUrl,
+    groupId,
+    messagesQuery.data?.length,
+    queryClient,
+    unreadSnapshotReady,
+  ]);
 
   const sendMutation = useMutation({
     mutationFn: (payload: Parameters<typeof sendGroupMessage>[1]) =>
@@ -201,6 +248,21 @@ export function GroupChatThreadPanel({
   const hasHighlightedMessage = orderedMessages.some(
     (message) => message.id === highlightedMessageId,
   );
+  const unreadMarkerMessageId = useMemo(
+    () =>
+      findFirstUnreadMessageId(
+        orderedMessages,
+        initialUnreadCutoff,
+        initialUnreadCount > 0,
+      ),
+    [initialUnreadCount, initialUnreadCutoff, orderedMessages],
+  );
+  const shouldLoadOlderForUnreadMarker =
+    initialUnreadCount > 0 &&
+    Boolean(initialUnreadCutoff) &&
+    hasOlderMessages &&
+    !messagesQuery.isFetching &&
+    !hasLoadedReadBoundary(orderedMessages, initialUnreadCutoff);
 
   const sendError =
     sendMutation.error instanceof Error ? sendMutation.error.message : null;
@@ -252,6 +314,28 @@ export function GroupChatThreadPanel({
 
     target.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [hasHighlightedMessage, highlightedMessageId]);
+
+  useEffect(() => {
+    if (
+      highlightedMessageId ||
+      !unreadMarkerMessageId ||
+      unreadMarkerScrolledRef.current
+    ) {
+      return;
+    }
+
+    unreadMarkerScrolledRef.current = true;
+    const markerId = buildChatUnreadMarkerDomId({
+      id: groupId,
+      type: "group",
+    });
+
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById(markerId)
+        ?.scrollIntoView({ behavior: "auto", block: "center" });
+    });
+  }, [groupId, highlightedMessageId, unreadMarkerMessageId]);
 
   const sendAttachmentMessage = async (
     payload: ChatComposerAttachmentPayload,
@@ -361,7 +445,7 @@ export function GroupChatThreadPanel({
     scrollToBottom("smooth");
   };
 
-  const loadOlderMessages = async () => {
+  const loadOlderMessages = useCallback(async () => {
     if (messagesQuery.isFetching || !hasOlderMessages) {
       return;
     }
@@ -373,7 +457,20 @@ export function GroupChatThreadPanel({
       scrollTop: element?.scrollTop ?? 0,
     };
     setMessageLimit((current) => current + HISTORY_PAGE_SIZE);
-  };
+  }, [
+    hasOlderMessages,
+    messagesQuery.data?.length,
+    messagesQuery.isFetching,
+    scrollAnchorRef,
+  ]);
+
+  useEffect(() => {
+    if (!shouldLoadOlderForUnreadMarker) {
+      return;
+    }
+
+    void loadOlderMessages();
+  }, [loadOlderMessages, shouldLoadOlderForUnreadMarker]);
 
   const replyPreview = replyDraft
     ? {
@@ -650,6 +747,8 @@ export function GroupChatThreadPanel({
             onLoadOlderMessages={() => {
               void loadOlderMessages();
             }}
+            unreadMarkerMessageId={unreadMarkerMessageId}
+            unreadMarkerCount={initialUnreadCount}
             onReplyMessage={handleReplyMessage}
             onSelectionModeChange={setSelectionModeActive}
             emptyState={
@@ -739,6 +838,7 @@ function describeReplyPreview(message: ChatRenderableMessage) {
 
   return "消息";
 }
+
 
 function upsertGroupMessage(
   current: GroupMessage[] | undefined,

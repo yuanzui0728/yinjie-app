@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Users } from "lucide-react";
 import { Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
@@ -23,6 +23,11 @@ import { buildChatBackgroundStyle } from "./backgrounds/chat-background-helpers"
 import { type ChatComposerAttachmentPayload } from "./chat-plus-types";
 import { MobileChatThreadHeader } from "./mobile-chat-thread-header";
 import { MobileChatScrollBottomButton } from "./mobile-chat-scroll-bottom-button";
+import {
+  buildChatUnreadMarkerDomId,
+  findFirstUnreadMessageId,
+  hasLoadedReadBoundary,
+} from "./chat-unread-marker";
 import { useConversationBackground } from "./backgrounds/use-conversation-background";
 import { useAppRuntimeConfig } from "../../runtime/runtime-config-store";
 import { useConversationThread } from "./use-conversation-thread";
@@ -64,6 +69,8 @@ export function ConversationThreadPanel({
     baseUrl,
     conversationTitle,
     conversationType,
+    initialUnreadCount,
+    initialUnreadCutoff,
     hasOlderMessages,
     loadingOlderMessages,
     loadOlderMessages,
@@ -84,6 +91,7 @@ export function ConversationThreadPanel({
   const runtimeConfig = useAppRuntimeConfig();
   const backgroundQuery = useConversationBackground(conversationId);
   const isDesktop = variant === "desktop";
+  const unreadMarkerScrolledRef = useRef(false);
   const {
     ref: scrollAnchorRef,
     isAtBottom,
@@ -101,6 +109,21 @@ export function ConversationThreadPanel({
   const hasHighlightedMessage = renderedMessages.some(
     (message) => message.id === highlightedMessageId,
   );
+  const unreadMarkerMessageId = useMemo(
+    () =>
+      findFirstUnreadMessageId(
+        renderedMessages,
+        initialUnreadCutoff,
+        initialUnreadCount > 0,
+      ),
+    [initialUnreadCount, initialUnreadCutoff, renderedMessages],
+  );
+  const shouldLoadOlderForUnreadMarker =
+    initialUnreadCount > 0 &&
+    Boolean(initialUnreadCutoff) &&
+    hasOlderMessages &&
+    !loadingOlderMessages &&
+    !hasLoadedReadBoundary(renderedMessages, initialUnreadCutoff);
   const replyPreview = replyDraft
     ? {
         senderName: replyDraft.senderName,
@@ -127,7 +150,38 @@ export function ConversationThreadPanel({
   useEffect(() => {
     setReplyDraft(null);
     setSelectionModeActive(false);
+    unreadMarkerScrolledRef.current = false;
   }, [conversationId]);
+
+  useEffect(() => {
+    if (!shouldLoadOlderForUnreadMarker) {
+      return;
+    }
+
+    void loadOlderMessages();
+  }, [loadOlderMessages, shouldLoadOlderForUnreadMarker]);
+
+  useEffect(() => {
+    if (
+      highlightedMessageId ||
+      !unreadMarkerMessageId ||
+      unreadMarkerScrolledRef.current
+    ) {
+      return;
+    }
+
+    unreadMarkerScrolledRef.current = true;
+    const markerId = buildChatUnreadMarkerDomId({
+      id: conversationId,
+      type: "direct",
+    });
+
+    window.requestAnimationFrame(() => {
+      document
+        .getElementById(markerId)
+        ?.scrollIntoView({ behavior: "auto", block: "center" });
+    });
+  }, [conversationId, highlightedMessageId, unreadMarkerMessageId]);
 
   const handleReplyMessage = (
     message: ChatRenderableMessage,
@@ -321,6 +375,8 @@ export function ConversationThreadPanel({
             onLoadOlderMessages={() => {
               void loadOlderMessages();
             }}
+            unreadMarkerMessageId={unreadMarkerMessageId}
+            unreadMarkerCount={initialUnreadCount}
             onReplyMessage={handleReplyMessage}
             onSelectionModeChange={setSelectionModeActive}
             emptyState={

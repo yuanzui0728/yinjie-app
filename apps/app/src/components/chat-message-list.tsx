@@ -85,6 +85,7 @@ import {
 import { emitChatMessage, joinConversationRoom } from "../lib/socket";
 import { requestNotificationPermission } from "../runtime/mobile-bridge";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
+import { buildChatUnreadMarkerDomId } from "../features/chat/chat-unread-marker";
 
 export type ChatRenderableMessage = {
   id: string;
@@ -121,6 +122,9 @@ type ChatMessageListProps = {
   hasOlderMessages?: boolean;
   loadingOlderMessages?: boolean;
   onLoadOlderMessages?: () => void;
+  unreadMarkerMessageId?: string | null;
+  unreadMarkerCount?: number;
+  unreadMarkerLabel?: string;
   onReplyMessage?: (
     message: ChatRenderableMessage,
     options?: {
@@ -169,6 +173,9 @@ export function ChatMessageList({
   hasOlderMessages = false,
   loadingOlderMessages = false,
   onLoadOlderMessages,
+  unreadMarkerMessageId = null,
+  unreadMarkerCount = 0,
+  unreadMarkerLabel,
   onReplyMessage,
   onSelectionModeChange,
 }: ChatMessageListProps) {
@@ -742,6 +749,12 @@ export function ChatMessageList({
       ),
     [imageMessages],
   );
+  const unreadMarkerDomId = buildChatUnreadMarkerDomId(threadContext);
+  const resolvedUnreadMarkerLabel =
+    unreadMarkerLabel ??
+    (unreadMarkerCount > 0
+      ? `以下是 ${unreadMarkerCount} 条新消息`
+      : "以下是新消息");
   const activeImageIndex = viewerMessageId
     ? imageMessages.findIndex((message) => message.id === viewerMessageId)
     : -1;
@@ -1376,23 +1389,38 @@ export function ChatMessageList({
 
         if (isSystem || isRecalled) {
           return (
-            <InlineNotice
-              key={message.id}
-              id={`chat-message-${message.id}`}
-              className={`mx-auto max-w-[84%] rounded-full px-3 py-1.5 text-center text-[11px] text-[color:var(--text-muted)] ${
-                isDesktop
-                  ? "border border-[color:var(--border-faint)] bg-[color:var(--surface-card)]"
-                  : "border border-black/5 bg-[rgba(255,255,255,0.82)] shadow-none"
-              } ${isHighlighted ? "ring-2 ring-[rgba(255,191,0,0.34)] ring-offset-2 ring-offset-transparent" : ""}`}
-              tone="muted"
-            >
-              {isRecalled ? buildRecalledMessageNotice(message) : displayText}
-            </InlineNotice>
+            <div key={message.id} className="space-y-2">
+              {unreadMarkerMessageId === message.id ? (
+                <UnreadMarkerDivider
+                  id={unreadMarkerDomId}
+                  label={resolvedUnreadMarkerLabel}
+                  variant={variant}
+                />
+              ) : null}
+              <InlineNotice
+                id={`chat-message-${message.id}`}
+                className={`mx-auto max-w-[84%] rounded-full px-3 py-1.5 text-center text-[11px] text-[color:var(--text-muted)] ${
+                  isDesktop
+                    ? "border border-[color:var(--border-faint)] bg-[color:var(--surface-card)]"
+                    : "border border-black/5 bg-[rgba(255,255,255,0.82)] shadow-none"
+                } ${isHighlighted ? "ring-2 ring-[rgba(255,191,0,0.34)] ring-offset-2 ring-offset-transparent" : ""}`}
+                tone="muted"
+              >
+                {isRecalled ? buildRecalledMessageNotice(message) : displayText}
+              </InlineNotice>
+            </div>
           );
         }
 
         return (
           <div key={message.id}>
+            {unreadMarkerMessageId === message.id ? (
+              <UnreadMarkerDivider
+                id={unreadMarkerDomId}
+                label={resolvedUnreadMarkerLabel}
+                variant={variant}
+              />
+            ) : null}
             {showTimestamp ? (
               <div className="pb-2 pt-1 text-center">
                 <button
@@ -2014,6 +2042,43 @@ export function ChatMessageList({
     </div>
   );
 }
+
+function UnreadMarkerDivider({
+  id,
+  label,
+  variant,
+}: {
+  id: string;
+  label: string;
+  variant: "mobile" | "desktop";
+}) {
+  const isDesktop = variant === "desktop";
+
+  return (
+    <div id={id} className="flex items-center gap-3 py-1.5">
+      <div
+        className={
+          isDesktop ? "h-px flex-1 bg-black/10" : "h-px flex-1 bg-black/8"
+        }
+      />
+      <div
+        className={
+          isDesktop
+            ? "rounded-full bg-[rgba(7,193,96,0.12)] px-3 py-1 text-[11px] font-medium text-[#07a35a]"
+            : "rounded-full bg-[rgba(7,193,96,0.12)] px-3 py-1 text-[11px] font-medium text-[#07a35a]"
+        }
+      >
+        {label}
+      </div>
+      <div
+        className={
+          isDesktop ? "h-px flex-1 bg-black/10" : "h-px flex-1 bg-black/8"
+        }
+      />
+    </div>
+  );
+}
+
 
 function shouldShowMessageTimestamp(
   createdAt?: string | null,
