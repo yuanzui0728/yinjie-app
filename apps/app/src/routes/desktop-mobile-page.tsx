@@ -11,6 +11,7 @@ import {
 } from "@yinjie/contracts";
 import {
   ArrowUpRight,
+  Blocks,
   CheckCircle2,
   Copy,
   RefreshCw,
@@ -26,6 +27,13 @@ import {
   readLiveHistory,
   type LiveSessionRecord,
 } from "../features/desktop/channels/live-companion-storage";
+import {
+  getMiniProgramEntry,
+  getMiniProgramWorkspaceTasks,
+  resolveMiniProgramEntries,
+  type MiniProgramEntry,
+} from "../features/mini-programs/mini-programs-data";
+import { readMiniProgramsState } from "../features/mini-programs/mini-programs-storage";
 import { DesktopEntryShell } from "../features/desktop/desktop-entry-shell";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import {
@@ -91,6 +99,9 @@ export function DesktopMobilePage() {
   const [liveHistory, setLiveHistory] = useState<LiveSessionRecord[]>(() =>
     readLiveHistory(),
   );
+  const [miniProgramsState, setMiniProgramsState] = useState(() =>
+    readMiniProgramsState(),
+  );
 
   const conversationsQuery = useQuery({
     queryKey: ["app-conversations", baseUrl],
@@ -133,6 +144,12 @@ export function DesktopMobilePage() {
   );
   const activeLiveSession =
     liveHistory.find((item) => item.status === "live") ?? null;
+  const activeMiniProgram = miniProgramsState.activeMiniProgramId
+    ? getMiniProgramEntry(miniProgramsState.activeMiniProgramId)
+    : null;
+  const recentMiniPrograms = resolveMiniProgramEntries(
+    miniProgramsState.recentMiniProgramIds,
+  ).slice(0, 4);
 
   const syncTimestamp = useMemo(() => {
     const candidates = [
@@ -453,6 +470,164 @@ export function DesktopMobilePage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
+                  <Blocks
+                    size={16}
+                    className="text-[color:var(--brand-primary)]"
+                  />
+                  <span>小程序接力</span>
+                </div>
+                <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
+                  桌面小程序面板里的当前工作台和最近使用，会从这里直接发到手机继续。
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  to="/tabs/mini-programs"
+                  className="inline-flex h-9 items-center justify-center rounded-full border border-[color:var(--border-faint)] px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:text-[color:var(--text-primary)]"
+                >
+                  打开小程序面板
+                </Link>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    const nextMiniProgramsState = readMiniProgramsState();
+                    setMiniProgramsState(nextMiniProgramsState);
+                    setNotice(
+                      nextMiniProgramsState.activeMiniProgramId
+                        ? "已刷新小程序接力内容。"
+                        : "小程序面板里还没有可同步到手机的最近使用。",
+                    );
+                  }}
+                  className="rounded-full"
+                >
+                  <RefreshCw size={14} />
+                  刷新
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
+              <div className="rounded-[22px] border border-[color:var(--border-faint)] bg-[rgba(255,250,244,0.82)] p-4">
+                <div className="text-sm font-medium text-[color:var(--text-primary)]">
+                  当前小程序工作台
+                </div>
+                {activeMiniProgram ? (
+                  <MiniProgramHandoffCard
+                    miniProgram={activeMiniProgram}
+                    launchCount={
+                      miniProgramsState.launchCountById[activeMiniProgram.id] ??
+                      0
+                    }
+                    lastOpenedAt={
+                      miniProgramsState.lastOpenedAtById[activeMiniProgram.id]
+                    }
+                    completedTaskCount={
+                      getMiniProgramWorkspaceTasks(
+                        activeMiniProgram.id,
+                        miniProgramsState.completedTaskIdsByMiniProgramId[
+                          activeMiniProgram.id
+                        ] ?? [],
+                      ).filter((task) => task.completed).length
+                    }
+                    totalTaskCount={
+                      getMiniProgramWorkspaceTasks(
+                        activeMiniProgram.id,
+                        miniProgramsState.completedTaskIdsByMiniProgramId[
+                          activeMiniProgram.id
+                        ] ?? [],
+                      ).length
+                    }
+                    pinned={miniProgramsState.pinnedMiniProgramIds.includes(
+                      activeMiniProgram.id,
+                    )}
+                    buttonLabel="发当前工作台到手机"
+                    onCopy={() =>
+                      void handleCopyHandoff({
+                        description: `${activeMiniProgram.name} 的当前工作台，带上最近使用和本地待办上下文。`,
+                        label: `${activeMiniProgram.name} 接力`,
+                        path: `/discover/mini-programs?miniProgram=${activeMiniProgram.id}`,
+                        setHistory: setHandoffHistory,
+                        setNotice,
+                      })
+                    }
+                  />
+                ) : (
+                  <div className="mt-4">
+                    <EmptyState
+                      title="还没有当前小程序"
+                      description="先在桌面小程序面板里打开一个入口，这里就会出现可接力到手机的工作台。"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-[22px] border border-[color:var(--border-faint)] bg-[rgba(255,250,244,0.82)] p-4">
+                <div className="text-sm font-medium text-[color:var(--text-primary)]">
+                  最近使用小程序
+                </div>
+                <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
+                  最近在桌面打开过的小程序，会直接形成手机继续入口。
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {recentMiniPrograms.length ? (
+                    recentMiniPrograms.map((miniProgram) => (
+                      <MiniProgramHandoffCard
+                        key={miniProgram.id}
+                        miniProgram={miniProgram}
+                        launchCount={
+                          miniProgramsState.launchCountById[miniProgram.id] ?? 0
+                        }
+                        lastOpenedAt={
+                          miniProgramsState.lastOpenedAtById[miniProgram.id]
+                        }
+                        completedTaskCount={
+                          getMiniProgramWorkspaceTasks(
+                            miniProgram.id,
+                            miniProgramsState.completedTaskIdsByMiniProgramId[
+                              miniProgram.id
+                            ] ?? [],
+                          ).filter((task) => task.completed).length
+                        }
+                        totalTaskCount={
+                          getMiniProgramWorkspaceTasks(
+                            miniProgram.id,
+                            miniProgramsState.completedTaskIdsByMiniProgramId[
+                              miniProgram.id
+                            ] ?? [],
+                          ).length
+                        }
+                        pinned={miniProgramsState.pinnedMiniProgramIds.includes(
+                          miniProgram.id,
+                        )}
+                        buttonLabel="发到手机继续"
+                        onCopy={() =>
+                          void handleCopyHandoff({
+                            description: `${miniProgram.name} 的当前工作台，带上最近使用和本地待办上下文。`,
+                            label: `${miniProgram.name} 接力`,
+                            path: `/discover/mini-programs?miniProgram=${miniProgram.id}`,
+                            setHistory: setHandoffHistory,
+                            setNotice,
+                          })
+                        }
+                      />
+                    ))
+                  ) : (
+                    <EmptyState
+                      title="还没有最近小程序"
+                      description="先在桌面小程序面板里打开几个入口，这里就会开始出现可接力到手机的最近记录。"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[28px] border border-[color:var(--border-faint)] bg-white/92 p-5 shadow-[var(--shadow-soft)]">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
                   <RadioTower
                     size={16}
                     className="text-[color:var(--brand-primary)]"
@@ -714,6 +889,67 @@ function RecentArticleRow({
             </Button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function MiniProgramHandoffCard({
+  miniProgram,
+  launchCount,
+  lastOpenedAt,
+  completedTaskCount,
+  totalTaskCount,
+  pinned,
+  buttonLabel,
+  onCopy,
+}: {
+  miniProgram: MiniProgramEntry;
+  launchCount: number;
+  lastOpenedAt?: string;
+  completedTaskCount: number;
+  totalTaskCount: number;
+  pinned: boolean;
+  buttonLabel: string;
+  onCopy: () => void;
+}) {
+  return (
+    <div className="rounded-[22px] border border-[color:var(--border-faint)] bg-white/86 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-sm font-medium text-[color:var(--text-primary)]">
+            {miniProgram.name}
+          </div>
+          <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+            {miniProgram.deckLabel}
+            {pinned ? " · 已加入我的小程序" : ""}
+          </div>
+        </div>
+        <div className="rounded-full bg-[rgba(255,138,61,0.08)] px-2.5 py-1 text-[10px] text-[color:var(--brand-primary)]">
+          {launchCount} 次
+        </div>
+      </div>
+
+      <div className="mt-2 text-xs leading-6 text-[color:var(--text-secondary)]">
+        {miniProgram.openHint}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-[color:var(--text-muted)]">
+        <span>
+          待办 {completedTaskCount}/{totalTaskCount}
+        </span>
+        <span>
+          {lastOpenedAt
+            ? `上次打开 ${formatConversationTimestamp(lastOpenedAt)}`
+            : "还没有打开过"}
+        </span>
+      </div>
+
+      <div className="mt-4">
+        <Button size="sm" onClick={onCopy} className="rounded-full">
+          <Copy size={14} />
+          {buttonLabel}
+        </Button>
       </div>
     </div>
   );
