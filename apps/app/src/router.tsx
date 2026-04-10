@@ -113,6 +113,11 @@ const CreateGroupPage = lazy(async () => {
   return { default: mod.CreateGroupPage };
 });
 
+const NotesPage = lazy(async () => {
+  const mod = await import("./routes/notes-page");
+  return { default: mod.NotesPage };
+});
+
 const LegalPrivacyPage = lazy(async () => {
   const mod = await import("./routes/legal-privacy-page");
   return { default: mod.LegalPrivacyPage };
@@ -273,6 +278,13 @@ const createGroupRoute = createRoute({
   component: CreateGroupPage,
 });
 
+const notesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/notes",
+  beforeLoad: requireWorldReady,
+  component: NotesPage,
+});
+
 const discoverMomentsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/discover/moments",
@@ -348,6 +360,7 @@ const routeTree = rootRoute.addChildren([
   groupChatDetailsRoute,
   groupMessageSearchRoute,
   createGroupRoute,
+  notesRoute,
   discoverMomentsRoute,
   discoverEncounterRoute,
   discoverSceneRoute,

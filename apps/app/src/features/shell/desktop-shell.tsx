@@ -32,7 +32,11 @@ type DesktopWindowHandle = {
 
 function isActive(pathname: string, to: string) {
   if (to === "/tabs/chat") {
-    return pathname.startsWith("/tabs/chat") || pathname.startsWith("/chat/");
+    return (
+      pathname.startsWith("/tabs/chat") ||
+      pathname.startsWith("/chat/") ||
+      pathname.startsWith("/notes")
+    );
   }
 
   if (to === "/tabs/contacts") {
