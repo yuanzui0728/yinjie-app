@@ -17,6 +17,7 @@ import {
 } from "@yinjie/contracts";
 import {
   BellOff,
+  BellRing,
   CheckCheck,
   Circle,
   Plus,
@@ -42,11 +43,19 @@ import { EmptyState } from "../components/empty-state";
 import { OfficialServiceConversationCard } from "../components/official-service-conversation-card";
 import { SubscriptionInboxCard } from "../components/subscription-inbox-card";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
+import {
+  removeLocalChatMessageReminder,
+  useLocalChatMessageActionState,
+} from "../features/chat/local-chat-message-actions";
 import { DesktopChatWorkspace } from "../features/desktop/chat/desktop-chat-workspace";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { sanitizeDisplayedChatText } from "../lib/chat-text";
 import { isPersistedGroupConversation } from "../lib/conversation-route";
-import { formatConversationTimestamp } from "../lib/format";
+import {
+  formatConversationTimestamp,
+  formatMessageTimestamp,
+  parseTimestamp,
+} from "../lib/format";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 type QuickActionItem = {
@@ -84,11 +93,23 @@ const quickActionItems: QuickActionItem[] = [
   },
 ];
 
-type ConversationListEntry = Awaited<ReturnType<typeof getConversations>>[number];
+type ConversationListEntry = Awaited<
+  ReturnType<typeof getConversations>
+>[number];
 type PendingHideConversation = {
   conversationId: string;
   isGroup: boolean;
   title: string;
+};
+
+type ChatReminderEntry = {
+  messageId: string;
+  threadId: string;
+  threadType: "direct" | "group";
+  title: string;
+  previewText: string;
+  remindAt: string;
+  isDue: boolean;
 };
 
 const SWIPE_ACTION_BUTTON_WIDTH = 72;
@@ -109,6 +130,7 @@ function MobileChatListPage() {
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
+  const localMessageActionState = useLocalChatMessageActionState();
   const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [openSwipeConversationId, setOpenSwipeConversationId] = useState<
@@ -116,6 +138,7 @@ function MobileChatListPage() {
   >(null);
   const [pendingHideConversation, setPendingHideConversation] =
     useState<PendingHideConversation | null>(null);
+  const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
   const hideTimeoutRef = useRef<number | null>(null);
   const pendingHideRef = useRef<PendingHideConversation | null>(null);
 
@@ -134,6 +157,19 @@ function MobileChatListPage() {
     () => conversationsQuery.data ?? [],
     [conversationsQuery.data],
   );
+  const reminderEntries = useMemo(
+    () =>
+      buildChatReminderEntries(
+        localMessageActionState.reminders,
+        conversations,
+        nowTimestamp,
+      ),
+    [conversations, localMessageActionState.reminders, nowTimestamp],
+  );
+  const dueReminderCount = useMemo(
+    () => reminderEntries.filter((item) => item.isDue).length,
+    [reminderEntries],
+  );
   const visibleConversations = useMemo(
     () =>
       pendingHideConversation
@@ -150,6 +186,7 @@ function MobileChatListPage() {
   const showSubscriptionInboxItem = Boolean(subscriptionInboxSummary);
 
   const hasConversations =
+    reminderEntries.length > 0 ||
     visibleConversations.length > 0 ||
     serviceConversations.length > 0 ||
     showSubscriptionInboxItem;
@@ -295,6 +332,18 @@ function MobileChatListPage() {
   }, [openSwipeConversationId, visibleConversations]);
 
   useEffect(() => {
+    if (!reminderEntries.length) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setNowTimestamp(Date.now());
+    }, 30_000);
+
+    return () => window.clearInterval(timer);
+  }, [reminderEntries.length]);
+
+  useEffect(() => {
     return () => {
       clearPendingHideTimer();
 
@@ -362,6 +411,30 @@ function MobileChatListPage() {
     pendingHideRef.current = null;
     setPendingHideConversation(null);
     setNotice("已撤销删除。");
+  }
+
+  function handleOpenReminder(entry: ChatReminderEntry) {
+    setNotice(null);
+
+    if (entry.threadType === "group") {
+      void navigate({
+        to: "/group/$groupId",
+        params: { groupId: entry.threadId },
+        hash: `chat-message-${entry.messageId}`,
+      });
+      return;
+    }
+
+    void navigate({
+      to: "/chat/$conversationId",
+      params: { conversationId: entry.threadId },
+      hash: `chat-message-${entry.messageId}`,
+    });
+  }
+
+  function handleDismissReminder(messageId: string) {
+    removeLocalChatMessageReminder(messageId);
+    setNotice("已移除消息提醒。");
   }
 
   return (
@@ -494,6 +567,67 @@ function MobileChatListPage() {
             <ErrorBlock message={messageEntriesQuery.error.message} />
           </div>
         ) : null}
+        {reminderEntries.length ? (
+          <section className="mt-2 overflow-hidden border-y border-black/6 bg-white">
+            <div className="flex items-center justify-between px-4 py-3">
+              <div className="flex items-center gap-2 text-[15px] font-medium text-[#111827]">
+                <BellRing size={16} className="text-[#07c160]" />
+                <span>消息提醒</span>
+              </div>
+              <div className="text-[12px] text-[#8c8c8c]">
+                {dueReminderCount > 0
+                  ? `${dueReminderCount} 条已到时间`
+                  : `${reminderEntries.length} 条待提醒`}
+              </div>
+            </div>
+            {reminderEntries.map((entry, index) => (
+              <div
+                key={entry.messageId}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-3",
+                  index > 0
+                    ? "border-t border-[color:var(--border-faint)]"
+                    : "",
+                )}
+              >
+                <button
+                  type="button"
+                  onClick={() => handleOpenReminder(entry)}
+                  className="min-w-0 flex-1 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                        entry.isDue
+                          ? "bg-[#fff1f0] text-[#d74b45]"
+                          : "bg-[#eaf8ef] text-[#07c160]",
+                      )}
+                    >
+                      {entry.isDue ? "已到时间" : "待提醒"}
+                    </span>
+                    <span className="min-w-0 truncate text-[14px] font-medium text-[#111827]">
+                      {entry.title}
+                    </span>
+                  </div>
+                  <div className="mt-1 truncate text-[13px] text-[#5f6368]">
+                    {entry.previewText}
+                  </div>
+                  <div className="mt-1 text-[12px] text-[#8c8c8c]">
+                    {formatReminderListTimestamp(entry.remindAt, entry.isDue)}
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDismissReminder(entry.messageId)}
+                  className="shrink-0 rounded-full border border-black/8 px-3 py-1.5 text-[12px] text-[#5f6368]"
+                >
+                  完成
+                </button>
+              </div>
+            ))}
+          </section>
+        ) : null}
 
         {!conversationsQuery.isLoading && !conversationsQuery.isError ? (
           hasConversations ? (
@@ -527,9 +661,11 @@ function MobileChatListPage() {
                   open={openSwipeConversationId === conversation.id}
                   pending={
                     (pinMutation.isPending &&
-                      pinMutation.variables?.conversationId === conversation.id) ||
+                      pinMutation.variables?.conversationId ===
+                        conversation.id) ||
                     (muteMutation.isPending &&
-                      muteMutation.variables?.conversationId === conversation.id) ||
+                      muteMutation.variables?.conversationId ===
+                        conversation.id) ||
                     (readStateMutation.isPending &&
                       readStateMutation.variables?.conversationId ===
                         conversation.id)
@@ -626,8 +762,7 @@ function ConversationListItemLink({
   } | null>(null);
   const showReadAction =
     conversation.unreadCount > 0 || canConversationBeMarkedUnread(conversation);
-  const swipeActionWidth =
-    (showReadAction ? 4 : 3) * SWIPE_ACTION_BUTTON_WIDTH;
+  const swipeActionWidth = (showReadAction ? 4 : 3) * SWIPE_ACTION_BUTTON_WIDTH;
   const readActionLabel = conversation.unreadCount > 0 ? "标已读" : "标未读";
   const [swipeOffset, setSwipeOffset] = useState(open ? -swipeActionWidth : 0);
   const hasUnreadMessages = conversation.unreadCount > 0;
@@ -705,9 +840,7 @@ function ConversationListItemLink({
     <div
       className={cn(
         "flex items-center gap-3 px-4 py-3.5",
-        isPinned
-          ? "bg-[#f2f2f2]"
-          : "bg-[color:var(--bg-canvas-elevated)]",
+        isPinned ? "bg-[#f2f2f2]" : "bg-[color:var(--bg-canvas-elevated)]",
       )}
     >
       <AvatarChip name={conversation.title} size="wechat" />
@@ -882,7 +1015,7 @@ function formatConversationPreview(conversation: ConversationListEntry) {
   }
 
   const prefix = isPersistedGroupConversation(conversation)
-    ? `${lastMessage.senderType === "user" ? "我" : (lastMessage.senderName || "群成员")}：`
+    ? `${lastMessage.senderType === "user" ? "我" : lastMessage.senderName || "群成员"}：`
     : "";
 
   if (lastMessage.type === "image") {
@@ -902,11 +1035,10 @@ function formatConversationPreview(conversation: ConversationListEntry) {
   }
 
   if (lastMessage.type === "sticker") {
-    return (
-      lastMessage.attachment?.kind === "sticker" && lastMessage.attachment.label
-        ? `${prefix}[表情] ${lastMessage.attachment.label}`
-        : `${prefix}[表情]`
-    );
+    return lastMessage.attachment?.kind === "sticker" &&
+      lastMessage.attachment.label
+      ? `${prefix}[表情] ${lastMessage.attachment.label}`
+      : `${prefix}[表情]`;
   }
 
   const sanitizedText = sanitizeDisplayedChatText(lastMessage.text);
@@ -918,4 +1050,49 @@ function canConversationBeMarkedUnread(conversation: ConversationListEntry) {
     conversation.unreadCount === 0 &&
     conversation.lastMessage?.senderType === "character"
   );
+}
+
+function buildChatReminderEntries(
+  reminders: ReturnType<typeof useLocalChatMessageActionState>["reminders"],
+  conversations: ConversationListEntry[],
+  nowTimestamp: number,
+): ChatReminderEntry[] {
+  const conversationMap = new Map(
+    conversations.map((conversation) => [conversation.id, conversation]),
+  );
+
+  return [...reminders]
+    .filter((item) => item.threadId.trim())
+    .map((item) => {
+      const conversation = conversationMap.get(item.threadId);
+      const remindTimestamp = parseTimestamp(item.remindAt) ?? 0;
+
+      return {
+        messageId: item.messageId,
+        threadId: item.threadId,
+        threadType: item.threadType,
+        title:
+          conversation?.title ||
+          item.threadTitle?.trim() ||
+          (item.threadType === "group" ? "群聊" : "聊天"),
+        previewText: item.previewText?.trim() || "聊天消息",
+        remindAt: item.remindAt,
+        isDue: remindTimestamp <= nowTimestamp,
+      };
+    })
+    .sort((left, right) => {
+      if (left.isDue !== right.isDue) {
+        return left.isDue ? -1 : 1;
+      }
+
+      return (
+        (parseTimestamp(left.remindAt) ?? 0) -
+        (parseTimestamp(right.remindAt) ?? 0)
+      );
+    });
+}
+
+function formatReminderListTimestamp(remindAt: string, isDue: boolean) {
+  const label = formatMessageTimestamp(remindAt);
+  return isDue ? `提醒时间 ${label}` : `将在 ${label} 提醒`;
 }
