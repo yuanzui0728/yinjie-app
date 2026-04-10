@@ -8,7 +8,7 @@ import {
   type GroupMessage,
   type Message,
 } from "@yinjie/contracts";
-import { ErrorBlock, LoadingBlock } from "@yinjie/ui";
+import { ErrorBlock, LoadingBlock, cn } from "@yinjie/ui";
 import { sanitizeDisplayedChatText } from "../../../lib/chat-text";
 import { isPersistedGroupConversation } from "../../../lib/conversation-route";
 import { formatMessageTimestamp, parseTimestamp } from "../../../lib/format";
@@ -21,11 +21,37 @@ type DesktopChatHistoryPanelProps = {
 type HistoryRow = {
   id: string;
   senderName: string;
-  text: string;
   createdAt: string;
+  preview: string;
+  type: Exclude<HistoryFilterType, "all">;
+  typeLabel: string;
 };
 
+type HistoryFilterType =
+  | "all"
+  | "text"
+  | "system"
+  | "sticker"
+  | "image"
+  | "file"
+  | "contact_card"
+  | "location_card";
+
 const MAX_VISIBLE_ROWS = 60;
+
+const historyFilterLabels: Array<{
+  id: HistoryFilterType;
+  label: string;
+}> = [
+  { id: "all", label: "全部" },
+  { id: "text", label: "文本" },
+  { id: "image", label: "图片" },
+  { id: "file", label: "文件" },
+  { id: "sticker", label: "表情" },
+  { id: "contact_card", label: "名片" },
+  { id: "location_card", label: "位置" },
+  { id: "system", label: "系统" },
+];
 
 export function DesktopChatHistoryPanel({
   conversation,
@@ -33,7 +59,10 @@ export function DesktopChatHistoryPanel({
   const navigate = useNavigate();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
+  const isGroupConversation = isPersistedGroupConversation(conversation);
   const [keyword, setKeyword] = useState("");
+  const [typeFilter, setTypeFilter] = useState<HistoryFilterType>("all");
+  const [senderFilter, setSenderFilter] = useState("all");
 
   const messagesQuery = useQuery({
     queryKey: [
@@ -61,19 +90,63 @@ export function DesktopChatHistoryPanel({
       ),
     [messagesQuery.data],
   );
+  const senderOptions = useMemo(() => {
+    if (!isGroupConversation) {
+      return [];
+    }
+
+    return [...new Set(historyRows.map((row) => row.senderName))]
+      .filter(Boolean)
+      .sort((left, right) => left.localeCompare(right, "zh-CN"));
+  }, [historyRows, isGroupConversation]);
+  const availableTypeFilters = useMemo(() => {
+    const counts = historyRows.reduce<Record<Exclude<HistoryFilterType, "all">, number>>(
+      (result, row) => {
+        result[row.type] += 1;
+        return result;
+      },
+      {
+        text: 0,
+        image: 0,
+        file: 0,
+        sticker: 0,
+        contact_card: 0,
+        location_card: 0,
+        system: 0,
+      },
+    );
+
+    return historyFilterLabels.filter(
+      (item) => item.id === "all" || counts[item.id] > 0,
+    );
+  }, [historyRows]);
+
   const filteredRows = useMemo(() => {
-    const rows = !trimmedKeyword
-      ? historyRows
-      : historyRows.filter((row) => {
-          const senderName = row.senderName.toLowerCase();
-          const text = row.text.toLowerCase();
-          return (
-            senderName.includes(trimmedKeyword) || text.includes(trimmedKeyword)
-          );
-        });
+    const rows = historyRows.filter((row) => {
+      if (typeFilter !== "all" && row.type !== typeFilter) {
+        return false;
+      }
+
+      if (senderFilter !== "all" && row.senderName !== senderFilter) {
+        return false;
+      }
+
+      if (!trimmedKeyword) {
+        return true;
+      }
+
+      const senderName = row.senderName.toLowerCase();
+      const preview = row.preview.toLowerCase();
+      const typeLabel = row.typeLabel.toLowerCase();
+      return (
+        senderName.includes(trimmedKeyword) ||
+        preview.includes(trimmedKeyword) ||
+        typeLabel.includes(trimmedKeyword)
+      );
+    });
 
     return rows.slice(0, MAX_VISIBLE_ROWS);
-  }, [historyRows, trimmedKeyword]);
+  }, [historyRows, senderFilter, trimmedKeyword, typeFilter]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -90,6 +163,41 @@ export function DesktopChatHistoryPanel({
             ? `共命中 ${filteredRows.length} 条，按时间倒序展示`
             : `最近 ${Math.min(historyRows.length, MAX_VISIBLE_ROWS)} 条聊天记录`}
         </div>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {availableTypeFilters.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setTypeFilter(item.id)}
+              className={cn(
+                "rounded-full px-3 py-1.5 text-[12px] transition",
+                typeFilter === item.id
+                  ? "bg-[rgba(255,138,61,0.16)] text-[color:var(--brand-primary)]"
+                  : "bg-[#f5f5f5] text-[color:var(--text-muted)] hover:bg-[#eeeeee]",
+              )}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        {isGroupConversation ? (
+          <div className="mt-3">
+            <select
+              value={senderFilter}
+              onChange={(event) => setSenderFilter(event.target.value)}
+              className="w-full rounded-xl border border-black/8 bg-[#f5f5f5] px-3 py-2 text-sm text-[color:var(--text-primary)] outline-none transition focus:border-black/12 focus:bg-white"
+            >
+              <option value="all">全部成员</option>
+              {senderOptions.map((senderName) => (
+                <option key={senderName} value={senderName}>
+                  {senderName}
+                </option>
+              ))}
+            </select>
+          </div>
+        ) : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto">
@@ -153,9 +261,14 @@ export function DesktopChatHistoryPanel({
                     {formatMessageTimestamp(row.createdAt)}
                   </div>
                 </div>
-                <div className="mt-1 text-[13px] leading-6 text-[color:var(--text-secondary)]">
+                <div className="mt-1 flex items-center gap-2">
+                  <span className="shrink-0 rounded-full bg-[rgba(255,138,61,0.10)] px-2 py-0.5 text-[10px] text-[color:var(--brand-primary)]">
+                    {row.typeLabel}
+                  </span>
+                </div>
+                <div className="mt-2 text-[13px] leading-6 text-[color:var(--text-secondary)]">
                   {renderHighlightedText(
-                    buildSearchPreview(row.text, trimmedKeyword),
+                    buildSearchPreview(row.preview, trimmedKeyword),
                     trimmedKeyword,
                   )}
                 </div>
@@ -172,12 +285,99 @@ function normalizeHistoryRows(messages: Array<Message | GroupMessage>): HistoryR
   return messages.map((message) => ({
     id: message.id,
     senderName: message.senderName,
-    text:
-      message.senderType === "user"
-        ? message.text
-        : sanitizeDisplayedChatText(message.text),
     createdAt: message.createdAt,
+    preview: resolveMessagePreview(message),
+    type: resolveHistoryFilterType(message.type),
+    typeLabel: resolveMessageTypeLabel(message.type),
   }));
+}
+
+function resolveHistoryFilterType(
+  type: Message["type"] | GroupMessage["type"],
+): Exclude<HistoryFilterType, "all"> {
+  if (type === "proactive") {
+    return "text" as const;
+  }
+
+  if (type === "system") {
+    return "system" as const;
+  }
+
+  if (type === "sticker") {
+    return "sticker" as const;
+  }
+
+  if (type === "image") {
+    return "image" as const;
+  }
+
+  if (type === "file") {
+    return "file" as const;
+  }
+
+  if (type === "contact_card") {
+    return "contact_card" as const;
+  }
+
+  if (type === "location_card") {
+    return "location_card" as const;
+  }
+
+  return "text" as const;
+}
+
+function resolveMessagePreview(message: Message | GroupMessage) {
+  if (message.attachment?.kind === "image") {
+    return message.text.trim() || `图片 · ${message.attachment.fileName}`;
+  }
+
+  if (message.attachment?.kind === "file") {
+    return message.text.trim() || `文件 · ${message.attachment.fileName}`;
+  }
+
+  if (message.attachment?.kind === "contact_card") {
+    return message.text.trim() || `名片 · ${message.attachment.name}`;
+  }
+
+  if (message.attachment?.kind === "location_card") {
+    return message.text.trim() || `位置 · ${message.attachment.title}`;
+  }
+
+  if (message.type === "sticker" && message.attachment?.kind === "sticker") {
+    return `表情 · ${message.attachment.label ?? message.attachment.stickerId}`;
+  }
+
+  return message.senderType === "user"
+    ? message.text
+    : sanitizeDisplayedChatText(message.text);
+}
+
+function resolveMessageTypeLabel(type: Message["type"] | GroupMessage["type"]) {
+  if (type === "image") {
+    return "图片";
+  }
+
+  if (type === "file") {
+    return "文件";
+  }
+
+  if (type === "contact_card") {
+    return "名片";
+  }
+
+  if (type === "location_card") {
+    return "位置";
+  }
+
+  if (type === "sticker") {
+    return "表情";
+  }
+
+  if (type === "system") {
+    return "系统";
+  }
+
+  return "文本";
 }
 
 function renderHighlightedText(text: string, keyword: string) {
