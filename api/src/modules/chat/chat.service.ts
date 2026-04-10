@@ -867,6 +867,8 @@ export class ChatService {
       messages: [],
       isPinned: group.isPinned ?? false,
       pinnedAt: group.pinnedAt ?? undefined,
+      isMuted: false,
+      mutedAt: undefined,
       lastReadAt: group.lastReadAt ?? undefined,
       lastClearedAt: group.lastClearedAt ?? undefined,
       lastActivityAt:
