@@ -249,6 +249,14 @@ export function GroupQrPage() {
       }, []),
     [deliveryTargets],
   );
+  const deliveryBatchRankById = useMemo(
+    () =>
+      deliveryTargetBatches.reduce<Record<string, number>>((result, batch, index) => {
+        result[batch.batchId] = index;
+        return result;
+      }, {}),
+    [deliveryTargetBatches],
+  );
 
   useEffect(() => {
     setDeliveredConversation(readGroupInviteDeliveryRecord(groupId));
@@ -683,14 +691,27 @@ export function GroupQrPage() {
                     buildConversationPath(currentReturnSourceConversation)
                   ] ? (
                     <div className="mt-1 text-xs text-[color:var(--brand-secondary)]">
-                      上次发送于{" "}
+                      {resolveDeliveredBatchLabel(
+                        deliveredTargetByPath[
+                          buildConversationPath(currentReturnSourceConversation)
+                        ],
+                        deliveryBatchRankById,
+                      )}{" "}
+                      · 上次发送于{" "}
                       {formatConversationTimestamp(
                         deliveredTargetByPath[
                           buildConversationPath(currentReturnSourceConversation)
                         ].deliveredAt,
                       )}
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                      {resolveDeliveredBatchLabel(
+                        undefined,
+                        deliveryBatchRankById,
+                      )}
+                    </div>
+                  )}
                 </div>
                 <span className="shrink-0 rounded-full bg-[rgba(249,115,22,0.1)] px-3 py-1 text-xs text-[color:var(--brand-secondary)]">
                   立即回发
@@ -724,14 +745,27 @@ export function GroupQrPage() {
                       </div>
                       {deliveredTargetByPath[buildConversationPath(conversation)] ? (
                         <div className="mt-1 text-xs text-[color:var(--brand-secondary)]">
-                          上次发送于{" "}
+                          {resolveDeliveredBatchLabel(
+                            deliveredTargetByPath[
+                              buildConversationPath(conversation)
+                            ],
+                            deliveryBatchRankById,
+                          )}{" "}
+                          · 上次发送于{" "}
                           {formatConversationTimestamp(
                             deliveredTargetByPath[
                               buildConversationPath(conversation)
                             ].deliveredAt,
                           )}
                         </div>
-                      ) : null}
+                      ) : (
+                        <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                          {resolveDeliveredBatchLabel(
+                            undefined,
+                            deliveryBatchRankById,
+                          )}
+                        </div>
+                      )}
                     </div>
                     <span className="shrink-0 rounded-full bg-[rgba(249,115,22,0.1)] px-3 py-1 text-xs text-[color:var(--brand-secondary)]">
                       {deliveredPaths.has(buildConversationPath(conversation))
@@ -766,14 +800,27 @@ export function GroupQrPage() {
                       </div>
                       {deliveredTargetByPath[buildConversationPath(conversation)] ? (
                         <div className="mt-1 text-xs text-[color:var(--brand-secondary)]">
-                          上次发送于{" "}
+                          {resolveDeliveredBatchLabel(
+                            deliveredTargetByPath[
+                              buildConversationPath(conversation)
+                            ],
+                            deliveryBatchRankById,
+                          )}{" "}
+                          · 上次发送于{" "}
                           {formatConversationTimestamp(
                             deliveredTargetByPath[
                               buildConversationPath(conversation)
                             ].deliveredAt,
                           )}
                         </div>
-                      ) : null}
+                      ) : (
+                        <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                          {resolveDeliveredBatchLabel(
+                            undefined,
+                            deliveryBatchRankById,
+                          )}
+                        </div>
+                      )}
                     </div>
                     <span className="shrink-0 rounded-full bg-[rgba(249,115,22,0.1)] px-3 py-1 text-xs text-[color:var(--brand-secondary)]">
                       {deliveredPaths.has(buildConversationPath(conversation))
@@ -886,6 +933,26 @@ function buildConversationPath(conversation: ConversationListItem) {
   return isPersistedGroupConversation(conversation)
     ? `/group/${conversation.id}`
     : `/chat/${conversation.id}`;
+}
+
+function resolveDeliveredBatchLabel(
+  record: GroupInviteDeliveryTarget | undefined,
+  batchRankById: Record<string, number>,
+) {
+  if (!record) {
+    return "新会话";
+  }
+
+  const rank = batchRankById[record.batchId];
+  if (rank === 0) {
+    return "本轮批次";
+  }
+
+  if (typeof rank === "number") {
+    return `更早批次 ${rank + 1}`;
+  }
+
+  return "更早批次";
 }
 
 function buildInviteMatrixSvg({
