@@ -14,6 +14,11 @@ import { AvatarChip } from "../../components/avatar-chip";
 import { ChatComposer } from "../../components/chat-composer";
 import { ChatMessageList } from "../../components/chat-message-list";
 import { EmptyState } from "../../components/empty-state";
+import {
+  DesktopChatHeaderActions,
+  type DesktopChatCallKind,
+  type DesktopChatSidePanelMode,
+} from "../desktop/chat/desktop-chat-header-actions";
 import { type ChatComposerAttachmentPayload } from "./chat-plus-types";
 import { buildChatBackgroundStyle } from "./backgrounds/chat-background-helpers";
 import { MobileChatThreadHeader } from "./mobile-chat-thread-header";
@@ -26,6 +31,10 @@ type GroupChatThreadPanelProps = {
   groupId: string;
   variant?: "mobile" | "desktop";
   onBack?: () => void;
+  desktopSidePanelMode?: DesktopChatSidePanelMode;
+  onToggleDesktopHistory?: () => void;
+  onToggleDesktopDetails?: () => void;
+  onDesktopCallAction?: (kind: DesktopChatCallKind) => void;
   highlightedMessageId?: string;
 };
 
@@ -33,6 +42,10 @@ export function GroupChatThreadPanel({
   groupId,
   variant = "mobile",
   onBack,
+  desktopSidePanelMode = null,
+  onToggleDesktopHistory,
+  onToggleDesktopDetails,
+  onDesktopCallAction,
   highlightedMessageId,
 }: GroupChatThreadPanelProps) {
   const navigate = useNavigate();
@@ -186,14 +199,23 @@ export function GroupChatThreadPanel({
       }`}
     >
       {isDesktop ? (
-        <header className="border-b border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,254,249,0.96),rgba(255,248,239,0.96))] px-5 py-4">
-          <div className="min-w-0">
+        <header className="flex items-center gap-3 border-b border-black/6 bg-[#f7f7f7] px-5 py-3.5">
+          <div className="min-w-0 flex-1">
             <div className="truncate text-[16px] font-medium text-[color:var(--text-primary)]">
               {groupQuery.data?.name ?? "群聊"}
             </div>
             <div className="mt-1 text-[11px] text-[color:var(--text-muted)]">
               {membersQuery.data?.length ?? 0} 人群聊
             </div>
+          </div>
+
+          <div className="hidden items-center xl:flex">
+            <DesktopChatHeaderActions
+              activePanelMode={desktopSidePanelMode}
+              onToggleHistory={() => onToggleDesktopHistory?.()}
+              onToggleDetails={() => onToggleDesktopDetails?.()}
+              onSelectCall={(kind) => onDesktopCallAction?.(kind)}
+            />
           </div>
         </header>
       ) : (
@@ -211,7 +233,7 @@ export function GroupChatThreadPanel({
       )}
 
       {isDesktop ? (
-        <div className="border-b border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,254,249,0.96),rgba(255,248,239,0.92))] px-5 py-3">
+        <div className="border-b border-black/6 bg-[#fbfbfb] px-5 py-3">
           {groupQuery.isError && groupQuery.error instanceof Error ? (
             <ErrorBlock className="mb-2" message={groupQuery.error.message} />
           ) : null}

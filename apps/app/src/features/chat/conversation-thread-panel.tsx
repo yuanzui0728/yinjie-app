@@ -1,10 +1,15 @@
 import { useEffect } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { Ellipsis, Phone, Search, Users, Video } from "lucide-react";
-import { Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
+import { useNavigate } from "@tanstack/react-router";
+import { Users } from "lucide-react";
+import { ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
 import { ChatComposer } from "../../components/chat-composer";
 import { ChatMessageList } from "../../components/chat-message-list";
 import { EmptyState } from "../../components/empty-state";
+import {
+  DesktopChatHeaderActions,
+  type DesktopChatCallKind,
+  type DesktopChatSidePanelMode,
+} from "../desktop/chat/desktop-chat-header-actions";
 import { buildChatBackgroundStyle } from "./backgrounds/chat-background-helpers";
 import { MobileChatThreadHeader } from "./mobile-chat-thread-header";
 import { useConversationBackground } from "./backgrounds/use-conversation-background";
@@ -15,8 +20,10 @@ type ConversationThreadPanelProps = {
   conversationId: string;
   variant?: "mobile" | "desktop";
   onBack?: () => void;
-  inspectorOpen?: boolean;
-  onToggleInspector?: () => void;
+  desktopSidePanelMode?: DesktopChatSidePanelMode;
+  onToggleDesktopHistory?: () => void;
+  onToggleDesktopDetails?: () => void;
+  onDesktopCallAction?: (kind: DesktopChatCallKind) => void;
   highlightedMessageId?: string;
 };
 
@@ -24,8 +31,10 @@ export function ConversationThreadPanel({
   conversationId,
   variant = "mobile",
   onBack,
-  inspectorOpen = false,
-  onToggleInspector,
+  desktopSidePanelMode = null,
+  onToggleDesktopHistory,
+  onToggleDesktopDetails,
+  onDesktopCallAction,
   highlightedMessageId,
 }: ConversationThreadPanelProps) {
   const navigate = useNavigate();
@@ -88,7 +97,7 @@ export function ConversationThreadPanel({
       }`}
     >
       {isDesktop ? (
-        <header className="flex items-center gap-3 border-b border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,254,249,0.96),rgba(255,248,239,0.96))] px-5 py-4">
+        <header className="flex items-center gap-3 border-b border-black/6 bg-[#f7f7f7] px-5 py-3.5">
           <div className="min-w-0 flex-1">
             <div className="truncate text-[17px] font-medium text-[color:var(--text-primary)]">
               {conversationTitle}
@@ -101,47 +110,13 @@ export function ConversationThreadPanel({
             ) : null}
           </div>
 
-          <div className="hidden items-center gap-1.5 xl:flex">
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--brand-primary)]"
-              aria-label="搜索"
-            >
-              <Search size={16} />
-            </button>
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--brand-primary)]"
-              aria-label="语音通话"
-            >
-              <Phone size={16} />
-            </button>
-            <button
-              type="button"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--brand-primary)]"
-              aria-label="视频通话"
-            >
-              <Video size={16} />
-            </button>
-            <Link
-              to="/tabs/contacts"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--brand-primary)]"
-              aria-label="通讯录"
-            >
-              <Users size={16} />
-            </Link>
-            <button
-              type="button"
-              onClick={onToggleInspector}
-              className={`flex h-9 w-9 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition ${
-                inspectorOpen
-                  ? "bg-[color:var(--surface-soft)] text-[color:var(--brand-primary)]"
-                  : "hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--brand-primary)]"
-              }`}
-              aria-label="更多"
-            >
-              <Ellipsis size={16} />
-            </button>
+          <div className="hidden items-center xl:flex">
+            <DesktopChatHeaderActions
+              activePanelMode={desktopSidePanelMode}
+              onToggleHistory={() => onToggleDesktopHistory?.()}
+              onToggleDetails={() => onToggleDesktopDetails?.()}
+              onSelectCall={(kind) => onDesktopCallAction?.(kind)}
+            />
           </div>
         </header>
       ) : (
