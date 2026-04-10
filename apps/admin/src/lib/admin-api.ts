@@ -1,3 +1,9 @@
+import type {
+  ReplyLogicCharacterSnapshot,
+  ReplyLogicConversationSnapshot,
+  ReplyLogicOverview,
+} from "@yinjie/contracts";
+
 const ADMIN_SECRET_KEY = "yinjie_admin_secret";
 
 function getStorage() {
@@ -55,7 +61,7 @@ async function adminFetch<T>(path: string, options?: RequestInit): Promise<T> {
     throw new Error("ADMIN_SECRET 不正确。");
   }
   if (!res.ok) {
-    throw new Error(`Admin API error ${res.status}: ${path}`);
+    throw new Error(`管理接口请求失败 ${res.status}：${path}`);
   }
   return res.json() as Promise<T>;
 }
@@ -81,4 +87,9 @@ export const adminApi = {
   getConfig: () => adminFetch<Record<string, string>>("/config"),
   setConfig: (key: string, value: string) =>
     adminFetch<{ success: boolean }>("/config", { method: "PATCH", body: JSON.stringify({ key, value }) }),
+  getReplyLogicOverview: () => adminFetch<ReplyLogicOverview>("/reply-logic/overview"),
+  getReplyLogicCharacterSnapshot: (id: string) =>
+    adminFetch<ReplyLogicCharacterSnapshot>(`/reply-logic/characters/${id}`),
+  getReplyLogicConversationSnapshot: (id: string) =>
+    adminFetch<ReplyLogicConversationSnapshot>(`/reply-logic/conversations/${id}`),
 };

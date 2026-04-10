@@ -174,6 +174,15 @@
 - Admin 不再提供实例内用户列表、删除用户等多用户管理能力
 - Setup / Dashboard 中的实例状态统一围绕单世界主人语义展示
 
+## 管理后台页面（`apps/admin/src/routes/`）
+
+- `dashboard-page.tsx`：实例级概览、Provider、诊断与运维入口
+- `characters-page.tsx`：角色注册表，查看在线状态与活动状态摘要
+- `character-editor-page.tsx`：角色画像编辑页，维护 prompt、traits、memory 与 reasoning
+- `evals-page.tsx`：生成评估、trace 与实验对比页
+- `setup-page.tsx`：运行时与 Provider 初始化配置页
+- `reply-logic-page.tsx`：AI 回复逻辑总览页，查看实际链路、effective prompt、上下文窗口、记忆与硬编码常量
+
 ## 环境变量（`api/.env`）
 
 `DEEPSEEK_API_KEY` · `OPENAI_BASE_URL` · `AI_MODEL` · `ADMIN_SECRET` · `DATABASE_PATH` · `PORT` · `CORS_ALLOWED_ORIGINS` · `PUBLIC_API_BASE_URL` · `USER_API_KEY_ENCRYPTION_SECRET`

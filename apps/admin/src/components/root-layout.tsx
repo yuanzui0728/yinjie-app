@@ -79,6 +79,9 @@ export function RootLayout() {
             <Link to="/evals" className={NAV_LINK} activeProps={{ className: NAV_LINK_ACTIVE }}>
               Evals
             </Link>
+            <Link to="/reply-logic" className={NAV_LINK} activeProps={{ className: NAV_LINK_ACTIVE }}>
+              Reply Logic
+            </Link>
           </div>
         </div>
         <Outlet />
