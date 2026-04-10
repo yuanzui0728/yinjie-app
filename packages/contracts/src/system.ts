@@ -105,6 +105,9 @@ export interface ProviderTestRequest {
   apiKey?: string;
   mode?: string;
   apiStyle?: string;
+  transcriptionEndpoint?: string;
+  transcriptionModel?: string;
+  transcriptionApiKey?: string;
 }
 
 export interface ProviderTestResult {
@@ -120,6 +123,9 @@ export interface ProviderConfig {
   apiKey?: string;
   mode: string;
   apiStyle: string;
+  transcriptionEndpoint?: string;
+  transcriptionModel?: string;
+  transcriptionApiKey?: string;
 }
 
 export interface InferencePreviewRequest {

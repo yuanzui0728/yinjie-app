@@ -8,6 +8,9 @@ export const providerConfigSchema = z.object({
   apiKey: z.string().optional(),
   mode: z.enum(["cloud", "local-compatible"]).default("cloud"),
   apiStyle: providerApiStyleSchema.default("openai-chat-completions"),
+  transcriptionEndpoint: z.union([z.string().url(), z.literal("")]).optional(),
+  transcriptionModel: z.string().optional(),
+  transcriptionApiKey: z.string().optional(),
 });
 
 export const storageConfigSchema = z.object({
@@ -41,6 +44,9 @@ export const defaultProviderConfig: ProviderConfig = providerConfigSchema.parse(
   apiKey: "",
   mode: "cloud",
   apiStyle: "openai-chat-completions",
+  transcriptionEndpoint: "",
+  transcriptionModel: "",
+  transcriptionApiKey: "",
 });
 
 function normalizeProviderEndpoint(value: string) {
@@ -61,6 +67,9 @@ export function normalizeProviderConfig(values: {
   mode: string;
   apiKey?: string;
   apiStyle?: string;
+  transcriptionEndpoint?: string;
+  transcriptionModel?: string;
+  transcriptionApiKey?: string;
 }): ProviderConfig {
   return {
     endpoint: normalizeProviderEndpoint(values.endpoint),
@@ -68,6 +77,11 @@ export function normalizeProviderConfig(values: {
     mode: values.mode === "cloud" ? "cloud" : "local-compatible",
     apiKey: values.apiKey ?? "",
     apiStyle: values.apiStyle === "openai-responses" ? "openai-responses" : "openai-chat-completions",
+    transcriptionEndpoint: values.transcriptionEndpoint
+      ? normalizeProviderEndpoint(values.transcriptionEndpoint)
+      : "",
+    transcriptionModel: values.transcriptionModel ?? "",
+    transcriptionApiKey: values.transcriptionApiKey ?? "",
   };
 }
 
@@ -78,6 +92,15 @@ export function buildProviderConfigPayload(values: ProviderConfig): ProviderConf
     mode: values.mode,
     apiKey: values.apiKey?.trim() ? values.apiKey.trim() : undefined,
     apiStyle: values.apiStyle,
+    transcriptionEndpoint: values.transcriptionEndpoint?.trim()
+      ? normalizeProviderEndpoint(values.transcriptionEndpoint)
+      : undefined,
+    transcriptionModel: values.transcriptionModel?.trim()
+      ? values.transcriptionModel.trim()
+      : undefined,
+    transcriptionApiKey: values.transcriptionApiKey?.trim()
+      ? values.transcriptionApiKey.trim()
+      : undefined,
   };
 }
 
