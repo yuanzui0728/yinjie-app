@@ -988,7 +988,7 @@ export function ChatComposer({
         className={
           isDesktop
             ? "relative border-t border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,254,249,0.98),rgba(255,248,239,0.98))] px-4 py-3"
-            : "border-t border-black/6 bg-[#f7f7f7] px-2 pb-2 pt-1.5"
+            : "border-t border-black/8 bg-[#f1f1f1] px-2 pb-2 pt-1"
         }
         style={{
           paddingBottom: keyboardOpen
@@ -1088,7 +1088,7 @@ export function ChatComposer({
         ) : null}
         <div
           ref={isDesktop ? desktopStickerRef : undefined}
-          className={`relative ${isDesktop ? "flex items-center gap-2 rounded-[22px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-3 py-2 shadow-[var(--shadow-soft)]" : "space-y-2"}`}
+          className={`relative ${isDesktop ? "flex items-center gap-2 rounded-[22px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-3 py-2 shadow-[var(--shadow-soft)]" : "space-y-1.5"}`}
         >
           {isDesktop ? (
             <>
@@ -1207,7 +1207,7 @@ export function ChatComposer({
               </div>
             </>
           ) : (
-            <div className="flex items-end gap-1.5">
+            <div className="flex items-end gap-1">
               {showSpeechEntry ? (
                 <button
                   type="button"
@@ -1215,7 +1215,7 @@ export function ChatComposer({
                   disabled={
                     speech.status === "processing" || mobileSpeechPressing
                   }
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#606266] transition active:bg-black/5 disabled:opacity-45"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#606266] transition active:bg-[#e3e3e3] disabled:opacity-45"
                   aria-label={
                     mobileSpeechMode ? "切换到键盘输入" : "切换到语音输入"
                   }
@@ -1240,7 +1240,7 @@ export function ChatComposer({
                   disabled={!speechSupported || speech.status === "processing"}
                   title={speechDisabledReason ?? undefined}
                   className={cn(
-                    "flex min-h-[40px] min-w-0 flex-1 select-none items-center justify-center rounded-[7px] border border-black/8 bg-white px-4 py-2 text-[15px] transition touch-none",
+                    "flex min-h-[36px] min-w-0 flex-1 select-none items-center justify-center rounded-[6px] border border-black/[0.09] bg-white px-4 py-2 text-[15px] transition touch-none",
                     mobileSpeechPressing
                       ? mobileSpeechCancelIntent
                         ? "border-[#ff4d4f]/45 bg-[#fff5f5] text-[#ff4d4f]"
@@ -1261,7 +1261,7 @@ export function ChatComposer({
                       : "按住说话"}
                 </button>
               ) : (
-                <div className="flex min-w-0 flex-1 items-end rounded-[7px] border border-black/8 bg-white px-3 py-1">
+                <div className="flex min-w-0 flex-1 items-end rounded-[6px] border border-black/[0.09] bg-white px-3 py-0.5">
                   <textarea
                     ref={mobileTextareaRef}
                     rows={1}
@@ -1283,7 +1283,7 @@ export function ChatComposer({
                     onKeyUp={syncInputCursor}
                     onSelect={syncInputCursor}
                     placeholder={placeholder}
-                    className="min-h-[38px] max-h-[108px] flex-1 resize-none bg-transparent py-1 text-[16px] leading-6 text-[#111827] outline-none placeholder:text-[#a3a3a3]"
+                    className="min-h-[36px] max-h-[108px] flex-1 resize-none bg-transparent py-1.5 text-[15px] leading-6 text-[#111827] outline-none placeholder:text-[#a3a3a3]"
                   />
                 </div>
               )}
@@ -1292,8 +1292,8 @@ export function ChatComposer({
                 type="button"
                 onClick={toggleStickerPanel}
                 className={cn(
-                  "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#606266] transition active:bg-black/5",
-                  stickerPanelOpen ? "bg-black/5 text-[#111827]" : "",
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#606266] transition active:bg-[#e3e3e3]",
+                  stickerPanelOpen ? "bg-[#e3e3e3] text-[#111827]" : "",
                 )}
                 aria-label={stickerPanelOpen ? "切换到键盘输入" : "表情"}
               >
@@ -1309,7 +1309,7 @@ export function ChatComposer({
                   type="button"
                   onClick={onSubmit}
                   disabled={composerPending}
-                  className="flex h-9 shrink-0 items-center justify-center rounded-[6px] bg-[#07c160] px-3.5 text-[15px] font-medium text-white disabled:opacity-45"
+                  className="flex h-8 min-w-[52px] shrink-0 items-center justify-center rounded-[4px] bg-[#07c160] px-3 text-[15px] font-medium text-white disabled:opacity-45"
                 >
                   发送
                 </button>
@@ -1319,8 +1319,8 @@ export function ChatComposer({
                   onClick={togglePlusPanel}
                   disabled={!onSendAttachment || attachmentBusy}
                   className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#606266] transition active:bg-black/5 disabled:opacity-45",
-                    plusPanelOpen ? "bg-black/5 text-[#111827]" : "",
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#606266] transition active:bg-[#e3e3e3] disabled:opacity-45",
+                    plusPanelOpen ? "bg-[#e3e3e3] text-[#111827]" : "",
                   )}
                   aria-label="更多功能"
                 >
@@ -1654,7 +1654,7 @@ function ReplyPreviewBar({
       className={`mb-3 flex items-start justify-between gap-3 ${
         isDesktop
           ? "rounded-[18px] border border-black/6 bg-white/90 px-4 py-3 shadow-[var(--shadow-soft)]"
-          : "rounded-[10px] border-l-[3px] border-l-[#07c160] bg-white px-3 py-2.5"
+          : "rounded-[8px] border-l-[2px] border-l-[#07c160] bg-[#e9e9e9] px-3 py-2"
       }`}
     >
       <div className="min-w-0 flex-1">
@@ -1680,7 +1680,14 @@ function ReplyPreviewBar({
             </div>
           ) : null}
         </div>
-        <div className="mt-1 line-clamp-2 text-[13px] leading-5 text-[color:var(--text-secondary)]">
+        <div
+          className={cn(
+            "mt-1 text-[13px] leading-5",
+            isDesktop
+              ? "line-clamp-2 text-[color:var(--text-secondary)]"
+              : "line-clamp-1 text-[#5f6368]",
+          )}
+        >
           {text}
         </div>
       </div>
@@ -1691,7 +1698,7 @@ function ReplyPreviewBar({
           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition ${
             isDesktop
               ? "hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--text-primary)]"
-              : "active:bg-black/5"
+              : "h-7 w-7 active:bg-[#dcdcdc]"
           }`}
           aria-label="取消回复"
         >
