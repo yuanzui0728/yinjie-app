@@ -1824,6 +1824,7 @@ export function ChatMessageList({
                       onOpen={
                         selectionMode ||
                         threadContext?.type !== "group" ||
+                        groupCallInvite.status !== "ongoing" ||
                         !onOpenGroupCallInvite
                           ? undefined
                           : () => onOpenGroupCallInvite(groupCallInvite.kind)
@@ -3513,12 +3514,23 @@ function GroupCallInviteMessage({
             {invite.groupName}
           </div>
         </div>
-        <div className="rounded-full bg-[rgba(59,130,246,0.12)] px-2.5 py-1 text-[10px] font-medium text-[#2563eb]">
-          桌面工作台
+        <div
+          className={cn(
+            "rounded-full px-2.5 py-1 text-[10px] font-medium",
+            invite.status === "ended"
+              ? "bg-[rgba(239,68,68,0.10)] text-[#d74b45]"
+              : "bg-[rgba(59,130,246,0.12)] text-[#2563eb]",
+          )}
+        >
+          {invite.status === "ended" ? "已结束" : "桌面工作台"}
         </div>
       </div>
 
       <div className="mt-3 space-y-2">
+        <CallInviteMetric
+          label="当前状态"
+          value={invite.status === "ended" ? "已结束" : "进行中"}
+        />
         {invite.activeCount ? (
           <div className="grid grid-cols-2 gap-2">
             <CallInviteMetric
@@ -3543,18 +3555,22 @@ function GroupCallInviteMessage({
 
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-black/6 pt-3">
         <div className="text-[11px] leading-5 text-[color:var(--text-muted)]">
-          {onOpen
-            ? "点击可回到当前群通话工作台。"
-            : "当前消息已转成群通话卡片，便于群成员识别状态。"}
+          {invite.status === "ended"
+            ? "这轮群通话已经结束，当前保留为状态记录卡片。"
+            : onOpen
+              ? "点击可回到当前群通话工作台。"
+              : "当前消息已转成群通话卡片，便于群成员识别状态。"}
         </div>
         <div className="text-[11px] font-medium text-[#2563eb]">
-          {onOpen
-            ? invite.kind === "voice"
-              ? "回到语音"
-              : "回到视频"
-            : invite.kind === "voice"
-              ? "语音中"
-              : "视频中"}
+          {invite.status === "ended"
+            ? "通话结束"
+            : onOpen
+              ? invite.kind === "voice"
+                ? "回到语音"
+                : "回到视频"
+              : invite.kind === "voice"
+                ? "语音中"
+                : "视频中"}
         </div>
       </div>
     </div>
