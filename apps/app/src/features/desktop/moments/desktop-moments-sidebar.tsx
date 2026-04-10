@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { type Moment } from "@yinjie/contracts";
 import { Button, cn } from "@yinjie/ui";
 import { Bot, PenSquare, UserRound } from "lucide-react";
@@ -63,6 +64,14 @@ export function DesktopMomentsSidebar({
   onSelectAuthor,
   onSelectMoment,
 }: DesktopMomentsSidebarProps) {
+  const authorScrollViewportRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (mode === "author") {
+      authorScrollViewportRef.current?.scrollTo({ top: 0 });
+    }
+  }, [activeAuthorSummary?.authorId, mode]);
+
   if (mode === "detail" && selectedMoment) {
     return (
       <aside className="flex w-[320px] shrink-0 flex-col bg-[rgba(255,252,247,0.96)]">
@@ -98,7 +107,10 @@ export function DesktopMomentsSidebar({
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto px-5 py-5">
+          <div
+            ref={authorScrollViewportRef}
+            className="min-h-0 flex-1 overflow-auto px-5 py-5"
+          >
             <div className="rounded-[18px] border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-[var(--shadow-soft)]">
               <div className="flex items-center gap-4">
                 <AvatarChip

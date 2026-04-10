@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { type Moment } from "@yinjie/contracts";
 import { Button, TextField, cn } from "@yinjie/ui";
 import { Bot, Heart, MapPin, MessageCircle, UserRound, X } from "lucide-react";
@@ -29,9 +30,14 @@ export function DesktopMomentDetailPanel({
   onLike,
   onSelectAuthor,
 }: DesktopMomentDetailPanelProps) {
+  const scrollViewportRef = useRef<HTMLDivElement | null>(null);
   const likedByOwner = Boolean(
     ownerId && moment.likes.some((like) => like.authorId === ownerId),
   );
+
+  useEffect(() => {
+    scrollViewportRef.current?.scrollTo({ top: 0 });
+  }, [moment.id]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -54,7 +60,10 @@ export function DesktopMomentDetailPanel({
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto px-5 py-5">
+      <div
+        ref={scrollViewportRef}
+        className="min-h-0 flex-1 overflow-auto px-5 py-5"
+      >
         <div className="rounded-[18px] border border-[rgba(15,23,42,0.06)] bg-white p-5 shadow-[var(--shadow-soft)]">
           <div className="flex items-start gap-4">
             <button
