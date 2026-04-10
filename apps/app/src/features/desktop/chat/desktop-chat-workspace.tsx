@@ -19,6 +19,7 @@ import { OfficialAccountServiceThread } from "../../official-accounts/service/of
 import {
   sanitizeDisplayedChatText,
   splitChatTextSegments,
+  summarizeChatMentions,
 } from "../../../lib/chat-text";
 import { isPersistedGroupConversation } from "../../../lib/conversation-route";
 import { formatConversationTimestamp } from "../../../lib/format";
@@ -470,6 +471,14 @@ function ConversationCardLink({
       : "flex items-center gap-3 rounded-[12px] border border-transparent bg-transparent px-4 py-3 transition-[background-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-white";
   const preview = buildConversationPreview(conversation);
   const isGroupConversation = isPersistedGroupConversation(conversation);
+  const mentionSummary = isGroupConversation
+    ? summarizeChatMentions(conversation.lastMessage?.text ?? "")
+    : null;
+  const hasMentionAllReminder = Boolean(
+    isGroupConversation &&
+    conversation.unreadCount > 0 &&
+    mentionSummary?.hasMentionAll,
+  );
 
   const content = (
     <>
@@ -509,6 +518,11 @@ function ConversationCardLink({
             <span>{renderConversationPreviewText(preview.text)}</span>
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
+            {hasMentionAllReminder ? (
+              <span className="shrink-0 rounded-full bg-[rgba(249,115,22,0.14)] px-2 py-0.5 text-[10px] font-medium text-[#c2410c]">
+                有人@所有人
+              </span>
+            ) : null}
             {conversation.isMuted ? (
               <BellOff
                 size={13}
