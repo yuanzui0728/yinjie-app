@@ -76,10 +76,15 @@ export function AdminSectionNav({
             type="button"
             onClick={item.onClick}
             disabled={item.disabled}
-            className="rounded-[20px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-4 py-3 text-left shadow-[var(--shadow-soft)] transition hover:border-[color:var(--border-subtle)] hover:bg-[color:var(--surface-card-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-4 py-3 text-left shadow-[var(--shadow-soft)] transition hover:border-[color:var(--border-subtle)] hover:bg-[color:var(--surface-card-hover)] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div className="font-semibold text-[color:var(--text-primary)]">{item.label}</div>
-            <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">{item.detail}</div>
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 h-2 w-2 rounded-full bg-[color:var(--brand-primary)]/70" />
+              <div>
+                <div className="font-semibold text-[color:var(--text-primary)]">{item.label}</div>
+                <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">{item.detail}</div>
+              </div>
+            </div>
           </button>
         ))}
       </div>
@@ -101,10 +106,10 @@ export function AdminInfoRows({
         {rows.map((row) => (
           <div
             key={row.label}
-            className="flex items-center justify-between gap-3 rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-3 py-2.5"
+            className="flex items-center justify-between gap-3 rounded-[16px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-3.5 py-3"
           >
-            <span className="text-[color:var(--text-muted)]">{row.label}</span>
-            <span className="text-right text-[color:var(--text-primary)]">{row.value}</span>
+            <span className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{row.label}</span>
+            <span className="text-right text-sm font-medium text-[color:var(--text-primary)]">{row.value}</span>
           </div>
         ))}
       </div>
@@ -128,7 +133,7 @@ export function AdminCallout({
   return (
     <div
       className={cn(
-        "rounded-[24px] border px-4 py-4 shadow-[var(--shadow-soft)]",
+        "rounded-[22px] border px-4 py-4 shadow-[var(--shadow-soft)]",
         tone === "warning"
           ? "border-amber-200 bg-[linear-gradient(160deg,rgba(255,251,235,0.98),rgba(255,243,219,0.92))]"
           : tone === "success"
@@ -142,7 +147,7 @@ export function AdminCallout({
       <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <div className="text-sm font-semibold text-[color:var(--text-primary)]">{title}</div>
-          <div className="mt-1 text-sm leading-7 text-[color:var(--text-secondary)]">{description}</div>
+          <div className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">{description}</div>
         </div>
         {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
       </div>
@@ -164,12 +169,12 @@ export function AdminEmptyState({
   return (
     <div
       className={cn(
-        "rounded-[24px] border border-dashed border-[color:var(--border-faint)] bg-[color:var(--surface-soft)] px-5 py-6 text-center shadow-[var(--shadow-soft)]",
+        "rounded-[22px] border border-dashed border-[color:var(--border-faint)] bg-[color:var(--surface-soft)] px-5 py-6 text-center shadow-[var(--shadow-soft)]",
         className,
       )}
     >
       <div className="text-base font-semibold text-[color:var(--text-primary)]">{title}</div>
-      <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">{description}</div>
+      <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{description}</div>
       {actions ? <div className="mt-4 flex flex-wrap justify-center gap-3">{actions}</div> : null}
     </div>
   );

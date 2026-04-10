@@ -1127,7 +1127,11 @@ export function EvalsPage() {
                     setPresetName(preset.name);
                     applyPreset(preset.name);
                   }}
-                  className="block w-full rounded-[20px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-4 py-3 text-left shadow-[var(--shadow-soft)] transition hover:border-[color:var(--border-subtle)] hover:bg-[color:var(--surface-card-hover)]"
+                  className={
+                    presetName === preset.name
+                      ? "block w-full rounded-[18px] border border-[color:var(--border-brand)] bg-[color:var(--brand-soft)] px-4 py-3.5 text-left shadow-[var(--shadow-soft)] ring-1 ring-[color:var(--brand-primary)]/15"
+                      : "block w-full rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-4 py-3.5 text-left shadow-[var(--shadow-soft)] transition hover:border-[color:var(--border-subtle)] hover:bg-[color:var(--surface-card-hover)]"
+                  }
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="font-semibold text-[color:var(--text-primary)]">{preset.name}</div>
@@ -1137,6 +1141,11 @@ export function EvalsPage() {
                   </div>
                   <div className="mt-2 text-xs leading-5 text-[color:var(--text-muted)]">
                     {preset.shareViewName || "未命名视图"}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-[color:var(--text-muted)]">
+                    <span>数据集 {preset.selectedDatasetId ?? "全部"}</span>
+                    <span>对比 {formatCompareCaseFilter(preset.compareCaseFilter)}</span>
+                    <span>链路 {formatTraceScope(preset.traceScopeFilter)}</span>
                   </div>
                 </button>
               ))}
