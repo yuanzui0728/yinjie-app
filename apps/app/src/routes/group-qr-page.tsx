@@ -871,6 +871,14 @@ export function GroupQrPage() {
                                 fallbackPendingReturnConversation.target.deliveredAt,
                               )}
                             </div>
+                            <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
+                              {resolvePendingReturnFallbackReason(
+                                topPendingReturnConversation.conversation,
+                                topPendingReturnConversation.target.deliveredAt,
+                                fallbackPendingReturnConversation.conversation,
+                                fallbackPendingReturnConversation.target.deliveredAt,
+                              )}
+                            </div>
                           </div>
                           <button
                             type="button"
@@ -1438,6 +1446,51 @@ function resolvePendingReturnRecommendationSummary(
   return isGroupConversation
     ? "群聊触达面更大，可作为扩散补发目标。"
     : "这条单聊更适合做定向补发。";
+}
+
+function resolvePendingReturnFallbackReason(
+  topConversation: ConversationListItem,
+  topDeliveredAt: string,
+  fallbackConversation: ConversationListItem,
+  fallbackDeliveredAt: string,
+) {
+  if (isPendingReturnCoolingDown(fallbackDeliveredAt)) {
+    return "这条备选刚补发过，还在冷却，所以暂时排在主推荐后面。";
+  }
+
+  const topActivityMinutes = resolveConversationRecentActivityMinutes(
+    topConversation.lastActivityAt,
+  );
+  const fallbackActivityMinutes = resolveConversationRecentActivityMinutes(
+    fallbackConversation.lastActivityAt,
+  );
+  if (
+    topActivityMinutes !== null &&
+    fallbackActivityMinutes !== null &&
+    topActivityMinutes < fallbackActivityMinutes
+  ) {
+    return "主推荐对应的会话更新近，还在更活跃的窗口里，所以优先级更高。";
+  }
+
+  const topElapsedMinutes = resolvePendingReturnElapsedMinutes(topDeliveredAt);
+  const fallbackElapsedMinutes =
+    resolvePendingReturnElapsedMinutes(fallbackDeliveredAt);
+  if (
+    topElapsedMinutes !== null &&
+    fallbackElapsedMinutes !== null &&
+    topElapsedMinutes > fallbackElapsedMinutes
+  ) {
+    return "主推荐已经等待回流更久，当前更值得先补这一轮。";
+  }
+
+  if (
+    isPersistedGroupConversation(topConversation) &&
+    !isPersistedGroupConversation(fallbackConversation)
+  ) {
+    return "主推荐是群聊扩散位，当前触达面更大，所以先放在第一位。";
+  }
+
+  return "这条也值得补发，但综合活跃度和回流时长后仍排在主推荐后面。";
 }
 
 function isPendingReturnCoolingDown(deliveredAt: string) {
