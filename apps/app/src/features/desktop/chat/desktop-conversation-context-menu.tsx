@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { BellOff, CheckCheck, Eraser, EyeOff, Pin } from "lucide-react";
+import { BellOff, CheckCheck, Circle, Eraser, EyeOff, Pin } from "lucide-react";
 
 type DesktopConversationContextMenuProps = {
   x: number;
@@ -7,18 +7,20 @@ type DesktopConversationContextMenuProps = {
   isPinned: boolean;
   isMuted: boolean;
   showMarkRead: boolean;
+  showMarkUnread?: boolean;
   busy?: boolean;
   onClose: () => void;
   onTogglePinned: () => void;
   onToggleMuted: () => void;
   onMarkRead?: () => void;
+  onMarkUnread?: () => void;
   onHide: () => void;
   onClear: () => void;
 };
 
 const MENU_WIDTH = 196;
-const MENU_HEIGHT_BASE = 188;
-const MENU_HEIGHT_WITH_MARK_READ = 236;
+const MENU_ITEM_HEIGHT = 42;
+const MENU_VERTICAL_PADDING = 16;
 const VIEWPORT_PADDING = 12;
 
 export function DesktopConversationContextMenu({
@@ -27,17 +29,21 @@ export function DesktopConversationContextMenu({
   isPinned,
   isMuted,
   showMarkRead,
+  showMarkUnread = false,
   busy = false,
   onClose,
   onTogglePinned,
   onToggleMuted,
   onMarkRead,
+  onMarkUnread,
   onHide,
   onClear,
 }: DesktopConversationContextMenuProps) {
-  const menuHeight = showMarkRead
-    ? MENU_HEIGHT_WITH_MARK_READ
-    : MENU_HEIGHT_BASE;
+  const actionCount =
+    4 +
+    Number(Boolean(showMarkRead && onMarkRead)) +
+    Number(Boolean(showMarkUnread && onMarkUnread));
+  const menuHeight = actionCount * MENU_ITEM_HEIGHT + MENU_VERTICAL_PADDING;
   const viewportWidth =
     typeof window === "undefined" ? MENU_WIDTH : window.innerWidth;
   const viewportHeight =
@@ -85,6 +91,14 @@ export function DesktopConversationContextMenu({
             icon={<CheckCheck size={15} />}
             label="标记为已读"
             onClick={onMarkRead}
+            disabled={busy}
+          />
+        ) : null}
+        {showMarkUnread && onMarkUnread ? (
+          <ContextMenuButton
+            icon={<Circle size={15} />}
+            label="标记为未读"
+            onClick={onMarkUnread}
             disabled={busy}
           />
         ) : null}

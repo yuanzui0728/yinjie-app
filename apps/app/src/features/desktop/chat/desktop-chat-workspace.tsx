@@ -18,7 +18,9 @@ import {
   hideConversation,
   hideGroup,
   markConversationRead,
+  markConversationUnread,
   markGroupRead,
+  markGroupUnread,
   setConversationMuted,
   setConversationPinned,
   setGroupPinned,
@@ -263,7 +265,7 @@ export function DesktopChatWorkspace({
       action,
       conversation,
     }: {
-      action: "pin" | "mute" | "read" | "hide" | "clear";
+      action: "pin" | "mute" | "read" | "unread" | "hide" | "clear";
       conversation: ConversationListItem;
     }) => {
       if (isPersistedGroupConversation(conversation)) {
@@ -282,6 +284,8 @@ export function DesktopChatWorkspace({
             );
           case "read":
             return markGroupRead(conversation.id, baseUrl);
+          case "unread":
+            return markGroupUnread(conversation.id, baseUrl);
           case "hide":
             return hideGroup(conversation.id, baseUrl);
           case "clear":
@@ -304,6 +308,8 @@ export function DesktopChatWorkspace({
           );
         case "read":
           return markConversationRead(conversation.id, baseUrl);
+        case "unread":
+          return markConversationUnread(conversation.id, baseUrl);
         case "hide":
           return hideConversation(conversation.id, baseUrl);
         case "clear":
@@ -634,6 +640,9 @@ export function DesktopChatWorkspace({
           isPinned={conversationContextMenu.conversation.isPinned}
           isMuted={conversationContextMenu.conversation.isMuted}
           showMarkRead={conversationContextMenu.conversation.unreadCount > 0}
+          showMarkUnread={canConversationBeMarkedUnread(
+            conversationContextMenu.conversation,
+          )}
           busy={conversationActionMutation.isPending}
           onClose={() => setConversationContextMenu(null)}
           onTogglePinned={() =>
@@ -651,6 +660,12 @@ export function DesktopChatWorkspace({
           onMarkRead={() =>
             conversationActionMutation.mutate({
               action: "read",
+              conversation: conversationContextMenu.conversation,
+            })
+          }
+          onMarkUnread={() =>
+            conversationActionMutation.mutate({
+              action: "unread",
               conversation: conversationContextMenu.conversation,
             })
           }
@@ -817,7 +832,7 @@ function ConversationCardLink({
 }
 
 function buildConversationActionNotice(
-  action: "pin" | "mute" | "read" | "hide" | "clear",
+  action: "pin" | "mute" | "read" | "unread" | "hide" | "clear",
   conversation: ConversationListItem,
 ) {
   switch (action) {
@@ -827,6 +842,8 @@ function buildConversationActionNotice(
       return conversation.isMuted ? "已关闭消息免打扰。" : "已开启消息免打扰。";
     case "read":
       return "已标记为已读。";
+    case "unread":
+      return "已标记为未读。";
     case "hide":
       return isPersistedGroupConversation(conversation)
         ? "群聊已隐藏。"
@@ -836,6 +853,13 @@ function buildConversationActionNotice(
         ? "群聊记录已清空。"
         : "聊天记录已清空。";
   }
+}
+
+function canConversationBeMarkedUnread(conversation: ConversationListItem) {
+  return (
+    conversation.unreadCount === 0 &&
+    conversation.lastMessage?.senderType === "character"
+  );
 }
 
 function buildConversationPreview(conversation: ConversationListItem) {
