@@ -11,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { SystemConfigModule } from './modules/config/config.module';
 import { SocialModule } from './modules/social/social.module';
 import { FeedModule } from './modules/feed/feed.module';
+import { OfficialAccountsModule } from './modules/official-accounts/official-accounts.module';
 import { WorldModule } from './modules/world/world.module';
 import { SchedulerModule } from './modules/scheduler/scheduler.module';
 import { NarrativeModule } from './modules/narrative/narrative.module';
@@ -39,6 +40,9 @@ import { WorldContextEntity } from './modules/world/world-context.entity';
 import { NarrativeArcEntity } from './modules/narrative/narrative-arc.entity';
 import { AIBehaviorLogEntity } from './modules/analytics/ai-behavior-log.entity';
 import { UserFeedInteractionEntity } from './modules/analytics/user-feed-interaction.entity';
+import { OfficialAccountEntity } from './modules/official-accounts/official-account.entity';
+import { OfficialAccountArticleEntity } from './modules/official-accounts/official-account-article.entity';
+import { OfficialAccountFollowEntity } from './modules/official-accounts/official-account-follow.entity';
 
 @Module({
   imports: [
@@ -55,6 +59,7 @@ import { UserFeedInteractionEntity } from './modules/analytics/user-feed-interac
         GroupEntity, GroupMemberEntity, GroupMessageEntity,
         FeedPostEntity, FeedCommentEntity, WorldContextEntity,
         NarrativeArcEntity, AIBehaviorLogEntity, UserFeedInteractionEntity,
+        OfficialAccountEntity, OfficialAccountArticleEntity, OfficialAccountFollowEntity,
       ],
       synchronize: true,
     }),
@@ -66,6 +71,7 @@ import { UserFeedInteractionEntity } from './modules/analytics/user-feed-interac
     SystemConfigModule,
     SocialModule,
     FeedModule,
+    OfficialAccountsModule,
     WorldModule,
     SchedulerModule,
     NarrativeModule,
