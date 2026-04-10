@@ -105,12 +105,22 @@ type NormalizedCropRect = {
 };
 
 type ScreenshotSelectionDraft = {
+  mode: "crop" | "rect" | "arrow";
   anchorX: number;
   anchorY: number;
   currentX: number;
   currentY: number;
   boundsWidth: number;
   boundsHeight: number;
+};
+
+type ScreenshotAnnotation = {
+  id: string;
+  kind: "rect" | "arrow";
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
 };
 
 type AttachmentDraft =
@@ -158,6 +168,11 @@ export function ChatComposer({
     useState<ImageDraft | null>(null);
   const [desktopScreenshotCrop, setDesktopScreenshotCrop] =
     useState<NormalizedCropRect | null>(null);
+  const [desktopScreenshotTool, setDesktopScreenshotTool] = useState<
+    "crop" | "rect" | "arrow"
+  >("crop");
+  const [desktopScreenshotAnnotations, setDesktopScreenshotAnnotations] =
+    useState<ScreenshotAnnotation[]>([]);
   const [desktopScreenshotSelection, setDesktopScreenshotSelection] =
     useState<ScreenshotSelectionDraft | null>(null);
   const [attachmentBusy, setAttachmentBusy] = useState(false);
@@ -843,6 +858,8 @@ export function ChatComposer({
       releaseImageDraft(desktopScreenshotDraft);
       setDesktopScreenshotDraft(screenshotDraft);
       setDesktopScreenshotCrop(null);
+      setDesktopScreenshotTool("crop");
+      setDesktopScreenshotAnnotations([]);
       setDesktopScreenshotSelection(null);
     } catch (captureError) {
       const name =
@@ -1092,6 +1109,8 @@ export function ChatComposer({
     releaseImageDraft(desktopScreenshotDraft);
     setDesktopScreenshotDraft(null);
     setDesktopScreenshotCrop(null);
+    setDesktopScreenshotTool("crop");
+    setDesktopScreenshotAnnotations([]);
     setDesktopScreenshotSelection(null);
   };
 
@@ -1112,6 +1131,7 @@ export function ChatComposer({
 
     event.currentTarget.setPointerCapture?.(event.pointerId);
     setDesktopScreenshotSelection({
+      mode: desktopScreenshotTool,
       anchorX: x,
       anchorY: y,
       currentX: x,
@@ -1152,13 +1172,51 @@ export function ChatComposer({
       }
 
       const normalizedCrop = normalizeSelectionRect(current);
-      setDesktopScreenshotCrop(
+      const validSelection =
         normalizedCrop &&
-          normalizedCrop.width >= 0.02 &&
-          normalizedCrop.height >= 0.02
+        normalizedCrop.width >= 0.02 &&
+        normalizedCrop.height >= 0.02
           ? normalizedCrop
-          : null,
+          : null;
+      const arrowLength = Math.hypot(
+        current.currentX - current.anchorX,
+        current.currentY - current.anchorY,
       );
+      const validArrow = arrowLength >= Math.min(
+        current.boundsWidth,
+        current.boundsHeight,
+      ) * 0.03;
+
+      if (current.mode === "crop") {
+        setDesktopScreenshotCrop(validSelection);
+      } else if (
+        (current.mode === "rect" && validSelection) ||
+        (current.mode === "arrow" && validArrow)
+      ) {
+        const rectSelection = validSelection;
+        const nextAnnotation =
+          current.mode === "rect" && rectSelection
+            ? {
+                id: createScreenshotAnnotationId(),
+                kind: "rect" as const,
+                x1: rectSelection.x,
+                y1: rectSelection.y,
+                x2: rectSelection.x + rectSelection.width,
+                y2: rectSelection.y + rectSelection.height,
+              }
+            : {
+                id: createScreenshotAnnotationId(),
+                kind: "arrow" as const,
+                x1: current.anchorX / current.boundsWidth,
+                y1: current.anchorY / current.boundsHeight,
+                x2: current.currentX / current.boundsWidth,
+                y2: current.currentY / current.boundsHeight,
+              };
+        setDesktopScreenshotAnnotations((existing) => [
+          ...existing,
+          nextAnnotation,
+        ]);
+      }
       return null;
     });
   };
@@ -1176,10 +1234,16 @@ export function ChatComposer({
         height?: number;
       };
 
-      if (mode === "cropped" && desktopScreenshotCrop) {
-        imagePayload = await createCroppedImagePayload(
+      if (
+        desktopScreenshotAnnotations.length ||
+        (mode === "cropped" && desktopScreenshotCrop)
+      ) {
+        imagePayload = await createEditedScreenshotPayload(
           desktopScreenshotDraft,
-          desktopScreenshotCrop,
+          {
+            crop: mode === "cropped" ? desktopScreenshotCrop : null,
+            annotations: desktopScreenshotAnnotations,
+          },
         );
       } else {
         imagePayload = {
@@ -1208,6 +1272,14 @@ export function ChatComposer({
           : "截图处理失败，请稍后再试。",
       );
     }
+  };
+
+  const handleClearScreenshotAnnotations = () => {
+    setDesktopScreenshotAnnotations([]);
+  };
+
+  const handleUndoScreenshotAnnotation = () => {
+    setDesktopScreenshotAnnotations((existing) => existing.slice(0, -1));
   };
 
   const applyMentionCandidate = (candidate: {
@@ -1475,12 +1547,17 @@ export function ChatComposer({
           <DesktopScreenshotEditor
             draft={desktopScreenshotDraft}
             crop={desktopScreenshotCrop}
+            tool={desktopScreenshotTool}
+            annotations={desktopScreenshotAnnotations}
             selection={desktopScreenshotSelection}
             imageRef={desktopScreenshotImageRef}
             pending={attachmentBusy}
             error={attachmentError}
             onCancel={closeDesktopScreenshotEditor}
+            onToolChange={setDesktopScreenshotTool}
             onClearCrop={() => setDesktopScreenshotCrop(null)}
+            onClearAnnotations={handleClearScreenshotAnnotations}
+            onUndoAnnotation={handleUndoScreenshotAnnotation}
             onPointerDown={handleDesktopScreenshotPointerDown}
             onPointerMove={handleDesktopScreenshotPointerMove}
             onPointerUp={finalizeDesktopScreenshotSelection}
@@ -2176,14 +2253,42 @@ function DesktopAttachmentDraftBar({
   );
 }
 
+function DesktopScreenshotToolButton({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "rounded-full px-3 py-1.5 text-[12px] transition",
+        active
+          ? "bg-white text-[#111827]"
+          : "bg-white/8 text-white/78 hover:bg-white/12 hover:text-white",
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+
 function DesktopScreenshotEditor({
+  annotations,
   crop,
   draft,
   error,
   imageRef,
   pending,
   selection,
+  tool,
   onCancel,
+  onClearAnnotations,
   onClearCrop,
   onPointerCancel,
   onPointerDown,
@@ -2191,14 +2296,19 @@ function DesktopScreenshotEditor({
   onPointerUp,
   onSendCropped,
   onSendOriginal,
+  onToolChange,
+  onUndoAnnotation,
 }: {
+  annotations: ScreenshotAnnotation[];
   crop: NormalizedCropRect | null;
   draft: ImageDraft;
   error: string | null;
   imageRef: React.RefObject<HTMLImageElement | null>;
   pending: boolean;
   selection: ScreenshotSelectionDraft | null;
+  tool: "crop" | "rect" | "arrow";
   onCancel: () => void;
+  onClearAnnotations: () => void;
   onClearCrop: () => void;
   onPointerCancel: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
@@ -2206,10 +2316,19 @@ function DesktopScreenshotEditor({
   onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onSendCropped: () => void;
   onSendOriginal: () => void;
+  onToolChange: (tool: "crop" | "rect" | "arrow") => void;
+  onUndoAnnotation: () => void;
 }) {
   const selectionRect = selection ? getSelectionPreviewRect(selection) : null;
   const cropRect = crop ? getNormalizedCropPreviewRect(crop) : null;
-  const activeRect = selectionRect ?? cropRect;
+  const previewRect =
+    selectionRect && selection?.mode !== "arrow"
+      ? selectionRect
+      : null;
+  const previewArrow =
+    selection && selection.mode === "arrow"
+      ? getSelectionArrowPreview(selection)
+      : null;
   const cropPixelSize =
     crop && draft.width && draft.height
       ? {
@@ -2256,6 +2375,50 @@ function DesktopScreenshotEditor({
                   暂未裁剪
                 </span>
               )}
+              <span className="rounded-full bg-white/8 px-2.5 py-1">
+                标注 {annotations.length} 条
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[16px] border border-white/8 bg-white/6 px-4 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <DesktopScreenshotToolButton
+                  label="裁剪"
+                  active={tool === "crop"}
+                  onClick={() => onToolChange("crop")}
+                />
+                <DesktopScreenshotToolButton
+                  label="矩形"
+                  active={tool === "rect"}
+                  onClick={() => onToolChange("rect")}
+                />
+                <DesktopScreenshotToolButton
+                  label="箭头"
+                  active={tool === "arrow"}
+                  onClick={() => onToolChange("arrow")}
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={onUndoAnnotation}
+                  disabled={pending || !annotations.length}
+                  className="rounded-[9px] border-white/12 bg-white/6 text-white hover:bg-white/10"
+                >
+                  撤销标注
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={onClearAnnotations}
+                  disabled={pending || !annotations.length}
+                  className="rounded-[9px] border-white/12 bg-white/6 text-white hover:bg-white/10"
+                >
+                  清空标注
+                </Button>
+              </div>
             </div>
 
             <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-[18px] border border-white/8 bg-[#111] p-5">
@@ -2274,17 +2437,96 @@ function DesktopScreenshotEditor({
                   onPointerUp={onPointerUp}
                   onPointerCancel={onPointerCancel}
                 >
-                  {activeRect ? (
+                  {cropRect ? (
                     <div
-                      className="absolute border-2 border-[#07c160] bg-[rgba(7,193,96,0.14)] shadow-[0_0_0_1px_rgba(255,255,255,0.16)]"
+                      className="absolute border-2 border-[#07c160] bg-[rgba(7,193,96,0.12)] shadow-[0_0_0_1px_rgba(255,255,255,0.16)]"
                       style={{
-                        left: `${activeRect.x * 100}%`,
-                        top: `${activeRect.y * 100}%`,
-                        width: `${activeRect.width * 100}%`,
-                        height: `${activeRect.height * 100}%`,
+                        left: `${cropRect.x * 100}%`,
+                        top: `${cropRect.y * 100}%`,
+                        width: `${cropRect.width * 100}%`,
+                        height: `${cropRect.height * 100}%`,
                       }}
                     />
                   ) : null}
+                  {previewRect ? (
+                    <div
+                      className={cn(
+                        "absolute border-2 shadow-[0_0_0_1px_rgba(255,255,255,0.16)]",
+                        selection?.mode === "crop"
+                          ? "border-[#07c160] bg-[rgba(7,193,96,0.14)]"
+                          : "border-[#f59e0b] bg-[rgba(245,158,11,0.12)]",
+                      )}
+                      style={{
+                        left: `${previewRect.x * 100}%`,
+                        top: `${previewRect.y * 100}%`,
+                        width: `${previewRect.width * 100}%`,
+                        height: `${previewRect.height * 100}%`,
+                      }}
+                    />
+                  ) : null}
+                  <svg
+                    viewBox="0 0 1 1"
+                    preserveAspectRatio="none"
+                    className="pointer-events-none absolute inset-0 h-full w-full"
+                  >
+                    {annotations.map((annotation) =>
+                      annotation.kind === "rect" ? (
+                        <rect
+                          key={annotation.id}
+                          x={Math.min(annotation.x1, annotation.x2)}
+                          y={Math.min(annotation.y1, annotation.y2)}
+                          width={Math.abs(annotation.x2 - annotation.x1)}
+                          height={Math.abs(annotation.y2 - annotation.y1)}
+                          fill="rgba(245,158,11,0.10)"
+                          stroke="#f59e0b"
+                          strokeWidth="0.006"
+                        />
+                      ) : (
+                        <g key={annotation.id}>
+                          <line
+                            x1={annotation.x1}
+                            y1={annotation.y1}
+                            x2={annotation.x2}
+                            y2={annotation.y2}
+                            stroke="#38bdf8"
+                            strokeWidth="0.007"
+                            strokeLinecap="round"
+                          />
+                          <polygon
+                            points={buildArrowHeadPoints(
+                              annotation.x1,
+                              annotation.y1,
+                              annotation.x2,
+                              annotation.y2,
+                            )}
+                            fill="#38bdf8"
+                          />
+                        </g>
+                      ),
+                    )}
+                    {previewArrow ? (
+                      <g>
+                        <line
+                          x1={previewArrow.x1}
+                          y1={previewArrow.y1}
+                          x2={previewArrow.x2}
+                          y2={previewArrow.y2}
+                          stroke="#67e8f9"
+                          strokeWidth="0.007"
+                          strokeLinecap="round"
+                        />
+                        <polygon
+                          points={buildArrowHeadPoints(
+                            previewArrow.x1,
+                            previewArrow.y1,
+                            previewArrow.x2,
+                            previewArrow.y2,
+                          )}
+                          fill="#67e8f9"
+                        />
+                      </g>
+                    ) : null}
+                  </svg>
                 </div>
               </div>
             </div>
@@ -2299,9 +2541,13 @@ function DesktopScreenshotEditor({
 
         <div className="flex items-center justify-between gap-3 border-t border-white/8 px-5 py-4">
           <div className="text-[12px] text-white/54">
-            {crop
-              ? "重新拖拽可修改裁剪区域。"
-              : "拖拽图片区域即可创建裁剪选区。"}
+            {tool === "crop"
+              ? crop
+                ? "重新拖拽可修改裁剪区域。"
+                : "拖拽图片区域即可创建裁剪选区。"
+              : tool === "rect"
+                ? "拖拽即可添加高亮矩形框。"
+                : "拖拽即可添加箭头标注。"}
           </div>
 
           <div className="flex items-center gap-2">
@@ -2624,9 +2870,21 @@ function normalizeSelectionRect(selection: ScreenshotSelectionDraft) {
   return getSelectionPreviewRect(selection);
 }
 
-async function createCroppedImagePayload(
+function getSelectionArrowPreview(selection: ScreenshotSelectionDraft) {
+  return {
+    x1: selection.anchorX / selection.boundsWidth,
+    y1: selection.anchorY / selection.boundsHeight,
+    x2: selection.currentX / selection.boundsWidth,
+    y2: selection.currentY / selection.boundsHeight,
+  };
+}
+
+async function createEditedScreenshotPayload(
   draft: ImageDraft,
-  crop: NormalizedCropRect,
+  input: {
+    crop: NormalizedCropRect | null;
+    annotations: ScreenshotAnnotation[];
+  },
 ) {
   const width = draft.width ?? 0;
   const height = draft.height ?? 0;
@@ -2634,10 +2892,15 @@ async function createCroppedImagePayload(
     throw new Error("截图尺寸异常，请重新截图。");
   }
 
-  const sourceX = Math.max(0, Math.floor(crop.x * width));
-  const sourceY = Math.max(0, Math.floor(crop.y * height));
-  const sourceWidth = Math.max(1, Math.round(crop.width * width));
-  const sourceHeight = Math.max(1, Math.round(crop.height * height));
+  const crop = input.crop;
+  const sourceX = crop ? Math.max(0, Math.floor(crop.x * width)) : 0;
+  const sourceY = crop ? Math.max(0, Math.floor(crop.y * height)) : 0;
+  const sourceWidth = crop
+    ? Math.max(1, Math.round(crop.width * width))
+    : width;
+  const sourceHeight = crop
+    ? Math.max(1, Math.round(crop.height * height))
+    : height;
   const image = await loadImageElement(draft.previewUrl);
   const canvas = document.createElement("canvas");
   canvas.width = sourceWidth;
@@ -2658,27 +2921,208 @@ async function createCroppedImagePayload(
     sourceWidth,
     sourceHeight,
   );
+  drawScreenshotAnnotations(context, input.annotations, {
+    crop,
+    width: sourceWidth,
+    height: sourceHeight,
+  });
 
   const blob = await canvasToBlob(canvas);
+  const nextFileName = buildEditedScreenshotFileName(draft.fileName, {
+    cropped: Boolean(crop),
+    annotated: input.annotations.length > 0,
+  });
 
   return {
-    file: new File([blob], buildCroppedScreenshotFileName(draft.fileName), {
+    file: new File([blob], nextFileName, {
       type: "image/png",
     }),
-    fileName: buildCroppedScreenshotFileName(draft.fileName),
+    fileName: nextFileName,
     width: sourceWidth,
     height: sourceHeight,
   };
 }
 
-function buildCroppedScreenshotFileName(fileName: string) {
-  const normalized = fileName.trim() || buildDesktopScreenshotFileName();
-  const extensionIndex = normalized.lastIndexOf(".");
-  if (extensionIndex <= 0) {
-    return `${normalized}-cropped.png`;
+function drawScreenshotAnnotations(
+  context: CanvasRenderingContext2D,
+  annotations: ScreenshotAnnotation[],
+  options: {
+    crop: NormalizedCropRect | null;
+    width: number;
+    height: number;
+  },
+) {
+  for (const annotation of annotations) {
+    if (annotation.kind === "rect") {
+      const rect = projectNormalizedRectToCanvas(annotation, options);
+      if (!rect) {
+        continue;
+      }
+
+      context.save();
+      context.strokeStyle = "#f59e0b";
+      context.fillStyle = "rgba(245,158,11,0.10)";
+      context.lineWidth = Math.max(3, Math.round(options.width * 0.004));
+      context.strokeRect(rect.x, rect.y, rect.width, rect.height);
+      context.fillRect(rect.x, rect.y, rect.width, rect.height);
+      context.restore();
+      continue;
+    }
+
+    const arrow = projectNormalizedLineToCanvas(annotation, options);
+    if (!arrow) {
+      continue;
+    }
+
+    context.save();
+    context.strokeStyle = "#38bdf8";
+    context.fillStyle = "#38bdf8";
+    context.lineWidth = Math.max(4, Math.round(options.width * 0.005));
+    context.lineCap = "round";
+    context.beginPath();
+    context.moveTo(arrow.x1, arrow.y1);
+    context.lineTo(arrow.x2, arrow.y2);
+    context.stroke();
+
+    const head = getArrowHeadGeometry(
+      arrow.x1,
+      arrow.y1,
+      arrow.x2,
+      arrow.y2,
+      Math.max(14, options.width * 0.018),
+    );
+    context.beginPath();
+    context.moveTo(head.tipX, head.tipY);
+    context.lineTo(head.leftX, head.leftY);
+    context.lineTo(head.rightX, head.rightY);
+    context.closePath();
+    context.fill();
+    context.restore();
+  }
+}
+
+function projectNormalizedRectToCanvas(
+  annotation: ScreenshotAnnotation,
+  options: {
+    crop: NormalizedCropRect | null;
+    width: number;
+    height: number;
+  },
+) {
+  const x = Math.min(annotation.x1, annotation.x2);
+  const y = Math.min(annotation.y1, annotation.y2);
+  const width = Math.abs(annotation.x2 - annotation.x1);
+  const height = Math.abs(annotation.y2 - annotation.y1);
+
+  return projectRectToCanvas({ x, y, width, height }, options);
+}
+
+function projectNormalizedLineToCanvas(
+  annotation: ScreenshotAnnotation,
+  options: {
+    crop: NormalizedCropRect | null;
+    width: number;
+    height: number;
+  },
+) {
+  const start = projectPointToCanvas(annotation.x1, annotation.y1, options);
+  const end = projectPointToCanvas(annotation.x2, annotation.y2, options);
+  if (!start || !end) {
+    return null;
   }
 
-  return `${normalized.slice(0, extensionIndex)}-cropped.png`;
+  return {
+    x1: start.x,
+    y1: start.y,
+    x2: end.x,
+    y2: end.y,
+  };
+}
+
+function projectRectToCanvas(
+  rect: NormalizedCropRect,
+  options: {
+    crop: NormalizedCropRect | null;
+    width: number;
+    height: number;
+  },
+) {
+  const topLeft = projectPointToCanvas(rect.x, rect.y, options);
+  const bottomRight = projectPointToCanvas(
+    rect.x + rect.width,
+    rect.y + rect.height,
+    options,
+  );
+  if (!topLeft || !bottomRight) {
+    return null;
+  }
+
+  return {
+    x: Math.min(topLeft.x, bottomRight.x),
+    y: Math.min(topLeft.y, bottomRight.y),
+    width: Math.abs(bottomRight.x - topLeft.x),
+    height: Math.abs(bottomRight.y - topLeft.y),
+  };
+}
+
+function projectPointToCanvas(
+  x: number,
+  y: number,
+  options: {
+    crop: NormalizedCropRect | null;
+    width: number;
+    height: number;
+  },
+) {
+  const crop = options.crop;
+  if (!crop) {
+    return {
+      x: x * options.width,
+      y: y * options.height,
+    };
+  }
+
+  const projectedX = ((x - crop.x) / crop.width) * options.width;
+  const projectedY = ((y - crop.y) / crop.height) * options.height;
+  if (
+    projectedX < -options.width ||
+    projectedX > options.width * 2 ||
+    projectedY < -options.height ||
+    projectedY > options.height * 2
+  ) {
+    return null;
+  }
+
+  return {
+    x: projectedX,
+    y: projectedY,
+  };
+}
+
+function buildEditedScreenshotFileName(
+  fileName: string,
+  options: {
+    cropped: boolean;
+    annotated: boolean;
+  },
+) {
+  const normalized = fileName.trim() || buildDesktopScreenshotFileName();
+  const extensionIndex = normalized.lastIndexOf(".");
+  let suffix = "";
+
+  if (options.cropped && options.annotated) {
+    suffix = "-edited";
+  } else if (options.cropped) {
+    suffix = "-cropped";
+  } else if (options.annotated) {
+    suffix = "-annotated";
+  }
+
+  if (extensionIndex <= 0) {
+    return `${normalized}${suffix || "-edited"}.png`;
+  }
+
+  return `${normalized.slice(0, extensionIndex)}${suffix || "-edited"}.png`;
 }
 
 function loadImageElement(url: string) {
@@ -2692,6 +3136,40 @@ function loadImageElement(url: string) {
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
+}
+
+function buildArrowHeadPoints(x1: number, y1: number, x2: number, y2: number) {
+  const head = getArrowHeadGeometry(x1, y1, x2, y2, 0.024);
+  return `${head.tipX},${head.tipY} ${head.leftX},${head.leftY} ${head.rightX},${head.rightY}`;
+}
+
+function getArrowHeadGeometry(
+  x1: number,
+  y1: number,
+  x2: number,
+  y2: number,
+  headLength: number,
+) {
+  const angle = Math.atan2(y2 - y1, x2 - x1);
+  const leftAngle = angle + Math.PI * 0.82;
+  const rightAngle = angle - Math.PI * 0.82;
+
+  return {
+    tipX: x2,
+    tipY: y2,
+    leftX: x2 + Math.cos(leftAngle) * headLength,
+    leftY: y2 + Math.sin(leftAngle) * headLength,
+    rightX: x2 + Math.cos(rightAngle) * headLength,
+    rightY: y2 + Math.sin(rightAngle) * headLength,
+  };
+}
+
+function createScreenshotAnnotationId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+
+  return `annotation-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
 
 function extractClipboardFiles(clipboardData: DataTransfer | null) {
