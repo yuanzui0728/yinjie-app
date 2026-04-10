@@ -236,6 +236,7 @@ export type ReplyLogicRuntimeRules = {
   relationshipUpdateStep: number;
   relationshipStrengthMax: number;
   activityScheduleHours: ReplyLogicActivityScheduleRules;
+  activityRandomPool: string[];
   activityBaseWeight: number;
   proactiveReminderHour: number;
   relationshipInitialBackstory: string;
@@ -332,6 +333,14 @@ export const DEFAULT_ACTIVITY_SCHEDULE_HOURS: ReplyLogicActivityScheduleRules =
     working: [9, 10, 11, 14, 15, 16, 17],
     eating: [12, 13, 20],
   });
+export const DEFAULT_ACTIVITY_RANDOM_POOL = [
+  'working',
+  'eating',
+  'resting',
+  'commuting',
+  'free',
+  'sleeping',
+] as const;
 export const ACTIVITY_BASE_WEIGHT = 0.8;
 export const PROACTIVE_REMINDER_HOUR = 20;
 export const HISTORY_WINDOW_BASE = 8;
@@ -681,6 +690,7 @@ export const DEFAULT_REPLY_LOGIC_RUNTIME_RULES: ReplyLogicRuntimeRules =
       working: [...DEFAULT_ACTIVITY_SCHEDULE_HOURS.working],
       eating: [...DEFAULT_ACTIVITY_SCHEDULE_HOURS.eating],
     },
+    activityRandomPool: [...DEFAULT_ACTIVITY_RANDOM_POOL],
     activityBaseWeight: ACTIVITY_BASE_WEIGHT,
     proactiveReminderHour: PROACTIVE_REMINDER_HOUR,
     relationshipInitialBackstory: RELATIONSHIP_INITIAL_BACKSTORY_TEMPLATE,
@@ -1697,6 +1707,10 @@ export function normalizeReplyLogicRuntimeRules(
         defaults.activityScheduleHours.eating,
       ),
     },
+    activityRandomPool: sanitizeMessages(
+      input?.activityRandomPool,
+      defaults.activityRandomPool,
+    ),
     activityBaseWeight: clamp(
       Number(input?.activityBaseWeight ?? defaults.activityBaseWeight),
       0,

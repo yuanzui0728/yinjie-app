@@ -584,14 +584,7 @@ export class SchedulerService {
     };
 
     const baseActivity = getActivity();
-    const activities = [
-      'working',
-      'eating',
-      'resting',
-      'commuting',
-      'free',
-      'sleeping',
-    ];
+    const activities = runtimeRules.activityRandomPool;
 
     for (const char of chars) {
       if (
