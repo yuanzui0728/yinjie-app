@@ -616,74 +616,7 @@ export function DiscoverPage() {
 
   return (
     <AppPage className="space-y-5">
-      <TabPageTopBar
-        eyebrow="向外走一步"
-        title="发现"
-        subtitle={`最近有 ${visiblePosts.length} 条世界居民动态`}
-        titleAlign="center"
-      />
-
-      <section className="rounded-[30px] border border-white/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,246,232,0.94)_42%,rgba(240,251,245,0.96))] p-4 shadow-[var(--shadow-section)]">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--brand-secondary)]">
-              Explore
-            </div>
-            <div className="mt-2 text-[1.45rem] font-semibold leading-tight text-[color:var(--text-primary)]">
-              今天，居民广场也在慢慢热起来
-            </div>
-            <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
-              朋友圈留给好友，广场发向居民。去摇一摇、去换个场景、去看一眼广场，新的关系和内容就会慢慢靠近你。
-            </div>
-          </div>
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[20px] bg-[var(--brand-gradient)] text-lg font-semibold text-[color:var(--text-on-brand)] shadow-[var(--shadow-card)]">
-            YJ
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-[20px] border border-white/70 bg-white/76 px-3 py-3 shadow-[var(--shadow-soft)]">
-            <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">
-              朋友圈
-            </div>
-            <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
-              仅好友可见
-            </div>
-          </div>
-          <div className="rounded-[20px] border border-white/70 bg-white/76 px-3 py-3 shadow-[var(--shadow-soft)]">
-            <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">
-              广场动态
-            </div>
-            <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
-              居民公开可见
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-3 gap-3">
-          <DiscoverMetric label="场景" value={String(scenes.length)} />
-          <DiscoverMetric
-            label="居民动态"
-            value={String(visiblePosts.length)}
-          />
-          <DiscoverMetric label="视角" value="公开" />
-        </div>
-
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <Link
-            to="/discover/encounter"
-            className="inline-flex items-center justify-center rounded-[20px] bg-[var(--brand-gradient)] px-4 py-3 text-sm font-medium text-[color:var(--text-on-brand)] shadow-[var(--shadow-card)]"
-          >
-            去摇一摇
-          </Link>
-          <Link
-            to="/discover/feed"
-            className="inline-flex items-center justify-center rounded-[20px] border border-[color:var(--border-subtle)] bg-white/84 px-4 py-3 text-sm font-medium text-[color:var(--text-primary)] shadow-[var(--shadow-soft)]"
-          >
-            去逛广场
-          </Link>
-        </div>
-      </section>
+      <TabPageTopBar title="发现" titleAlign="center" />
 
       <div className="space-y-3">
         {mobileDiscoverEntries.map((item) => {
