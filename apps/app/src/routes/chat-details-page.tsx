@@ -18,7 +18,6 @@ import {
 import { ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
 import { getChatBackgroundLabel } from "../features/chat/backgrounds/chat-background-helpers";
-import { buildChatCallFallbackShortcutSearch } from "../features/chat/chat-compose-shortcut-route";
 import { useConversationBackground } from "../features/chat/backgrounds/use-conversation-background";
 import {
   CONVERSATION_STRONG_REMINDER_DURATION_HOURS,
@@ -46,14 +45,10 @@ export function ChatDetailsPage() {
   const ownerName = useWorldOwnerStore((state) => state.username) ?? "我";
   const ownerAvatar = useWorldOwnerStore((state) => state.avatar);
   const [notice, setNotice] = useState<string | null>(null);
-  const [pendingCallFallback, setPendingCallFallback] = useState<
-    "voice" | "video" | null
-  >(null);
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
 
   useEffect(() => {
     setNotice(null);
-    setPendingCallFallback(null);
   }, [conversationId]);
 
   const conversationsQuery = useQuery({
@@ -406,27 +401,17 @@ export function ChatDetailsPage() {
           </ChatDetailsSection>
 
           <ChatCallFallbackSection
-            activeKind={pendingCallFallback}
             disabled={!targetCharacterId}
+            voiceValue="AI 语音"
+            videoValue="AI 数字人"
             onSelectKind={(kind) => {
               setNotice(null);
-              if (kind === "voice") {
-                void navigate({
-                  to: "/chat/$conversationId/voice-call",
-                  params: { conversationId },
-                });
-                return;
-              }
-              setPendingCallFallback(kind);
-            }}
-            onDismiss={() => setPendingCallFallback(null)}
-            onPrimaryAction={(kind) => {
               void navigate({
-                to: "/chat/$conversationId",
+                to:
+                  kind === "voice"
+                    ? "/chat/$conversationId/voice-call"
+                    : "/chat/$conversationId/video-call",
                 params: { conversationId },
-                search: buildChatCallFallbackShortcutSearch({
-                  kind,
-                }),
               });
             }}
           />

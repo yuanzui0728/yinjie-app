@@ -33,8 +33,6 @@ import {
 } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
-import { ChatCallFallbackNotice } from "../features/chat/chat-call-fallback-notice";
-import { buildChatCallFallbackShortcutSearch } from "../features/chat/chat-compose-shortcut-route";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { formatTimestamp } from "../lib/format";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
@@ -56,9 +54,6 @@ export function CharacterDetailPage() {
   const baseUrl = runtimeConfig.apiBaseUrl;
   const ownerName = useWorldOwnerStore((state) => state.username) ?? "我";
   const [notice, setNotice] = useState<string | null>(null);
-  const [pendingCallFallback, setPendingCallFallback] = useState<
-    "voice" | "video" | null
-  >(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState<FriendProfileFormState>({
     remarkName: "",
@@ -120,7 +115,6 @@ export function CharacterDetailPage() {
 
   useEffect(() => {
     setNotice(null);
-    setPendingCallFallback(null);
     setIsEditingProfile(false);
     setProfileForm({
       remarkName: friendship?.remarkName ?? "",
@@ -149,37 +143,39 @@ export function CharacterDetailPage() {
         return;
       }
 
-      const nextSearch = pendingCallFallback
-        ? buildChatCallFallbackShortcutSearch({
-            kind: pendingCallFallback,
-          })
-        : undefined;
-
-      setPendingCallFallback(null);
       void navigate({
         to: "/chat/$conversationId",
         params: { conversationId: conversation.id },
-        search: nextSearch,
       });
     },
   });
-  const openVoiceCallMutation = useMutation({
-    mutationFn: async () => {
+  const openCallMutation = useMutation({
+    mutationFn: async (kind: "voice" | "video") => {
       if (!character) {
         return null;
       }
 
-      return getOrCreateConversation({ characterId: character.id }, baseUrl);
+      const conversation = await getOrCreateConversation(
+        { characterId: character.id },
+        baseUrl,
+      );
+
+      return {
+        conversation,
+        kind,
+      };
     },
-    onSuccess: (conversation) => {
-      if (!conversation) {
+    onSuccess: (result) => {
+      if (!result?.conversation) {
         return;
       }
 
-      setPendingCallFallback(null);
       void navigate({
-        to: "/chat/$conversationId/voice-call",
-        params: { conversationId: conversation.id },
+        to:
+          result.kind === "voice"
+            ? "/chat/$conversationId/voice-call"
+            : "/chat/$conversationId/video-call",
+        params: { conversationId: result.conversation.id },
       });
     },
   });
@@ -286,12 +282,12 @@ export function CharacterDetailPage() {
 
   const handleVoiceCall = () => {
     setNotice(null);
-    openVoiceCallMutation.mutate();
+    openCallMutation.mutate("voice");
   };
 
   const handleVideoCall = () => {
     setNotice(null);
-    setPendingCallFallback("video");
+    openCallMutation.mutate("video");
   };
 
   return (
@@ -361,9 +357,9 @@ export function CharacterDetailPage() {
           startChatMutation.error instanceof Error ? (
             <ErrorBlock message={startChatMutation.error.message} />
           ) : null}
-          {openVoiceCallMutation.isError &&
-          openVoiceCallMutation.error instanceof Error ? (
-            <ErrorBlock message={openVoiceCallMutation.error.message} />
+          {openCallMutation.isError &&
+          openCallMutation.error instanceof Error ? (
+            <ErrorBlock message={openCallMutation.error.message} />
           ) : null}
           {sendFriendRequestMutation.isError &&
           sendFriendRequestMutation.error instanceof Error ? (
@@ -438,17 +434,18 @@ export function CharacterDetailPage() {
                   <ActionPanelButton
                     icon={<Phone size={18} />}
                     label={
-                      openVoiceCallMutation.isPending
-                        ? "正在接通..."
-                        : "语音通话"
+                      openCallMutation.isPending ? "正在接通..." : "语音通话"
                     }
                     onClick={handleVoiceCall}
-                    disabled={openVoiceCallMutation.isPending}
+                    disabled={openCallMutation.isPending}
                   />
                   <ActionPanelButton
                     icon={<Video size={18} />}
-                    label="视频通话"
+                    label={
+                      openCallMutation.isPending ? "正在接通..." : "视频通话"
+                    }
                     onClick={handleVideoCall}
+                    disabled={openCallMutation.isPending}
                   />
                 </>
               ) : (
@@ -470,30 +467,6 @@ export function CharacterDetailPage() {
               )}
             </div>
           </section>
-
-          {pendingCallFallback ? (
-            <ChatCallFallbackNotice
-              variant="card"
-              kind={pendingCallFallback}
-              description={
-                pendingCallFallback === "voice"
-                  ? "先进入聊天页继续，用按住说话发送语音消息会更接近现在可用的体验。"
-                  : "先进入聊天页继续，先拍一张图或发送图片消息，会更接近当前能替代视频通话的体验。"
-              }
-              primaryLabel={
-                startChatMutation.isPending
-                  ? "正在打开..."
-                  : pendingCallFallback === "voice"
-                    ? "去聊天发语音"
-                    : "去聊天拍摄"
-              }
-              secondaryLabel="知道了"
-              onPrimaryAction={() => startChatMutation.mutate()}
-              onSecondaryAction={() => setPendingCallFallback(null)}
-              primaryDisabled={startChatMutation.isPending}
-              secondaryDisabled={startChatMutation.isPending}
-            />
-          ) : null}
 
           <ProfileSection title={isFriend ? "资料设置" : "基本资料"}>
             {isFriend ? (

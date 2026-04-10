@@ -6,23 +6,27 @@ import { ChatDetailsSection } from "./chat-details-section";
 import { ChatSettingRow } from "./chat-setting-row";
 
 type ChatCallFallbackSectionProps = {
-  activeKind: ChatCallFallbackKind | null;
+  activeKind?: ChatCallFallbackKind | null;
   onSelectKind: (kind: ChatCallFallbackKind) => void;
-  onDismiss: () => void;
-  onPrimaryAction: (kind: ChatCallFallbackKind) => void;
+  onDismiss?: () => void;
+  onPrimaryAction?: (kind: ChatCallFallbackKind) => void;
   disabled?: boolean;
   scope?: "direct" | "group";
   variant?: "default" | "wechat";
+  voiceValue?: string;
+  videoValue?: string;
 };
 
 export function ChatCallFallbackSection({
-  activeKind,
+  activeKind = null,
   onSelectKind,
   onDismiss,
   onPrimaryAction,
   disabled = false,
   scope = "direct",
   variant = "default",
+  voiceValue = "暂未开放",
+  videoValue = "暂未开放",
 }: ChatCallFallbackSectionProps) {
   const isGroup = scope === "group";
 
@@ -32,14 +36,14 @@ export function ChatCallFallbackSection({
         <div className="divide-y divide-black/5">
           <ChatSettingRow
             label="语音通话"
-            value="暂未开放"
+            value={voiceValue}
             disabled={disabled}
             variant={variant}
             onClick={() => onSelectKind("voice")}
           />
           <ChatSettingRow
             label="视频通话"
-            value="暂未开放"
+            value={videoValue}
             disabled={disabled}
             variant={variant}
             onClick={() => onSelectKind("video")}
@@ -47,7 +51,7 @@ export function ChatCallFallbackSection({
         </div>
       </ChatDetailsSection>
 
-      {activeKind ? (
+      {activeKind && onDismiss && onPrimaryAction ? (
         <div className="px-3">
           <ChatCallFallbackNotice
             kind={activeKind}
