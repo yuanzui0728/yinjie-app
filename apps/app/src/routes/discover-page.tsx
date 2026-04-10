@@ -46,7 +46,11 @@ type MobileDiscoverEntry = {
   detail: string;
   icon: typeof Users;
   iconClassName: string;
-  to: "/discover/moments" | "/discover/encounter" | "/discover/scene" | "/discover/feed";
+  to:
+    | "/discover/moments"
+    | "/discover/encounter"
+    | "/discover/scene"
+    | "/discover/feed";
 };
 
 const mobileDiscoverEntries: MobileDiscoverEntry[] = [
@@ -89,7 +93,9 @@ export function DiscoverPage() {
   const [feedText, setFeedText] = useState("");
   const [shakeMessage, setShakeMessage] = useState("");
   const [sceneMessage, setSceneMessage] = useState("");
-  const [feedCommentDrafts, setFeedCommentDrafts] = useState<Record<string, string>>({});
+  const [feedCommentDrafts, setFeedCommentDrafts] = useState<
+    Record<string, string>
+  >({});
   const [successNotice, setSuccessNotice] = useState("");
 
   const feedQuery = useQuery({
@@ -141,8 +147,12 @@ export function DiscoverPage() {
       }
 
       setSuccessNotice("新的好友申请已发送。");
-      setShakeMessage(`${result.character.name} 向你发来了好友申请：${result.greeting}`);
-      void queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl] });
+      setShakeMessage(
+        `${result.character.name} 向你发来了好友申请：${result.greeting}`,
+      );
+      void queryClient.invalidateQueries({
+        queryKey: ["app-friend-requests", baseUrl],
+      });
     },
   });
 
@@ -157,7 +167,8 @@ export function DiscoverPage() {
       return { request: result, scene };
     },
     onSuccess: ({ request, scene }) => {
-      const sceneLabel = scenes.find((item) => item.id === scene)?.label ?? scene;
+      const sceneLabel =
+        scenes.find((item) => item.id === scene)?.label ?? scene;
 
       if (!request) {
         setSceneMessage(`${sceneLabel} 里暂时没有新的相遇。`);
@@ -165,8 +176,12 @@ export function DiscoverPage() {
       }
 
       setSuccessNotice("场景相遇已写入好友申请列表。");
-      setSceneMessage(`${request.characterName} 在${sceneLabel}里注意到了你：${request.greeting ?? "对你产生了兴趣。"}`);
-      void queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl] });
+      setSceneMessage(
+        `${request.characterName} 在${sceneLabel}里注意到了你：${request.greeting ?? "对你产生了兴趣。"}`,
+      );
+      void queryClient.invalidateQueries({
+        queryKey: ["app-friend-requests", baseUrl],
+      });
     },
   });
 
@@ -201,12 +216,18 @@ export function DiscoverPage() {
   const visiblePosts = useMemo(
     () =>
       (feedQuery.data?.posts ?? []).filter(
-        (post) => post.authorType !== "character" || !blockedCharacterIds.has(post.authorId),
+        (post) =>
+          post.authorType !== "character" ||
+          !blockedCharacterIds.has(post.authorId),
       ),
     [blockedCharacterIds, feedQuery.data?.posts],
   );
-  const pendingLikePostId = likeFeedMutation.isPending ? likeFeedMutation.variables : null;
-  const pendingCommentPostId = commentFeedMutation.isPending ? commentFeedMutation.variables : null;
+  const pendingLikePostId = likeFeedMutation.isPending
+    ? likeFeedMutation.variables
+    : null;
+  const pendingCommentPostId = commentFeedMutation.isPending
+    ? commentFeedMutation.variables
+    : null;
 
   useEffect(() => {
     setFeedText("");
@@ -235,12 +256,16 @@ export function DiscoverPage() {
         />
 
         <div className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
-          <div className="space-y-5">
+          <div className="space-y-4">
             <AppSection className="space-y-4 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,247,236,0.94)_44%,rgba(240,251,245,0.92))]">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--brand-secondary)]">内容视角</div>
-                  <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">先决定发给好友，还是发给居民</div>
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--brand-secondary)]">
+                    内容视角
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
+                    先决定发给好友，还是发给居民
+                  </div>
                   <div className="mt-2 text-xs leading-6 text-[color:var(--text-muted)]">
                     朋友圈和广场动态共用同一套发现入口，但可见范围完全不同，桌面端先把这层分界讲清楚。
                   </div>
@@ -252,37 +277,73 @@ export function DiscoverPage() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="rounded-[26px] border border-[rgba(47,122,63,0.16)] bg-[linear-gradient(180deg,rgba(247,252,248,0.98),rgba(255,255,255,0.96))] px-4 py-4 shadow-[var(--shadow-soft)]">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-[#2f7a3f]">朋友圈</div>
-                  <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">仅好友可见</div>
-                  <div className="mt-2 text-xs leading-6 text-[color:var(--text-muted)]">更近一点的生活片段，留在熟人关系里慢慢流动。</div>
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-[#2f7a3f]">
+                    朋友圈
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
+                    仅好友可见
+                  </div>
+                  <div className="mt-2 text-xs leading-6 text-[color:var(--text-muted)]">
+                    更近一点的生活片段，留在熟人关系里慢慢流动。
+                  </div>
                 </div>
                 <div className="rounded-[26px] border border-[rgba(93,103,201,0.16)] bg-[linear-gradient(180deg,rgba(246,247,255,0.98),rgba(255,255,255,0.96))] px-4 py-4 shadow-[var(--shadow-soft)]">
-                  <div className="text-[11px] uppercase tracking-[0.16em] text-[#4951a3]">广场动态</div>
-                  <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">世界居民公开可见</div>
-                  <div className="mt-2 text-xs leading-6 text-[color:var(--text-muted)]">把这一刻发到居民广场，让世界里的居民也能看见并回应。</div>
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-[#4951a3]">
+                    广场动态
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
+                    世界居民公开可见
+                  </div>
+                  <div className="mt-2 text-xs leading-6 text-[color:var(--text-muted)]">
+                    把这一刻发到居民广场，让世界里的居民也能看见并回应。
+                  </div>
                 </div>
               </div>
             </AppSection>
 
             <AppSection className="space-y-4 bg-[color:var(--brand-soft)]">
-              <div>
-                <div className="text-sm font-medium text-[color:var(--text-primary)]">今日相遇</div>
-                <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
-                  轻轻试一次，就可能遇到一段新的关系线索。
+              <div className="rounded-[26px] border border-[rgba(34,197,94,0.12)] bg-[linear-gradient(180deg,rgba(244,252,247,0.98),rgba(255,255,255,0.94))] p-4 shadow-[var(--shadow-soft)]">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="text-[11px] uppercase tracking-[0.18em] text-emerald-600">
+                      Encounter Desk
+                    </div>
+                    <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
+                      今日相遇
+                    </div>
+                    <div className="mt-2 text-xs leading-6 text-[color:var(--text-muted)]">
+                      轻轻试一次，就可能遇到一段新的关系线索。
+                    </div>
+                  </div>
+                  <div className="rounded-full bg-white/90 px-3 py-1 text-[11px] font-medium text-emerald-600 shadow-[var(--shadow-soft)]">
+                    探索区
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-3 gap-3">
+                  <DiscoverMetric label="场景" value={String(scenes.length)} />
+                  <DiscoverMetric
+                    label="居民动态"
+                    value={String(visiblePosts.length)}
+                  />
+                  <DiscoverMetric
+                    label="反馈状态"
+                    value={blockedCharacterIds.size > 0 ? "已过滤" : "开放"}
+                  />
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <DiscoverMetric label="场景" value={String(scenes.length)} />
-                <DiscoverMetric label="居民动态" value={String(visiblePosts.length)} />
-                <DiscoverMetric label="反馈状态" value={blockedCharacterIds.size > 0 ? "已过滤" : "开放"} />
-              </div>
-
               <div className="flex items-center gap-3">
-                <Button onClick={() => shakeMutation.mutate()} disabled={shakeMutation.isPending} variant="primary">
+                <Button
+                  onClick={() => shakeMutation.mutate()}
+                  disabled={shakeMutation.isPending}
+                  variant="primary"
+                >
                   {shakeMutation.isPending ? "正在寻找..." : "摇一摇"}
                 </Button>
-                <div className="text-xs text-[color:var(--text-muted)]">随机相遇会从不同场景里发生。</div>
+                <div className="text-xs text-[color:var(--text-muted)]">
+                  随机相遇会从不同场景里发生。
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -294,23 +355,38 @@ export function DiscoverPage() {
                     variant="secondary"
                     size="sm"
                   >
-                    {sceneMutation.isPending && sceneMutation.variables === scene.id ? `正在前往${scene.label}...` : scene.label}
+                    {sceneMutation.isPending &&
+                    sceneMutation.variables === scene.id
+                      ? `正在前往${scene.label}...`
+                      : scene.label}
                   </Button>
                 ))}
               </div>
 
-              {shakeMessage ? <InlineNotice tone="success">{shakeMessage}</InlineNotice> : null}
-              {sceneMessage ? <InlineNotice tone="info">{sceneMessage}</InlineNotice> : null}
-              {shakeMutation.isError && shakeMutation.error instanceof Error ? <ErrorBlock message={shakeMutation.error.message} /> : null}
-              {sceneMutation.isError && sceneMutation.error instanceof Error ? <ErrorBlock message={sceneMutation.error.message} /> : null}
+              {shakeMessage ? (
+                <InlineNotice tone="success">{shakeMessage}</InlineNotice>
+              ) : null}
+              {sceneMessage ? (
+                <InlineNotice tone="info">{sceneMessage}</InlineNotice>
+              ) : null}
+              {shakeMutation.isError && shakeMutation.error instanceof Error ? (
+                <ErrorBlock message={shakeMutation.error.message} />
+              ) : null}
+              {sceneMutation.isError && sceneMutation.error instanceof Error ? (
+                <ErrorBlock message={sceneMutation.error.message} />
+              ) : null}
             </AppSection>
 
             <AppSection className="space-y-4 bg-[linear-gradient(180deg,rgba(255,250,245,0.98),rgba(255,255,255,0.95))]">
               <div className="rounded-[26px] border border-[rgba(255,138,61,0.14)] bg-[linear-gradient(180deg,rgba(255,248,240,0.98),rgba(255,255,255,0.94))] p-4 shadow-[var(--shadow-soft)]">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--brand-secondary)]">Publishing Desk</div>
-                    <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">发一条广场动态</div>
+                    <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--brand-secondary)]">
+                      Publishing Desk
+                    </div>
+                    <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
+                      发一条广场动态
+                    </div>
                     <div className="mt-2 text-xs leading-6 text-[color:var(--text-muted)]">
                       把你的想法发到居民广场，让世界里的居民都可能看到并回应。
                     </div>
@@ -322,7 +398,12 @@ export function DiscoverPage() {
 
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   <DiscoverMetric label="范围" value="居民公开" />
-                  <DiscoverMetric label="发布状态" value={createFeedPostMutation.isPending ? "发布中" : "待发送"} />
+                  <DiscoverMetric
+                    label="发布状态"
+                    value={
+                      createFeedPostMutation.isPending ? "发布中" : "待发送"
+                    }
+                  />
                 </div>
               </div>
 
@@ -337,10 +418,15 @@ export function DiscoverPage() {
                 onClick={() => createFeedPostMutation.mutate()}
                 variant="primary"
               >
-                {createFeedPostMutation.isPending ? "正在发布..." : "发布到广场"}
+                {createFeedPostMutation.isPending
+                  ? "正在发布..."
+                  : "发布到广场"}
               </Button>
-              <InlineNotice tone="muted">发布后会直接进入右侧公开流，世界居民公开可见。</InlineNotice>
-              {createFeedPostMutation.isError && createFeedPostMutation.error instanceof Error ? (
+              <InlineNotice tone="muted">
+                发布后会直接进入右侧公开流，世界居民公开可见。
+              </InlineNotice>
+              {createFeedPostMutation.isError &&
+              createFeedPostMutation.error instanceof Error ? (
                 <ErrorBlock message={createFeedPostMutation.error.message} />
               ) : null}
             </AppSection>
@@ -350,8 +436,12 @@ export function DiscoverPage() {
             <div className="rounded-[26px] border border-[rgba(93,103,201,0.14)] bg-[linear-gradient(180deg,rgba(245,247,255,0.98),rgba(255,255,255,0.94))] p-4 shadow-[var(--shadow-soft)]">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-[#4951a3]">Residents Feed</div>
-                  <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">广场动态</div>
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-[#4951a3]">
+                    Residents Feed
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
+                    广场动态
+                  </div>
                   <div className="mt-2 text-xs leading-6 text-[color:var(--text-muted)]">
                     这里不只看朋友，也能看到世界里的居民正在说什么。
                   </div>
@@ -362,14 +452,23 @@ export function DiscoverPage() {
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3">
-                <DiscoverMetric label="可见动态" value={String(visiblePosts.length)} />
+                <DiscoverMetric
+                  label="可见动态"
+                  value={String(visiblePosts.length)}
+                />
                 <DiscoverMetric label="范围" value="居民公开" />
               </div>
             </div>
 
-            {successNotice ? <InlineNotice tone="success">{successNotice}</InlineNotice> : null}
-            {feedQuery.isLoading ? <LoadingBlock label="正在读取广场动态..." /> : null}
-            {feedQuery.isError && feedQuery.error instanceof Error ? <ErrorBlock message={feedQuery.error.message} /> : null}
+            {successNotice ? (
+              <InlineNotice tone="success">{successNotice}</InlineNotice>
+            ) : null}
+            {feedQuery.isLoading ? (
+              <LoadingBlock label="正在读取广场动态..." />
+            ) : null}
+            {feedQuery.isError && feedQuery.error instanceof Error ? (
+              <ErrorBlock message={feedQuery.error.message} />
+            ) : null}
 
             {visiblePosts.map((post) => (
               <SocialPostCard
@@ -389,7 +488,12 @@ export function DiscoverPage() {
                 }
                 summary={`${post.likeCount} 赞 · ${post.commentCount} 评论${post.aiReacted ? " · AI 已参与回应" : ""}`}
                 actions={
-                  <Button disabled={likeFeedMutation.isPending} onClick={() => likeFeedMutation.mutate(post.id)} variant="secondary" size="sm">
+                  <Button
+                    disabled={likeFeedMutation.isPending}
+                    onClick={() => likeFeedMutation.mutate(post.id)}
+                    variant="secondary"
+                    size="sm"
+                  >
                     {pendingLikePostId === post.id ? "处理中..." : "点赞"}
                   </Button>
                 }
@@ -397,8 +501,13 @@ export function DiscoverPage() {
                   post.commentsPreview.length > 0 ? (
                     <div className="space-y-2 rounded-[22px] bg-[color:var(--surface-soft)] p-3">
                       {post.commentsPreview.map((comment) => (
-                        <div key={comment.id} className="text-xs leading-6 text-[color:var(--text-secondary)]">
-                          <span className="text-[color:var(--text-primary)]">{comment.authorName}</span>
+                        <div
+                          key={comment.id}
+                          className="text-xs leading-6 text-[color:var(--text-secondary)]"
+                        >
+                          <span className="text-[color:var(--text-primary)]">
+                            {comment.authorName}
+                          </span>
                           {`：${comment.text}`}
                         </div>
                       ))}
@@ -419,7 +528,10 @@ export function DiscoverPage() {
                       className="min-w-0 flex-1 rounded-full py-2 text-xs"
                     />
                     <Button
-                      disabled={!(feedCommentDrafts[post.id] ?? "").trim() || commentFeedMutation.isPending}
+                      disabled={
+                        !(feedCommentDrafts[post.id] ?? "").trim() ||
+                        commentFeedMutation.isPending
+                      }
                       onClick={() => commentFeedMutation.mutate(post.id)}
                       variant="primary"
                       size="sm"
@@ -431,13 +543,22 @@ export function DiscoverPage() {
               />
             ))}
 
-            {likeFeedMutation.isError && likeFeedMutation.error instanceof Error ? <ErrorBlock message={likeFeedMutation.error.message} /> : null}
-            {commentFeedMutation.isError && commentFeedMutation.error instanceof Error ? (
+            {likeFeedMutation.isError &&
+            likeFeedMutation.error instanceof Error ? (
+              <ErrorBlock message={likeFeedMutation.error.message} />
+            ) : null}
+            {commentFeedMutation.isError &&
+            commentFeedMutation.error instanceof Error ? (
               <ErrorBlock message={commentFeedMutation.error.message} />
             ) : null}
 
-            {!feedQuery.isLoading && !feedQuery.isError && !visiblePosts.length ? (
-              <EmptyState title="广场还没有新动态" description="你先发一条居民公开可见的动态，或者等世界里的居民先开口。" />
+            {!feedQuery.isLoading &&
+            !feedQuery.isError &&
+            !visiblePosts.length ? (
+              <EmptyState
+                title="广场还没有新动态"
+                description="你先发一条居民公开可见的动态，或者等世界里的居民先开口。"
+              />
             ) : null}
           </AppSection>
         </div>
@@ -457,7 +578,9 @@ export function DiscoverPage() {
       <section className="rounded-[30px] border border-white/80 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(255,246,232,0.94)_42%,rgba(240,251,245,0.96))] p-4 shadow-[var(--shadow-section)]">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--brand-secondary)]">Explore</div>
+            <div className="text-xs uppercase tracking-[0.22em] text-[color:var(--brand-secondary)]">
+              Explore
+            </div>
             <div className="mt-2 text-[1.45rem] font-semibold leading-tight text-[color:var(--text-primary)]">
               今天，居民广场也在慢慢热起来
             </div>
@@ -472,18 +595,29 @@ export function DiscoverPage() {
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="rounded-[20px] border border-white/70 bg-white/76 px-3 py-3 shadow-[var(--shadow-soft)]">
-            <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">朋友圈</div>
-            <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">仅好友可见</div>
+            <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">
+              朋友圈
+            </div>
+            <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
+              仅好友可见
+            </div>
           </div>
           <div className="rounded-[20px] border border-white/70 bg-white/76 px-3 py-3 shadow-[var(--shadow-soft)]">
-            <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">广场动态</div>
-            <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">居民公开可见</div>
+            <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">
+              广场动态
+            </div>
+            <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
+              居民公开可见
+            </div>
           </div>
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-3">
           <DiscoverMetric label="场景" value={String(scenes.length)} />
-          <DiscoverMetric label="居民动态" value={String(visiblePosts.length)} />
+          <DiscoverMetric
+            label="居民动态"
+            value={String(visiblePosts.length)}
+          />
           <DiscoverMetric label="视角" value="公开" />
         </div>
 
@@ -513,19 +647,31 @@ export function DiscoverPage() {
               to={item.to}
               className="flex items-center gap-4 rounded-[28px] border border-white/80 bg-white/88 px-4 py-4 shadow-[var(--shadow-section)] transition-[transform,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]"
             >
-              <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px]", item.iconClassName)}>
+              <div
+                className={cn(
+                  "flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px]",
+                  item.iconClassName,
+                )}
+              >
                 <Icon size={20} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <div className="text-[15px] font-medium text-[color:var(--text-primary)]">{item.label}</div>
+                  <div className="text-[15px] font-medium text-[color:var(--text-primary)]">
+                    {item.label}
+                  </div>
                   <div className="rounded-full bg-[rgba(255,138,61,0.08)] px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-[color:var(--brand-primary)]">
                     {item.description}
                   </div>
                 </div>
-                <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">{item.detail}</div>
+                <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
+                  {item.detail}
+                </div>
               </div>
-              <ChevronRight size={16} className="shrink-0 text-[color:var(--text-dim)]" />
+              <ChevronRight
+                size={16}
+                className="shrink-0 text-[color:var(--text-dim)]"
+              />
             </Link>
           );
         })}
@@ -537,8 +683,12 @@ export function DiscoverPage() {
 function DiscoverMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-[22px] bg-white/82 px-3 py-3 shadow-[var(--shadow-soft)]">
-      <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">{label}</div>
-      <div className="mt-2 text-base font-semibold text-[color:var(--text-primary)]">{value}</div>
+      <div className="text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-muted)]">
+        {label}
+      </div>
+      <div className="mt-2 text-base font-semibold text-[color:var(--text-primary)]">
+        {value}
+      </div>
     </div>
   );
 }
