@@ -358,6 +358,28 @@ export function AdminFormSection({
   );
 }
 
+export function AdminValueCard({
+  label,
+  value,
+  className,
+}: {
+  label: string;
+  value: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-[16px] border border-[color:var(--border-faint)] bg-white/70 px-3 py-3",
+        className,
+      )}
+    >
+      <div className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{label}</div>
+      <div className="mt-2 text-sm text-[color:var(--text-secondary)]">{value}</div>
+    </div>
+  );
+}
+
 export function AdminTextField({
   label,
   value,

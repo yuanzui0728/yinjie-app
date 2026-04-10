@@ -26,6 +26,7 @@ import {
   AdminSelectField as SelectFieldBlock,
   AdminTextArea as TextAreaBlock,
   AdminTextField as FieldBlock,
+  AdminValueCard as ValueSnapshot,
 } from "../components/admin-workbench";
 import { adminApi } from "../lib/admin-api";
 
@@ -1101,23 +1102,6 @@ function PublishDiffCard({
         <ValueSnapshot label="当前运行时" value={item.currentValue} />
         <ValueSnapshot label="发布后" value={item.nextValue} />
       </div>
-    </div>
-  );
-}
-
-function ValueSnapshot({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-[16px] border border-[color:var(--border-faint)] bg-white/70 px-3 py-3">
-      <div className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
-        {label}
-      </div>
-      <div className="mt-2 text-sm text-[color:var(--text-secondary)]">{value}</div>
     </div>
   );
 }
