@@ -38,6 +38,11 @@ type DesktopMiniProgramsWorkspaceProps = {
   onSelectMiniProgram: (miniProgramId: string) => void;
   onToggleMiniProgramTask: (miniProgramId: string, taskId: string) => void;
   onTogglePinnedMiniProgram: (miniProgramId: string) => void;
+  launchContext?: {
+    sourceGroupId: string;
+    sourceGroupName: string;
+  } | null;
+  onReturnToGroup?: () => void;
 };
 
 export function DesktopMiniProgramsWorkspace({
@@ -61,6 +66,8 @@ export function DesktopMiniProgramsWorkspace({
   onSelectMiniProgram,
   onToggleMiniProgramTask,
   onTogglePinnedMiniProgram,
+  launchContext = null,
+  onReturnToGroup,
 }: DesktopMiniProgramsWorkspaceProps) {
   const selectedMiniProgram =
     getMiniProgramEntry(selectedMiniProgramId) ??
@@ -210,6 +217,27 @@ export function DesktopMiniProgramsWorkspace({
             </div>
             {successNotice ? <InlineNotice tone={noticeTone}>{successNotice}</InlineNotice> : null}
           </div>
+          {launchContext ? (
+            <div className="mt-4">
+              <InlineNotice tone="info">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="text-sm leading-6 text-[color:var(--text-secondary)]">
+                    正在从“{launchContext.sourceGroupName}”打开群接龙，可以边看群聊边处理报名和回填。
+                  </div>
+                  {onReturnToGroup ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={onReturnToGroup}
+                      className="shrink-0 rounded-full"
+                    >
+                      返回群聊
+                    </Button>
+                  ) : null}
+                </div>
+              </InlineNotice>
+            </div>
+          ) : null}
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto px-6 py-6">

@@ -1142,6 +1142,22 @@ function GroupChatDetailsPanel({
           onClick={onOpenHistory}
         />
         <DesktopPanelRow
+          label="群接龙"
+          value="发起或查看"
+          onClick={() => {
+            const query = new URLSearchParams({
+              miniProgram: "group-relay",
+              sourceGroupId: conversation.id,
+              sourceGroupName: groupQuery.data?.name ?? conversation.title,
+            });
+
+            void navigate({
+              to: "/tabs/mini-programs",
+              search: `?${query.toString()}`,
+            });
+          }}
+        />
+        <DesktopPanelRow
           label="聊天文件"
           onClick={() => {
             void navigate({
