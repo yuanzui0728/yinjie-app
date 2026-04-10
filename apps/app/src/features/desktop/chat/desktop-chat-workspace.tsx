@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { FileText, Plus, UserPlus, Users, X } from "lucide-react";
+import { FileText, Plus, UserPlus, Users } from "lucide-react";
 import {
   getBlockedCharacters,
   getConversations,
@@ -22,6 +22,14 @@ import { useAppRuntimeConfig } from "../../../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../../../store/world-owner-store";
 import { ConversationThreadPanel } from "../../chat/conversation-thread-panel";
 import GroupChatThreadPanel from "../../chat/group-chat-thread-panel-view";
+import {
+  type DesktopChatCallKind,
+  type DesktopChatSidePanelMode,
+} from "./desktop-chat-header-actions";
+import {
+  DesktopChatSidePanel,
+  DesktopChatSidePanelPlaceholder,
+} from "./desktop-chat-side-panel";
 import { createDesktopNote } from "./desktop-notes-storage";
 
 type DesktopChatWorkspaceProps = {
@@ -66,7 +74,8 @@ export function DesktopChatWorkspace({
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
   const [searchTerm, setSearchTerm] = useState("");
-  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [rightPanelMode, setRightPanelMode] =
+    useState<DesktopChatSidePanelMode>(null);
   const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -183,7 +192,7 @@ export function DesktopChatWorkspace({
       subscriptionInboxActive ||
       serviceConversationActive
     ) {
-      setInspectorOpen(false);
+      setRightPanelMode(null);
     }
   }, [activeConversation, serviceConversationActive, subscriptionInboxActive]);
 
@@ -212,6 +221,18 @@ export function DesktopChatWorkspace({
 
     const note = createDesktopNote();
     void navigate({ to: "/notes", hash: note.id });
+  }
+
+  function handleToggleSidePanel(mode: Exclude<DesktopChatSidePanelMode, null>) {
+    setRightPanelMode((current) => (current === mode ? null : mode));
+  }
+
+  function handleDesktopCallAction(kind: DesktopChatCallKind) {
+    setNotice(
+      kind === "video"
+        ? "视频通话入口已保留，真实通话能力后续补齐。"
+        : "语音通话入口已保留，真实通话能力后续补齐。",
+    );
   }
 
   return (
@@ -354,6 +375,10 @@ export function DesktopChatWorkspace({
             <GroupChatThreadPanel
               groupId={activeConversation.id}
               variant="desktop"
+              desktopSidePanelMode={rightPanelMode}
+              onToggleDesktopHistory={() => handleToggleSidePanel("history")}
+              onToggleDesktopDetails={() => handleToggleSidePanel("details")}
+              onDesktopCallAction={handleDesktopCallAction}
               highlightedMessageId={
                 activeConversation.id === selectedConversationId
                   ? highlightedMessageId
@@ -364,13 +389,15 @@ export function DesktopChatWorkspace({
             <ConversationThreadPanel
               conversationId={activeConversation.id}
               variant="desktop"
+              desktopSidePanelMode={rightPanelMode}
+              onToggleDesktopHistory={() => handleToggleSidePanel("history")}
+              onToggleDesktopDetails={() => handleToggleSidePanel("details")}
+              onDesktopCallAction={handleDesktopCallAction}
               highlightedMessageId={
                 activeConversation.id === selectedConversationId
                   ? highlightedMessageId
                   : undefined
               }
-              inspectorOpen={inspectorOpen}
-              onToggleInspector={() => setInspectorOpen((current) => !current)}
             />
           )
         ) : (
@@ -378,98 +405,24 @@ export function DesktopChatWorkspace({
         )}
       </section>
 
-      {activeConversation && inspectorOpen ? (
-        <aside className="absolute bottom-0 right-0 top-[73px] z-20 hidden w-[280px] border-l border-[color:var(--border-faint)] bg-[rgba(255,251,245,0.98)] shadow-[-10px_0_30px_rgba(160,90,10,0.10)] xl:flex xl:flex-col">
-          <div className="flex items-center justify-end px-4 py-3">
-            <button
-              type="button"
-              onClick={() => setInspectorOpen(false)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-soft)] hover:text-[color:var(--brand-primary)]"
-              aria-label="关闭"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="border-b border-[color:var(--border-faint)] px-6 pb-6 text-center">
-            <div className="flex justify-center">
-              <AvatarChip name={activeConversation.title} size="lg" />
-            </div>
-            <div className="mt-4 truncate text-lg font-medium text-[color:var(--text-primary)]">
-              {activeConversation.title}
-            </div>
-            <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
-              {activeConversation.type === "group" ? "群聊" : "联系人"}
-            </div>
-          </div>
-
-          <div className="space-y-6 overflow-auto px-6 py-6">
-            <section className="space-y-3">
-              <InspectorRow
-                label="类型"
-                value={activeConversation.type === "group" ? "群聊" : "单聊"}
-              />
-              <InspectorRow
-                label="成员"
-                value={String(activeConversation.participants.length || 1)}
-              />
-              <InspectorRow
-                label="最后活跃"
-                value={formatTimestamp(
-                  activeConversation.lastMessage?.createdAt ??
-                    activeConversation.updatedAt,
-                )}
-              />
-              <InspectorRow
-                label="未读消息"
-                value={
-                  activeConversation.unreadCount > 0
-                    ? String(activeConversation.unreadCount)
-                    : "无"
-                }
-              />
-            </section>
-
-            <section className="border-t border-[color:var(--border-faint)] pt-4">
-              <div className="space-y-2">
-                <Link
-                  to={
-                    isPersistedGroupConversation(activeConversation)
-                      ? "/group/$groupId/details"
-                      : "/chat/$conversationId/details"
-                  }
-                  params={
-                    isPersistedGroupConversation(activeConversation)
-                      ? { groupId: activeConversation.id }
-                      : { conversationId: activeConversation.id }
-                  }
-                  className="flex items-center justify-between rounded-[14px] px-3 py-3 text-sm text-[color:var(--text-primary)] transition hover:bg-[color:var(--surface-card)]"
-                >
-                  <span>
-                    {activeConversation.type === "group"
-                      ? "群聊信息"
-                      : "聊天信息"}
-                  </span>
-                  <span className="text-[color:var(--brand-secondary)]">›</span>
-                </Link>
-                <Link
-                  to="/tabs/contacts"
-                  className="flex items-center justify-between rounded-[14px] px-3 py-3 text-sm text-[color:var(--text-primary)] transition hover:bg-[color:var(--surface-card)]"
-                >
-                  <span>通讯录</span>
-                  <span className="text-[color:var(--brand-secondary)]">›</span>
-                </Link>
-                <Link
-                  to="/tabs/profile"
-                  className="flex items-center justify-between rounded-[14px] px-3 py-3 text-sm text-[color:var(--text-primary)] transition hover:bg-[color:var(--surface-card)]"
-                >
-                  <span>我的资料</span>
-                  <span className="text-[color:var(--brand-secondary)]">›</span>
-                </Link>
-              </div>
-            </section>
-          </div>
-        </aside>
+      {activeConversation && rightPanelMode ? (
+        <DesktopChatSidePanel
+          mode={rightPanelMode}
+          title={rightPanelMode === "history" ? "聊天记录" : "聊天信息"}
+          subtitle={activeConversation.title}
+          onClose={() => setRightPanelMode(null)}
+        >
+          <DesktopChatSidePanelPlaceholder
+            title={
+              rightPanelMode === "history" ? "聊天记录侧栏" : "聊天信息侧栏"
+            }
+            description={
+              rightPanelMode === "history"
+                ? "下一步接入当前会话搜索和结果定位，替换掉独立全页搜索。"
+                : "下一步接入单聊 / 群聊资料、设置项和危险操作。"
+            }
+          />
+        </DesktopChatSidePanel>
       ) : null}
     </div>
   );
@@ -544,16 +497,5 @@ function ConversationCardLink({
     >
       {content}
     </Link>
-  );
-}
-
-function InspectorRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between rounded-[14px] bg-[color:var(--surface-card)] px-4 py-3 shadow-[var(--shadow-soft)]">
-      <div className="text-sm text-[color:var(--text-secondary)]">{label}</div>
-      <div className="max-w-[132px] truncate text-sm font-medium text-[color:var(--text-primary)]">
-        {value}
-      </div>
-    </div>
   );
 }
