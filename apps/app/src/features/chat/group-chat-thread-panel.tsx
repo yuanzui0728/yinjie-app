@@ -137,9 +137,6 @@ export function GroupChatThreadPanel({
     sendMutation.error instanceof Error ? sendMutation.error.message : null;
   const effectiveBackground = backgroundQuery.data?.effectiveBackground ?? null;
   const announcement = groupQuery.data?.announcement?.trim() ?? "";
-  const groupMemberCount = membersQuery.data?.length ?? 0;
-  const groupSubtitle = groupMemberCount ? `${groupMemberCount} 人` : undefined;
-
   useEffect(() => {
     if (!highlightedMessageId || !hasHighlightedMessage) {
       return;
@@ -299,7 +296,6 @@ export function GroupChatThreadPanel({
       ) : (
         <MobileChatThreadHeader
           title={groupQuery.data?.name ?? "群聊"}
-          subtitle={groupSubtitle}
           onBack={onBack}
           onMore={() => {
             void navigate({
