@@ -553,19 +553,6 @@ export function GroupChatThreadPanel({
     onDesktopCallAction?.(kind);
   };
 
-  const handleOpenGroupRelay = () => {
-    const query = new URLSearchParams({
-      miniProgram: "group-relay",
-      sourceGroupId: groupId,
-      sourceGroupName: groupQuery.data?.name ?? "当前群聊",
-    });
-
-    void navigate({
-      to: "/tabs/mini-programs",
-      search: `?${query.toString()}`,
-    });
-  };
-
   return (
     <div
       className={`flex h-full min-h-0 flex-col ${
@@ -607,43 +594,30 @@ export function GroupChatThreadPanel({
 
       {isDesktop ? (
         <div className="flex items-center gap-3 border-b border-black/5 bg-[#f7f7f7] px-6 py-3">
-          {announcement ? (
-            <button
-              type="button"
-              onClick={() => {
-                void navigate({
-                  to: "/group/$groupId/announcement",
-                  params: { groupId },
-                });
-              }}
-              className="flex min-w-0 flex-1 items-start gap-3 text-left transition hover:opacity-90"
-            >
-              <span className="mt-0.5 shrink-0 rounded-full bg-[rgba(7,193,96,0.10)] px-2.5 py-1 text-[10px] font-medium tracking-[0.08em] text-[#07a35a]">
-                群公告
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[13px] text-[color:var(--text-primary)]">
-                  {announcement}
-                </div>
-                <div className="mt-1 text-[11px] text-[color:var(--text-muted)]">
-                  最近更新 {formatTimestamp(groupQuery.data?.updatedAt)}
-                </div>
-              </div>
-            </button>
-          ) : (
-            <div className="min-w-0 flex-1 text-[12px] text-[color:var(--text-muted)]">
-              群公告还没有内容，可以先去写一条，再用群接龙收集结果。
-            </div>
-          )}
-
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleOpenGroupRelay}
-            className="shrink-0 rounded-full border-black/8 bg-white"
+          <button
+            type="button"
+            onClick={() => {
+              void navigate({
+                to: "/group/$groupId/announcement",
+                params: { groupId },
+              });
+            }}
+            className="flex min-w-0 flex-1 items-start gap-3 text-left transition hover:opacity-90"
           >
-            群接龙
-          </Button>
+            <span className="mt-0.5 shrink-0 rounded-full bg-[rgba(7,193,96,0.10)] px-2.5 py-1 text-[10px] font-medium tracking-[0.08em] text-[#07a35a]">
+              群公告
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[13px] text-[color:var(--text-primary)]">
+                {announcement || "暂无群公告，点击填写本群说明。"}
+              </div>
+              <div className="mt-1 text-[11px] text-[color:var(--text-muted)]">
+                {announcement
+                  ? `最近更新 ${formatTimestamp(groupQuery.data?.updatedAt)}`
+                  : "群接龙与群协作入口先收口到聊天信息侧栏"}
+              </div>
+            </div>
+          </button>
         </div>
       ) : null}
 
