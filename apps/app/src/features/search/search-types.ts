@@ -24,6 +24,12 @@ export type SearchResultItem = {
 
 export type SearchMatchCounts = Record<SearchResultCategory, number>;
 
+export type SearchResultSection = {
+  category: SearchResultCategory;
+  label: string;
+  results: SearchResultItem[];
+};
+
 export type SearchScopeCounts = {
   conversations: number;
   contacts: number;
