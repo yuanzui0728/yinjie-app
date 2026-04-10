@@ -1,4 +1,15 @@
-import { useProviderSetup, Button, InlineNotice, ProviderSetupForm, SetupScaffold, SetupStatusCard, SetupStepList } from "@yinjie/ui";
+import {
+  useProviderSetup,
+  Button,
+  Card,
+  InlineNotice,
+  MetricCard,
+  ProviderSetupForm,
+  SectionHeading,
+  SetupStatusCard,
+  SetupStepList,
+  StatusPill,
+} from "@yinjie/ui";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { getSystemStatus } from "@yinjie/contracts";
@@ -38,6 +49,8 @@ export function SetupPage() {
 
   const coreApiReady = Boolean(systemStatusQuery.data?.coreApi.healthy);
   const providerReady = providerSetup.providerReady;
+  const worldOwnerReady = (systemStatusQuery.data?.worldSurface.ownerCount ?? 0) === 1;
+  const schedulerReady = Boolean(systemStatusQuery.data?.scheduler.healthy);
   const setupSteps = [
     {
       label: "远程 API",
@@ -69,111 +82,238 @@ export function SetupPage() {
       providerSetup.providerSaveMutation.error.message) ||
     null;
 
+  const readinessSummary = coreApiReady && providerReady
+    ? "远程接口和推理服务均已就绪，当前实例已经可以进入角色、回复逻辑和评测工作区。"
+    : coreApiReady
+      ? "远程接口已连通，当前只差推理服务配置。"
+      : "先恢复远程世界接口，再继续配置推理服务。";
+
   return (
-    <SetupScaffold
-      badge="后台设置"
-      title="为当前世界实例完成运维准备"
-      description="管理后台现在面向单用户世界实例。先确认远程接口可达，再配置当前世界使用的推理服务。"
-      heroAside={<SetupStepList steps={setupSteps} />}
-      left={
-        <section className="space-y-4 rounded-[30px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-6 shadow-[var(--shadow-card)]">
-          <div className="grid gap-4 md:grid-cols-2">
-            <SetupStatusCard
-              title="远程 API"
-              value={systemStatusQuery.data?.coreApi.version ?? "离线"}
-              detail={
-                systemStatusQuery.data?.coreApi.message ??
-                "管理后台连接的是远程世界实例，而不是本地托管核心接口。"
-              }
-              ok={coreApiReady}
+    <div className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
+        <Card className="bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(255,247,235,0.92)_45%,rgba(237,250,244,0.95))]">
+          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+            <div className="max-w-2xl">
+              <div className="text-[11px] uppercase tracking-[0.28em] text-[color:var(--text-muted)]">运维准备</div>
+              <h2 className="mt-3 text-3xl font-semibold text-[color:var(--text-primary)]">先打通实例，再补齐模型。</h2>
+              <p className="mt-3 text-sm leading-7 text-[color:var(--text-secondary)]">{readinessSummary}</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link to="/">
+                <Button variant="secondary">返回总览</Button>
+              </Link>
+              <Link to="/reply-logic">
+                <Button variant="secondary" disabled={!coreApiReady}>查看回复逻辑</Button>
+              </Link>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <MetricCard
+              label="远程 API"
+              value={coreApiReady ? "已连通" : "待恢复"}
+              detail={systemStatusQuery.data?.coreApi.version ?? "等待探测"}
+              meta={<StatusPill tone={coreApiReady ? "healthy" : "warning"}>{coreApiReady ? "在线" : "离线"}</StatusPill>}
             />
-            <SetupStatusCard
-              title="数据库"
-              value={systemStatusQuery.data?.database.path ?? "未知"}
-              detail={
-                systemStatusQuery.data
-                  ? `已连接=${systemStatusQuery.data.database.connected} · WAL=${systemStatusQuery.data.database.walEnabled}`
-                  : "等待实例状态..."
-              }
-              ok={Boolean(systemStatusQuery.data?.database.connected)}
+            <MetricCard
+              label="推理服务"
+              value={providerReady ? "已配置" : "待配置"}
+              detail={providerSetup.providerDraft.model || "当前未填写模型"}
+              meta={<StatusPill tone={providerReady ? "healthy" : "warning"}>{providerReady ? "可用" : "缺失"}</StatusPill>}
             />
-            <SetupStatusCard
-              title="调度器"
-              value={systemStatusQuery.data?.scheduler.mode ?? "未知"}
-              detail={
-                systemStatusQuery.data
-                  ? `${systemStatusQuery.data.scheduler.jobs.length} 个任务 · 快照=${systemStatusQuery.data.scheduler.worldSnapshots}`
-                  : "等待调度器状态..."
-              }
-              ok={Boolean(systemStatusQuery.data?.scheduler.healthy)}
+            <MetricCard
+              label="调度器"
+              value={schedulerReady ? "健康" : "待关注"}
+              detail={systemStatusQuery.data?.scheduler.mode ?? "未知"}
+              meta={<StatusPill tone={schedulerReady ? "healthy" : "warning"}>{schedulerReady ? "正常" : "异常"}</StatusPill>}
             />
-            <SetupStatusCard
-              title="世界主人"
+            <MetricCard
+              label="世界主人"
               value={String(systemStatusQuery.data?.worldSurface.ownerCount ?? 0)}
-              detail="健康的单世界实例在运行时应当且仅应暴露一个世界主人。"
-              ok={(systemStatusQuery.data?.worldSurface.ownerCount ?? 0) === 1}
+              detail="单世界实例应当且仅应有一个世界主人"
+              meta={<StatusPill tone={worldOwnerReady ? "healthy" : "warning"}>{worldOwnerReady ? "正确" : "异常"}</StatusPill>}
             />
+          </div>
+        </Card>
+
+        <Card className="bg-[color:var(--surface-console)]">
+          <SectionHeading>接入检查</SectionHeading>
+          <div className="mt-4">
+            <SetupStepList steps={setupSteps} />
           </div>
 
           {systemStatusQuery.isError && systemStatusQuery.error instanceof Error ? (
-            <InlineNotice tone="warning">{systemStatusQuery.error.message}</InlineNotice>
+            <InlineNotice className="mt-4" tone="warning">{systemStatusQuery.error.message}</InlineNotice>
           ) : null}
 
-          <InlineNotice tone={coreApiReady ? "success" : "warning"}>
-            {coreApiReady
-              ? providerReady
-                ? "远程接口和推理服务均已就绪。当前世界已经可以运行聊天、广场、朋友圈和调度流程。"
-                : "远程接口已可访问，下一步请完成推理服务配置。"
-              : "管理后台暂时还未连接到远程世界接口。"}
-          </InlineNotice>
-        </section>
-      }
-      right={
-        <ProviderSetupForm
-          className="rounded-[30px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-6 shadow-[var(--shadow-card)]"
-          title="推理服务配置"
-          description="当世界主人没有配置个人 API 密钥时，这里保存实例级推理服务配置供当前世界兜底使用。"
-          statusLabel={providerReady ? "已配置" : "待配置"}
-          endpointLabel="接口地址"
-          modeLabel="模式"
-          modelLabel="模型"
-          apiKeyLabel="API 密钥"
-          endpointPlaceholder="https://api.openai.com/v1"
-          modelPlaceholder="gpt-4.1-mini"
-          apiKeyPlaceholder="输入实例级推理服务 API 密钥"
-          probeLabel="测试连接"
-          saveLabel="保存配置"
-          draft={providerSetup.providerDraft}
-          availableModels={providerSetup.availableModelsQuery.data?.models ?? []}
-          availableModelsId="admin-setup-available-models"
-          disabled={!coreApiReady}
-          validationMessage={providerSetup.providerValidationMessage}
-          errorMessage={providerLoadError}
-          actionErrorMessage={providerActionError}
-          footerMessage={
-            !coreApiReady
-              ? "请先连通远程世界 API。"
-              : providerSetup.providerProbeMutation.data
-                ? providerSetup.providerProbeMutation.data.message
-                : providerSetup.providerSaveMutation.data
-                  ? `已保存推理服务 ${providerSetup.providerSaveMutation.data.model}（${formatProviderMode(providerSetup.providerSaveMutation.data.mode)}）`
-                  : "这里保存的是当前世界的实例级推理服务配置。"
-          }
-          onSubmit={providerSetup.submitProviderSave}
-          onProbe={providerSetup.submitProviderProbe}
-          onChange={providerSetup.updateProviderDraft}
-          probePending={providerSetup.providerProbeMutation.isPending}
-          savePending={providerSetup.providerSaveMutation.isPending}
-        />
-      }
-      footer={
-        <section className="flex flex-wrap gap-3">
-          <Link to="/">
-            <Button variant="secondary">返回总览</Button>
-          </Link>
-        </section>
-      }
-      className="px-0 py-0"
-    />
+          <div className="mt-4 space-y-3">
+            <ChecklistItem
+              title="先确认远程 API 可达"
+              description="如果接口离线，先检查世界实例地址、反向代理和服务进程。"
+              ok={coreApiReady}
+            />
+            <ChecklistItem
+              title="确认世界主人数量正确"
+              description="当前实例必须保持单世界主人语义，数量不为 1 时先处理数据状态。"
+              ok={worldOwnerReady}
+            />
+            <ChecklistItem
+              title="保存并测试推理服务"
+              description="模型、接口地址和 API Key 都正确后，再进入回复逻辑和评测工作区。"
+              ok={providerReady}
+            />
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="space-y-6">
+          <Card className="bg-[color:var(--surface-console)]">
+            <SectionHeading>实例状态详情</SectionHeading>
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <SetupStatusCard
+                title="远程 API"
+                value={systemStatusQuery.data?.coreApi.version ?? "离线"}
+                detail={
+                  systemStatusQuery.data?.coreApi.message ??
+                  "管理后台连接的是远程世界实例，而不是本地托管核心接口。"
+                }
+                ok={coreApiReady}
+              />
+              <SetupStatusCard
+                title="数据库"
+                value={systemStatusQuery.data?.database.path ?? "未知"}
+                detail={
+                  systemStatusQuery.data
+                    ? `已连接=${systemStatusQuery.data.database.connected} · WAL=${systemStatusQuery.data.database.walEnabled}`
+                    : "等待实例状态..."
+                }
+                ok={Boolean(systemStatusQuery.data?.database.connected)}
+              />
+              <SetupStatusCard
+                title="调度器"
+                value={systemStatusQuery.data?.scheduler.mode ?? "未知"}
+                detail={
+                  systemStatusQuery.data
+                    ? `${systemStatusQuery.data.scheduler.jobs.length} 个任务 · 快照=${systemStatusQuery.data.scheduler.worldSnapshots}`
+                    : "等待调度器状态..."
+                }
+                ok={schedulerReady}
+              />
+              <SetupStatusCard
+                title="世界主人"
+                value={String(systemStatusQuery.data?.worldSurface.ownerCount ?? 0)}
+                detail="健康的单世界实例在运行时应当且仅应暴露一个世界主人。"
+                ok={worldOwnerReady}
+              />
+            </div>
+          </Card>
+
+          <Card className="bg-[color:var(--surface-console)]">
+            <SectionHeading>下一步建议</SectionHeading>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <ActionHint
+                title="进入角色中心"
+                detail="接口和模型就绪后，优先检查角色资料、工厂和运行逻辑。"
+                href="/characters"
+                disabled={!coreApiReady}
+              />
+              <ActionHint
+                title="进入回复逻辑"
+                detail="确认真实回复链路、上下文快照和规则配置。"
+                href="/reply-logic"
+                disabled={!coreApiReady || !providerReady}
+              />
+              <ActionHint
+                title="进入评测分析"
+                detail="用 runs、compare 和 trace 验证配置改动是否生效。"
+                href="/evals"
+                disabled={!coreApiReady || !providerReady}
+              />
+            </div>
+          </Card>
+        </div>
+
+        <div className="space-y-6 xl:sticky xl:top-24 xl:self-start">
+          <ProviderSetupForm
+            className="rounded-[30px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-6 shadow-[var(--shadow-card)]"
+            title="推理服务配置"
+            description="当世界主人没有配置个人 API 密钥时，这里保存实例级推理服务配置供当前世界兜底使用。"
+            statusLabel={providerReady ? "已配置" : "待配置"}
+            endpointLabel="接口地址"
+            modeLabel="模式"
+            modelLabel="模型"
+            apiKeyLabel="API 密钥"
+            endpointPlaceholder="https://api.openai.com/v1"
+            modelPlaceholder="gpt-4.1-mini"
+            apiKeyPlaceholder="输入实例级推理服务 API 密钥"
+            probeLabel="测试连接"
+            saveLabel="保存配置"
+            draft={providerSetup.providerDraft}
+            availableModels={providerSetup.availableModelsQuery.data?.models ?? []}
+            availableModelsId="admin-setup-available-models"
+            disabled={!coreApiReady}
+            validationMessage={providerSetup.providerValidationMessage}
+            errorMessage={providerLoadError}
+            actionErrorMessage={providerActionError}
+            footerMessage={
+              !coreApiReady
+                ? "请先连通远程世界 API。"
+                : providerSetup.providerProbeMutation.data
+                  ? providerSetup.providerProbeMutation.data.message
+                  : providerSetup.providerSaveMutation.data
+                    ? `已保存推理服务 ${providerSetup.providerSaveMutation.data.model}（${formatProviderMode(providerSetup.providerSaveMutation.data.mode)}）`
+                    : "这里保存的是当前世界的实例级推理服务配置。"
+            }
+            onSubmit={providerSetup.submitProviderSave}
+            onProbe={providerSetup.submitProviderProbe}
+            onChange={providerSetup.updateProviderDraft}
+            probePending={providerSetup.providerProbeMutation.isPending}
+            savePending={providerSetup.providerSaveMutation.isPending}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChecklistItem({
+  title,
+  description,
+  ok,
+}: {
+  title: string;
+  description: string;
+  ok: boolean;
+}) {
+  return (
+    <div className="rounded-[22px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4 shadow-[var(--shadow-soft)]">
+      <div className="flex items-center justify-between gap-3">
+        <div className="font-semibold text-[color:var(--text-primary)]">{title}</div>
+        <StatusPill tone={ok ? "healthy" : "warning"}>{ok ? "完成" : "待处理"}</StatusPill>
+      </div>
+      <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{description}</div>
+    </div>
+  );
+}
+
+function ActionHint({
+  title,
+  detail,
+  href,
+  disabled,
+}: {
+  title: string;
+  detail: string;
+  href: "/characters" | "/reply-logic" | "/evals";
+  disabled?: boolean;
+}) {
+  return (
+    <Link to={href} disabled={disabled} className={disabled ? "pointer-events-none opacity-50" : "block"}>
+      <div className="h-full rounded-[24px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4 shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]">
+        <div className="font-semibold text-[color:var(--text-primary)]">{title}</div>
+        <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{detail}</div>
+      </div>
+    </Link>
   );
 }
