@@ -105,6 +105,11 @@ export interface ReplyLogicActivityScheduleRules {
   eating: number[];
 }
 
+export interface ReplyLogicDefaultCharacterRules {
+  isOnline: boolean;
+  activity: string;
+}
+
 export interface ReplyLogicObservabilityTemplates {
   stateGateSleeping: string;
   stateGateBusy: string;
@@ -314,6 +319,7 @@ export interface ReplyLogicOverview {
     relationshipStrengthMax: number;
     activityScheduleHours: ReplyLogicActivityScheduleRules;
     activityRandomPool: string[];
+    defaultCharacterRules: ReplyLogicDefaultCharacterRules;
     activityBaseWeight: number;
     proactiveReminderHour: number;
     relationshipInitialBackstory: string;

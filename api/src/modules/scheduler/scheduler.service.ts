@@ -274,8 +274,8 @@ export class SchedulerService {
           char.id as (typeof DEFAULT_CHARACTER_IDS)[number],
         )
       ) {
-        const nextOnline = true;
-        const nextActivity = 'free';
+        const nextOnline = runtimeRules.defaultCharacterRules.isOnline;
+        const nextActivity = runtimeRules.defaultCharacterRules.activity;
         const onlineChanged = char.isOnline !== nextOnline;
         const activityChanged = char.currentActivity !== nextActivity;
         if (onlineChanged || activityChanged) {
@@ -291,12 +291,16 @@ export class SchedulerService {
               title: runtimeRules.schedulerTextTemplates.eventTitleOnlineStatusChanged,
               summary: renderTemplate(
                 runtimeRules.schedulerTextTemplates.eventSummaryDefaultOnlineKept,
-                {},
+                { onlineState: nextOnline ? '在线' : '离线' },
               ),
               jobId: 'update_ai_active_status',
             });
           }
           if (activityChanged) {
+            const activityLabel =
+              runtimeRules.semanticLabels.activityLabels[
+                nextActivity as keyof typeof runtimeRules.semanticLabels.activityLabels
+              ] ?? nextActivity;
             this.telemetry.recordCharacterEvent({
               characterId: char.id,
               characterName: char.name,
@@ -304,7 +308,7 @@ export class SchedulerService {
               title: runtimeRules.schedulerTextTemplates.eventTitleActivityChanged,
               summary: renderTemplate(
                 runtimeRules.schedulerTextTemplates.eventSummaryDefaultActivityReset,
-                {},
+                { activity: activityLabel },
               ),
               jobId: 'update_ai_active_status',
             });
@@ -592,15 +596,21 @@ export class SchedulerService {
           char.id as (typeof DEFAULT_CHARACTER_IDS)[number],
         )
       ) {
-        const activityChanged = char.currentActivity !== 'free';
-        const onlineChanged = char.isOnline !== true;
+        const defaultActivity = runtimeRules.defaultCharacterRules.activity;
+        const defaultOnline = runtimeRules.defaultCharacterRules.isOnline;
+        const activityChanged = char.currentActivity !== defaultActivity;
+        const onlineChanged = char.isOnline !== defaultOnline;
         if (activityChanged || onlineChanged) {
           await this.characterRepo.update(char.id, {
-            currentActivity: 'free',
-            isOnline: true,
+            currentActivity: defaultActivity,
+            isOnline: defaultOnline,
           });
           updatedCount += 1;
           if (activityChanged) {
+            const activityLabel =
+              runtimeRules.semanticLabels.activityLabels[
+                defaultActivity as keyof typeof runtimeRules.semanticLabels.activityLabels
+              ] ?? defaultActivity;
             this.telemetry.recordCharacterEvent({
               characterId: char.id,
               characterName: char.name,
@@ -608,7 +618,7 @@ export class SchedulerService {
               title: runtimeRules.schedulerTextTemplates.eventTitleActivityChanged,
               summary: renderTemplate(
                 runtimeRules.schedulerTextTemplates.eventSummaryDefaultActivityReset,
-                {},
+                { activity: activityLabel },
               ),
               jobId: 'update_character_status',
             });
