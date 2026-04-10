@@ -4,6 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import type {
   CharacterBlueprintRecipeValue,
   CharacterBlueprintSourceTypeValue,
+  CharacterFactoryFieldSourceContract,
+  CharacterFactoryPublishDiffItemContract,
   CharacterFactorySnapshotContract,
 } from './character-blueprint.types';
 import { Repository } from 'typeorm';
@@ -17,6 +19,303 @@ type RevisionChangeSource =
   | 'restore'
   | 'seed_backfill'
   | 'manual_snapshot';
+
+type CharacterFieldMapping = {
+  label: string;
+  recipeField: string;
+  targetField: string;
+  readRecipe: (recipe: CharacterBlueprintRecipeValue) => unknown;
+  readCharacter: (character: CharacterEntity) => unknown;
+};
+
+const CHARACTER_FIELD_MAPPINGS: CharacterFieldMapping[] = [
+  {
+    label: '名称',
+    recipeField: 'identity.name',
+    targetField: 'name',
+    readRecipe: (recipe) => recipe.identity.name,
+    readCharacter: (character) => character.name,
+  },
+  {
+    label: '关系描述',
+    recipeField: 'identity.relationship',
+    targetField: 'relationship',
+    readRecipe: (recipe) => recipe.identity.relationship,
+    readCharacter: (character) => character.relationship,
+  },
+  {
+    label: '关系类型',
+    recipeField: 'identity.relationshipType',
+    targetField: 'relationshipType',
+    readRecipe: (recipe) => recipe.identity.relationshipType,
+    readCharacter: (character) => character.relationshipType,
+  },
+  {
+    label: '头像',
+    recipeField: 'identity.avatar',
+    targetField: 'avatar',
+    readRecipe: (recipe) => recipe.identity.avatar,
+    readCharacter: (character) => character.avatar,
+  },
+  {
+    label: '简介',
+    recipeField: 'identity.bio',
+    targetField: 'bio',
+    readRecipe: (recipe) => recipe.identity.bio,
+    readCharacter: (character) => character.bio,
+  },
+  {
+    label: '职业',
+    recipeField: 'identity.occupation',
+    targetField: 'profile.identity.occupation',
+    readRecipe: (recipe) => recipe.identity.occupation,
+    readCharacter: (character) => character.profile?.identity?.occupation ?? '',
+  },
+  {
+    label: '背景',
+    recipeField: 'identity.background',
+    targetField: 'profile.identity.background',
+    readRecipe: (recipe) => recipe.identity.background,
+    readCharacter: (character) => character.profile?.identity?.background ?? '',
+  },
+  {
+    label: '核心动机',
+    recipeField: 'identity.motivation',
+    targetField: 'profile.identity.motivation',
+    readRecipe: (recipe) => recipe.identity.motivation,
+    readCharacter: (character) => character.profile?.identity?.motivation ?? '',
+  },
+  {
+    label: '世界观',
+    recipeField: 'identity.worldview',
+    targetField: 'profile.identity.worldview',
+    readRecipe: (recipe) => recipe.identity.worldview,
+    readCharacter: (character) => character.profile?.identity?.worldview ?? '',
+  },
+  {
+    label: '擅长领域',
+    recipeField: 'expertise.expertDomains',
+    targetField: 'expertDomains',
+    readRecipe: (recipe) => recipe.expertise.expertDomains,
+    readCharacter: (character) => character.expertDomains,
+  },
+  {
+    label: '专长描述',
+    recipeField: 'expertise.expertiseDescription',
+    targetField: 'profile.cognitiveBoundaries.expertiseDescription',
+    readRecipe: (recipe) => recipe.expertise.expertiseDescription,
+    readCharacter: (character) =>
+      character.profile?.cognitiveBoundaries?.expertiseDescription ?? '',
+  },
+  {
+    label: '知识边界',
+    recipeField: 'expertise.knowledgeLimits',
+    targetField: 'profile.cognitiveBoundaries.knowledgeLimits',
+    readRecipe: (recipe) => recipe.expertise.knowledgeLimits,
+    readCharacter: (character) =>
+      character.profile?.cognitiveBoundaries?.knowledgeLimits ?? '',
+  },
+  {
+    label: '拒绝方式',
+    recipeField: 'expertise.refusalStyle',
+    targetField: 'profile.cognitiveBoundaries.refusalStyle',
+    readRecipe: (recipe) => recipe.expertise.refusalStyle,
+    readCharacter: (character) =>
+      character.profile?.cognitiveBoundaries?.refusalStyle ?? '',
+  },
+  {
+    label: '说话习惯',
+    recipeField: 'tone.speechPatterns',
+    targetField: 'profile.traits.speechPatterns',
+    readRecipe: (recipe) => recipe.tone.speechPatterns,
+    readCharacter: (character) => character.profile?.traits?.speechPatterns ?? [],
+  },
+  {
+    label: '口头禅',
+    recipeField: 'tone.catchphrases',
+    targetField: 'profile.traits.catchphrases',
+    readRecipe: (recipe) => recipe.tone.catchphrases,
+    readCharacter: (character) => character.profile?.traits?.catchphrases ?? [],
+  },
+  {
+    label: '兴趣话题',
+    recipeField: 'tone.topicsOfInterest',
+    targetField: 'profile.traits.topicsOfInterest',
+    readRecipe: (recipe) => recipe.tone.topicsOfInterest,
+    readCharacter: (character) =>
+      character.profile?.traits?.topicsOfInterest ?? [],
+  },
+  {
+    label: '情绪基调',
+    recipeField: 'tone.emotionalTone',
+    targetField: 'profile.traits.emotionalTone',
+    readRecipe: (recipe) => recipe.tone.emotionalTone,
+    readCharacter: (character) => character.profile?.traits?.emotionalTone ?? '',
+  },
+  {
+    label: '回复长度',
+    recipeField: 'tone.responseLength',
+    targetField: 'profile.traits.responseLength',
+    readRecipe: (recipe) => recipe.tone.responseLength,
+    readCharacter: (character) => character.profile?.traits?.responseLength ?? '',
+  },
+  {
+    label: '表情使用',
+    recipeField: 'tone.emojiUsage',
+    targetField: 'profile.traits.emojiUsage',
+    readRecipe: (recipe) => recipe.tone.emojiUsage,
+    readCharacter: (character) => character.profile?.traits?.emojiUsage ?? '',
+  },
+  {
+    label: '工作风格',
+    recipeField: 'tone.workStyle',
+    targetField: 'profile.behavioralPatterns.workStyle',
+    readRecipe: (recipe) => recipe.tone.workStyle,
+    readCharacter: (character) =>
+      character.profile?.behavioralPatterns?.workStyle ?? '',
+  },
+  {
+    label: '社交风格',
+    recipeField: 'tone.socialStyle',
+    targetField: 'profile.behavioralPatterns.socialStyle',
+    readRecipe: (recipe) => recipe.tone.socialStyle,
+    readCharacter: (character) =>
+      character.profile?.behavioralPatterns?.socialStyle ?? '',
+  },
+  {
+    label: '语言禁忌',
+    recipeField: 'tone.taboos',
+    targetField: 'profile.behavioralPatterns.taboos',
+    readRecipe: (recipe) => recipe.tone.taboos,
+    readCharacter: (character) => character.profile?.behavioralPatterns?.taboos ?? [],
+  },
+  {
+    label: '个人癖好',
+    recipeField: 'tone.quirks',
+    targetField: 'profile.behavioralPatterns.quirks',
+    readRecipe: (recipe) => recipe.tone.quirks,
+    readCharacter: (character) => character.profile?.behavioralPatterns?.quirks ?? [],
+  },
+  {
+    label: '基础提示词',
+    recipeField: 'tone.basePrompt',
+    targetField: 'profile.basePrompt',
+    readRecipe: (recipe) => recipe.tone.basePrompt,
+    readCharacter: (character) => character.profile?.basePrompt ?? '',
+  },
+  {
+    label: '系统提示词',
+    recipeField: 'tone.systemPrompt',
+    targetField: 'profile.systemPrompt',
+    readRecipe: (recipe) => recipe.tone.systemPrompt,
+    readCharacter: (character) => character.profile?.systemPrompt ?? '',
+  },
+  {
+    label: '记忆摘要',
+    recipeField: 'memorySeed.memorySummary',
+    targetField: 'profile.memorySummary',
+    readRecipe: (recipe) => recipe.memorySeed.memorySummary,
+    readCharacter: (character) => character.profile?.memorySummary ?? '',
+  },
+  {
+    label: '核心记忆',
+    recipeField: 'memorySeed.coreMemory',
+    targetField: 'profile.memory.coreMemory',
+    readRecipe: (recipe) => recipe.memorySeed.coreMemory,
+    readCharacter: (character) => character.profile?.memory?.coreMemory ?? '',
+  },
+  {
+    label: '近期摘要初始值',
+    recipeField: 'memorySeed.recentSummarySeed',
+    targetField: 'profile.memory.recentSummary',
+    readRecipe: (recipe) => recipe.memorySeed.recentSummarySeed,
+    readCharacter: (character) => character.profile?.memory?.recentSummary ?? '',
+  },
+  {
+    label: '遗忘曲线',
+    recipeField: 'memorySeed.forgettingCurve',
+    targetField: 'profile.memory.forgettingCurve',
+    readRecipe: (recipe) => recipe.memorySeed.forgettingCurve,
+    readCharacter: (character) => character.profile?.memory?.forgettingCurve ?? 70,
+  },
+  {
+    label: '活动频率',
+    recipeField: 'lifeStrategy.activityFrequency',
+    targetField: 'activityFrequency',
+    readRecipe: (recipe) => recipe.lifeStrategy.activityFrequency,
+    readCharacter: (character) => character.activityFrequency,
+  },
+  {
+    label: '朋友圈频率',
+    recipeField: 'lifeStrategy.momentsFrequency',
+    targetField: 'momentsFrequency',
+    readRecipe: (recipe) => recipe.lifeStrategy.momentsFrequency,
+    readCharacter: (character) => character.momentsFrequency,
+  },
+  {
+    label: '视频号频率',
+    recipeField: 'lifeStrategy.feedFrequency',
+    targetField: 'feedFrequency',
+    readRecipe: (recipe) => recipe.lifeStrategy.feedFrequency,
+    readCharacter: (character) => character.feedFrequency,
+  },
+  {
+    label: '活跃开始小时',
+    recipeField: 'lifeStrategy.activeHoursStart',
+    targetField: 'activeHoursStart',
+    readRecipe: (recipe) => recipe.lifeStrategy.activeHoursStart,
+    readCharacter: (character) => character.activeHoursStart ?? null,
+  },
+  {
+    label: '活跃结束小时',
+    recipeField: 'lifeStrategy.activeHoursEnd',
+    targetField: 'activeHoursEnd',
+    readRecipe: (recipe) => recipe.lifeStrategy.activeHoursEnd,
+    readCharacter: (character) => character.activeHoursEnd ?? null,
+  },
+  {
+    label: '触发场景',
+    recipeField: 'lifeStrategy.triggerScenes',
+    targetField: 'triggerScenes',
+    readRecipe: (recipe) => recipe.lifeStrategy.triggerScenes,
+    readCharacter: (character) => character.triggerScenes ?? [],
+  },
+  {
+    label: '模板标记',
+    recipeField: 'publishMapping.isTemplate',
+    targetField: 'isTemplate',
+    readRecipe: (recipe) => recipe.publishMapping.isTemplate,
+    readCharacter: (character) => character.isTemplate,
+  },
+  {
+    label: '在线模式',
+    recipeField: 'publishMapping.onlineModeDefault',
+    targetField: 'onlineMode',
+    readRecipe: (recipe) => recipe.publishMapping.onlineModeDefault,
+    readCharacter: (character) => character.onlineMode ?? 'auto',
+  },
+  {
+    label: '活动模式',
+    recipeField: 'publishMapping.activityModeDefault',
+    targetField: 'activityMode',
+    readRecipe: (recipe) => recipe.publishMapping.activityModeDefault,
+    readCharacter: (character) => character.activityMode ?? 'auto',
+  },
+  {
+    label: '初始在线状态',
+    recipeField: 'publishMapping.initialOnline',
+    targetField: 'isOnline',
+    readRecipe: (recipe) => recipe.publishMapping.initialOnline,
+    readCharacter: (character) => character.isOnline,
+  },
+  {
+    label: '初始活动',
+    recipeField: 'publishMapping.initialActivity',
+    targetField: 'currentActivity',
+    readRecipe: (recipe) => recipe.publishMapping.initialActivity,
+    readCharacter: (character) => character.currentActivity ?? null,
+  },
+];
 
 function normalizeResponseLength(value: string) {
   return value === 'short' || value === 'long' || value === 'medium'
@@ -34,6 +333,12 @@ function cloneRecipe(
   recipe: CharacterBlueprintRecipeValue,
 ): CharacterBlueprintRecipeValue {
   return JSON.parse(JSON.stringify(recipe)) as CharacterBlueprintRecipeValue;
+}
+
+function cloneCharacter(
+  character: CharacterEntity,
+): CharacterEntity {
+  return JSON.parse(JSON.stringify(character)) as CharacterEntity;
 }
 
 function deepMerge<T>(base: T, patch: Partial<T>): T {
@@ -112,6 +417,32 @@ function listDiffPaths(
   return result;
 }
 
+function valuesEqual(left: unknown, right: unknown) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function summarizeValue(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.length
+      ? value.map((item) => String(item).trim()).filter(Boolean).join('、')
+      : '未设置';
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? '是' : '否';
+  }
+
+  if (
+    value === null ||
+    value === undefined ||
+    (typeof value === 'string' && !value.trim())
+  ) {
+    return '未设置';
+  }
+
+  return String(value);
+}
+
 @Injectable()
 export class CharacterBlueprintService {
   constructor(
@@ -128,6 +459,17 @@ export class CharacterBlueprintService {
   ): Promise<CharacterFactorySnapshotContract> {
     const blueprint = await this.ensureBlueprint(characterId);
     const character = await this.getCharacterOrThrow(characterId);
+    const draftCharacter = this.applyRecipeToCharacter(
+      cloneCharacter(character),
+      cloneRecipe(blueprint.draftRecipe),
+    );
+    const publishedCharacter = blueprint.publishedRecipe
+      ? this.applyRecipeToCharacter(
+          cloneCharacter(character),
+          cloneRecipe(blueprint.publishedRecipe),
+        )
+      : null;
+
     return {
       character: this.toCharacterContract(character),
       blueprint: this.toBlueprintContract(blueprint),
@@ -135,6 +477,12 @@ export class CharacterBlueprintService {
         blueprint.draftRecipe,
         blueprint.publishedRecipe ?? null,
       ),
+      fieldSources: this.buildFieldSources(
+        character,
+        draftCharacter,
+        publishedCharacter,
+      ),
+      publishDiff: this.buildPublishDiff(character, draftCharacter),
     };
   }
 
@@ -428,6 +776,90 @@ export class CharacterBlueprintService {
     return {
       hasUnpublishedChanges: changedFields.length > 0,
       changedFields,
+    };
+  }
+
+  private buildFieldSources(
+    character: CharacterEntity,
+    draftCharacter: CharacterEntity,
+    publishedCharacter?: CharacterEntity | null,
+  ): CharacterFactoryFieldSourceContract[] {
+    return CHARACTER_FIELD_MAPPINGS.map((mapping) => {
+      const runtimeValue = mapping.readCharacter(character);
+      const draftValue = mapping.readCharacter(draftCharacter);
+      const publishedValue = publishedCharacter
+        ? mapping.readCharacter(publishedCharacter)
+        : null;
+      const runtimeMatchesPublished =
+        publishedCharacter !== null &&
+        publishedCharacter !== undefined &&
+        valuesEqual(runtimeValue, publishedValue);
+      const runtimeMatchesDraft = valuesEqual(runtimeValue, draftValue);
+
+      if (!publishedCharacter) {
+        return {
+          label: mapping.label,
+          targetField: mapping.targetField,
+          recipeField: mapping.recipeField,
+          status: 'draft_only' as const,
+          runtimeValue: summarizeValue(runtimeValue),
+          publishedValue: '未发布',
+          draftValue: summarizeValue(draftValue),
+          note: '当前字段仅由草稿配方定义，尚未发布到运行时。',
+        };
+      }
+
+      return {
+        label: mapping.label,
+        targetField: mapping.targetField,
+        recipeField: mapping.recipeField,
+        status: runtimeMatchesPublished
+          ? ('published_sync' as const)
+          : ('runtime_drift' as const),
+        runtimeValue: summarizeValue(runtimeValue),
+        publishedValue: summarizeValue(publishedValue),
+        draftValue: summarizeValue(draftValue),
+        note: runtimeMatchesPublished
+          ? runtimeMatchesDraft
+            ? '当前运行时与已发布版本一致，草稿也保持同步。'
+            : '当前运行时仍来自已发布版本，下一次发布会按草稿更新。'
+          : '当前运行时已偏离上次发布结果，下一次发布会按草稿重新覆盖。',
+      };
+    }).sort((left, right) => {
+      const weight = (value: CharacterFactoryFieldSourceContract['status']) => {
+        switch (value) {
+          case 'runtime_drift':
+            return 0;
+          case 'draft_only':
+            return 1;
+          default:
+            return 2;
+        }
+      };
+      return weight(left.status) - weight(right.status);
+    });
+  }
+
+  private buildPublishDiff(
+    character: CharacterEntity,
+    draftCharacter: CharacterEntity,
+  ) {
+    const items = CHARACTER_FIELD_MAPPINGS.map((mapping) => {
+      const currentValue = mapping.readCharacter(character);
+      const nextValue = mapping.readCharacter(draftCharacter);
+      return {
+        label: mapping.label,
+        targetField: mapping.targetField,
+        recipeField: mapping.recipeField,
+        changed: !valuesEqual(currentValue, nextValue),
+        currentValue: summarizeValue(currentValue),
+        nextValue: summarizeValue(nextValue),
+      };
+    }).sort((left, right) => Number(right.changed) - Number(left.changed));
+
+    return {
+      changedCount: items.filter((item) => item.changed).length,
+      items,
     };
   }
 
