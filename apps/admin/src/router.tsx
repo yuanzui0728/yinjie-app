@@ -22,6 +22,11 @@ const EvalsPage = lazy(async () => {
   return { default: mod.EvalsPage };
 });
 
+const ReplyLogicPage = lazy(async () => {
+  const mod = await import("./routes/reply-logic-page");
+  return { default: mod.ReplyLogicPage };
+});
+
 const SetupPage = lazy(async () => {
   const mod = await import("./routes/setup-page");
   return { default: mod.SetupPage };
@@ -55,13 +60,19 @@ const evalsRoute = createRoute({
   component: EvalsPage,
 });
 
+const replyLogicRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/reply-logic",
+  component: ReplyLogicPage,
+});
+
 const setupRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/setup",
   component: SetupPage,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, charactersRoute, characterEditorRoute, evalsRoute, setupRoute]);
+const routeTree = rootRoute.addChildren([indexRoute, charactersRoute, characterEditorRoute, evalsRoute, replyLogicRoute, setupRoute]);
 
 export const router = createRouter({
   routeTree,
