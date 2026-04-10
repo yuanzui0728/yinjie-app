@@ -63,6 +63,7 @@ export function GroupChatThreadPanel({
   const backgroundQuery = useGroupBackground(groupId);
   const [text, setText] = useState("");
   const [replyDraft, setReplyDraft] = useState<ChatReplyMetadata | null>(null);
+  const [selectionModeActive, setSelectionModeActive] = useState(false);
   const isDesktop = variant === "desktop";
 
   const groupQuery = useQuery({
@@ -87,6 +88,7 @@ export function GroupChatThreadPanel({
   useEffect(() => {
     setText("");
     setReplyDraft(null);
+    setSelectionModeActive(false);
   }, [baseUrl, groupId]);
 
   useEffect(() => {
@@ -399,6 +401,7 @@ export function GroupChatThreadPanel({
             variant={isDesktop ? "desktop" : "mobile"}
             highlightedMessageId={highlightedMessageId}
             onReplyMessage={handleReplyMessage}
+            onSelectionModeChange={setSelectionModeActive}
             emptyState={
               !isDesktop &&
               !messagesQuery.isLoading &&
@@ -413,30 +416,32 @@ export function GroupChatThreadPanel({
         </div>
       </div>
 
-      <ChatComposer
-        value={text}
-        placeholder="输入消息"
-        variant={isDesktop ? "desktop" : "mobile"}
-        pending={sendMutation.isPending}
-        error={sendError}
-        speechInput={{
-          baseUrl,
-          conversationId: groupId,
-          enabled: runtimeConfig.appPlatform === "web",
-        }}
-        onChange={setText}
-        onSendAttachment={sendAttachmentMessage}
-        mentionCandidates={mentionCandidates}
-        replyPreview={replyPreview}
-        onCancelReply={() => setReplyDraft(null)}
-        onSubmit={() =>
-          sendMutation.mutate({
-            text: replyDraft
-              ? encodeChatReplyText(text, replyDraft)
-              : text.trim(),
-          })
-        }
-      />
+      {!selectionModeActive ? (
+        <ChatComposer
+          value={text}
+          placeholder="输入消息"
+          variant={isDesktop ? "desktop" : "mobile"}
+          pending={sendMutation.isPending}
+          error={sendError}
+          speechInput={{
+            baseUrl,
+            conversationId: groupId,
+            enabled: runtimeConfig.appPlatform === "web",
+          }}
+          onChange={setText}
+          onSendAttachment={sendAttachmentMessage}
+          mentionCandidates={mentionCandidates}
+          replyPreview={replyPreview}
+          onCancelReply={() => setReplyDraft(null)}
+          onSubmit={() =>
+            sendMutation.mutate({
+              text: replyDraft
+                ? encodeChatReplyText(text, replyDraft)
+                : text.trim(),
+            })
+          }
+        />
+      ) : null}
     </div>
   );
 }
