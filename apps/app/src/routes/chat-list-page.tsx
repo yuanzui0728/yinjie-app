@@ -2,8 +2,22 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { getConversations } from "@yinjie/contracts";
-import { Plus, QrCode, Search, UserPlus, Users, WalletCards } from "lucide-react";
-import { AppPage, Button, ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
+import {
+  Plus,
+  QrCode,
+  Search,
+  UserPlus,
+  Users,
+  WalletCards,
+} from "lucide-react";
+import {
+  AppPage,
+  Button,
+  ErrorBlock,
+  InlineNotice,
+  LoadingBlock,
+  cn,
+} from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
@@ -71,7 +85,10 @@ function MobileChatListPage() {
     refetchInterval: 3_000,
   });
 
-  const conversations = useMemo(() => conversationsQuery.data ?? [], [conversationsQuery.data]);
+  const conversations = useMemo(
+    () => conversationsQuery.data ?? [],
+    [conversationsQuery.data],
+  );
   const normalizedSearchText = searchText.trim().toLowerCase();
   const filteredConversations = useMemo(() => {
     if (!normalizedSearchText) {
@@ -80,8 +97,12 @@ function MobileChatListPage() {
 
     return conversations.filter((conversation) => {
       const title = conversation.title.toLowerCase();
-      const lastMessageText = conversation.lastMessage?.text?.toLowerCase() ?? "";
-      return title.includes(normalizedSearchText) || lastMessageText.includes(normalizedSearchText);
+      const lastMessageText =
+        conversation.lastMessage?.text?.toLowerCase() ?? "";
+      return (
+        title.includes(normalizedSearchText) ||
+        lastMessageText.includes(normalizedSearchText)
+      );
     });
   }, [conversations, normalizedSearchText]);
 
@@ -100,21 +121,21 @@ function MobileChatListPage() {
   }
 
   return (
-    <AppPage className="space-y-4 px-0">
+    <AppPage className="space-y-0 bg-[#ededed] px-0 py-0">
       {isQuickMenuOpen ? (
         <button
           type="button"
           aria-label="关闭快捷菜单"
           onClick={() => setIsQuickMenuOpen(false)}
-          className="fixed inset-0 z-30"
+          className="fixed inset-0 z-30 bg-black/5"
         />
       ) : null}
 
       <TabPageTopBar
         title="消息"
-        subtitle={`共 ${conversations.length} 个会话`}
-        className="z-40 space-y-4 overflow-visible px-4 pb-4 pt-3 text-[color:var(--text-primary)]"
+        className="z-40 space-y-3 overflow-visible border-b border-black/5 bg-[rgba(247,247,247,0.96)] px-4 pb-3 pt-3 text-[color:var(--text-primary)] shadow-none"
         titleAlign="center"
+        titleClassName="text-[17px] font-medium tracking-normal"
         rightActions={
           <div className="relative">
             <Button
@@ -122,14 +143,14 @@ function MobileChatListPage() {
               variant="ghost"
               size="icon"
               onClick={() => setIsQuickMenuOpen((current) => !current)}
-              className="h-9 w-9 rounded-full border border-black bg-white/82 text-[color:var(--text-primary)] shadow-[var(--shadow-soft)] hover:bg-white"
+              className="h-9 w-9 rounded-full border border-black/5 bg-white/70 text-[color:var(--text-primary)] shadow-none hover:bg-white"
               aria-label="打开快捷菜单"
             >
               <Plus size={16} strokeWidth={2.4} />
             </Button>
 
             {isQuickMenuOpen ? (
-              <div className="absolute right-0 top-[calc(100%+0.45rem)] z-40 w-48 overflow-hidden rounded-[24px] border border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,246,236,0.94))] p-2 shadow-[var(--shadow-overlay)]">
+              <div className="absolute right-0 top-[calc(100%+0.45rem)] z-40 w-44 overflow-hidden rounded-[14px] bg-[rgba(44,44,44,0.96)] p-1.5 shadow-[0_14px_40px_rgba(15,23,42,0.22)]">
                 {quickActionItems.map((item) => {
                   const Icon = item.icon;
 
@@ -140,9 +161,9 @@ function MobileChatListPage() {
                         key={item.key}
                         type="button"
                         onClick={() => handleNavigate(to)}
-                        className="flex w-full items-center gap-3 rounded-[18px] px-3 py-3 text-left text-sm text-[color:var(--text-primary)] transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-white/82"
+                        className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm text-white transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-white/10"
                       >
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-[rgba(255,138,61,0.12)] text-[color:var(--brand-primary)]">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-white/10 text-white">
                           <Icon size={16} />
                         </div>
                         <span>{item.label}</span>
@@ -154,10 +175,12 @@ function MobileChatListPage() {
                     <button
                       key={item.key}
                       type="button"
-                      onClick={() => handleUnavailableAction(item.unavailableNotice!)}
-                      className="flex w-full items-center gap-3 rounded-[18px] px-3 py-3 text-left text-sm text-[color:var(--text-primary)] transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-white/82"
+                      onClick={() =>
+                        handleUnavailableAction(item.unavailableNotice!)
+                      }
+                      className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm text-white transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-white/10"
                     >
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-2xl bg-[rgba(255,138,61,0.12)] text-[color:var(--brand-primary)]">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-white/10 text-white">
                         <Icon size={16} />
                       </div>
                       <span>{item.label}</span>
@@ -172,58 +195,75 @@ function MobileChatListPage() {
         <label className="relative block">
           <Search
             aria-hidden="true"
-            className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[color:var(--text-dim)]"
+            className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[color:var(--text-dim)]"
           />
           <input
             type="search"
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
-            placeholder="搜索联系人、消息或关键词"
-            className="h-11 w-full rounded-[20px] border border-white/75 bg-white/90 pl-11 pr-4 text-sm text-[color:var(--text-primary)] shadow-[var(--shadow-soft)] outline-none transition-[background-color,border-color,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] placeholder:text-[color:var(--text-dim)] focus:border-[color:var(--border-brand)] focus:bg-white focus:shadow-[var(--shadow-focus)]"
+            placeholder="搜索"
+            className="h-9 w-full rounded-[10px] border border-transparent bg-[#f2f2f2] pl-10 pr-4 text-sm text-[color:var(--text-primary)] outline-none transition-[background-color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] placeholder:text-[color:var(--text-dim)] focus:border-black/5 focus:bg-white"
           />
         </label>
       </TabPageTopBar>
 
-      <div className="space-y-4 px-4 pb-5">
-        {notice ? <InlineNotice tone="info">{notice}</InlineNotice> : null}
-        {conversationsQuery.isLoading ? <LoadingBlock label="正在读取会话..." /> : null}
-        {conversationsQuery.isError && conversationsQuery.error instanceof Error ? (
-          <ErrorBlock message={conversationsQuery.error.message} />
+      <div className="pb-6">
+        {notice ? (
+          <div className="px-3 pt-3">
+            <InlineNotice tone="info">{notice}</InlineNotice>
+          </div>
+        ) : null}
+        {conversationsQuery.isLoading ? (
+          <div className="px-3 pt-3">
+            <LoadingBlock label="正在读取会话..." />
+          </div>
+        ) : null}
+        {conversationsQuery.isError &&
+        conversationsQuery.error instanceof Error ? (
+          <div className="px-3 pt-3">
+            <ErrorBlock message={conversationsQuery.error.message} />
+          </div>
         ) : null}
 
         {!conversationsQuery.isLoading && !conversationsQuery.isError ? (
           hasConversations ? (
-            <section className="overflow-hidden rounded-[28px] border border-white/80 bg-white/88 shadow-[var(--shadow-section)]">
+            <section className="mt-2 overflow-hidden border-y border-black/5 bg-white">
               {filteredConversations.map((conversation, index) => (
                 <ConversationListItemLink
                   key={conversation.id}
                   conversation={conversation}
                   className={cn(
                     "block transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[rgba(255,138,61,0.05)]",
-                    index > 0 ? "border-t border-[color:var(--border-faint)]" : undefined,
+                    index > 0
+                      ? "border-t border-[color:var(--border-faint)]"
+                      : undefined,
                   )}
                 />
               ))}
             </section>
           ) : (
-            <EmptyState
-              title={hasSearchResult ? "没有找到匹配的会话" : "还没有任何会话"}
-              description={
-                hasSearchResult
-                  ? "换一个关键词试试，或者直接去通讯录发起新的对话。"
-                  : "先去通讯录认识角色，或者从发现页触发第一次相遇。"
-              }
-              action={
-                <div className="flex flex-wrap justify-center gap-3">
-                  <Link to="/tabs/contacts">
-                    <Button variant="secondary">去通讯录看看</Button>
-                  </Link>
-                  <Link to="/tabs/discover">
-                    <Button variant="primary">去发现页</Button>
-                  </Link>
-                </div>
-              }
-            />
+            <div className="px-3 pt-8">
+              <EmptyState
+                title={
+                  hasSearchResult ? "没有找到匹配的会话" : "还没有任何会话"
+                }
+                description={
+                  hasSearchResult
+                    ? "换一个关键词试试，或者直接去通讯录发起新的对话。"
+                    : "先去通讯录认识角色，或者从发现页触发第一次相遇。"
+                }
+                action={
+                  <div className="flex flex-wrap justify-center gap-3">
+                    <Link to="/tabs/contacts">
+                      <Button variant="secondary">去通讯录看看</Button>
+                    </Link>
+                    <Link to="/tabs/discover">
+                      <Button variant="primary">去发现页</Button>
+                    </Link>
+                  </div>
+                }
+              />
+            </div>
           )
         ) : null}
       </div>
@@ -238,17 +278,23 @@ function ConversationListItemLink({
   conversation: Awaited<ReturnType<typeof getConversations>>[number];
   className?: string;
 }) {
+  const isPinned = conversation.isPinned;
   const content = (
-    <div className="flex items-center gap-3 px-4 py-4">
+    <div
+      className={cn(
+        "flex items-center gap-3 px-4 py-3.5",
+        isPinned ? "bg-[#f7f7f7]" : "bg-white",
+      )}
+    >
       <AvatarChip name={conversation.title} size="wechat" />
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[15px] font-medium text-[color:var(--text-primary)]">
+            <div className="truncate text-[16px] font-normal text-[color:var(--text-primary)]">
               {conversation.title}
             </div>
             <div className="mt-1 truncate text-[13px] text-[color:var(--text-muted)]">
-              {conversation.lastMessage?.text ?? "从这里开始第一句问候"}
+              {formatConversationPreview(conversation)}
             </div>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1">
@@ -264,13 +310,15 @@ function ConversationListItemLink({
                   conversation.unreadCount > 9 ? "min-w-6" : undefined,
                 )}
               >
-                {conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}
+                {conversation.unreadCount > 99
+                  ? "99+"
+                  : conversation.unreadCount}
               </div>
-            ) : (
-              <div className="rounded-full bg-[rgba(74,222,128,0.12)] px-2 py-0.5 text-[10px] text-emerald-700">
-                已读
+            ) : isPinned ? (
+              <div className="text-[10px] text-[color:var(--text-dim)]">
+                置顶
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -279,7 +327,12 @@ function ConversationListItemLink({
 
   if (conversation.type === "group") {
     return (
-      <Link to="/group/$groupId" params={{ groupId: conversation.id }} className={className}>
+      <Link
+        to="/group/$groupId"
+        params={{ groupId: conversation.id }}
+        search={{}}
+        className={className}
+      >
         {content}
       </Link>
     );
@@ -289,9 +342,44 @@ function ConversationListItemLink({
     <Link
       to="/chat/$conversationId"
       params={{ conversationId: conversation.id }}
+      search={{}}
       className={className}
     >
       {content}
     </Link>
   );
+}
+
+function formatConversationPreview(
+  conversation: Awaited<ReturnType<typeof getConversations>>[number],
+) {
+  const lastMessage = conversation.lastMessage;
+  if (!lastMessage) {
+    return "从这里开始第一句问候";
+  }
+
+  if (lastMessage.type === "image") {
+    return "[图片]";
+  }
+
+  if (lastMessage.type === "file") {
+    return "[文件]";
+  }
+
+  if (lastMessage.type === "contact_card") {
+    return "[名片]";
+  }
+
+  if (lastMessage.type === "location_card") {
+    return "[位置]";
+  }
+
+  if (lastMessage.type === "sticker") {
+    return lastMessage.attachment?.kind === "sticker" &&
+      lastMessage.attachment.label
+      ? `[表情] ${lastMessage.attachment.label}`
+      : "[表情]";
+  }
+
+  return lastMessage.text || "从这里开始第一句问候";
 }
