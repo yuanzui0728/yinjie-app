@@ -135,6 +135,40 @@ export interface ReplyLogicWorldContextRules {
   promptContextTemplate: string;
 }
 
+export interface ReplyLogicInspectorTemplates {
+  characterViewIntro: string;
+  characterViewHistoryFound: string;
+  characterViewHistoryMissing: string;
+  historyIncludedNote: string;
+  historyExcludedNote: string;
+  storedGroupTitle: string;
+  storedGroupUpgradedNote: string;
+  storedGroupNextReplyNote: string;
+  directBranchTitle: string;
+  directBranchNextReplyNote: string;
+  formalGroupTitle: string;
+  formalGroupStateGateNote: string;
+  formalGroupReplyRuleNote: string;
+  previewCharacterIntro: string;
+  previewCharacterWithHistory: string;
+  previewCharacterWithoutHistory: string;
+  previewStoredGroup: string;
+  previewDirectConversation: string;
+  previewFormalGroup: string;
+}
+
+export interface ReplyLogicSchedulerDescriptions {
+  world_context_snapshot: string;
+  expire_friend_requests: string;
+  update_ai_active_status: string;
+  check_moment_schedule: string;
+  trigger_scene_friend_requests: string;
+  process_pending_feed_reactions: string;
+  check_channels_schedule: string;
+  update_character_status: string;
+  trigger_memory_proactive_messages: string;
+}
+
 export interface ReplyLogicConstantSummary {
   sleepHintMessages: string[];
   busyHintMessages: Record<string, string[]>;
@@ -163,6 +197,8 @@ export interface ReplyLogicConstantSummary {
   semanticLabels: ReplyLogicSemanticLabels;
   observabilityTemplates: ReplyLogicObservabilityTemplates;
   worldContextRules: ReplyLogicWorldContextRules;
+  inspectorTemplates: ReplyLogicInspectorTemplates;
+  schedulerDescriptions: ReplyLogicSchedulerDescriptions;
 }
 
 export interface ReplyLogicOverviewCharacterItem {

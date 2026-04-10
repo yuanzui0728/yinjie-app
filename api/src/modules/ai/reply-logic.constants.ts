@@ -86,6 +86,40 @@ export type ReplyLogicWorldContextRules = {
   promptContextTemplate: string;
 };
 
+export type ReplyLogicInspectorTemplates = {
+  characterViewIntro: string;
+  characterViewHistoryFound: string;
+  characterViewHistoryMissing: string;
+  historyIncludedNote: string;
+  historyExcludedNote: string;
+  storedGroupTitle: string;
+  storedGroupUpgradedNote: string;
+  storedGroupNextReplyNote: string;
+  directBranchTitle: string;
+  directBranchNextReplyNote: string;
+  formalGroupTitle: string;
+  formalGroupStateGateNote: string;
+  formalGroupReplyRuleNote: string;
+  previewCharacterIntro: string;
+  previewCharacterWithHistory: string;
+  previewCharacterWithoutHistory: string;
+  previewStoredGroup: string;
+  previewDirectConversation: string;
+  previewFormalGroup: string;
+};
+
+export type ReplyLogicSchedulerDescriptions = {
+  world_context_snapshot: string;
+  expire_friend_requests: string;
+  update_ai_active_status: string;
+  check_moment_schedule: string;
+  trigger_scene_friend_requests: string;
+  process_pending_feed_reactions: string;
+  check_channels_schedule: string;
+  update_character_status: string;
+  trigger_memory_proactive_messages: string;
+};
+
 export type ReplyLogicRuntimeRules = {
   sleepHintMessages: string[];
   busyHintMessages: {
@@ -117,6 +151,8 @@ export type ReplyLogicRuntimeRules = {
   semanticLabels: ReplyLogicSemanticLabels;
   observabilityTemplates: ReplyLogicObservabilityTemplates;
   worldContextRules: ReplyLogicWorldContextRules;
+  inspectorTemplates: ReplyLogicInspectorTemplates;
+  schedulerDescriptions: ReplyLogicSchedulerDescriptions;
 };
 
 export const REPLY_LOGIC_RUNTIME_RULES_CONFIG_KEY =
@@ -334,6 +370,49 @@ export const DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES: ReplyLogicWorldContextRule
     promptContextTemplate: '【当前世界状态】{{context}}',
   });
 
+export const DEFAULT_REPLY_LOGIC_INSPECTOR_TEMPLATES: ReplyLogicInspectorTemplates =
+  Object.freeze({
+    characterViewIntro: '角色视图使用“单聊直回”逻辑展示 prompt 和状态门控。',
+    characterViewHistoryFound:
+      '已找到与该角色关联的单聊，会使用该会话的可见历史和最近一次用户发言时间。',
+    characterViewHistoryMissing: '未找到现有单聊，当前视图仅展示角色默认直聊快照。',
+    historyIncludedNote: '进入第一个角色的当前上下文窗口',
+    historyExcludedNote: '在当前可见历史中，但超出第一个角色的窗口',
+    storedGroupTitle: '临时群聊已转为 stored conversation',
+    storedGroupUpgradedNote: '当前会话来自 conversations 表，但类型已经升级为 group。',
+    storedGroupNextReplyNote: '下一次用户消息会直接按 group 分支让所有参与角色回复。',
+    directBranchTitle: '单聊直回链路',
+    directBranchNextReplyNote:
+      '下一次用户消息会先经过当前状态门控，再进入意图分类与单聊回复链。',
+    formalGroupTitle: '正式群聊异步回复链路',
+    formalGroupStateGateNote: '正式群聊不会经过单聊状态门控。',
+    formalGroupReplyRuleNote:
+      '角色是否回复取决于 activityFrequency，对应不同的随机回复概率和延迟。',
+    previewCharacterIntro:
+      '这是基于当前角色配置和当前可见历史，对这条候选消息做的即时预演。',
+    previewCharacterWithHistory: '预演使用了该角色当前单聊的真实可见历史。',
+    previewCharacterWithoutHistory: '该角色还没有现成单聊，预演基于空历史进行。',
+    previewStoredGroup:
+      '这是 stored conversation 群聊分支下，按当前选中角色进行的候选消息预演。',
+    previewDirectConversation:
+      '这是单聊分支下，按当前选中角色进行的候选消息预演。',
+    previewFormalGroup:
+      '这是正式群聊异步回复分支下，按当前选中角色进行的候选消息预演。',
+  });
+
+export const DEFAULT_REPLY_LOGIC_SCHEDULER_DESCRIPTIONS: ReplyLogicSchedulerDescriptions =
+  Object.freeze({
+    world_context_snapshot: '刷新 WorldContext 快照，供回复链路读取当前世界状态。',
+    expire_friend_requests: '清理当天过期的待处理好友请求。',
+    update_ai_active_status: '根据活跃时间窗口更新角色在线状态，并推进 AI 角色关系。',
+    check_moment_schedule: '检查角色是否应发布朋友圈内容。',
+    trigger_scene_friend_requests: '按场景触发新的好友请求机会。',
+    process_pending_feed_reactions: '处理待执行的 AI 广场互动。',
+    check_channels_schedule: '按频率生成视频号内容，并补足基础内容池。',
+    update_character_status: '根据时间段刷新角色当前活动状态。',
+    trigger_memory_proactive_messages: '扫描角色记忆，在合适时机主动给用户发提醒。',
+  });
+
 export const DEFAULT_REPLY_LOGIC_RUNTIME_RULES: ReplyLogicRuntimeRules =
   Object.freeze({
     sleepHintMessages: [...SLEEP_HINTS],
@@ -417,6 +496,12 @@ export const DEFAULT_REPLY_LOGIC_RUNTIME_RULES: ReplyLogicRuntimeRules =
       contextSeparator: DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.contextSeparator,
       promptContextTemplate:
         DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.promptContextTemplate,
+    },
+    inspectorTemplates: {
+      ...DEFAULT_REPLY_LOGIC_INSPECTOR_TEMPLATES,
+    },
+    schedulerDescriptions: {
+      ...DEFAULT_REPLY_LOGIC_SCHEDULER_DESCRIPTIONS,
     },
   });
 
@@ -671,6 +756,134 @@ function normalizeWorldContextRules(
   };
 }
 
+function normalizeInspectorTemplates(
+  value: Partial<ReplyLogicInspectorTemplates> | undefined,
+): ReplyLogicInspectorTemplates {
+  const defaults = DEFAULT_REPLY_LOGIC_INSPECTOR_TEMPLATES;
+  return {
+    characterViewIntro: sanitizeTemplate(
+      value?.characterViewIntro,
+      defaults.characterViewIntro,
+    ),
+    characterViewHistoryFound: sanitizeTemplate(
+      value?.characterViewHistoryFound,
+      defaults.characterViewHistoryFound,
+    ),
+    characterViewHistoryMissing: sanitizeTemplate(
+      value?.characterViewHistoryMissing,
+      defaults.characterViewHistoryMissing,
+    ),
+    historyIncludedNote: sanitizeTemplate(
+      value?.historyIncludedNote,
+      defaults.historyIncludedNote,
+    ),
+    historyExcludedNote: sanitizeTemplate(
+      value?.historyExcludedNote,
+      defaults.historyExcludedNote,
+    ),
+    storedGroupTitle: sanitizeTemplate(
+      value?.storedGroupTitle,
+      defaults.storedGroupTitle,
+    ),
+    storedGroupUpgradedNote: sanitizeTemplate(
+      value?.storedGroupUpgradedNote,
+      defaults.storedGroupUpgradedNote,
+    ),
+    storedGroupNextReplyNote: sanitizeTemplate(
+      value?.storedGroupNextReplyNote,
+      defaults.storedGroupNextReplyNote,
+    ),
+    directBranchTitle: sanitizeTemplate(
+      value?.directBranchTitle,
+      defaults.directBranchTitle,
+    ),
+    directBranchNextReplyNote: sanitizeTemplate(
+      value?.directBranchNextReplyNote,
+      defaults.directBranchNextReplyNote,
+    ),
+    formalGroupTitle: sanitizeTemplate(
+      value?.formalGroupTitle,
+      defaults.formalGroupTitle,
+    ),
+    formalGroupStateGateNote: sanitizeTemplate(
+      value?.formalGroupStateGateNote,
+      defaults.formalGroupStateGateNote,
+    ),
+    formalGroupReplyRuleNote: sanitizeTemplate(
+      value?.formalGroupReplyRuleNote,
+      defaults.formalGroupReplyRuleNote,
+    ),
+    previewCharacterIntro: sanitizeTemplate(
+      value?.previewCharacterIntro,
+      defaults.previewCharacterIntro,
+    ),
+    previewCharacterWithHistory: sanitizeTemplate(
+      value?.previewCharacterWithHistory,
+      defaults.previewCharacterWithHistory,
+    ),
+    previewCharacterWithoutHistory: sanitizeTemplate(
+      value?.previewCharacterWithoutHistory,
+      defaults.previewCharacterWithoutHistory,
+    ),
+    previewStoredGroup: sanitizeTemplate(
+      value?.previewStoredGroup,
+      defaults.previewStoredGroup,
+    ),
+    previewDirectConversation: sanitizeTemplate(
+      value?.previewDirectConversation,
+      defaults.previewDirectConversation,
+    ),
+    previewFormalGroup: sanitizeTemplate(
+      value?.previewFormalGroup,
+      defaults.previewFormalGroup,
+    ),
+  };
+}
+
+function normalizeSchedulerDescriptions(
+  value: Partial<ReplyLogicSchedulerDescriptions> | undefined,
+): ReplyLogicSchedulerDescriptions {
+  const defaults = DEFAULT_REPLY_LOGIC_SCHEDULER_DESCRIPTIONS;
+  return {
+    world_context_snapshot: sanitizeTemplate(
+      value?.world_context_snapshot,
+      defaults.world_context_snapshot,
+    ),
+    expire_friend_requests: sanitizeTemplate(
+      value?.expire_friend_requests,
+      defaults.expire_friend_requests,
+    ),
+    update_ai_active_status: sanitizeTemplate(
+      value?.update_ai_active_status,
+      defaults.update_ai_active_status,
+    ),
+    check_moment_schedule: sanitizeTemplate(
+      value?.check_moment_schedule,
+      defaults.check_moment_schedule,
+    ),
+    trigger_scene_friend_requests: sanitizeTemplate(
+      value?.trigger_scene_friend_requests,
+      defaults.trigger_scene_friend_requests,
+    ),
+    process_pending_feed_reactions: sanitizeTemplate(
+      value?.process_pending_feed_reactions,
+      defaults.process_pending_feed_reactions,
+    ),
+    check_channels_schedule: sanitizeTemplate(
+      value?.check_channels_schedule,
+      defaults.check_channels_schedule,
+    ),
+    update_character_status: sanitizeTemplate(
+      value?.update_character_status,
+      defaults.update_character_status,
+    ),
+    trigger_memory_proactive_messages: sanitizeTemplate(
+      value?.trigger_memory_proactive_messages,
+      defaults.trigger_memory_proactive_messages,
+    ),
+  };
+}
+
 function normalizePromptTemplates(
   value: Partial<ReplyLogicPromptTemplates> | undefined,
 ): ReplyLogicPromptTemplates {
@@ -855,6 +1068,10 @@ export function normalizeReplyLogicRuntimeRules(
       input?.observabilityTemplates,
     ),
     worldContextRules: normalizeWorldContextRules(input?.worldContextRules),
+    inspectorTemplates: normalizeInspectorTemplates(input?.inspectorTemplates),
+    schedulerDescriptions: normalizeSchedulerDescriptions(
+      input?.schedulerDescriptions,
+    ),
   };
 }
 

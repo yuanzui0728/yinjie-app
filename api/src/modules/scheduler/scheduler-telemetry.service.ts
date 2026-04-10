@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { Injectable } from '@nestjs/common';
+import { ReplyLogicRulesService } from '../ai/reply-logic-rules.service';
 import {
   SCHEDULER_JOB_DEFINITIONS,
   type SchedulerCharacterEventKindValue,
@@ -25,7 +26,7 @@ export class SchedulerTelemetryService {
   private readonly recentRuns: SchedulerRunRecordValue[] = [];
   private readonly characterEvents = new Map<string, SchedulerCharacterEventValue[]>();
 
-  constructor() {
+  constructor(private readonly replyLogicRules: ReplyLogicRulesService) {
     for (const definition of SCHEDULER_JOB_DEFINITIONS) {
       this.jobs.set(definition.id, {
         ...definition,
@@ -47,11 +48,15 @@ export class SchedulerTelemetryService {
     return this.jobs.get('world_context_snapshot')?.lastRunAt;
   }
 
-  listJobs() {
+  async listJobs() {
+    const runtimeRules = await this.replyLogicRules.getRules();
     return SCHEDULER_JOB_DEFINITIONS.map((definition) => {
       const job = this.jobs.get(definition.id);
       return {
         ...definition,
+        description:
+          runtimeRules.schedulerDescriptions[definition.id] ??
+          definition.description,
         runCount: job?.runCount ?? 0,
         running: job?.running ?? false,
         lastRunAt: job?.lastRunAt,
