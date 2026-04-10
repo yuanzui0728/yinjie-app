@@ -267,6 +267,59 @@ export class AiOrchestratorService {
     );
   }
 
+  private isTransientSpeechFailure(error: unknown) {
+    const message = this.extractErrorMessage(error);
+    const status = this.extractErrorStatus(error);
+
+    if (
+      status === 408 ||
+      status === 409 ||
+      status === 425 ||
+      status === 429 ||
+      status === 500 ||
+      status === 502 ||
+      status === 503 ||
+      status === 504
+    ) {
+      return true;
+    }
+
+    return /rate limit|too many requests|overloaded|temporarily unavailable|timeout|timed out|负载已饱和|稍后再试|服务繁忙/i.test(
+      message,
+    );
+  }
+
+  private async retrySpeechRequest<T>(
+    label: 'speech transcription' | 'speech synthesis',
+    request: () => Promise<T>,
+  ) {
+    const maxAttempts = 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        return await request();
+      } catch (error) {
+        if (
+          attempt >= maxAttempts ||
+          !this.isTransientSpeechFailure(error)
+        ) {
+          throw error;
+        }
+
+        this.logger.warn(`${label} retry scheduled`, {
+          attempt,
+          maxAttempts,
+          errorMessage: this.extractErrorMessage(error),
+        });
+        await new Promise((resolve) => {
+          setTimeout(resolve, 600 * attempt);
+        });
+      }
+    }
+
+    throw new BadGatewayException('语音请求重试失败。');
+  }
+
   private async requestReplyFromProvider(
     provider: ResolvedProviderConfig,
     request: PreparedReplyRequest,
@@ -757,18 +810,22 @@ export class AiOrchestratorService {
     const startedAt = Date.now();
 
     try {
-      const response = await client.audio.transcriptions.create({
-        file: await toFile(
-          file.buffer,
-          file.originalname || 'speech-input.webm',
-          {
-            type: file.mimetype || 'audio/webm',
-          },
-        ),
-        model: provider.transcriptionModel,
-        language: 'zh',
-        prompt: '这是聊天输入语音转文字，请输出自然、简洁的中文口语内容。',
-      });
+      const response = await this.retrySpeechRequest(
+        'speech transcription',
+        async () =>
+          client.audio.transcriptions.create({
+            file: await toFile(
+              file.buffer,
+              file.originalname || 'speech-input.webm',
+              {
+                type: file.mimetype || 'audio/webm',
+              },
+            ),
+            model: provider.transcriptionModel,
+            language: 'zh',
+            prompt: '这是聊天输入语音转文字，请输出自然、简洁的中文口语内容。',
+          }),
+      );
       const text = response.text.trim();
 
       if (!text) {
@@ -794,8 +851,21 @@ export class AiOrchestratorService {
         size: file.size,
         errorMessage: this.extractErrorMessage(error),
       });
+
+      if (this.isAuthenticationFailure(error)) {
+        throw new ServiceUnavailableException(
+          '当前语音转写配置鉴权失败，请检查 Provider Key。',
+        );
+      }
+
+      if (this.isTransientSpeechFailure(error)) {
+        throw new ServiceUnavailableException(
+          '当前语音转写通道繁忙，请稍后再试。',
+        );
+      }
+
       throw new BadGatewayException(
-        '当前 Provider 不支持语音转写，或本次转写请求失败。',
+        '当前 Provider 暂不支持语音转写，请切换支持转写的模型或网关。',
       );
     }
   }
@@ -821,13 +891,15 @@ export class AiOrchestratorService {
     const startedAt = Date.now();
 
     try {
-      const response = await client.audio.speech.create({
-        model: provider.ttsModel,
-        voice,
-        input: text,
-        response_format: 'mp3',
-        instructions: options.instructions?.trim() || undefined,
-      });
+      const response = await this.retrySpeechRequest('speech synthesis', () =>
+        client.audio.speech.create({
+          model: provider.ttsModel,
+          voice,
+          input: text,
+          response_format: 'mp3',
+          instructions: options.instructions?.trim() || undefined,
+        }),
+      );
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
@@ -855,8 +927,21 @@ export class AiOrchestratorService {
         textLength: text.length,
         errorMessage: this.extractErrorMessage(error),
       });
+
+      if (this.isAuthenticationFailure(error)) {
+        throw new ServiceUnavailableException(
+          '当前语音播报配置鉴权失败，请检查 Provider Key。',
+        );
+      }
+
+      if (this.isTransientSpeechFailure(error)) {
+        throw new ServiceUnavailableException(
+          '当前语音播报通道繁忙，请稍后再试。',
+        );
+      }
+
       throw new BadGatewayException(
-        '当前 Provider 不支持语音合成，或本次语音生成请求失败。',
+        '当前 Provider 暂不支持语音合成，请切换支持播报的模型或网关。',
       );
     }
   }
