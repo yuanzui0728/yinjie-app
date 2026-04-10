@@ -60,6 +60,7 @@ type QuickEntry = {
 
 type MobileHandoffCategory =
   | "messages"
+  | "group_invite"
   | "official"
   | "mini_program"
   | "games"
@@ -76,6 +77,11 @@ const mobileHandoffCategoryMeta: Array<{
     id: "messages",
     label: "消息",
     description: "单聊、群聊和消息列表入口。",
+  },
+  {
+    id: "group_invite",
+    label: "群聊邀请",
+    description: "群二维码、群邀请卡和群入口接力。",
   },
   {
     id: "official",
@@ -822,7 +828,7 @@ export function DesktopMobilePage() {
               <span>最近发往手机</span>
             </div>
             <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
-              当前把手机接力记录按内容类型拆开，方便区分消息、公众号、小程序和直播链路。
+              当前把手机接力记录按内容类型拆开，方便区分消息、群邀请、公众号、小程序和直播链路。
             </div>
 
             <div className="mt-4 space-y-5">
@@ -1086,6 +1092,13 @@ function resolveLiveQualityLabel(quality: LiveSessionRecord["quality"]) {
 function resolveMobileHandoffCategory(
   item: MobileHandoffRecord,
 ): MobileHandoffCategory {
+  if (
+    item.path.startsWith("/group/") &&
+    (item.label.endsWith("邀请") || item.description.includes("邀请"))
+  ) {
+    return "group_invite";
+  }
+
   if (
     item.path === "/tabs/chat" ||
     item.path.startsWith("/chat/") ||
