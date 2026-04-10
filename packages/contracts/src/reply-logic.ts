@@ -282,6 +282,7 @@ export interface ReplyLogicConstantSummary {
   relationshipUpdateStep: number;
   relationshipStrengthMax: number;
   activityScheduleHours: ReplyLogicActivityScheduleRules;
+  activityRandomPool: string[];
   activityBaseWeight: number;
   proactiveReminderHour: number;
   relationshipInitialBackstory: string;
