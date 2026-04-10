@@ -23,7 +23,7 @@
 
 ## 后端模块（`api/src/modules/`）
 
-`ai` · `admin` · `auth` · `characters` · `chat` · `config` · `import` · `moments` · `social` · `feed` · `world` · `scheduler` · `events` · `narrative` · `analytics`
+`ai` · `admin` · `auth` · `characters` · `chat` · `config` · `import` · `moments` · `social` · `feed` · `official-accounts` · `world` · `scheduler` · `events` · `narrative` · `analytics`
 
 ## 主 App 结构（`apps/app/src/`）
 
@@ -38,6 +38,9 @@
 - 底部 Tab：`tabs/chat-list-page` · `contacts-page` · `discover-page` · `profile-page`
 - `discover-page.tsx`：移动端承载微信式发现入口列表，点击后进入独立子页面
 - `discover/moments` · `discover/encounter` · `discover/scene` · `discover/feed`：发现二级页，分别承载朋友圈 / 摇一摇 / 场景相遇 / 广场动态
+- `official-accounts-page.tsx`：公众号列表页，移动端承载通讯录内“公众号”入口，桌面端承载公众号工作区路由入口
+- `official-account-detail-page.tsx`：公众号主页，承载账号资料、关注状态与最近文章列表
+- `official-account-article-page.tsx`：公众号文章详情页，移动端承载独立阅读页，桌面端复用工作区阅读面板
 - `profile/settings`：我的二级设置页，集中承载资料编辑与专属 API Key 配置
 - `chat-background-page.tsx`：聊天背景设置页，承载默认背景图与好友专属背景图配置
 - `chat/$conversationId/background`：单聊聊天背景设置路由，对齐微信式“聊天信息 -> 聊天背景”
@@ -49,7 +52,7 @@
 - `moments-page.tsx`：保留独立朋友圈页能力，当前主要作为发现页内二级能力的兼容承载
 - `chat-room-page` · `group-chat-page` · `character-detail-page` · `friend-requests-page` · `create-group-page`
 
-## 数据库实体（21个，物理表保持兼容）
+## 数据库实体（24个，物理表保持兼容）
 
 **核心**：User（运行时语义为单例 World Owner） · Character · Conversation · Message · SystemConfig
 
@@ -60,6 +63,8 @@
 **群聊**：Group · GroupMember · GroupMessage
 
 **视频号**：FeedPost · FeedComment · UserFeedInteraction
+
+**公众号**：OfficialAccount · OfficialAccountArticle · OfficialAccountFollow
 
 **世界**：WorldContext · NarrativeArc · AIBehaviorLog
 
@@ -165,6 +170,7 @@
 - 世界主人可在 App 内设置自己的 API Key，服务端仅加密存储
 - 移动端底部导航当前对齐微信四项：`消息 / 通讯录 / 发现 / 我`
 - 移动端“发现”聚合朋友圈、摇一摇、场景相遇、广场动态等入口；点击入口后进入独立二级页，朋友圈不再占用独立底部 Tab
+- 移动端“公众号”当前收口在“通讯录”固定服务项内，不单独占用底部 Tab，也不放进“发现”
 - 移动端“我”页当前对齐微信式个人主页，资料编辑与 API Key 配置收口到“设置”二级页，不在主页直接裸露
 - Setup 页先选择云世界或本地世界：本地世界手动填写地址，云世界通过手机号进入
 - 官方云世界通过手机号索引，一个手机号只对应一个云世界

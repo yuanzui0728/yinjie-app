@@ -53,6 +53,21 @@ const ContactsPage = lazy(async () => {
   return { default: mod.ContactsPage };
 });
 
+const OfficialAccountsPage = lazy(async () => {
+  const mod = await import("./routes/official-accounts-page");
+  return { default: mod.OfficialAccountsPage };
+});
+
+const OfficialAccountDetailPage = lazy(async () => {
+  const mod = await import("./routes/official-account-detail-page");
+  return { default: mod.OfficialAccountDetailPage };
+});
+
+const OfficialAccountArticlePage = lazy(async () => {
+  const mod = await import("./routes/official-account-article-page");
+  return { default: mod.OfficialAccountArticlePage };
+});
+
 const ProfilePage = lazy(async () => {
   const mod = await import("./routes/profile-page");
   return { default: mod.ProfilePage };
@@ -250,6 +265,27 @@ const friendRequestsRoute = createRoute({
   component: FriendRequestsPage,
 });
 
+const officialAccountsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/contacts/official-accounts",
+  beforeLoad: requireWorldReady,
+  component: OfficialAccountsPage,
+});
+
+const officialAccountDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/official-accounts/$accountId",
+  beforeLoad: requireWorldReady,
+  component: OfficialAccountDetailPage,
+});
+
+const officialAccountArticleRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/official-accounts/articles/$articleId",
+  beforeLoad: requireWorldReady,
+  component: OfficialAccountArticlePage,
+});
+
 const groupChatRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/group/$groupId",
@@ -356,6 +392,9 @@ const routeTree = rootRoute.addChildren([
   chatMessageSearchRoute,
   characterDetailRoute,
   friendRequestsRoute,
+  officialAccountsRoute,
+  officialAccountDetailRoute,
+  officialAccountArticleRoute,
   groupChatRoute,
   groupChatDetailsRoute,
   groupMessageSearchRoute,

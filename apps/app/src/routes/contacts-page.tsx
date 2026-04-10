@@ -1,7 +1,7 @@
 import { useDeferredValue, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { BookUser, Search, Tag, UserPlus, Users } from "lucide-react";
+import { BookText, BookUser, Search, Tag, UserPlus, Users } from "lucide-react";
 import { getFriendRequests, getFriends, getOrCreateConversation, listCharacters } from "@yinjie/contracts";
 import { AppPage, Button, ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
@@ -21,7 +21,10 @@ import {
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
-type ShortcutRoute = "/group/new" | "/friend-requests";
+type ShortcutRoute =
+  | "/group/new"
+  | "/friend-requests"
+  | "/contacts/official-accounts";
 
 type DesktopSelection =
   | {
@@ -316,6 +319,14 @@ export function ContactsPage() {
       icon: Tag,
       iconClassName: "bg-[linear-gradient(135deg,#fb923c,#f97316)]",
       onClick: () => handleUnavailableAction("标签功能暂未开放。"),
+    },
+    {
+      key: "official-accounts",
+      label: "公众号",
+      subtitle: "查看已上线的内容账号",
+      icon: BookText,
+      iconClassName: "bg-[linear-gradient(135deg,#5d67c9,#4951a3)]",
+      onClick: () => handleShortcutNavigate("/contacts/official-accounts"),
     },
     {
       key: "world-characters",
