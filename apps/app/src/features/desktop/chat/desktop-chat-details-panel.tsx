@@ -29,6 +29,7 @@ import { ChevronRight, Search } from "lucide-react";
 import { ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
 import { AvatarChip } from "../../../components/avatar-chip";
 import { GroupAvatarChip } from "../../../components/group-avatar-chip";
+import { DesktopChatTextEditDialog } from "./desktop-chat-text-edit-dialog";
 import { DesktopGroupMemberPicker } from "./desktop-group-member-picker";
 import { DesktopGroupMemberRemovalPicker } from "./desktop-group-member-removal-picker";
 import { getChatBackgroundLabel } from "../../chat/backgrounds/chat-background-helpers";
@@ -51,6 +52,19 @@ type DesktopMemberGridItem = {
   src?: string | null;
   kind?: "member" | "add" | "remove";
   onClick?: () => void;
+};
+
+type GroupDetailsEditorMode = "name" | "announcement" | "nickname";
+
+type GroupDetailsEditorConfig = {
+  title: string;
+  description: string;
+  placeholder: string;
+  initialValue: string;
+  multiline: boolean;
+  emptyAllowed: boolean;
+  pending: boolean;
+  onConfirm: (value: string) => void;
 };
 
 export function DesktopChatDetailsPanel({
@@ -452,11 +466,15 @@ function GroupChatDetailsPanel({
   const [memberPickerMode, setMemberPickerMode] = useState<"add" | "remove">(
     "add",
   );
+  const [editorMode, setEditorMode] = useState<GroupDetailsEditorMode | null>(
+    null,
+  );
 
   useEffect(() => {
     setNotice(null);
     setMemberPickerOpen(false);
     setMemberPickerMode("add");
+    setEditorMode(null);
   }, [conversation.id]);
 
   useEffect(() => {
@@ -486,6 +504,7 @@ function GroupChatDetailsPanel({
     mutationFn: (payload: { name?: string; announcement?: string | null }) =>
       updateGroup(conversation.id, payload, baseUrl),
     onSuccess: async (_, payload) => {
+      setEditorMode(null);
       setNotice(payload.name ? "群聊名称已更新。" : "群公告已更新。");
       await Promise.all([
         queryClient.invalidateQueries({
@@ -570,6 +589,7 @@ function GroupChatDetailsPanel({
     mutationFn: (nickname: string) =>
       updateGroupOwnerProfile(conversation.id, { nickname }, baseUrl),
     onSuccess: async () => {
+      setEditorMode(null);
       setNotice("我在本群的昵称已更新。");
       await queryClient.invalidateQueries({
         queryKey: ["app-group-members", baseUrl, conversation.id],
@@ -755,6 +775,45 @@ function GroupChatDetailsPanel({
     hideMutation.isPending ||
     clearMutation.isPending ||
     leaveMutation.isPending;
+  const activeEditor: GroupDetailsEditorConfig | null =
+    editorMode === "name"
+      ? {
+          title: "修改群聊名称",
+          description: "桌面端直接编辑群聊名称，替代浏览器原生提示框。",
+          placeholder: "请输入群聊名称",
+          initialValue: group?.name ?? conversation.title,
+          multiline: false,
+          emptyAllowed: false,
+          pending: updateGroupMutation.isPending,
+          onConfirm: (value: string) =>
+            updateGroupMutation.mutate({ name: value }),
+        }
+      : editorMode === "announcement"
+        ? {
+            title: "修改群公告",
+            description: "支持换行；留空后保存会清空当前群公告。",
+            placeholder: "输入群公告内容",
+            initialValue: group?.announcement ?? "",
+            multiline: true,
+            emptyAllowed: true,
+            pending: updateGroupMutation.isPending,
+            onConfirm: (value: string) =>
+              updateGroupMutation.mutate({
+                announcement: value || null,
+              }),
+          }
+        : editorMode === "nickname"
+          ? {
+              title: "修改我在本群的昵称",
+              description: "这个昵称会显示在群成员资料里。",
+              placeholder: "请输入群昵称",
+              initialValue: ownerMember?.memberName ?? "",
+              multiline: false,
+              emptyAllowed: false,
+              pending: updateNicknameMutation.isPending,
+              onConfirm: (value: string) => updateNicknameMutation.mutate(value),
+            }
+          : null;
 
   return (
     <div className="space-y-3 p-3">
@@ -806,32 +865,14 @@ function GroupChatDetailsPanel({
         <DesktopPanelRow
           label="群聊名称"
           value={groupQuery.data?.name ?? conversation.title}
-          onClick={() => {
-            const nextName = window.prompt(
-              "修改群聊名称",
-              groupQuery.data?.name ?? conversation.title,
-            );
-            if (!nextName || nextName.trim() === groupQuery.data?.name) {
-              return;
-            }
-            updateGroupMutation.mutate({ name: nextName.trim() });
-          }}
+          disabled={busy}
+          onClick={() => setEditorMode("name")}
         />
         <DesktopPanelRow
           label="群公告"
           value={groupQuery.data?.announcement?.trim() || "未设置"}
-          onClick={() => {
-            const nextAnnouncement = window.prompt(
-              "修改群公告",
-              groupQuery.data?.announcement ?? "",
-            );
-            if (nextAnnouncement === null) {
-              return;
-            }
-            updateGroupMutation.mutate({
-              announcement: nextAnnouncement.trim() || null,
-            });
-          }}
+          disabled={busy}
+          onClick={() => setEditorMode("announcement")}
         />
         <DesktopPanelRow
           label="群二维码"
@@ -914,19 +955,7 @@ function GroupChatDetailsPanel({
           label="我在本群的昵称"
           value={ownerMember?.memberName ?? "未设置"}
           disabled={busy}
-          onClick={() => {
-            const nextNickname = window.prompt(
-              "修改我在本群的昵称",
-              ownerMember?.memberName ?? "",
-            );
-            if (
-              !nextNickname ||
-              nextNickname.trim() === ownerMember?.memberName
-            ) {
-              return;
-            }
-            updateNicknameMutation.mutate(nextNickname.trim());
-          }}
+          onClick={() => setEditorMode("nickname")}
         />
         <DesktopPanelRow
           label="显示群成员昵称"
@@ -1033,6 +1062,18 @@ function GroupChatDetailsPanel({
         pending={removeMembersMutation.isPending}
         onClose={() => setMemberPickerOpen(false)}
         onConfirm={(memberIds) => removeMembersMutation.mutate(memberIds)}
+      />
+      <DesktopChatTextEditDialog
+        open={Boolean(activeEditor)}
+        title={activeEditor?.title ?? ""}
+        description={activeEditor?.description}
+        placeholder={activeEditor?.placeholder}
+        initialValue={activeEditor?.initialValue ?? ""}
+        multiline={activeEditor?.multiline}
+        emptyAllowed={activeEditor?.emptyAllowed}
+        pending={activeEditor?.pending}
+        onClose={() => setEditorMode(null)}
+        onConfirm={(value) => activeEditor?.onConfirm(value)}
       />
     </div>
   );
