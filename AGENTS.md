@@ -63,7 +63,9 @@
 - `desktop/settings`：桌面端“设置”页
 - `desktop/channels/live-companion`：桌面端“视频号直播伴侣”工具页
 - `chat-background-page.tsx`：聊天背景设置页，承载默认背景图与好友专属背景图配置
+- `chat-voice-call-page.tsx`：Web 手机版 AI 语言通话页，承载单聊语音回合制对话、AI 语音播报与挂断回跳
 - `chat/$conversationId/background`：单聊聊天背景设置路由，对齐微信式“聊天信息 -> 聊天背景”
+- `chat/$conversationId/voice-call`：单聊 AI 语言通话路由，承载“录音 -> 转写 -> AI 回复 -> TTS 播放”的半双工通话体验
 - `chat/$conversationId/details`：单聊右上角三个点详情页，对齐微信式聊天信息页
 - `chat/$conversationId/search`：单聊聊天记录检索页，由聊天信息页进入
 - `group/$groupId/details`：群聊右上角三个点详情页，对齐微信式群聊信息页
@@ -288,6 +290,11 @@
 - `POST /api/groups/:id/messages` 现已支持图片、文件、名片、位置卡片附件负载
 - AI 语音转写路由已提供：
   - `POST /api/ai/transcriptions`
+- AI 语音合成路由已提供：
+  - `POST /api/ai/speech`
+  - `GET /api/ai/speech/:fileName`
+- AI 语言通话路由已提供：
+  - `POST /api/chat/voice-calls/turns`
 - 社交屏蔽路由已提供：
   - `GET /api/social/blocks`
   - `POST /api/social/block`

@@ -410,6 +410,13 @@ export function ChatDetailsPage() {
             disabled={!targetCharacterId}
             onSelectKind={(kind) => {
               setNotice(null);
+              if (kind === "voice") {
+                void navigate({
+                  to: "/chat/$conversationId/voice-call",
+                  params: { conversationId },
+                });
+                return;
+              }
               setPendingCallFallback(kind);
             }}
             onDismiss={() => setPendingCallFallback(null)}

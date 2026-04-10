@@ -1,12 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import {
-  createVoiceCallTurn,
-  getCharacter,
-  getConversations,
-  type VoiceCallTurnResult,
-} from "@yinjie/contracts";
+import { getCharacter, getConversations } from "@yinjie/contracts";
 import {
   AppPage,
   Button,
@@ -25,7 +20,7 @@ import {
   VolumeX,
 } from "lucide-react";
 import { AvatarChip } from "../components/avatar-chip";
-import { useSpeechInput } from "../features/chat/use-speech-input";
+import { useVoiceCallSession } from "../features/chat/use-voice-call-session";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
@@ -36,17 +31,10 @@ export function ChatVoiceCallPage() {
     conversationId?: string;
   };
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const isDesktopLayout = useDesktopLayout();
   const baseUrl = runtimeConfig.apiBaseUrl;
-  const [lastTurn, setLastTurn] = useState<VoiceCallTurnResult | null>(null);
-  const [audioMuted, setAudioMuted] = useState(false);
-  const [playbackState, setPlaybackState] = useState<"idle" | "playing">("idle");
-  const [playerError, setPlayerError] = useState<string | null>(null);
   const [recordButtonHolding, setRecordButtonHolding] = useState(false);
-  const autoSubmitRecordingRef = useRef(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const conversationsQuery = useQuery({
     queryKey: ["app-conversations", baseUrl],
@@ -63,47 +51,13 @@ export function ChatVoiceCallPage() {
     queryFn: () => getCharacter(characterId ?? "", baseUrl),
     enabled: Boolean(characterId),
   });
-  const speech = useSpeechInput({
+  const voiceCall = useVoiceCallSession({
     baseUrl,
     conversationId: resolvedConversationId,
+    characterId,
     enabled: !isDesktopLayout && Boolean(conversationId),
-    mode: "voice",
   });
-
-  const turnMutation = useMutation({
-    mutationFn: async () => {
-      if (!speech.recordedAudio) {
-        throw new Error("请先录一段语音再试。");
-      }
-
-      const formData = new FormData();
-      formData.append(
-        "file",
-        speech.recordedAudio.blob,
-        speech.recordedAudio.fileName,
-      );
-      formData.append("conversationId", resolvedConversationId);
-      if (characterId) {
-        formData.append("characterId", characterId);
-      }
-
-      return createVoiceCallTurn(formData, baseUrl);
-    },
-    onSuccess: async (result) => {
-      setLastTurn(result);
-      setPlayerError(null);
-      speech.clearResult();
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["app-conversations", baseUrl],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["app-conversation-messages", baseUrl, conversationId],
-        }),
-      ]);
-      void playReplyAudio(result.assistantAudioUrl);
-    },
-  });
+  const speech = voiceCall.speech;
 
   const characterName =
     characterQuery.data?.name?.trim() ||
@@ -114,16 +68,13 @@ export function ChatVoiceCallPage() {
     characterQuery.data?.currentStatus?.trim() ||
     characterQuery.data?.currentActivity?.trim() ||
     "在线";
-  const busy =
-    turnMutation.isPending ||
-    speech.status === "processing" ||
-    playbackState === "playing";
+  const busy = voiceCall.busy;
   const statusLabel = useMemo(() => {
-    if (turnMutation.isPending) {
+    if (voiceCall.turnMutation.isPending) {
       return "AI 正在思考";
     }
 
-    if (playbackState === "playing") {
+    if (voiceCall.playbackState === "playing") {
       return "正在说话";
     }
 
@@ -134,18 +85,23 @@ export function ChatVoiceCallPage() {
       return "正在聆听";
     }
 
-    if (lastTurn) {
+    if (voiceCall.lastTurn) {
       return "继续说话";
     }
 
     return "按住说话";
-  }, [lastTurn, playbackState, speech.status, turnMutation.isPending]);
+  }, [
+    speech.status,
+    voiceCall.lastTurn,
+    voiceCall.playbackState,
+    voiceCall.turnMutation.isPending,
+  ]);
   const statusHint = useMemo(() => {
-    if (turnMutation.isPending) {
+    if (voiceCall.turnMutation.isPending) {
       return "本轮语音已收到，正在转写并组织回复。";
     }
 
-    if (playbackState === "playing") {
+    if (voiceCall.playbackState === "playing") {
       return "当前是半双工模式，等 TA 说完后再开始下一轮。";
     }
 
@@ -153,124 +109,42 @@ export function ChatVoiceCallPage() {
       speech.status === "requesting-permission" ||
       speech.status === "listening"
     ) {
-      return "松开按钮后会自动发起这一轮语言通话。";
+      return "松开按钮后会自动发起这一轮语音通话。";
     }
 
     return "每次说一段，AI 会回复一段语音。";
-  }, [playbackState, speech.status, turnMutation.isPending]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) {
-      return;
-    }
-
-    const handlePlay = () => {
-      setPlaybackState("playing");
-      setPlayerError(null);
-    };
-    const handlePause = () => {
-      setPlaybackState("idle");
-    };
-    const handleEnded = () => {
-      setPlaybackState("idle");
-    };
-    const handleError = () => {
-      setPlaybackState("idle");
-      setPlayerError("语音已生成，但浏览器没有成功播放。可以点“重播上一句”再试。");
-    };
-
-    audio.addEventListener("play", handlePlay);
-    audio.addEventListener("pause", handlePause);
-    audio.addEventListener("ended", handleEnded);
-    audio.addEventListener("error", handleError);
-    return () => {
-      audio.removeEventListener("play", handlePlay);
-      audio.removeEventListener("pause", handlePause);
-      audio.removeEventListener("ended", handleEnded);
-      audio.removeEventListener("error", handleError);
-    };
-  }, []);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) {
-      return;
-    }
-
-    audio.muted = audioMuted;
-  }, [audioMuted]);
-
-  useEffect(() => {
-    if (!speech.recordedAudio || speech.status !== "ready") {
-      return;
-    }
-
-    if (!autoSubmitRecordingRef.current || turnMutation.isPending) {
-      return;
-    }
-
-    autoSubmitRecordingRef.current = false;
-    void turnMutation.mutateAsync();
-  }, [speech.recordedAudio, speech.status, turnMutation]);
-
-  const playReplyAudio = async (audioUrl: string) => {
-    const audio = audioRef.current;
-    if (!audio) {
-      return;
-    }
-
-    audio.pause();
-    audio.src = audioUrl;
-    audio.currentTime = 0;
-
-    try {
-      await audio.play();
-    } catch {
-      setPlaybackState("idle");
-      setPlayerError("浏览器拦截了自动播报，点“重播上一句”即可播放。");
-    }
-  };
+  }, [
+    speech.status,
+    voiceCall.playbackState,
+    voiceCall.turnMutation.isPending,
+  ]);
 
   const handlePressStart = async () => {
     if (busy || isDesktopLayout) {
       return;
     }
 
-    autoSubmitRecordingRef.current = true;
     setRecordButtonHolding(true);
-    setPlayerError(null);
-    if (speech.status !== "idle") {
-      speech.cancel();
-    }
-
-    await speech.start();
+    await voiceCall.startRecordingTurn();
   };
 
   const handlePressEnd = () => {
     setRecordButtonHolding(false);
-    if (
-      speech.status === "listening" ||
-      speech.status === "requesting-permission"
-    ) {
-      speech.stop();
-      return;
-    }
-
-    autoSubmitRecordingRef.current = false;
+    voiceCall.stopRecordingTurn();
   };
 
   const handleBack = () => {
+    voiceCall.stopReplyPlayback();
     void navigate({
       to: "/chat/$conversationId",
-      params: { conversationId: resolvedConversationId },
+      params: { conversationId },
     });
   };
 
   if (conversationsQuery.isLoading) {
     return (
       <AppPage className="min-h-full bg-[#111827] px-4 py-6 text-white">
-        <LoadingBlock label="正在连接语言通话..." />
+        <LoadingBlock label="正在连接语音通话..." />
       </AppPage>
     );
   }
@@ -286,7 +160,7 @@ export function ChatVoiceCallPage() {
   if (!conversation || conversation.type !== "direct") {
     return (
       <AppPage className="min-h-full space-y-4 bg-[#111827] px-4 py-6 text-white">
-        <ErrorBlock message="当前只支持在单聊里发起 AI 语言通话。" />
+        <ErrorBlock message="当前只支持在单聊里发起 AI 语音通话。" />
         <Button variant="secondary" onClick={handleBack} className="rounded-full">
           返回聊天
         </Button>
@@ -298,7 +172,7 @@ export function ChatVoiceCallPage() {
     return (
       <AppPage className="min-h-full space-y-4 bg-[#111827] px-4 py-6 text-white">
         <InlineNotice tone="info">
-          语言通话首版当前只开放给 Web 手机版，桌面端先回到聊天页继续。
+          当前会话已支持桌面端 AI 语音通话，请回到聊天页顶部直接发起。
         </InlineNotice>
         <Button variant="secondary" onClick={handleBack} className="rounded-full">
           返回聊天
@@ -309,7 +183,7 @@ export function ChatVoiceCallPage() {
 
   return (
     <AppPage className="min-h-full space-y-0 bg-[radial-gradient(circle_at_top,rgba(52,211,153,0.18),transparent_38%),linear-gradient(180deg,#111827_0%,#0f172a_48%,#020617_100%)] px-0 py-0 text-white">
-      <audio ref={audioRef} preload="auto" />
+      <audio ref={voiceCall.audioRef} preload="auto" />
       <header className="sticky top-0 z-20 border-b border-white/10 bg-[rgba(2,6,23,0.62)] px-3 py-3 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <button
@@ -321,29 +195,25 @@ export function ChatVoiceCallPage() {
             <ArrowLeft size={18} />
           </button>
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[17px] font-medium">语言通话</div>
+            <div className="truncate text-[17px] font-medium">语音通话</div>
             <div className="mt-0.5 truncate text-[12px] text-white/60">
               {conversation.title}
             </div>
           </div>
           <button
             type="button"
-            onClick={() => setAudioMuted((current) => !current)}
+            onClick={() => voiceCall.setAudioMuted((current) => !current)}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition active:bg-white/16"
-            aria-label={audioMuted ? "取消静音播放" : "静音播放"}
+            aria-label={voiceCall.audioMuted ? "取消静音播放" : "静音播放"}
           >
-            {audioMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+            {voiceCall.audioMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
         </div>
       </header>
 
       <div className="flex min-h-[calc(100dvh-65px)] flex-col px-5 pb-[calc(env(safe-area-inset-bottom,0px)+24px)] pt-6">
         <div className="flex flex-col items-center text-center">
-          <AvatarChip
-            name={characterName}
-            src={characterAvatar}
-            size="xl"
-          />
+          <AvatarChip name={characterName} src={characterAvatar} size="xl" />
           <div className="mt-4 text-[28px] font-semibold tracking-[0.01em]">
             {characterName}
           </div>
@@ -357,11 +227,13 @@ export function ChatVoiceCallPage() {
         </div>
 
         <div className="mt-8 space-y-3">
-          {turnMutation.error instanceof Error ? (
-            <ErrorBlock message={turnMutation.error.message} />
+          {voiceCall.turnMutation.error instanceof Error ? (
+            <ErrorBlock message={voiceCall.turnMutation.error.message} />
           ) : null}
           {speech.error ? <ErrorBlock message={speech.error} /> : null}
-          {playerError ? <InlineNotice tone="info">{playerError}</InlineNotice> : null}
+          {voiceCall.playerError ? (
+            <InlineNotice tone="info">{voiceCall.playerError}</InlineNotice>
+          ) : null}
           {characterQuery.isError && characterQuery.error instanceof Error ? (
             <ErrorBlock message={characterQuery.error.message} />
           ) : null}
@@ -371,16 +243,17 @@ export function ChatVoiceCallPage() {
           <VoiceCallBubble
             label="我"
             text={
-              turnMutation.isPending
+              voiceCall.turnMutation.isPending
                 ? speech.displayText || "本轮语音已发出，正在整理..."
-                : lastTurn?.userTranscript || "按住底部按钮，说出你想对 TA 说的话。"
+                : voiceCall.lastTurn?.userTranscript ||
+                  "按住底部按钮，说出你想对 TA 说的话。"
             }
             align="right"
           />
           <VoiceCallBubble
             label={characterName}
             text={
-              lastTurn?.assistantText ||
+              voiceCall.lastTurn?.assistantText ||
               "TA 的回复会在这里显示，并自动播报给你听。"
             }
             align="left"
@@ -392,11 +265,9 @@ export function ChatVoiceCallPage() {
             <button
               type="button"
               onClick={() => {
-                if (lastTurn) {
-                  void playReplyAudio(lastTurn.assistantAudioUrl);
-                }
+                void voiceCall.replayLastTurn();
               }}
-              disabled={!lastTurn || turnMutation.isPending}
+              disabled={!voiceCall.lastTurn || voiceCall.turnMutation.isPending}
               className="flex h-12 min-w-[120px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition disabled:opacity-45"
             >
               <RotateCcw size={16} />
@@ -433,17 +304,17 @@ export function ChatVoiceCallPage() {
               className="flex h-[172px] w-[172px] items-center justify-center rounded-full border border-[#34d399]/28 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.72),rgba(5,150,105,0.96))] shadow-[0_30px_80px_rgba(16,185,129,0.3)] transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55"
             >
               <span className="flex flex-col items-center gap-3">
-                {turnMutation.isPending ? (
+                {voiceCall.turnMutation.isPending ? (
                   <LoaderCircle size={34} className="animate-spin" />
                 ) : (
                   <Mic size={36} />
                 )}
                 <span className="text-[17px] font-medium">
-                  {turnMutation.isPending
+                  {voiceCall.turnMutation.isPending
                     ? "AI 回复中"
                     : speech.status === "listening" || recordButtonHolding
                       ? "松开发送"
-                      : playbackState === "playing"
+                      : voiceCall.playbackState === "playing"
                         ? "播放中"
                         : "按住说话"}
                 </span>
