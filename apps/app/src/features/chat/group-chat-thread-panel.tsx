@@ -125,6 +125,7 @@ export function GroupChatThreadPanel({
   const sendError =
     sendMutation.error instanceof Error ? sendMutation.error.message : null;
   const defaultBackground = ownerQuery.data?.defaultChatBackground ?? null;
+  const announcement = groupQuery.data?.announcement?.trim() ?? "";
 
   useEffect(() => {
     if (!highlightedMessageId || !hasHighlightedMessage) {
@@ -197,7 +198,7 @@ export function GroupChatThreadPanel({
       className={`flex h-full min-h-0 flex-col ${
         isDesktop
           ? "bg-[linear-gradient(180deg,rgba(255,252,246,0.98),rgba(255,247,238,0.98))]"
-          : "bg-[linear-gradient(180deg,#f8fcf8,#f2f8f5)]"
+          : "bg-[#ededed]"
       }`}
     >
       {isDesktop ? (
@@ -223,7 +224,7 @@ export function GroupChatThreadPanel({
       ) : (
         <MobileChatThreadHeader
           title={groupQuery.data?.name ?? "群聊"}
-          subtitle={`${membersQuery.data?.length ?? 0} 人群聊`}
+          subtitle={undefined}
           onBack={onBack}
           onMore={() => {
             void navigate({
@@ -233,6 +234,26 @@ export function GroupChatThreadPanel({
           }}
         />
       )}
+
+      {!isDesktop && announcement ? (
+        <button
+          type="button"
+          onClick={() => {
+            void navigate({
+              to: "/group/$groupId/announcement",
+              params: { groupId },
+            });
+          }}
+          className="flex items-center gap-2 border-b border-black/5 bg-[rgba(247,247,247,0.96)] px-4 py-2.5 text-left"
+        >
+          <span className="shrink-0 rounded-full bg-[#07c160]/10 px-2 py-0.5 text-[10px] font-medium text-[#07c160]">
+            群公告
+          </span>
+          <span className="min-w-0 flex-1 truncate text-[13px] text-[color:var(--text-secondary)]">
+            {announcement}
+          </span>
+        </button>
+      ) : null}
 
       {routeContextNotice ? (
         <div
@@ -262,10 +283,20 @@ export function GroupChatThreadPanel({
 
       <div className="relative flex-1 overflow-hidden">
         <div
-          className="absolute inset-0 bg-[linear-gradient(180deg,#fffdf7,#fff9ee)]"
+          className={`absolute inset-0 ${
+            isDesktop
+              ? "bg-[linear-gradient(180deg,#fffdf7,#fff9ee)]"
+              : "bg-[#ededed]"
+          }`}
           style={buildChatBackgroundStyle(defaultBackground)}
         />
-        <div className="absolute inset-0 bg-[rgba(255,250,244,0.30)]" />
+        <div
+          className={`absolute inset-0 ${
+            isDesktop
+              ? "bg-[rgba(255,250,244,0.30)]"
+              : "bg-[rgba(237,237,237,0.72)]"
+          }`}
+        />
 
         <div
           ref={scrollAnchorRef}
@@ -289,6 +320,9 @@ export function GroupChatThreadPanel({
           <ChatMessageList
             messages={orderedMessages}
             groupMode
+            showGroupMemberNicknames={
+              groupQuery.data?.showMemberNicknames ?? true
+            }
             variant={isDesktop ? "desktop" : "mobile"}
             highlightedMessageId={highlightedMessageId}
             emptyState={
