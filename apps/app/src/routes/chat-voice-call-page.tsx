@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { getCharacter, getConversations } from "@yinjie/contracts";
 import {
@@ -20,8 +20,10 @@ import {
   VolumeX,
 } from "lucide-react";
 import { AvatarChip } from "../components/avatar-chip";
+import { buildDirectCallInviteMessage } from "../features/chat/group-call-message";
 import { useVoiceCallSession } from "../features/chat/use-voice-call-session";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
+import { emitChatMessage } from "../lib/socket";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export function ChatVoiceCallPage() {
@@ -31,10 +33,14 @@ export function ChatVoiceCallPage() {
     conversationId?: string;
   };
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const isDesktopLayout = useDesktopLayout();
   const baseUrl = runtimeConfig.apiBaseUrl;
   const [recordButtonHolding, setRecordButtonHolding] = useState(false);
+  const waitingNoticeSentRef = useRef(false);
+  const connectedNoticeSentRef = useRef(false);
+  const endedNoticeSentRef = useRef(false);
 
   const conversationsQuery = useQuery({
     queryKey: ["app-conversations", baseUrl],
@@ -51,11 +57,42 @@ export function ChatVoiceCallPage() {
     queryFn: () => getCharacter(characterId ?? "", baseUrl),
     enabled: Boolean(characterId),
   });
+  const sendCallStatusMessage = useCallback(
+    async (status: "waiting" | "connected" | "ended") => {
+      if (!characterId || !resolvedConversationId || !conversation) {
+        return;
+      }
+
+      emitChatMessage({
+        conversationId: resolvedConversationId,
+        characterId,
+        text: buildDirectCallInviteMessage("voice", conversation.title, status),
+      });
+
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["app-conversations", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["app-conversation-messages", baseUrl, resolvedConversationId],
+        }),
+      ]);
+    },
+    [baseUrl, characterId, conversation, queryClient, resolvedConversationId],
+  );
   const voiceCall = useVoiceCallSession({
     baseUrl,
     conversationId: resolvedConversationId,
     characterId,
     enabled: !isDesktopLayout && Boolean(conversationId),
+    onTurnSuccess: async () => {
+      if (connectedNoticeSentRef.current) {
+        return;
+      }
+
+      connectedNoticeSentRef.current = true;
+      await sendCallStatusMessage("connected");
+    },
   });
   const speech = voiceCall.speech;
 
@@ -133,13 +170,36 @@ export function ChatVoiceCallPage() {
     voiceCall.stopRecordingTurn();
   };
 
-  const handleBack = () => {
+  const handleBack = async () => {
     voiceCall.stopReplyPlayback();
+    if (
+      conversation?.type === "direct" &&
+      waitingNoticeSentRef.current &&
+      !endedNoticeSentRef.current
+    ) {
+      endedNoticeSentRef.current = true;
+      await sendCallStatusMessage("ended");
+    }
+
     void navigate({
       to: "/chat/$conversationId",
       params: { conversationId: resolvedConversationId },
     });
   };
+
+  useEffect(() => {
+    if (
+      !conversation ||
+      conversation.type !== "direct" ||
+      isDesktopLayout ||
+      waitingNoticeSentRef.current
+    ) {
+      return;
+    }
+
+    waitingNoticeSentRef.current = true;
+    void sendCallStatusMessage("waiting");
+  }, [conversation, isDesktopLayout, sendCallStatusMessage]);
 
   if (conversationsQuery.isLoading) {
     return (
