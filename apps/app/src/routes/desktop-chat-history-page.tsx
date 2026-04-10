@@ -22,6 +22,9 @@ import {
 } from "../lib/format";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
+const INITIAL_VISIBLE_HISTORY_COUNT = 24;
+const HISTORY_LOAD_STEP = 24;
+
 export function DesktopChatHistoryPage() {
   const isDesktopLayout = useDesktopLayout();
   const queryClient = useQueryClient();
@@ -31,6 +34,9 @@ export function DesktopChatHistoryPage() {
     string | null
   >(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [visibleHistoryCount, setVisibleHistoryCount] = useState(
+    INITIAL_VISIBLE_HISTORY_COUNT,
+  );
 
   const conversationsQuery = useQuery({
     queryKey: ["app-conversations", baseUrl],
@@ -114,6 +120,18 @@ export function DesktopChatHistoryPage() {
       ),
     [messagesQuery.data],
   );
+  const visibleHistoryRows = useMemo(
+    () => historyRows.slice(0, visibleHistoryCount),
+    [historyRows, visibleHistoryCount],
+  );
+  const remainingHistoryCount = Math.max(
+    historyRows.length - visibleHistoryRows.length,
+    0,
+  );
+
+  useEffect(() => {
+    setVisibleHistoryCount(INITIAL_VISIBLE_HISTORY_COUNT);
+  }, [selectedConversation?.id]);
 
   useEffect(() => {
     if (!notice) {
@@ -183,7 +201,7 @@ export function DesktopChatHistoryPage() {
           <DesktopEntryShell
             badge="History"
             title={selectedConversation.title}
-            description="这里先承接当前会话的聊天摘要和清理动作。后续如果服务端补上分页接口，会把更旧消息加载也统一收口到这个工作区。"
+            description="这里先承接当前会话的聊天摘要、逐步加载更早消息和清理动作。即便服务端暂时没有分页接口，也先把桌面端历史扩展路径做实。"
             aside={
               <div className="space-y-3">
                 <InfoCard
@@ -198,7 +216,18 @@ export function DesktopChatHistoryPage() {
                     selectedConversation.lastActivityAt,
                   )}
                 />
-                <InfoCard label="当前消息" value={`${historyRows.length} 条`} />
+                <InfoCard
+                  label="已加载"
+                  value={`${visibleHistoryRows.length} / ${historyRows.length} 条`}
+                />
+                <InfoCard
+                  label="更早消息"
+                  value={
+                    remainingHistoryCount
+                      ? `${remainingHistoryCount} 条`
+                      : "已全部展开"
+                  }
+                />
               </div>
             }
           >
@@ -221,10 +250,25 @@ export function DesktopChatHistoryPage() {
                 variant="secondary"
                 size="sm"
                 onClick={() => {
-                  setNotice("当前版本已加载服务端可直接返回的最近聊天记录。");
+                  if (remainingHistoryCount <= 0) {
+                    setNotice("当前会话的聊天记录已经全部展开。");
+                    return;
+                  }
+
+                  const nextVisibleCount = Math.min(
+                    visibleHistoryCount + HISTORY_LOAD_STEP,
+                    historyRows.length,
+                  );
+                  const loadedCount = nextVisibleCount - visibleHistoryCount;
+
+                  setVisibleHistoryCount(nextVisibleCount);
+                  setNotice(`已继续加载 ${loadedCount} 条更早聊天记录。`);
                 }}
+                disabled={!historyRows.length}
               >
-                加载历史聊天记录
+                {remainingHistoryCount > 0
+                  ? `加载更早消息（剩余 ${remainingHistoryCount} 条）`
+                  : "历史已全部展开"}
               </Button>
               <Button
                 variant="secondary"
@@ -248,7 +292,7 @@ export function DesktopChatHistoryPage() {
                 <ErrorBlock message={clearMutation.error.message} />
               ) : null}
 
-              {historyRows.map((item) => (
+              {visibleHistoryRows.map((item) => (
                 <div
                   key={item.id}
                   className="rounded-[24px] border border-[color:var(--border-faint)] bg-white/92 p-5 shadow-[var(--shadow-soft)]"
@@ -277,6 +321,31 @@ export function DesktopChatHistoryPage() {
                   title="当前会话还没有可管理的记录"
                   description="可能刚刚清空过，或者这个会话目前还没有任何消息。"
                 />
+              ) : null}
+
+              {!messagesQuery.isLoading &&
+              historyRows.length > 0 &&
+              remainingHistoryCount > 0 ? (
+                <div className="flex justify-center pt-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => {
+                      const nextVisibleCount = Math.min(
+                        visibleHistoryCount + HISTORY_LOAD_STEP,
+                        historyRows.length,
+                      );
+                      const loadedCount =
+                        nextVisibleCount - visibleHistoryCount;
+
+                      setVisibleHistoryCount(nextVisibleCount);
+                      setNotice(`已继续加载 ${loadedCount} 条更早聊天记录。`);
+                    }}
+                    className="rounded-full"
+                  >
+                    继续加载更早消息
+                  </Button>
+                </div>
               ) : null}
             </div>
           </DesktopEntryShell>
