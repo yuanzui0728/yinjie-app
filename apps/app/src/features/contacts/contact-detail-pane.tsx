@@ -1,7 +1,8 @@
+import type { ReactNode } from "react";
+import { ChevronRight, MessageCircleMore } from "lucide-react";
 import type { Character, FriendListItem } from "@yinjie/contracts";
 import { Button } from "@yinjie/ui";
 import { AvatarChip } from "../../components/avatar-chip";
-import { EmptyState } from "../../components/empty-state";
 import { formatTimestamp } from "../../lib/format";
 
 type ContactDetailPaneProps = {
@@ -21,72 +22,157 @@ export function ContactDetailPane({
 }: ContactDetailPaneProps) {
   if (!character) {
     return (
-      <div className="flex h-full items-center justify-center px-10">
-        <EmptyState title="先选择一个联系人" description="左侧会保留微信式联系人目录，你可以在这里查看资料或继续发消息。" />
+      <div className="flex h-full items-center justify-center bg-[#f5f5f5] px-10">
+        <div className="flex max-w-sm flex-col items-center text-center">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full border border-[rgba(15,23,42,0.08)] bg-white text-3xl text-[color:var(--text-dim)] shadow-[0_14px_40px_rgba(15,23,42,0.06)]">
+            ···
+          </div>
+          <div className="mt-6 text-[17px] font-medium text-[color:var(--text-primary)]">选择联系人</div>
+          <p className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
+            从左侧通讯录选择一位好友后，这里会显示更接近微信电脑端的联系人资料与常用操作。
+          </p>
+        </div>
       </div>
     );
   }
 
-  const detailItems = friendship
+  const isFriend = Boolean(friendship);
+  const profileRows = isFriend
     ? [
-        { label: "关系", value: character.relationship || "联系人" },
-        { label: "当前状态", value: character.currentStatus?.trim() || character.relationship || "保持联系" },
-        { label: "最近互动", value: formatTimestamp(friendship.lastInteractedAt ?? character.lastActiveAt ?? null) },
+        { label: "备注", value: "暂无" },
+        { label: "昵称", value: character.name },
+        { label: "隐界号", value: `yinjie_${character.id.slice(0, 8)}` },
+        { label: "个性签名", value: character.currentStatus?.trim() || "这个联系人还没有签名。" },
+        { label: "最近互动", value: formatTimestamp(friendship?.lastInteractedAt ?? character.lastActiveAt ?? null) },
       ]
     : [
+        { label: "昵称", value: character.name },
         { label: "身份", value: character.relationship || "世界角色" },
-        { label: "当前状态", value: character.currentStatus?.trim() || character.relationship || "查看角色资料" },
-        { label: "擅长领域", value: character.expertDomains.slice(0, 3).join(" / ") || "查看角色资料" },
-        { label: "最近活跃", value: formatTimestamp(character.lastActiveAt ?? null) },
+        { label: "隐界号", value: `yinjie_${character.id.slice(0, 8)}` },
+        { label: "个性签名", value: character.currentStatus?.trim() || "这个角色还没有签名。" },
       ];
 
+  const relationshipSummary = isFriend ? character.relationship || "联系人" : character.relationship || "世界角色";
+  const description = character.bio?.trim() || (isFriend ? "这个联系人还没有补充更多资料。" : "可以先查看资料，了解这个角色。");
+
   return (
-    <div className="flex h-full flex-col bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(246,248,250,0.98))]">
-      <div className="border-b border-[rgba(15,23,42,0.06)] px-8 py-8">
-        <div className="flex items-start gap-5">
-          <AvatarChip name={character.name} src={character.avatar} size="lg" />
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="truncate text-[28px] font-semibold tracking-[0.01em] text-[color:var(--text-primary)]">{character.name}</h2>
-              <span className="rounded-full bg-[rgba(15,23,42,0.06)] px-3 py-1 text-xs text-[color:var(--text-secondary)]">
-                {friendship ? "联系人" : "世界角色"}
-              </span>
+    <div className="flex h-full overflow-auto bg-[#f5f5f5]">
+      <div className="mx-auto flex w-full max-w-[720px] flex-col px-10 py-10">
+        <section className="overflow-hidden rounded-[24px] border border-[rgba(15,23,42,0.08)] bg-white shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
+          <div className="flex items-start justify-between gap-6 px-8 py-8">
+            <div className="flex min-w-0 flex-1 items-start gap-5">
+              <AvatarChip name={character.name} src={character.avatar} size="xl" />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="truncate text-[30px] font-medium tracking-[0.01em] text-[color:var(--text-primary)]">{character.name}</h2>
+                  <span className="rounded-full bg-[rgba(15,23,42,0.06)] px-3 py-1 text-xs text-[color:var(--text-secondary)]">
+                    {isFriend ? "联系人" : "世界角色"}
+                  </span>
+                </div>
+                <div className="mt-2 text-sm text-[color:var(--text-secondary)]">
+                  备注：暂无
+                  <span className="mx-2 text-[color:var(--border-faint)]">|</span>
+                  {relationshipSummary}
+                </div>
+                <div className="mt-1 text-sm text-[color:var(--text-dim)]">隐界号：yinjie_{character.id.slice(0, 8)}</div>
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-[color:var(--text-secondary)]">{description}</p>
+              </div>
             </div>
-            <div className="mt-2 text-sm text-[color:var(--text-secondary)]">{character.currentStatus?.trim() || character.relationship || "保持联系"}</div>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-[color:var(--text-secondary)]">
-              {character.bio?.trim() || "这里会展示联系人资料、关系状态和常用动作。"}
-            </p>
-          </div>
-        </div>
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          {friendship && onStartChat ? (
-            <Button variant="primary" size="lg" className="min-w-32 rounded-2xl" onClick={onStartChat} disabled={chatPending}>
-              {chatPending ? "正在打开会话..." : "发消息"}
-            </Button>
+            <div className="shrink-0">
+              {isFriend && onStartChat ? (
+                <Button variant="primary" size="lg" className="min-w-32 rounded-2xl" onClick={onStartChat} disabled={chatPending}>
+                  <MessageCircleMore size={16} />
+                  {chatPending ? "正在打开会话..." : "发消息"}
+                </Button>
+              ) : (
+                <Button variant="primary" size="lg" className="min-w-32 rounded-2xl" onClick={onOpenProfile}>
+                  查看资料
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <DetailSection title="基础资料">
+            {profileRows.map((item) => (
+              <StaticDetailRow key={item.label} label={item.label} value={item.value} />
+            ))}
+          </DetailSection>
+
+          <DetailSection title="内容与关系">
+            <ActionDetailRow
+              label="更多资料"
+              value={isFriend ? "查看角色档案与更多介绍" : "查看完整角色资料"}
+              onClick={onOpenProfile}
+            />
+            <StaticDetailRow label="朋友圈" value="暂未接入" muted />
+            <StaticDetailRow label="共同群聊" value="暂未接入" muted />
+          </DetailSection>
+
+          {isFriend ? (
+            <DetailSection title="聊天与管理">
+              <StaticDetailRow label="置顶聊天" value="后续接入" muted />
+              <StaticDetailRow label="消息免打扰" value="后续接入" muted />
+              <ActionDetailRow label="查看资料" value="进入角色资料详情页" onClick={onOpenProfile} />
+              <StaticDetailRow label="删除联系人" value="后续接入" muted />
+            </DetailSection>
           ) : null}
-          <Button
-            variant={friendship ? "secondary" : "primary"}
-            size="lg"
-            className="min-w-32 rounded-2xl"
-            onClick={onOpenProfile}
-          >
-            查看资料
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid gap-4 px-8 py-8 lg:grid-cols-2">
-        {detailItems.map((item) => (
-          <div
-            key={item.label}
-            className="rounded-[24px] border border-[rgba(15,23,42,0.06)] bg-white/92 px-5 py-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]"
-          >
-            <div className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-muted)]">{item.label}</div>
-            <div className="mt-3 text-sm leading-7 text-[color:var(--text-primary)]">{item.value}</div>
-          </div>
-        ))}
+        </section>
       </div>
     </div>
+  );
+}
+
+function DetailSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="border-t border-[rgba(15,23,42,0.08)]">
+      <div className="px-8 pt-6 pb-3 text-xs uppercase tracking-[0.18em] text-[color:var(--text-muted)]">{title}</div>
+      <div>{children}</div>
+    </section>
+  );
+}
+
+function StaticDetailRow({
+  label,
+  value,
+  muted = false,
+}: {
+  label: string;
+  value: string;
+  muted?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-4 px-8 py-4 text-sm">
+      <div className="w-24 shrink-0 text-[color:var(--text-muted)]">{label}</div>
+      <div className={muted ? "text-[color:var(--text-dim)]" : "text-[color:var(--text-primary)]"}>{value}</div>
+    </div>
+  );
+}
+
+function ActionDetailRow({
+  label,
+  value,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-4 px-8 py-4 text-left text-sm transition-colors hover:bg-[rgba(15,23,42,0.03)]"
+    >
+      <div className="w-24 shrink-0 text-[color:var(--text-muted)]">{label}</div>
+      <div className="min-w-0 flex-1 truncate text-[color:var(--text-primary)]">{value}</div>
+      <ChevronRight size={16} className="shrink-0 text-[color:var(--text-dim)]" />
+    </button>
   );
 }
