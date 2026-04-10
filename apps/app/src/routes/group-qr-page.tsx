@@ -1016,13 +1016,10 @@ export function GroupQrPage() {
                           {topPendingReturnConversation.conversation.title}
                         </div>
                         <div className="mt-1 text-xs text-[color:var(--text-muted)]">
-                          优先补发理由：
-                          {
-                            resolvePendingReturnPrimaryReason(
-                              topPendingReturnConversation.conversation,
-                              topPendingReturnConversation.target.deliveredAt,
-                            ).label
-                          }
+                          {resolvePendingReturnCardMetaSummary(
+                            topPendingReturnConversation.conversation,
+                            topPendingReturnConversation.target.deliveredAt,
+                          )}
                         </div>
                         <div className="mt-1 text-xs leading-6 text-[color:var(--text-secondary)]">
                           {resolvePendingReturnRecommendationSummary(
@@ -1076,33 +1073,6 @@ export function GroupQrPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                      <span
-                        className={`rounded-full px-2.5 py-1 font-medium ${resolvePendingReturnPrimaryReason(
-                          topPendingReturnConversation.conversation,
-                          topPendingReturnConversation.target.deliveredAt,
-                        ).tone}`}
-                      >
-                        {
-                          resolvePendingReturnPrimaryReason(
-                            topPendingReturnConversation.conversation,
-                            topPendingReturnConversation.target.deliveredAt,
-                          ).label
-                        }
-                      </span>
-                      <span className="text-[color:var(--text-muted)]">
-                        待回流{" "}
-                        {formatPendingReturnDuration(
-                          topPendingReturnConversation.target.deliveredAt,
-                        )}
-                      </span>
-                      <span className="text-[color:var(--text-muted)]">
-                        最近活跃{" "}
-                        {formatConversationTimestamp(
-                          topPendingReturnConversation.conversation.lastActivityAt,
-                        )}
-                      </span>
-                    </div>
                     {fallbackPendingReturnConversation ? (
                       <div className="mt-3 rounded-[16px] border border-[rgba(15,23,42,0.08)] bg-white/72 px-3 py-3">
                         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -1128,14 +1098,9 @@ export function GroupQrPage() {
                             <div className="mt-1 truncate text-sm font-medium text-[color:var(--text-primary)]">
                               {fallbackPendingReturnConversation.conversation.title}
                             </div>
-                            <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
-                              {resolvePendingReturnPrimaryReason(
+                            <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                              {resolvePendingReturnCardMetaSummary(
                                 fallbackPendingReturnConversation.conversation,
-                                fallbackPendingReturnConversation.target.deliveredAt,
-                              ).label}
-                              {" · "}
-                              待回流{" "}
-                              {formatPendingReturnDuration(
                                 fallbackPendingReturnConversation.target.deliveredAt,
                               )}
                             </div>
@@ -1187,9 +1152,9 @@ export function GroupQrPage() {
                             <div className="mt-1 truncate text-sm font-medium text-[color:var(--text-primary)]">
                               {deferredPendingReturnConversation.conversation.title}
                             </div>
-                            <div className="mt-1 text-xs text-[color:var(--text-secondary)]">
-                              刚补发过 · 冷却剩余{" "}
-                              {formatPendingReturnCooldownRemaining(
+                            <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                              {resolvePendingReturnCardMetaSummary(
+                                deferredPendingReturnConversation.conversation,
                                 deferredPendingReturnConversation.target.deliveredAt,
                               )}
                             </div>
@@ -1612,6 +1577,19 @@ function resolvePendingReturnMetaSummary(
     resolveDeliveredBatchLabel(target, deliveryBatchRankById),
     `待回流 ${formatPendingReturnDuration(target.deliveredAt)}`,
     `上次发送于 ${formatConversationTimestamp(target.deliveredAt)}`,
+    `最近活跃 ${formatConversationTimestamp(conversation.lastActivityAt)}`,
+  ].join(" · ");
+}
+
+function resolvePendingReturnCardMetaSummary(
+  conversation: ConversationListItem,
+  deliveredAt: string,
+) {
+  return [
+    resolvePendingReturnPrimaryReason(conversation, deliveredAt).label,
+    isPendingReturnCoolingDown(deliveredAt)
+      ? `冷却剩余 ${formatPendingReturnCooldownRemaining(deliveredAt)}`
+      : `待回流 ${formatPendingReturnDuration(deliveredAt)}`,
     `最近活跃 ${formatConversationTimestamp(conversation.lastActivityAt)}`,
   ].join(" · ");
 }

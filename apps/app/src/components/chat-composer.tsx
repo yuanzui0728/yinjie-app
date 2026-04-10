@@ -2584,6 +2584,14 @@ function DesktopScreenshotEditor({
     height: number;
   } | null>(null);
   const [previewZoom, setPreviewZoom] = useState(1);
+  const [previewSpacePressed, setPreviewSpacePressed] = useState(false);
+  const [previewPanDrag, setPreviewPanDrag] = useState<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    scrollLeft: number;
+    scrollTop: number;
+  } | null>(null);
   const previewZoomLabel = `${Math.round(previewZoom * 100)}%`;
   const selectionRect = selection ? getSelectionPreviewRect(selection) : null;
   const cropRect = crop ? getNormalizedCropPreviewRect(crop) : null;
@@ -2613,11 +2621,69 @@ function DesktopScreenshotEditor({
         height: previewViewportSize.height * previewZoom,
       }
     : null;
+  const previewPanEnabled = previewZoom > 1 && previewSpacePressed;
+  const previewPanVisible =
+    previewZoom > 1 && Boolean(previewSpacePressed || previewPanDrag);
 
   useEffect(() => {
     setPreviewZoom(1);
     setPreviewViewportSize(null);
+    setPreviewSpacePressed(false);
+    setPreviewPanDrag(null);
   }, [draft.previewUrl]);
+
+  useEffect(() => {
+    const isInteractiveTarget = (target: EventTarget | null) => {
+      if (!(target instanceof HTMLElement)) {
+        return false;
+      }
+
+      return Boolean(
+        target.closest(
+          'input, textarea, select, button, a, [contenteditable="true"], [role="button"]',
+        ),
+      );
+    };
+
+    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
+      if (
+        event.code !== "Space" ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        isInteractiveTarget(event.target)
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      setPreviewSpacePressed(true);
+    };
+
+    const handleKeyUp = (event: globalThis.KeyboardEvent) => {
+      if (event.code !== "Space") {
+        return;
+      }
+
+      setPreviewSpacePressed(false);
+      setPreviewPanDrag(null);
+    };
+
+    const handleWindowBlur = () => {
+      setPreviewSpacePressed(false);
+      setPreviewPanDrag(null);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleWindowBlur);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleWindowBlur);
+    };
+  }, []);
 
   useEffect(() => {
     const image = imageRef.current;
@@ -2682,6 +2748,65 @@ function DesktopScreenshotEditor({
     event.preventDefault();
     const step = event.deltaY < 0 ? 0.1 : -0.1;
     updatePreviewZoom(previewZoom + step);
+  };
+
+  const handlePreviewPanStart = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!previewPanEnabled) {
+      return;
+    }
+
+    const viewport = previewViewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    setPreviewPanDrag({
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      scrollLeft: viewport.scrollLeft,
+      scrollTop: viewport.scrollTop,
+    });
+  };
+
+  const handlePreviewPanMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    setPreviewPanDrag((current) => {
+      if (!current || current.pointerId !== event.pointerId) {
+        return current;
+      }
+
+      const viewport = previewViewportRef.current;
+      if (!viewport) {
+        return current;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      viewport.scrollLeft = Math.max(
+        0,
+        current.scrollLeft - (event.clientX - current.startX),
+      );
+      viewport.scrollTop = Math.max(
+        0,
+        current.scrollTop - (event.clientY - current.startY),
+      );
+      return current;
+    });
+  };
+
+  const finishPreviewPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    setPreviewPanDrag((current) =>
+      current?.pointerId === event.pointerId ? null : current,
+    );
   };
 
   return (
@@ -2796,7 +2921,7 @@ function DesktopScreenshotEditor({
                   清空标注
                 </Button>
                 <span className="text-[11px] text-white/42">
-                  Ctrl/Cmd + 滚轮缩放
+                  Ctrl/Cmd + 滚轮缩放，空格拖动画布
                 </span>
               </div>
             </div>
@@ -2831,12 +2956,28 @@ function DesktopScreenshotEditor({
                     )}
                   />
                   <div
-                    className="absolute inset-0 cursor-crosshair"
+                    className={cn(
+                      "absolute inset-0",
+                      previewPanVisible
+                        ? previewPanDrag
+                          ? "cursor-grabbing"
+                          : "cursor-grab"
+                        : "cursor-crosshair",
+                    )}
                     onPointerDown={onPointerDown}
                     onPointerMove={onPointerMove}
                     onPointerUp={onPointerUp}
                     onPointerCancel={onPointerCancel}
                   >
+                    {previewPanVisible ? (
+                      <div
+                        className="absolute inset-0 z-20"
+                        onPointerDown={handlePreviewPanStart}
+                        onPointerMove={handlePreviewPanMove}
+                        onPointerUp={finishPreviewPan}
+                        onPointerCancel={finishPreviewPan}
+                      />
+                    ) : null}
                     {cropRect ? (
                       <div
                         className="absolute border-2 border-[#07c160] bg-[rgba(7,193,96,0.12)] shadow-[0_0_0_1px_rgba(255,255,255,0.16)]"
