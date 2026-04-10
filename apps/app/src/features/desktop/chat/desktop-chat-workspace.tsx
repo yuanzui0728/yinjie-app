@@ -56,6 +56,7 @@ import {
   buildChatReminderNavigation,
   formatReminderListTimestamp,
   getChatReminderActionLabel,
+  getChatReminderActionTone,
   getChatReminderStatus,
   getChatReminderStatusLabel,
   isChatReminderGroupCollapsible,
@@ -324,12 +325,19 @@ export function DesktopChatWorkspace({
 
   useEffect(() => {
     const hasActiveThread = Boolean(activeConversation);
-    if (!hasActiveThread || subscriptionInboxActive || serviceConversationActive) {
+    if (
+      !hasActiveThread ||
+      subscriptionInboxActive ||
+      serviceConversationActive
+    ) {
       return;
     }
 
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== "f") {
+      if (
+        !(event.ctrlKey || event.metaKey) ||
+        event.key.toLowerCase() !== "f"
+      ) {
         return;
       }
 
@@ -1091,7 +1099,12 @@ function DesktopReminderCard({
       <button
         type="button"
         onClick={() => onDismiss(entry)}
-        className="shrink-0 rounded-full border border-black/8 bg-white px-3 py-1.5 text-[11px] text-[color:var(--text-secondary)] transition hover:border-[#07c160]/30 hover:text-[#07c160]"
+        className={cn(
+          "shrink-0 rounded-full px-3 py-1.5 text-[11px] transition-colors",
+          getChatReminderActionTone(entry) === "warning"
+            ? "border border-[#f1d5a6] bg-[#fff8ec] text-[#b76a08] hover:bg-[#fff1dc]"
+            : "border border-transparent bg-[#f3f6f4] text-[#5f6b63] hover:bg-[#e9eeeb]",
+        )}
       >
         {getChatReminderActionLabel(entry)}
       </button>
