@@ -151,10 +151,6 @@ export function ChatMessageList({
     setFavoriteSourceIds(readDesktopFavorites().map((item) => item.sourceId));
   }, [isDesktop]);
 
-  if (!messages.length) {
-    return emptyState ?? null;
-  }
-
   const copyToClipboard = async (text: string, successMessage: string) => {
     if (
       typeof navigator === "undefined" ||
@@ -262,6 +258,72 @@ export function ChatMessageList({
       clearLongPressTimer();
     }
   };
+
+  const imageMessages = messages
+    .filter(
+      (
+        message,
+      ): message is ChatRenderableMessage & {
+        type: "image";
+        attachment: Extract<MessageAttachment, { kind: "image" }>;
+      } => message.type === "image" && message.attachment?.kind === "image",
+    )
+    .map((message) => ({
+      id: message.id,
+      url: message.attachment.url,
+      label:
+        message.attachment.fileName ||
+        sanitizeDisplayedChatText(message.text) ||
+        "[图片]",
+      fileName: message.attachment.fileName,
+    }));
+  const activeImageIndex = viewerMessageId
+    ? imageMessages.findIndex((message) => message.id === viewerMessageId)
+    : -1;
+  const activeImage =
+    activeImageIndex >= 0 ? imageMessages[activeImageIndex] : null;
+
+  const openImageByIndex = (nextIndex: number) => {
+    const target = imageMessages[nextIndex];
+    if (!target) {
+      return;
+    }
+
+    setViewerMessageId(target.id);
+  };
+
+  useEffect(() => {
+    if (!isDesktop || !activeImage) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setViewerMessageId(null);
+        return;
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        openImageByIndex(Math.max(activeImageIndex - 1, 0));
+        return;
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        openImageByIndex(
+          Math.min(activeImageIndex + 1, imageMessages.length - 1),
+        );
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeImage, activeImageIndex, imageMessages, isDesktop]);
+
+  if (!messages.length) {
+    return emptyState ?? null;
+  }
 
   const handleToggleFavorite = (message: ChatRenderableMessage) => {
     const sourceId = buildFavoriteSourceId(message.id);
@@ -428,6 +490,11 @@ export function ChatMessageList({
                       url={message.attachment.url}
                       label={message.attachment.fileName || displayText}
                       maxSize={isDesktop ? 180 : 144}
+                      onOpen={
+                        isDesktop
+                          ? () => setViewerMessageId(message.id)
+                          : undefined
+                      }
                     />
                   ) : message.type === "file" &&
                     message.attachment?.kind === "file" ? (
@@ -561,6 +628,28 @@ export function ChatMessageList({
             : undefined
         }
       />
+      {isDesktop && activeImage ? (
+        <DesktopImageViewerOverlay
+          activeImage={activeImage}
+          activeIndex={activeImageIndex}
+          total={imageMessages.length}
+          onClose={() => setViewerMessageId(null)}
+          onPrevious={
+            activeImageIndex > 0
+              ? () => openImageByIndex(activeImageIndex - 1)
+              : undefined
+          }
+          onNext={
+            activeImageIndex < imageMessages.length - 1
+              ? () => openImageByIndex(activeImageIndex + 1)
+              : undefined
+          }
+          onLocate={() => {
+            setViewerMessageId(null);
+            jumpToMessage(activeImage.id);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -754,10 +843,12 @@ function ImageMessage({
   url,
   label,
   maxSize,
+  onOpen,
 }: {
   url: string;
   label: string;
   maxSize: number;
+  onOpen?: () => void;
 }) {
   const [loadFailed, setLoadFailed] = useState(false);
 
@@ -769,7 +860,7 @@ function ImageMessage({
     );
   }
 
-  return (
+  const image = (
     <img
       src={url}
       alt={label}
@@ -778,6 +869,21 @@ function ImageMessage({
       style={{ maxWidth: `${maxSize}px`, maxHeight: `${maxSize}px` }}
       loading="lazy"
     />
+  );
+
+  if (!onOpen) {
+    return image;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="transition hover:opacity-95"
+      aria-label={`查看图片 ${label}`}
+    >
+      {image}
+    </button>
   );
 }
 
@@ -894,6 +1000,131 @@ function StickerMessage({
       style={{ maxWidth: `${maxSize}px`, maxHeight: `${maxSize}px` }}
       loading="lazy"
     />
+  );
+}
+
+function DesktopImageViewerOverlay({
+  activeImage,
+  activeIndex,
+  total,
+  onClose,
+  onPrevious,
+  onNext,
+  onLocate,
+}: {
+  activeImage: {
+    id: string;
+    url: string;
+    label: string;
+    fileName?: string;
+  };
+  activeIndex: number;
+  total: number;
+  onClose: () => void;
+  onPrevious?: () => void;
+  onNext?: () => void;
+  onLocate: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-[rgba(15,23,42,0.86)] backdrop-blur-sm">
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute inset-0 cursor-default"
+        aria-label="关闭图片查看器"
+      />
+
+      <div className="absolute inset-x-8 top-5 z-10 flex items-center justify-between gap-4 text-white">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-medium">
+            {activeImage.fileName || activeImage.label}
+          </div>
+          <div className="mt-1 text-xs text-white/70">
+            {activeIndex + 1} / {total}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <ViewerActionButton label="定位到聊天位置" onClick={onLocate}>
+            <LocateFixed size={16} />
+          </ViewerActionButton>
+          <ViewerActionButton label="关闭图片查看器" onClick={onClose}>
+            <X size={16} />
+          </ViewerActionButton>
+        </div>
+      </div>
+
+      {onPrevious ? (
+        <ViewerNavButton
+          side="left"
+          label="上一张图片"
+          onClick={onPrevious}
+        >
+          <ChevronLeft size={22} />
+        </ViewerNavButton>
+      ) : null}
+      {onNext ? (
+        <ViewerNavButton side="right" label="下一张图片" onClick={onNext}>
+          <ChevronRight size={22} />
+        </ViewerNavButton>
+      ) : null}
+
+      <div className="absolute inset-0 flex items-center justify-center px-24 pb-10 pt-24">
+        <img
+          src={activeImage.url}
+          alt={activeImage.label}
+          className="max-h-full max-w-full rounded-[20px] object-contain shadow-[0_32px_80px_rgba(0,0,0,0.34)]"
+        />
+      </div>
+    </div>
+  );
+}
+
+function ViewerActionButton({
+  children,
+  label,
+  onClick,
+}: {
+  children: ReactNode;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-10 items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 text-sm text-white transition hover:bg-white/16"
+      aria-label={label}
+      title={label}
+    >
+      {children}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function ViewerNavButton({
+  children,
+  label,
+  onClick,
+  side,
+}: {
+  children: ReactNode;
+  label: string;
+  onClick: () => void;
+  side: "left" | "right";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`absolute top-1/2 z-10 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-white/10 text-white transition hover:bg-white/16 ${
+        side === "left" ? "left-8" : "right-8"
+      }`}
+      aria-label={label}
+      title={label}
+    >
+      {children}
+    </button>
   );
 }
 
