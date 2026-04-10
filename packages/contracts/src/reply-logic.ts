@@ -169,6 +169,30 @@ export interface ReplyLogicSchedulerDescriptions {
   trigger_memory_proactive_messages: string;
 }
 
+export interface ReplyLogicSchedulerNames {
+  world_context_snapshot: string;
+  expire_friend_requests: string;
+  update_ai_active_status: string;
+  check_moment_schedule: string;
+  trigger_scene_friend_requests: string;
+  process_pending_feed_reactions: string;
+  check_channels_schedule: string;
+  update_character_status: string;
+  trigger_memory_proactive_messages: string;
+}
+
+export interface ReplyLogicSchedulerNextRunHints {
+  world_context_snapshot: string;
+  expire_friend_requests: string;
+  update_ai_active_status: string;
+  check_moment_schedule: string;
+  trigger_scene_friend_requests: string;
+  process_pending_feed_reactions: string;
+  check_channels_schedule: string;
+  update_character_status: string;
+  trigger_memory_proactive_messages: string;
+}
+
 export interface ReplyLogicConstantSummary {
   sleepHintMessages: string[];
   busyHintMessages: Record<string, string[]>;
@@ -199,6 +223,8 @@ export interface ReplyLogicConstantSummary {
   worldContextRules: ReplyLogicWorldContextRules;
   inspectorTemplates: ReplyLogicInspectorTemplates;
   schedulerDescriptions: ReplyLogicSchedulerDescriptions;
+  schedulerNames: ReplyLogicSchedulerNames;
+  schedulerNextRunHints: ReplyLogicSchedulerNextRunHints;
 }
 
 export interface ReplyLogicOverviewCharacterItem {

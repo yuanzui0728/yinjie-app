@@ -10,6 +10,7 @@ import {
 @Injectable()
 export class ReplyLogicRulesService {
   private readonly logger = new Logger(ReplyLogicRulesService.name);
+  private cachedRules: ReplyLogicRuntimeRules = DEFAULT_REPLY_LOGIC_RUNTIME_RULES;
 
   constructor(private readonly systemConfig: SystemConfigService) {}
 
@@ -18,19 +19,26 @@ export class ReplyLogicRulesService {
       REPLY_LOGIC_RUNTIME_RULES_CONFIG_KEY,
     );
     if (!raw) {
-      return DEFAULT_REPLY_LOGIC_RUNTIME_RULES;
+      this.cachedRules = DEFAULT_REPLY_LOGIC_RUNTIME_RULES;
+      return this.cachedRules;
     }
 
     try {
-      return normalizeReplyLogicRuntimeRules(
+      this.cachedRules = normalizeReplyLogicRuntimeRules(
         JSON.parse(raw) as Partial<ReplyLogicRuntimeRules>,
       );
+      return this.cachedRules;
     } catch {
       this.logger.warn(
         `Failed to parse ${REPLY_LOGIC_RUNTIME_RULES_CONFIG_KEY}, using defaults.`,
       );
-      return DEFAULT_REPLY_LOGIC_RUNTIME_RULES;
+      this.cachedRules = DEFAULT_REPLY_LOGIC_RUNTIME_RULES;
+      return this.cachedRules;
     }
+  }
+
+  getCachedRules() {
+    return this.cachedRules;
   }
 
   async setRules(
@@ -41,6 +49,7 @@ export class ReplyLogicRulesService {
       REPLY_LOGIC_RUNTIME_RULES_CONFIG_KEY,
       JSON.stringify(normalized),
     );
+    this.cachedRules = normalized;
     return normalized;
   }
 
