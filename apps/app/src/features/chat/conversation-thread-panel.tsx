@@ -20,7 +20,6 @@ import {
 } from "../desktop/chat/desktop-chat-header-actions";
 import { DesktopDirectCallPanel } from "../desktop/chat/desktop-direct-call-panel";
 import { buildChatBackgroundStyle } from "./backgrounds/chat-background-helpers";
-import { ChatCallFallbackNotice } from "./chat-call-fallback-notice";
 import { type ChatComposeShortcutAction } from "./chat-compose-shortcut-route";
 import { type ChatComposerAttachmentPayload } from "./chat-plus-types";
 import { buildDirectCallInviteMessage } from "./group-call-message";
@@ -72,8 +71,6 @@ export function ConversationThreadPanel({
   const navigate = useNavigate();
   const [replyDraft, setReplyDraft] = useState<ChatReplyMetadata | null>(null);
   const [desktopCallPanelKind, setDesktopCallPanelKind] =
-    useState<DesktopChatCallKind | null>(null);
-  const [pendingCallFallback, setPendingCallFallback] =
     useState<DesktopChatCallKind | null>(null);
   const [mobileShortcutRequest, setMobileShortcutRequest] = useState<{
     action: ChatComposeShortcutAction;
@@ -259,29 +256,18 @@ export function ConversationThreadPanel({
       return;
     }
 
-    if (kind === "voice") {
-      setPendingCallFallback(null);
-      void navigate({
-        to: "/chat/$conversationId/voice-call",
-        params: { conversationId },
-      });
-      return;
-    }
-
-    setPendingCallFallback(kind);
-    onDesktopCallAction?.(kind);
-  };
-  const handleApplyMobileCallFallback = (kind: DesktopChatCallKind) => {
-    setMobileShortcutRequest({
-      action: kind === "voice" ? "voice-message" : "camera",
-      nonce: Date.now(),
+    void navigate({
+      to:
+        kind === "voice"
+          ? "/chat/$conversationId/voice-call"
+          : "/chat/$conversationId/video-call",
+      params: { conversationId },
     });
-    setPendingCallFallback(null);
+    onDesktopCallAction?.(kind);
   };
 
   useEffect(() => {
     setDesktopCallPanelKind(null);
-    setPendingCallFallback(null);
     setMobileShortcutRequest(null);
   }, [conversationId]);
 
@@ -357,27 +343,6 @@ export function ConversationThreadPanel({
           }}
         />
       )}
-
-      {pendingCallFallback && !isDesktop ? (
-        <div className="border-b border-black/6 bg-white/82 px-3 py-2.5">
-          <ChatCallFallbackNotice
-            kind={pendingCallFallback}
-            description={
-              pendingCallFallback === "voice"
-                ? "先切到底部按住说话，会更接近当前可用的体验。"
-                : "先用拍摄或图片消息继续，把要表达的内容先发出去。"
-            }
-            primaryLabel={
-              pendingCallFallback === "voice" ? "改发语音" : "改为拍摄"
-            }
-            secondaryLabel="收起"
-            onPrimaryAction={() =>
-              handleApplyMobileCallFallback(pendingCallFallback)
-            }
-            onSecondaryAction={() => setPendingCallFallback(null)}
-          />
-        </div>
-      ) : null}
 
       {routeContextNotice ? (
         <div
@@ -578,11 +543,9 @@ export function ConversationThreadPanel({
           onOpenDesktopHistory={onToggleDesktopHistory}
           mobileShortcutRequest={mobileShortcutRequest}
           onMobileShortcutHandled={() => {
-            setPendingCallFallback(null);
             setMobileShortcutRequest(null);
           }}
           onStartVoiceCall={() => {
-            setPendingCallFallback(null);
             void navigate({
               to: "/chat/$conversationId/voice-call",
               params: { conversationId },

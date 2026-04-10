@@ -188,6 +188,11 @@ const ChatVoiceCallPage = lazy(async () => {
   return { default: mod.ChatVoiceCallPage };
 });
 
+const ChatVideoCallPage = lazy(async () => {
+  const mod = await import("./routes/chat-video-call-page");
+  return { default: mod.ChatVideoCallPage };
+});
+
 const ChatBackgroundPage = lazy(async () => {
   const mod = await import("./routes/chat-background-page");
   return { default: mod.ChatBackgroundPage };
@@ -425,6 +430,13 @@ const chatVoiceCallRoute = createRoute({
   path: "/chat/$conversationId/voice-call",
   beforeLoad: requireWorldReady,
   component: ChatVoiceCallPage,
+});
+
+const chatVideoCallRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/chat/$conversationId/video-call",
+  beforeLoad: requireWorldReady,
+  component: ChatVideoCallPage,
 });
 
 const chatBackgroundRoute = createRoute({
@@ -740,6 +752,7 @@ const routeTree = rootRoute.addChildren([
   chatRoomRoute,
   chatDetailsRoute,
   chatVoiceCallRoute,
+  chatVideoCallRoute,
   chatBackgroundRoute,
   chatMessageSearchRoute,
   characterDetailRoute,
