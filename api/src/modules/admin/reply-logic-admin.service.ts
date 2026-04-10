@@ -37,6 +37,15 @@ import type {
   ReplyLogicWorldContextSummary,
 } from './reply-logic-admin.types';
 
+function renderTemplate(
+  template: string,
+  variables: Record<string, string | undefined | null>,
+) {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) =>
+    variables[key] == null ? '' : String(variables[key]),
+  );
+}
+
 @Injectable()
 export class ReplyLogicAdminService {
   constructor(
@@ -740,6 +749,7 @@ export class ReplyLogicAdminService {
     previewUserMessage?: string;
   }): Promise<ReplyLogicActorSnapshot> {
     const character = input.character;
+    const runtimeRules = await this.replyLogicRules.getRules();
     const history = input.visibleMessages.map((message) =>
       this.toChatHistoryMessage(message),
     );
@@ -777,8 +787,8 @@ export class ReplyLogicAdminService {
         }),
       );
     const stateGate = input.includeStateGate
-      ? await this.describeDirectStateGate(character.currentActivity)
-      : this.describeNonDirectStateGate();
+      ? this.describeDirectStateGate(runtimeRules, character.currentActivity)
+      : this.describeNonDirectStateGate(runtimeRules);
 
     return {
       character: this.toCharacterContract(character),
@@ -799,24 +809,33 @@ export class ReplyLogicAdminService {
       worldContextText: inspection.worldContextText ?? null,
       notes: [
         inspection.apiAvailable
-          ? '当前实例存在可用 API Key，预览使用真实生成链的 prompt 组装结果。'
-          : '当前实例没有可用 API Key，实际聊天会返回“先配置 API Key”的兜底提示。',
+          ? runtimeRules.observabilityTemplates.actorNoteApiAvailable
+          : runtimeRules.observabilityTemplates.actorNoteApiUnavailable,
         input.isGroupChat
-          ? '群聊 prompt 不会注入单聊 lastChatAt/currentActivity 的行为上下文。'
-          : '单聊 prompt 会注入 currentActivity 和距离上次聊天时间。',
+          ? runtimeRules.observabilityTemplates.actorNoteGroupContext
+          : runtimeRules.observabilityTemplates.actorNoteDirectContext,
       ],
     };
   }
 
-  private async describeDirectStateGate(
+  private describeDirectStateGate(
+    runtimeRules: Awaited<ReturnType<ReplyLogicRulesService['getRules']>>,
     activity?: string | null,
-  ): Promise<ReplyLogicStateGateSummary> {
-    const runtimeRules = await this.replyLogicRules.getRules();
+  ): ReplyLogicStateGateSummary {
+    const activityLabel =
+      runtimeRules.semanticLabels.activityLabels[
+        (activity ?? 'free') as keyof typeof runtimeRules.semanticLabels.activityLabels
+      ] ?? activity ?? runtimeRules.semanticLabels.activityLabels.free;
     if (activity === 'sleeping') {
       return {
         mode: 'sleep_hint_delay',
         activity,
-        reason: '当前活动为 sleeping，先发系统提示，再进入延迟回复。',
+        reason: renderTemplate(
+          runtimeRules.observabilityTemplates.stateGateSleeping,
+          {
+            activity: activityLabel,
+          },
+        ),
         delayMs: { ...runtimeRules.sleepDelayMs },
         hintMessages: [...runtimeRules.sleepHintMessages],
       };
@@ -826,7 +845,9 @@ export class ReplyLogicAdminService {
       return {
         mode: 'busy_hint_delay',
         activity,
-        reason: '当前活动为 working / commuting，先发忙碌提示，再进入延迟回复。',
+        reason: renderTemplate(runtimeRules.observabilityTemplates.stateGateBusy, {
+          activity: activityLabel,
+        }),
         delayMs: { ...runtimeRules.busyDelayMs },
         hintMessages: [...(runtimeRules.busyHintMessages[activity] ?? [])],
       };
@@ -835,15 +856,25 @@ export class ReplyLogicAdminService {
     return {
       mode: 'immediate',
       activity: activity ?? null,
-      reason: '当前状态不会触发额外系统提示，下一条消息会直接进入回复链。',
+      reason: renderTemplate(
+        runtimeRules.observabilityTemplates.stateGateImmediate,
+        {
+          activity: activityLabel,
+        },
+      ),
       hintMessages: [],
     };
   }
 
-  private describeNonDirectStateGate(): ReplyLogicStateGateSummary {
+  private describeNonDirectStateGate(
+    runtimeRules: Awaited<ReturnType<ReplyLogicRulesService['getRules']>>,
+  ): ReplyLogicStateGateSummary {
     return {
       mode: 'not_applied',
-      reason: '当前链路不经过单聊状态门控。',
+      reason: renderTemplate(
+        runtimeRules.observabilityTemplates.stateGateNotApplied,
+        {},
+      ),
       hintMessages: [],
     };
   }

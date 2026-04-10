@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { PersonalityProfile } from './ai.types';
 import { ReplyLogicRulesService } from './reply-logic-rules.service';
-import type { ReplyLogicPromptTemplates } from './reply-logic.constants';
+import type {
+  ReplyLogicPromptTemplates,
+  ReplyLogicSemanticLabels,
+} from './reply-logic.constants';
 
 export interface ChatContext {
   currentActivity?: string;
@@ -24,26 +27,6 @@ export interface ChatSystemPromptSection {
   content: string;
   active: boolean;
 }
-
-const DOMAIN_MAP: Record<string, string> = {
-  law: '法律、合同、劳动纠纷',
-  medicine: '医疗健康、常见病、心理健康',
-  finance: '理财投资、税务、财务规划',
-  tech: '技术开发、产品设计、AI',
-  psychology: '情绪疏导、人际关系、心理咨询',
-  education: '教育辅导、学习方法',
-  management: '职场管理、团队协作',
-  general: '日常生活',
-};
-
-const ACTIVITY_MAP: Record<string, string> = {
-  working: '正在工作中',
-  eating: '正在吃饭',
-  sleeping: '正在睡觉',
-  commuting: '正在通勤路上',
-  resting: '正在休息',
-  free: '空闲中',
-};
 
 function renderTemplate(
   template: string,
@@ -74,10 +57,11 @@ export class PromptBuilderService {
     isGroupChat = false,
     context?: ChatContext,
   ): Promise<ChatSystemPromptSection[]> {
-    const templates = (await this.replyLogicRules.getRules()).promptTemplates;
+    const runtimeRules = await this.replyLogicRules.getRules();
     return this.buildChatSystemPromptSectionsFromTemplates(
       profile,
-      templates,
+      runtimeRules.promptTemplates,
+      runtimeRules.semanticLabels,
       isGroupChat,
       context,
     );
@@ -88,10 +72,11 @@ export class PromptBuilderService {
     isGroupChat = false,
     context?: ChatContext,
   ): Promise<string> {
-    const templates = (await this.replyLogicRules.getRules()).promptTemplates;
+    const runtimeRules = await this.replyLogicRules.getRules();
     const sections = this.buildChatSystemPromptSectionsFromTemplates(
       profile,
-      templates,
+      runtimeRules.promptTemplates,
+      runtimeRules.semanticLabels,
       isGroupChat,
       context,
     );
@@ -124,25 +109,17 @@ export class PromptBuilderService {
     currentTime: Date,
     recentTopics: string[] = [],
   ): Promise<string> {
-    const templates = (await this.replyLogicRules.getRules()).promptTemplates;
+    const runtimeRules = await this.replyLogicRules.getRules();
+    const templates = runtimeRules.promptTemplates;
     const hour = currentTime.getHours();
-    const timeOfDay =
-      hour < 6
-        ? '深夜'
-        : hour < 9
-          ? '早上'
-          : hour < 12
-            ? '上午'
-            : hour < 14
-              ? '中午'
-              : hour < 18
-                ? '下午'
-                : hour < 21
-                  ? '傍晚'
-                  : '晚上';
-    const dayOfWeek = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][
-      currentTime.getDay()
-    ];
+    const timeOfDay = this.resolveTimeOfDayLabel(
+      hour,
+      runtimeRules.semanticLabels,
+    );
+    const dayOfWeek =
+      runtimeRules.semanticLabels.weekdayLabels[currentTime.getDay()] ??
+      runtimeRules.semanticLabels.weekdayLabels[0] ??
+      '周日';
     const topicsHint =
       recentTopics.length > 0
         ? `\n最近你聊过的话题：${recentTopics.join('、')}，可以适当延续或换个话题。`
@@ -200,12 +177,18 @@ export class PromptBuilderService {
   private buildChatSystemPromptSectionsFromTemplates(
     profile: PersonalityProfile,
     templates: ReplyLogicPromptTemplates,
+    semanticLabels: ReplyLogicSemanticLabels,
     isGroupChat: boolean,
     context?: ChatContext,
   ): ChatSystemPromptSection[] {
     const { name, expertDomains, basePrompt } = profile;
     const expertiseDesc = expertDomains
-      .map((domain) => DOMAIN_MAP[domain] ?? domain)
+      .map(
+        (domain) =>
+          semanticLabels.domainLabels[
+            domain as keyof ReplyLogicSemanticLabels['domainLabels']
+          ] ?? domain,
+      )
       .join('、');
     const identityText =
       basePrompt ??
@@ -341,8 +324,10 @@ export class PromptBuilderService {
         minute: '2-digit',
       });
       const activityDesc = context.currentActivity
-        ? ACTIVITY_MAP[context.currentActivity] || '空闲中'
-        : '空闲中';
+        ? semanticLabels.activityLabels[
+            context.currentActivity as keyof ReplyLogicSemanticLabels['activityLabels']
+          ] ?? semanticLabels.activityLabels.free
+        : semanticLabels.activityLabels.free;
 
       let timeSinceLastChat = '';
       if (context.lastChatAt) {
@@ -443,5 +428,30 @@ ${templates.behavioralGuideline}
         active: Boolean(rulesBody),
       },
     ];
+  }
+
+  private resolveTimeOfDayLabel(
+    hour: number,
+    semanticLabels: ReplyLogicSemanticLabels,
+  ) {
+    if (hour < 6) {
+      return semanticLabels.timeOfDayLabels.lateNight;
+    }
+    if (hour < 9) {
+      return semanticLabels.timeOfDayLabels.morning;
+    }
+    if (hour < 12) {
+      return semanticLabels.timeOfDayLabels.forenoon;
+    }
+    if (hour < 14) {
+      return semanticLabels.timeOfDayLabels.noon;
+    }
+    if (hour < 18) {
+      return semanticLabels.timeOfDayLabels.afternoon;
+    }
+    if (hour < 21) {
+      return semanticLabels.timeOfDayLabels.dusk;
+    }
+    return semanticLabels.timeOfDayLabels.evening;
   }
 }
