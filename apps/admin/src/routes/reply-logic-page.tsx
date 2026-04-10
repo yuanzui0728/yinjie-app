@@ -2560,6 +2560,278 @@ function RuntimeRulesEditorCard({
               />
             </ConfigSection>
 
+            <ConfigSection title="链路解释模板">
+              <InlineNotice tone="muted">
+                这部分主要影响后台里“角色视图备注 / 会话分支摘要 / 候选消息预演说明 / 历史窗口注释”这些解释文字。
+              </InlineNotice>
+              <TextAreaBlock
+                label="角色视图总说明"
+                value={draft.inspectorTemplates.characterViewIntro}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      characterViewIntro: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="角色视图-已找到单聊"
+                value={draft.inspectorTemplates.characterViewHistoryFound}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      characterViewHistoryFound: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="角色视图-未找到单聊"
+                value={draft.inspectorTemplates.characterViewHistoryMissing}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      characterViewHistoryMissing: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="历史窗口内注释"
+                value={draft.inspectorTemplates.historyIncludedNote}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      historyIncludedNote: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="历史窗口外注释"
+                value={draft.inspectorTemplates.historyExcludedNote}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      historyExcludedNote: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="Stored Group 标题"
+                value={draft.inspectorTemplates.storedGroupTitle}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      storedGroupTitle: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="Stored Group-升级说明"
+                value={draft.inspectorTemplates.storedGroupUpgradedNote}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      storedGroupUpgradedNote: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="Stored Group-下一步说明"
+                value={draft.inspectorTemplates.storedGroupNextReplyNote}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      storedGroupNextReplyNote: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="Direct Branch 标题"
+                value={draft.inspectorTemplates.directBranchTitle}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      directBranchTitle: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="Direct Branch-下一步说明"
+                value={draft.inspectorTemplates.directBranchNextReplyNote}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      directBranchNextReplyNote: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="Formal Group 标题"
+                value={draft.inspectorTemplates.formalGroupTitle}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      formalGroupTitle: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="Formal Group-状态门说明"
+                value={draft.inspectorTemplates.formalGroupStateGateNote}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      formalGroupStateGateNote: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="Formal Group-回复规则说明"
+                value={draft.inspectorTemplates.formalGroupReplyRuleNote}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      formalGroupReplyRuleNote: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="预演-角色说明"
+                value={draft.inspectorTemplates.previewCharacterIntro}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      previewCharacterIntro: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="预演-角色有历史"
+                value={draft.inspectorTemplates.previewCharacterWithHistory}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      previewCharacterWithHistory: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="预演-角色无历史"
+                value={draft.inspectorTemplates.previewCharacterWithoutHistory}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      previewCharacterWithoutHistory: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="预演-Stored Group"
+                value={draft.inspectorTemplates.previewStoredGroup}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      previewStoredGroup: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="预演-Direct Conversation"
+                value={draft.inspectorTemplates.previewDirectConversation}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      previewDirectConversation: value,
+                    },
+                  }))
+                }
+              />
+              <TextAreaBlock
+                label="预演-Formal Group"
+                value={draft.inspectorTemplates.previewFormalGroup}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    inspectorTemplates: {
+                      ...current.inspectorTemplates,
+                      previewFormalGroup: value,
+                    },
+                  }))
+                }
+              />
+            </ConfigSection>
+
+            <ConfigSection title="调度器任务说明">
+              <InlineNotice tone="muted">
+                这里改的是 Scheduler 任务列表里的描述文字，不改 cron 表达式和实际触发频率。
+              </InlineNotice>
+              <TextAreaBlock
+                label="任务说明（key=value）"
+                value={recordToLines(draft.schedulerDescriptions)}
+                onChange={(value) =>
+                  onPatch((current) => ({
+                    ...current,
+                    schedulerDescriptions: parseKeyValueLines(
+                      value,
+                      current.schedulerDescriptions,
+                    ),
+                  }))
+                }
+              />
+            </ConfigSection>
+
             <div className="flex flex-wrap gap-3 border-t border-[color:var(--border-faint)] pt-5">
               <Button variant="secondary" onClick={onReset}>
                 重置运行规则
@@ -3091,6 +3363,28 @@ function formatRuntimeConstants(constants: ReplyLogicOverview["constants"]) {
       上下文分隔符: constants.worldContextRules.contextSeparator,
       Prompt注入模板: constants.worldContextRules.promptContextTemplate,
     },
+    链路解释模板: {
+      角色视图总说明: constants.inspectorTemplates.characterViewIntro,
+      角色视图已找到单聊: constants.inspectorTemplates.characterViewHistoryFound,
+      角色视图未找到单聊: constants.inspectorTemplates.characterViewHistoryMissing,
+      历史窗口内注释: constants.inspectorTemplates.historyIncludedNote,
+      历史窗口外注释: constants.inspectorTemplates.historyExcludedNote,
+      StoredGroup标题: constants.inspectorTemplates.storedGroupTitle,
+      StoredGroup升级说明: constants.inspectorTemplates.storedGroupUpgradedNote,
+      StoredGroup下一步说明: constants.inspectorTemplates.storedGroupNextReplyNote,
+      DirectBranch标题: constants.inspectorTemplates.directBranchTitle,
+      DirectBranch下一步说明: constants.inspectorTemplates.directBranchNextReplyNote,
+      FormalGroup标题: constants.inspectorTemplates.formalGroupTitle,
+      FormalGroup状态门说明: constants.inspectorTemplates.formalGroupStateGateNote,
+      FormalGroup回复规则说明: constants.inspectorTemplates.formalGroupReplyRuleNote,
+      预演角色说明: constants.inspectorTemplates.previewCharacterIntro,
+      预演角色有历史: constants.inspectorTemplates.previewCharacterWithHistory,
+      预演角色无历史: constants.inspectorTemplates.previewCharacterWithoutHistory,
+      预演StoredGroup: constants.inspectorTemplates.previewStoredGroup,
+      预演DirectConversation: constants.inspectorTemplates.previewDirectConversation,
+      预演FormalGroup: constants.inspectorTemplates.previewFormalGroup,
+    },
+    调度器任务说明: { ...constants.schedulerDescriptions },
   } as Record<string, unknown>;
 }
 
@@ -3105,13 +3399,13 @@ function linesToList(value: string) {
     .filter(Boolean);
 }
 
-function recordToLines(record: Record<string, string>) {
-  return Object.entries(record)
+function recordToLines<T extends object>(record: T) {
+  return Object.entries(record as Record<string, string>)
     .map(([key, value]) => `${key}=${value}`)
     .join("\n");
 }
 
-function parseKeyValueLines<T extends Record<string, string>>(value: string, fallback: T): T {
+function parseKeyValueLines<T extends object>(value: string, fallback: T): T {
   const entries = value
     .split("\n")
     .map((line) => line.trim())
@@ -3132,7 +3426,7 @@ function parseKeyValueLines<T extends Record<string, string>>(value: string, fal
     })
     .filter((entry): entry is readonly [string, string] => Boolean(entry));
 
-  const next = { ...fallback } as Record<string, string>;
+  const next = { ...(fallback as Record<string, string>) };
   for (const [key, content] of entries) {
     if (Object.prototype.hasOwnProperty.call(next, key)) {
       next[key] = content;
