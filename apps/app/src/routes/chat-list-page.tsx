@@ -48,6 +48,7 @@ import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { useLocalChatMessageActionState } from "../features/chat/local-chat-message-actions";
 import {
   getChatReminderActionLabel,
+  getChatReminderActionTone,
   buildChatReminderNavigation,
   getChatReminderStatus,
   getChatReminderStatusLabel,
@@ -680,7 +681,12 @@ function MobileChatListPage() {
                                 onClick={() => {
                                   void completeReminder(entry);
                                 }}
-                                className="shrink-0 rounded-full border border-black/8 px-3 py-1.5 text-[12px] text-[#5f6368]"
+                                className={cn(
+                                  "shrink-0 rounded-full px-3 py-1.5 text-[12px] transition-colors",
+                                  getChatReminderActionTone(entry) === "warning"
+                                    ? "border border-[#f1d5a6] bg-[#fff8ec] text-[#b76a08] hover:bg-[#fff1dc]"
+                                    : "border border-transparent bg-[#f3f6f4] text-[#5f6b63] hover:bg-[#e9eeeb]",
+                                )}
                               >
                                 {getChatReminderActionLabel(entry)}
                               </button>

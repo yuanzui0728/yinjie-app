@@ -37,6 +37,8 @@ export type ChatReminderGroup = {
   entries: ChatReminderEntry[];
 };
 
+export type ChatReminderActionTone = "secondary" | "warning";
+
 export function buildChatReminderEntries(
   reminders: readonly MessageReminderRecord[],
   conversations: readonly ConversationListItem[],
@@ -162,6 +164,12 @@ export function getChatReminderActionErrorMessage(
   return getChatReminderStatus(entry) === "pending"
     ? "取消提醒失败，请稍后再试。"
     : "完成提醒失败，请稍后再试。";
+}
+
+export function getChatReminderActionTone(
+  entry: Pick<ChatReminderEntry, "isDue" | "notifiedAt">,
+): ChatReminderActionTone {
+  return getChatReminderStatus(entry) === "pending" ? "warning" : "secondary";
 }
 
 export function formatReminderListTimestamp(

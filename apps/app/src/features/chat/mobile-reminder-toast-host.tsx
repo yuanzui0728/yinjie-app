@@ -10,6 +10,7 @@ import {
   buildChatReminderNavigation,
   buildChatReminderPath,
   getChatReminderActionLabel,
+  getChatReminderActionTone,
   formatReminderListTimestamp,
   getChatReminderStatusLabel,
 } from "./chat-reminder-entries";
@@ -229,7 +230,12 @@ export function MobileReminderToastHost() {
                   <button
                     type="button"
                     onClick={handleComplete}
-                    className="rounded-full border border-black/8 px-3 py-1.5 text-[12px] text-[#5f6368]"
+                    className={[
+                      "rounded-full px-3 py-1.5 text-[12px] transition-colors",
+                      getChatReminderActionTone(activeReminder) === "warning"
+                        ? "border border-[#f1d5a6] bg-[#fff8ec] text-[#b76a08]"
+                        : "border border-transparent bg-[#f3f6f4] text-[#5f6b63]",
+                    ].join(" ")}
                   >
                     {getChatReminderActionLabel(activeReminder)}
                   </button>
