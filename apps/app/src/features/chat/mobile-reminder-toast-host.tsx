@@ -9,6 +9,7 @@ import {
   buildChatReminderHref,
   buildChatReminderNavigation,
   buildChatReminderPath,
+  getChatReminderActionLabel,
   formatReminderListTimestamp,
   getChatReminderStatusLabel,
 } from "./chat-reminder-entries";
@@ -145,7 +146,7 @@ export function MobileReminderToastHost() {
     }
 
     dismissReminder(activeReminder.messageId);
-    void completeReminder(activeReminder.messageId);
+    void completeReminder(activeReminder);
   };
 
   const handleOpen = () => {
@@ -230,7 +231,7 @@ export function MobileReminderToastHost() {
                     onClick={handleComplete}
                     className="rounded-full border border-black/8 px-3 py-1.5 text-[12px] text-[#5f6368]"
                   >
-                    完成
+                    {getChatReminderActionLabel(activeReminder)}
                   </button>
                   <button
                     type="button"

@@ -1,10 +1,16 @@
-import { ArrowLeft, Ellipsis } from "lucide-react";
+import { ArrowLeft, Ellipsis, type LucideIcon } from "lucide-react";
 type MobileChatThreadHeaderProps = {
   title: string;
   subtitle?: string;
   onBack?: () => void;
   onMore: () => void;
   moreLabel?: string;
+  actions?: Array<{
+    key: string;
+    icon: LucideIcon;
+    label: string;
+    onClick: () => void;
+  }>;
 };
 
 export function MobileChatThreadHeader({
@@ -13,6 +19,7 @@ export function MobileChatThreadHeader({
   onBack,
   onMore,
   moreLabel = "更多操作",
+  actions = [],
 }: MobileChatThreadHeaderProps) {
   return (
     <header className="border-b border-black/5 bg-[#f7f7f7] px-1.5 py-2">
@@ -40,6 +47,23 @@ export function MobileChatThreadHeader({
             </div>
           ) : null}
         </div>
+
+        {actions.map((action) => {
+          const Icon = action.icon;
+
+          return (
+            <button
+              key={action.key}
+              type="button"
+              onClick={action.onClick}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-[#111827] transition active:bg-black/6"
+              aria-label={action.label}
+              title={action.label}
+            >
+              <Icon size={19} />
+            </button>
+          );
+        })}
 
         <button
           type="button"

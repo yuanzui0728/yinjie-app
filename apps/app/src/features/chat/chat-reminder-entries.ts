@@ -142,6 +142,28 @@ export function getChatReminderStatusLabel(
   return status === "due" ? "已到时间" : "待提醒";
 }
 
+export function getChatReminderActionLabel(
+  entry: Pick<ChatReminderEntry, "isDue" | "notifiedAt">,
+) {
+  return getChatReminderStatus(entry) === "pending" ? "取消提醒" : "完成";
+}
+
+export function getChatReminderActionNotice(
+  entry: Pick<ChatReminderEntry, "isDue" | "notifiedAt">,
+) {
+  return getChatReminderStatus(entry) === "pending"
+    ? "已取消消息提醒。"
+    : "已完成消息提醒。";
+}
+
+export function getChatReminderActionErrorMessage(
+  entry: Pick<ChatReminderEntry, "isDue" | "notifiedAt">,
+) {
+  return getChatReminderStatus(entry) === "pending"
+    ? "取消提醒失败，请稍后再试。"
+    : "完成提醒失败，请稍后再试。";
+}
+
 export function formatReminderListTimestamp(
   remindAt: string,
   isDue: boolean,

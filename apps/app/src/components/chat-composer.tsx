@@ -20,6 +20,7 @@ import { Button, InlineNotice, cn } from "@yinjie/ui";
 import { useKeyboardInset } from "../hooks/use-keyboard-inset";
 import {
   useEffect,
+  useEffectEvent,
   useMemo,
   useRef,
   useState,
@@ -76,6 +77,11 @@ type ChatComposerProps = {
     text: string;
     modeLabel?: string;
   } | null;
+  mobileShortcutRequest?: {
+    action: "voice-message" | "camera" | "album";
+    nonce: number;
+  } | null;
+  onMobileShortcutHandled?: () => void;
   onCancelReply?: () => void;
   onOpenDesktopHistory?: () => void;
   onChange: (value: string) => void;
@@ -115,6 +121,8 @@ export function ChatComposer({
   onSendPresetText,
   mentionCandidates,
   replyPreview = null,
+  mobileShortcutRequest = null,
+  onMobileShortcutHandled,
   onCancelReply,
   onOpenDesktopHistory,
   onChange,
@@ -835,6 +843,37 @@ export function ChatComposer({
     pickAlbum();
   };
 
+  const handleMobileShortcutRequest = useEffectEvent(
+    (action: "voice-message" | "camera" | "album") => {
+      if (action === "voice-message") {
+        activateMobileSpeechFallback();
+        return;
+      }
+
+      setPlusPanelOpen(false);
+      if (action === "camera") {
+        pickCamera();
+        return;
+      }
+
+      pickAlbum();
+    },
+  );
+
+  useEffect(() => {
+    if (isDesktop || !mobileShortcutRequest) {
+      return;
+    }
+
+    handleMobileShortcutRequest(mobileShortcutRequest.action);
+    onMobileShortcutHandled?.();
+  }, [
+    handleMobileShortcutRequest,
+    isDesktop,
+    mobileShortcutRequest,
+    onMobileShortcutHandled,
+  ]);
+
   const handleImageSelection = async (fileList: FileList | null) => {
     const files = [...(fileList ?? [])].slice(0, MAX_ALBUM_IMAGE_COUNT);
     if (!files.length) {
@@ -1357,7 +1396,9 @@ export function ChatComposer({
                 ) : null}
                 {showSpeechEntry ? (
                   <DesktopToolbarButton
-                    label={speech.status === "listening" ? "停止语音" : "语音输入"}
+                    label={
+                      speech.status === "listening" ? "停止语音" : "语音输入"
+                    }
                     icon={
                       speech.status === "listening" ? (
                         <Square size={14} fill="currentColor" />
@@ -1964,9 +2005,7 @@ function ReplyPreviewBar({
         <div className="flex items-center gap-2">
           <div
             className={`text-[11px] font-medium ${
-              isDesktop
-                ? "text-[#07a35a]"
-                : "text-[#07c160]"
+              isDesktop ? "text-[#07a35a]" : "text-[#07c160]"
             }`}
           >
             回复 {senderName}

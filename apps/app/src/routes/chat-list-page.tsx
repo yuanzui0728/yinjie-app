@@ -47,6 +47,7 @@ import { SubscriptionInboxCard } from "../components/subscription-inbox-card";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { useLocalChatMessageActionState } from "../features/chat/local-chat-message-actions";
 import {
+  getChatReminderActionLabel,
   buildChatReminderNavigation,
   getChatReminderStatus,
   getChatReminderStatusLabel,
@@ -674,15 +675,15 @@ function MobileChatListPage() {
                                   )}
                                 </div>
                               </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    void completeReminder(entry.messageId);
-                                  }}
-                                  className="shrink-0 rounded-full border border-black/8 px-3 py-1.5 text-[12px] text-[#5f6368]"
-                                >
-                                  完成
-                                </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  void completeReminder(entry);
+                                }}
+                                className="shrink-0 rounded-full border border-black/8 px-3 py-1.5 text-[12px] text-[#5f6368]"
+                              >
+                                {getChatReminderActionLabel(entry)}
+                              </button>
                             </div>
                           ))}
                     </>
