@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { X } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { FileText, Plus, UserPlus, Users, X } from "lucide-react";
 import {
   getBlockedCharacters,
   getConversations,
   type ConversationListItem,
 } from "@yinjie/contracts";
-import { ErrorBlock, LoadingBlock, TextField } from "@yinjie/ui";
+import { ErrorBlock, InlineNotice, LoadingBlock, TextField } from "@yinjie/ui";
 import { AvatarChip } from "../../../components/avatar-chip";
 import { EmptyState } from "../../../components/empty-state";
 import { formatTimestamp } from "../../../lib/format";
@@ -21,15 +21,47 @@ type DesktopChatWorkspaceProps = {
   highlightedMessageId?: string;
 };
 
+type DesktopQuickActionItem = {
+  key: string;
+  label: string;
+  icon: typeof Users;
+  to?: "/group/new" | "/friend-requests";
+  unavailableNotice?: string;
+};
+
+const desktopQuickActionItems: DesktopQuickActionItem[] = [
+  {
+    key: "create-group",
+    label: "发起群聊",
+    icon: Users,
+    to: "/group/new",
+  },
+  {
+    key: "add-friend",
+    label: "添加朋友",
+    icon: UserPlus,
+    to: "/friend-requests",
+  },
+  {
+    key: "create-note",
+    label: "新建笔记",
+    icon: FileText,
+    unavailableNotice: "新建笔记功能暂未接入。",
+  },
+];
+
 export function DesktopChatWorkspace({
   selectedConversationId,
   highlightedMessageId,
 }: DesktopChatWorkspaceProps) {
+  const navigate = useNavigate();
   const ownerId = useWorldOwnerStore((state) => state.id);
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
   const [searchTerm, setSearchTerm] = useState("");
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const conversationsQuery = useQuery({
     queryKey: ["app-conversations", baseUrl],
@@ -103,8 +135,37 @@ export function DesktopChatWorkspace({
     }
   }, [activeConversation]);
 
+  useEffect(() => {
+    if (!notice) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setNotice(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  function handleUnavailableAction(message: string) {
+    setIsQuickMenuOpen(false);
+    setNotice(message);
+  }
+
+  function handleNavigate(to: "/group/new" | "/friend-requests") {
+    setIsQuickMenuOpen(false);
+    setNotice(null);
+    void navigate({ to });
+  }
+
   return (
     <div className="relative flex h-full min-h-0">
+      {isQuickMenuOpen ? (
+        <button
+          type="button"
+          aria-label="关闭快捷菜单"
+          onClick={() => setIsQuickMenuOpen(false)}
+          className="absolute inset-0 z-10 cursor-default"
+        />
+      ) : null}
+
       <section className="flex w-[320px] shrink-0 flex-col border-r border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,253,248,0.98),rgba(255,248,239,0.98))]">
         <div className="border-b border-[color:var(--border-faint)] px-4 py-4">
           <div className="flex items-center justify-end">
@@ -112,14 +173,70 @@ export function DesktopChatWorkspace({
               {filteredConversations.length} / {unreadMessageCount}
             </div>
           </div>
-          <div className="mt-3">
+          <div className="relative z-20 mt-3 flex items-center gap-2">
             <TextField
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               placeholder="搜索"
-              className="rounded-[18px] border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-4 py-2.5 shadow-none hover:bg-white focus:shadow-none"
+              className="flex-1 rounded-[18px] border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-4 py-2.5 shadow-none hover:bg-white focus:shadow-none"
             />
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsQuickMenuOpen((current) => !current)}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] text-[color:var(--text-primary)] transition hover:bg-white"
+                aria-label="打开快捷菜单"
+              >
+                <Plus size={18} strokeWidth={2.2} />
+              </button>
+
+              {isQuickMenuOpen ? (
+                <div className="absolute right-0 top-[calc(100%+0.5rem)] z-20 w-44 overflow-hidden rounded-[16px] border border-[rgba(255,255,255,0.6)] bg-[rgba(44,44,44,0.96)] p-1.5 shadow-[0_14px_40px_rgba(15,23,42,0.22)]">
+                  {desktopQuickActionItems.map((item) => {
+                    const Icon = item.icon;
+
+                    if (item.to) {
+                      const to = item.to;
+                      return (
+                        <button
+                          key={item.key}
+                          type="button"
+                          onClick={() => handleNavigate(to)}
+                          className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm text-white transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-white/10"
+                        >
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-white/10 text-white">
+                            <Icon size={16} />
+                          </div>
+                          <span>{item.label}</span>
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() =>
+                          handleUnavailableAction(item.unavailableNotice!)
+                        }
+                        className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm text-white transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-white/10"
+                      >
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-white/10 text-white">
+                          <Icon size={16} />
+                        </div>
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+            </div>
           </div>
+          {notice ? (
+            <InlineNotice className="mt-3 text-xs" tone="info">
+              {notice}
+            </InlineNotice>
+          ) : null}
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto px-2 py-2">
