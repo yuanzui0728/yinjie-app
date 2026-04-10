@@ -10,7 +10,7 @@ import {
   setGroupPinned,
   updateGroupPreferences,
 } from "@yinjie/contracts";
-import { ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
+import { Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
 import { getChatBackgroundLabel } from "../features/chat/backgrounds/chat-background-helpers";
 import { useDefaultChatBackground } from "../features/chat/backgrounds/use-conversation-background";
@@ -28,6 +28,9 @@ export function GroupChatDetailsPage() {
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
   const [notice, setNotice] = useState<string | null>(null);
+  const [pendingCallFallback, setPendingCallFallback] = useState<
+    "voice" | "video" | null
+  >(null);
   const [memberGridExpanded, setMemberGridExpanded] = useState(false);
   const [managementSheetOpen, setManagementSheetOpen] = useState(false);
   const [dangerSheetAction, setDangerSheetAction] = useState<
@@ -46,6 +49,8 @@ export function GroupChatDetailsPage() {
   });
 
   useEffect(() => {
+    setNotice(null);
+    setPendingCallFallback(null);
     setMemberGridExpanded(false);
     setManagementSheetOpen(false);
     setDangerSheetAction(null);
@@ -184,10 +189,7 @@ export function GroupChatDetailsPage() {
   const ownerDisplayName = ownerMember?.memberName?.trim() || "我";
 
   const memberItems = useMemo(() => {
-    const members = (membersQuery.data ?? []).slice(
-      0,
-      visibleMemberCount,
-    );
+    const members = (membersQuery.data ?? []).slice(0, visibleMemberCount);
 
     return [
       ...members.map((member) => ({
@@ -220,8 +222,7 @@ export function GroupChatDetailsPage() {
     ];
   }, [groupId, membersQuery.data, navigate, visibleMemberCount]);
 
-  const hasCollapsedMembers =
-    totalMemberCount > COLLAPSED_MEMBER_PREVIEW_COUNT;
+  const hasCollapsedMembers = totalMemberCount > COLLAPSED_MEMBER_PREVIEW_COUNT;
   const dangerSheetConfig =
     dangerSheetAction === "hide"
       ? {
@@ -451,6 +452,74 @@ export function GroupChatDetailsPage() {
               />
             </div>
           </ChatDetailsSection>
+
+          <ChatDetailsSection title="实时通话" variant="wechat">
+            <div className="divide-y divide-black/5">
+              <ChatSettingRow
+                label="语音通话"
+                value="暂未开放"
+                variant="wechat"
+                onClick={() => {
+                  setNotice(null);
+                  setPendingCallFallback("voice");
+                }}
+              />
+              <ChatSettingRow
+                label="视频通话"
+                value="暂未开放"
+                variant="wechat"
+                onClick={() => {
+                  setNotice(null);
+                  setPendingCallFallback("video");
+                }}
+              />
+            </div>
+          </ChatDetailsSection>
+
+          {pendingCallFallback ? (
+            <div className="px-3">
+              <InlineNotice tone="info">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium leading-6 text-[color:var(--text-primary)]">
+                      {pendingCallFallback === "voice"
+                        ? "群语音通话暂未开放"
+                        : "群视频通话暂未开放"}
+                    </div>
+                    <div className="text-xs leading-6 text-[color:var(--text-secondary)]">
+                      {pendingCallFallback === "voice"
+                        ? "先回到群聊继续，用语音消息同步大家的状态会更接近当前可用体验。"
+                        : "先回到群聊继续，当前可以改用拍摄、图片或语音消息把内容发到群里。"}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        void navigate({
+                          to: "/group/$groupId",
+                          params: { groupId },
+                        });
+                      }}
+                      className="rounded-full"
+                    >
+                      {pendingCallFallback === "voice"
+                        ? "返回群聊发语音"
+                        : "返回群聊发消息"}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setPendingCallFallback(null)}
+                      className="rounded-full"
+                    >
+                      知道了
+                    </Button>
+                  </div>
+                </div>
+              </InlineNotice>
+            </div>
+          ) : null}
 
           <ChatDetailsSection title="群内资料" variant="wechat">
             <div className="divide-y divide-black/5">
