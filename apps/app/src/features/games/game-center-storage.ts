@@ -1,0 +1,113 @@
+export type GameCenterStoredState = {
+  recentGameIds: string[];
+  pinnedGameIds: string[];
+  lastOpenedAtById: Record<string, string>;
+};
+
+const GAME_CENTER_STORAGE_KEY = "yinjie-game-center-state";
+const MAX_RECENT_GAMES = 6;
+
+function getStorage() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage;
+}
+
+function sanitizeIds(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [] as string[];
+  }
+
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+function sanitizeTimestampRecord(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return {} as Record<string, string>;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, string] => typeof entry[0] === "string" && typeof entry[1] === "string",
+    ),
+  );
+}
+
+export function getDefaultGameCenterState(): GameCenterStoredState {
+  return {
+    recentGameIds: ["signal-squad", "night-market", "cat-inn"],
+    pinnedGameIds: ["signal-squad", "cloud-farm"],
+    lastOpenedAtById: {
+      "signal-squad": "2026-04-10T14:18:00.000Z",
+      "night-market": "2026-04-10T12:36:00.000Z",
+      "cat-inn": "2026-04-09T19:22:00.000Z",
+      "cloud-farm": "2026-04-08T20:10:00.000Z",
+    },
+  };
+}
+
+export function readGameCenterState() {
+  const storage = getStorage();
+  if (!storage) {
+    return getDefaultGameCenterState();
+  }
+
+  const raw = storage.getItem(GAME_CENTER_STORAGE_KEY);
+  if (!raw) {
+    return getDefaultGameCenterState();
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<GameCenterStoredState>;
+    return {
+      recentGameIds: sanitizeIds(parsed.recentGameIds).slice(0, MAX_RECENT_GAMES),
+      pinnedGameIds: sanitizeIds(parsed.pinnedGameIds),
+      lastOpenedAtById: sanitizeTimestampRecord(parsed.lastOpenedAtById),
+    };
+  } catch {
+    return getDefaultGameCenterState();
+  }
+}
+
+export function writeGameCenterState(state: GameCenterStoredState) {
+  const storage = getStorage();
+  if (!storage) {
+    return;
+  }
+
+  storage.setItem(GAME_CENTER_STORAGE_KEY, JSON.stringify(state));
+}
+
+export function markGameOpened(
+  state: GameCenterStoredState,
+  gameId: string,
+): GameCenterStoredState {
+  const openedAt = new Date().toISOString();
+  return {
+    recentGameIds: [gameId, ...state.recentGameIds.filter((id) => id !== gameId)].slice(
+      0,
+      MAX_RECENT_GAMES,
+    ),
+    pinnedGameIds: state.pinnedGameIds,
+    lastOpenedAtById: {
+      ...state.lastOpenedAtById,
+      [gameId]: openedAt,
+    },
+  };
+}
+
+export function togglePinnedGame(
+  state: GameCenterStoredState,
+  gameId: string,
+): GameCenterStoredState {
+  const alreadyPinned = state.pinnedGameIds.includes(gameId);
+  return {
+    ...state,
+    pinnedGameIds: alreadyPinned
+      ? state.pinnedGameIds.filter((id) => id !== gameId)
+      : [gameId, ...state.pinnedGameIds],
+  };
+}
+
