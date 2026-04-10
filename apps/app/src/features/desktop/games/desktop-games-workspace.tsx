@@ -24,6 +24,8 @@ import { GameCenterSessionPanel } from "../../games/game-center-session-panel";
 import {
   gameCenterCategoryTabs,
   gameCenterEvents,
+  getGameCenterEventActionLabel,
+  getGameCenterEventStatusLabel,
   gameCenterFriendActivities,
   gameCenterGames,
   gameCenterHotRankings,
@@ -36,6 +38,7 @@ import {
 type DesktopGamesWorkspaceProps = {
   activeCategory: GameCenterCategoryId;
   activeGameId: string | null;
+  eventActionStatusById: Record<string, string>;
   launchCountById: Record<string, number>;
   pinnedGameIds: string[];
   recentGameIds: string[];
@@ -43,6 +46,7 @@ type DesktopGamesWorkspaceProps = {
   lastOpenedAtById: Record<string, string>;
   successNotice?: string;
   onCategoryChange: (categoryId: GameCenterCategoryId) => void;
+  onCompleteEventAction: (eventId: string) => void;
   onDismissActiveGame: () => void;
   onLaunchGame: (gameId: string) => void;
   onSelectGame: (gameId: string) => void;
@@ -58,6 +62,7 @@ function resolveGames(ids: string[]) {
 export function DesktopGamesWorkspace({
   activeCategory,
   activeGameId,
+  eventActionStatusById,
   launchCountById,
   pinnedGameIds,
   recentGameIds,
@@ -65,6 +70,7 @@ export function DesktopGamesWorkspace({
   lastOpenedAtById,
   successNotice,
   onCategoryChange,
+  onCompleteEventAction,
   onDismissActiveGame,
   onLaunchGame,
   onSelectGame,
@@ -470,6 +476,7 @@ export function DesktopGamesWorkspace({
                 <div className="mt-4 space-y-3">
                   {gameCenterEvents.map((event) => {
                     const tone = getGameCenterToneStyle(event.tone);
+                    const engaged = Boolean(eventActionStatusById[event.id]);
                     return (
                       <article
                         key={event.id}
@@ -480,8 +487,15 @@ export function DesktopGamesWorkspace({
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="text-sm font-semibold text-[color:var(--text-primary)]">
-                              {event.title}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div className="text-sm font-semibold text-[color:var(--text-primary)]">
+                                {event.title}
+                              </div>
+                              {engaged ? (
+                                <span className="rounded-full bg-white/84 px-2.5 py-1 text-[10px] text-[color:var(--text-muted)]">
+                                  {getGameCenterEventStatusLabel(event)}
+                                </span>
+                              ) : null}
                             </div>
                             <div className="mt-2 text-xs leading-6 text-[color:var(--text-secondary)]">
                               {event.description}
@@ -490,8 +504,12 @@ export function DesktopGamesWorkspace({
                               {event.meta}
                             </div>
                           </div>
-                          <Button variant="secondary" size="sm">
-                            {event.ctaLabel}
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => onCompleteEventAction(event.id)}
+                          >
+                            {getGameCenterEventActionLabel(event, engaged)}
                           </Button>
                         </div>
                       </article>

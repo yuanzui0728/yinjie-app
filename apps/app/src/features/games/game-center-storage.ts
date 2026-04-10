@@ -4,6 +4,7 @@ export type GameCenterStoredState = {
   pinnedGameIds: string[];
   launchCountById: Record<string, number>;
   lastOpenedAtById: Record<string, string>;
+  eventActionStatusById: Record<string, string>;
 };
 
 const GAME_CENTER_STORAGE_KEY = "yinjie-game-center-state";
@@ -54,6 +55,9 @@ export function getDefaultGameCenterState(): GameCenterStoredState {
       "cat-inn": "2026-04-09T19:22:00.000Z",
       "cloud-farm": "2026-04-08T20:10:00.000Z",
     },
+    eventActionStatusById: {
+      "market-night": "reminder_set",
+    },
   };
 }
 
@@ -81,6 +85,7 @@ export function readGameCenterState() {
         ),
       ),
       lastOpenedAtById: sanitizeTimestampRecord(parsed.lastOpenedAtById),
+      eventActionStatusById: sanitizeTimestampRecord(parsed.eventActionStatusById),
     };
   } catch {
     return getDefaultGameCenterState();
@@ -116,6 +121,7 @@ export function markGameOpened(
       ...state.lastOpenedAtById,
       [gameId]: openedAt,
     },
+    eventActionStatusById: state.eventActionStatusById,
   };
 }
 
@@ -136,5 +142,21 @@ export function dismissActiveGame(state: GameCenterStoredState): GameCenterStore
   return {
     ...state,
     activeGameId: null,
+  };
+}
+
+export function markGameCenterEventAction(
+  state: GameCenterStoredState,
+  input: {
+    eventId: string;
+    status: string;
+  },
+): GameCenterStoredState {
+  return {
+    ...state,
+    eventActionStatusById: {
+      ...state.eventActionStatusById,
+      [input.eventId]: input.status,
+    },
   };
 }
