@@ -24,6 +24,7 @@ import {
   type DesktopChatCallKind,
   type DesktopChatSidePanelMode,
 } from "../desktop/chat/desktop-chat-header-actions";
+import { buildDesktopMobileCallHandoffHash } from "../desktop/chat/desktop-mobile-call-handoff-route-state";
 import { type ChatRenderableMessage } from "../../components/chat-message-list";
 import { type ChatRouteContextNotice } from "./conversation-thread-panel";
 import { type ChatComposerAttachmentPayload } from "./chat-plus-types";
@@ -282,6 +283,23 @@ export function GroupChatThreadPanel({
     });
   };
 
+  const handleDesktopCallAction = (kind: DesktopChatCallKind) => {
+    if (isDesktop) {
+      void navigate({
+        to: "/desktop/mobile",
+        hash: buildDesktopMobileCallHandoffHash({
+          kind,
+          conversationId: groupId,
+          conversationType: "group",
+          title: groupQuery.data?.name ?? "群聊",
+        }),
+      });
+      return;
+    }
+
+    onDesktopCallAction?.(kind);
+  };
+
   return (
     <div
       className={`flex h-full min-h-0 flex-col ${
@@ -306,7 +324,7 @@ export function GroupChatThreadPanel({
               activePanelMode={desktopSidePanelMode}
               onToggleHistory={() => onToggleDesktopHistory?.()}
               onToggleDetails={() => onToggleDesktopDetails?.()}
-              onSelectCall={(kind) => onDesktopCallAction?.(kind)}
+              onSelectCall={handleDesktopCallAction}
             />
           </div>
         </header>

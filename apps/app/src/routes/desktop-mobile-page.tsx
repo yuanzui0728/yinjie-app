@@ -1,7 +1,7 @@
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   getConversations,
   getSystemStatus,
@@ -36,6 +36,7 @@ import {
 } from "../features/mini-programs/mini-programs-data";
 import { readMiniProgramsState } from "../features/mini-programs/mini-programs-storage";
 import { DesktopEntryShell } from "../features/desktop/desktop-entry-shell";
+import { parseDesktopMobileCallHandoffHash } from "../features/desktop/chat/desktop-mobile-call-handoff-route-state";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { getConversationPreviewParts } from "../lib/conversation-preview";
 import {
@@ -152,8 +153,10 @@ const quickEntries: QuickEntry[] = [
 
 export function DesktopMobilePage() {
   const isDesktopLayout = useDesktopLayout();
+  const navigate = useNavigate();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
+  const hash = useRouterState({ select: (state) => state.location.hash });
   const ownerName = useWorldOwnerStore((state) => state.username);
   const ownerAvatar = useWorldOwnerStore((state) => state.avatar);
   const ownerSignature = useWorldOwnerStore((state) => state.signature);
@@ -174,6 +177,10 @@ export function DesktopMobilePage() {
     GroupInviteReopenRecord[]
   >([]);
   const localMessageActionState = useLocalChatMessageActionState();
+  const callHandoffState = useMemo(
+    () => parseDesktopMobileCallHandoffHash(hash),
+    [hash],
+  );
 
   const conversationsQuery = useQuery({
     queryKey: ["app-conversations", baseUrl],
@@ -214,6 +221,19 @@ export function DesktopMobilePage() {
         .slice(0, 4),
     [officialAccountsQuery.data],
   );
+  const callHandoffPath = callHandoffState
+    ? callHandoffState.conversationType === "group"
+      ? `/group/${callHandoffState.conversationId}`
+      : `/chat/${callHandoffState.conversationId}`
+    : null;
+  const callHandoffKindLabel = callHandoffState
+    ? callHandoffState.kind === "video"
+      ? "视频通话"
+      : "语音通话"
+    : "";
+  const callHandoffTitle =
+    callHandoffState?.title?.trim() ||
+    (callHandoffState?.conversationType === "group" ? "当前群聊" : "当前聊天");
   const activeLiveSession =
     liveHistory.find((item) => item.status === "live") ?? null;
   const activeMiniProgram = miniProgramsState.activeMiniProgramId
@@ -344,6 +364,67 @@ export function DesktopMobilePage() {
       >
         <div className="space-y-5">
           {notice ? <InlineNotice tone="success">{notice}</InlineNotice> : null}
+
+          {callHandoffState && callHandoffPath ? (
+            <section className="rounded-[28px] border border-[rgba(59,130,246,0.16)] bg-[linear-gradient(180deg,rgba(239,246,255,0.96),rgba(255,255,255,0.98))] p-5 shadow-[var(--shadow-soft)]">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
+                    <RadioTower
+                      size={16}
+                      className="text-[#2563eb]"
+                    />
+                    <span>{callHandoffKindLabel}接力</span>
+                  </div>
+                  <div className="mt-2 text-sm text-[color:var(--text-primary)]">
+                    把 <span className="font-medium">{callHandoffTitle}</span>{" "}
+                    的通话入口带到手机继续。
+                  </div>
+                  <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
+                    桌面端先不假做本地通话，直接把当前聊天接力到手机，更贴近微信电脑端“到手机继续”的真实工作流。
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    void navigate({
+                      to: "/desktop/mobile",
+                      hash: "",
+                      replace: true,
+                    })
+                  }
+                  className="inline-flex h-9 items-center justify-center rounded-full border border-[rgba(37,99,235,0.18)] bg-white/80 px-4 text-xs font-medium text-[#2563eb] transition hover:bg-white"
+                >
+                  收起
+                </button>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  onClick={() =>
+                    void handleCopyHandoff({
+                      description: `从桌面把 ${callHandoffTitle} 的${callHandoffKindLabel}接力到手机继续。`,
+                      label: `${callHandoffTitle} ${callHandoffKindLabel}`,
+                      path: callHandoffPath,
+                      setHistory: setHandoffHistory,
+                      setNotice,
+                    })
+                  }
+                  className="rounded-full"
+                >
+                  <Copy size={14} />
+                  复制到手机
+                </Button>
+                <Link
+                  to={callHandoffPath as never}
+                  className="inline-flex h-9 items-center justify-center rounded-full border border-[color:var(--border-faint)] px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:text-[color:var(--text-primary)]"
+                >
+                  桌面打开聊天
+                </Link>
+              </div>
+            </section>
+          ) : null}
 
           {conversationsQuery.isError &&
           conversationsQuery.error instanceof Error ? (
