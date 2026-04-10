@@ -473,132 +473,134 @@ export class ChatService {
         throw new Error(`Profile not found for ${charId}`);
       }
 
-      const intent = await this.ai.classifyIntent(
-        normalizedInput.promptText,
-        profile.name,
-        profile.expertDomains,
-      );
-
-      if (intent.needsGroupChat && intent.requiredDomains.length > 0) {
-        const ownerConversations = await this.convRepo.find({
-          where: { ownerId: owner.id },
-        });
-        const ownerFriendIds = new Set(
-          ownerConversations
-            .flatMap((conversation) => conversation.participants)
-            .filter((id) => id !== charId),
+      if (normalizedInput.type === 'text') {
+        const intent = await this.ai.classifyIntent(
+          normalizedInput.promptText,
+          profile.name,
+          profile.expertDomains,
         );
 
-        const invitedChars = (
-          await this.characters.findByDomains(intent.requiredDomains)
-        )
-          .filter(
-            (character) =>
-              character.id !== charId && ownerFriendIds.has(character.id),
-          )
-          .slice(0, 2);
-
-        if (invitedChars.length > 0) {
-          entity.type = 'group';
-          entity.title = 'Temporary group chat';
-          invitedChars.forEach((character) => {
-            if (!entity.participants.includes(character.id)) {
-              entity.participants.push(character.id);
-            }
+        if (intent.needsGroupChat && intent.requiredDomains.length > 0) {
+          const ownerConversations = await this.convRepo.find({
+            where: { ownerId: owner.id },
           });
-          await this.convRepo.save(entity);
-
-          const invitedNames = invitedChars
-            .map((character) => character.name)
-            .join(', ');
-          const coordPrompt = `Explain that you want to invite ${invitedNames} into this conversation to help with the user's question. Keep it under 30 words.`;
-          const coordReply = await this.ai.generateReply({
-            profile,
-            conversationHistory: history,
-            userMessage: coordPrompt,
-            userMessageParts: this.buildTextAiParts(coordPrompt),
-            aiKeyOverride,
-          });
-          const coordEntity = this.msgRepo.create({
-            id: `msg_${Date.now()}_coord`,
-            conversationId: convId,
-            senderType: 'character',
-            senderId: charId,
-            senderName: profile.name,
-            type: 'text',
-            text: coordReply.text,
-          });
-          await this.msgRepo.save(coordEntity);
-          await this.touchConversationActivity(
-            entity,
-            coordEntity.createdAt ?? new Date(),
+          const ownerFriendIds = new Set(
+            ownerConversations
+              .flatMap((conversation) => conversation.participants)
+              .filter((id) => id !== charId),
           );
-          history.push({
-            role: 'assistant',
-            content: coordReply.text,
-            parts: this.buildTextAiParts(coordReply.text),
-            characterId: charId,
-          });
-          results.push(this._entityToMessage(coordEntity));
 
-          for (const invited of invitedChars) {
-            const sysEntity = this.msgRepo.create({
-              id: `msg_${Date.now()}_sys_${invited.id}`,
-              conversationId: convId,
-              senderType: 'system',
-              senderId: 'system',
-              senderName: 'system',
-              type: 'system',
-              text: `${profile.name} invited ${invited.name} into the conversation.`,
+          const invitedChars = (
+            await this.characters.findByDomains(intent.requiredDomains)
+          )
+            .filter(
+              (character) =>
+                character.id !== charId && ownerFriendIds.has(character.id),
+            )
+            .slice(0, 2);
+
+          if (invitedChars.length > 0) {
+            entity.type = 'group';
+            entity.title = 'Temporary group chat';
+            invitedChars.forEach((character) => {
+              if (!entity.participants.includes(character.id)) {
+                entity.participants.push(character.id);
+              }
             });
-            await this.msgRepo.save(sysEntity);
-            await this.touchConversationActivity(
-              entity,
-              sysEntity.createdAt ?? new Date(),
-            );
-            results.push(this._entityToMessage(sysEntity));
-          }
+            await this.convRepo.save(entity);
 
-          for (const invited of invitedChars) {
-            const invitedProfile = await this.characters.getProfile(invited.id);
-            if (!invitedProfile) {
-              continue;
-            }
-
-            const reply = await this.ai.generateReply({
-              profile: invitedProfile,
+            const invitedNames = invitedChars
+              .map((character) => character.name)
+              .join(', ');
+            const coordPrompt = `Explain that you want to invite ${invitedNames} into this conversation to help with the user's question. Keep it under 30 words.`;
+            const coordReply = await this.ai.generateReply({
+              profile,
               conversationHistory: history,
-              userMessage: normalizedInput.promptText,
-              userMessageParts: normalizedInput.aiParts,
-              isGroupChat: true,
+              userMessage: coordPrompt,
+              userMessageParts: this.buildTextAiParts(coordPrompt),
               aiKeyOverride,
             });
-            const aiEntity = this.msgRepo.create({
-              id: `msg_${Date.now()}_${invited.id}`,
+            const coordEntity = this.msgRepo.create({
+              id: `msg_${Date.now()}_coord`,
               conversationId: convId,
               senderType: 'character',
-              senderId: invited.id,
-              senderName: invited.name,
+              senderId: charId,
+              senderName: profile.name,
               type: 'text',
-              text: reply.text,
+              text: coordReply.text,
             });
-            await this.msgRepo.save(aiEntity);
+            await this.msgRepo.save(coordEntity);
             await this.touchConversationActivity(
               entity,
-              aiEntity.createdAt ?? new Date(),
+              coordEntity.createdAt ?? new Date(),
             );
             history.push({
               role: 'assistant',
-              content: reply.text,
-              parts: this.buildTextAiParts(reply.text),
-              characterId: invited.id,
+              content: coordReply.text,
+              parts: this.buildTextAiParts(coordReply.text),
+              characterId: charId,
             });
-            results.push(this._entityToMessage(aiEntity));
-          }
+            results.push(this._entityToMessage(coordEntity));
 
-          await this.syncNarrativeArc(entity);
-          this.conversationHistory.set(convId, history);
-          return results;
+            for (const invited of invitedChars) {
+              const sysEntity = this.msgRepo.create({
+                id: `msg_${Date.now()}_sys_${invited.id}`,
+                conversationId: convId,
+                senderType: 'system',
+                senderId: 'system',
+                senderName: 'system',
+                type: 'system',
+                text: `${profile.name} invited ${invited.name} into the conversation.`,
+              });
+              await this.msgRepo.save(sysEntity);
+              await this.touchConversationActivity(
+                entity,
+                sysEntity.createdAt ?? new Date(),
+              );
+              results.push(this._entityToMessage(sysEntity));
+            }
+
+            for (const invited of invitedChars) {
+              const invitedProfile = await this.characters.getProfile(invited.id);
+              if (!invitedProfile) {
+                continue;
+              }
+
+              const reply = await this.ai.generateReply({
+                profile: invitedProfile,
+                conversationHistory: history,
+                userMessage: normalizedInput.promptText,
+                userMessageParts: normalizedInput.aiParts,
+                isGroupChat: true,
+                aiKeyOverride,
+              });
+              const aiEntity = this.msgRepo.create({
+                id: `msg_${Date.now()}_${invited.id}`,
+                conversationId: convId,
+                senderType: 'character',
+                senderId: invited.id,
+                senderName: invited.name,
+                type: 'text',
+                text: reply.text,
+              });
+              await this.msgRepo.save(aiEntity);
+              await this.touchConversationActivity(
+                entity,
+                aiEntity.createdAt ?? new Date(),
+              );
+              history.push({
+                role: 'assistant',
+                content: reply.text,
+                parts: this.buildTextAiParts(reply.text),
+                characterId: invited.id,
+              });
+              results.push(this._entityToMessage(aiEntity));
+            }
+
+            await this.syncNarrativeArc(entity);
+            this.conversationHistory.set(convId, history);
+            return results;
+          }
         }
       }
 
