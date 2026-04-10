@@ -1,25 +1,22 @@
-import { useEffect, useState, type MouseEvent as ReactMouseEvent, type PropsWithChildren } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  BellDot,
-  Compass,
-  Copy,
-  MessageCircleMore,
-  Minus,
-  UsersRound,
-  X,
-} from "lucide-react";
+  useEffect,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PropsWithChildren,
+} from "react";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Copy, Minus, X } from "lucide-react";
 import { cn } from "@yinjie/ui";
 import { AvatarChip } from "../../components/avatar-chip";
 import { useAppRuntimeConfig } from "../../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../../store/world-owner-store";
-
-const navItems = [
-  { to: "/tabs/chat", label: "消息", icon: MessageCircleMore, shortLabel: "消息" },
-  { to: "/tabs/contacts", label: "通讯录", icon: UsersRound, shortLabel: "联系人" },
-  { to: "/tabs/moments", label: "朋友圈", icon: BellDot, shortLabel: "动态" },
-  { to: "/tabs/discover", label: "发现", icon: Compass, shortLabel: "发现" },
-];
+import {
+  desktopBottomNavItems,
+  desktopMoreMenuItems,
+  desktopPrimaryNavItems,
+  isDesktopNavItemActive,
+  type DesktopNavActionItem,
+} from "./desktop-nav-config";
 
 type DesktopWindowHandle = {
   close: () => Promise<void>;
@@ -29,30 +26,6 @@ type DesktopWindowHandle = {
   startDragging: () => Promise<void>;
   toggleMaximize: () => Promise<void>;
 };
-
-function isActive(pathname: string, to: string) {
-  if (to === "/tabs/chat") {
-    return (
-      pathname.startsWith("/tabs/chat") ||
-      pathname.startsWith("/chat/") ||
-      pathname.startsWith("/notes")
-    );
-  }
-
-  if (to === "/tabs/contacts") {
-    return (
-      pathname.startsWith("/tabs/contacts") ||
-      pathname.startsWith("/contacts/starred") ||
-      pathname.startsWith("/contacts/official-accounts") ||
-      pathname.startsWith("/official-accounts/") ||
-      pathname.startsWith("/character/") ||
-      pathname.startsWith("/friend-requests") ||
-      pathname.startsWith("/group/")
-    );
-  }
-
-  return pathname.startsWith(to);
-}
 
 async function resolveDesktopWindowHandle(): Promise<DesktopWindowHandle | null> {
   try {
@@ -114,13 +87,19 @@ async function resolveDesktopWindowHandle(): Promise<DesktopWindowHandle | null>
 }
 
 export function DesktopShell({ children }: PropsWithChildren) {
-  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const navigate = useNavigate();
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
   const runtimeConfig = useAppRuntimeConfig();
   const ownerName = useWorldOwnerStore((state) => state.username);
   const ownerAvatar = useWorldOwnerStore((state) => state.avatar);
   const nativeDesktopShell = runtimeConfig.appPlatform === "desktop";
-  const [desktopWindow, setDesktopWindow] = useState<DesktopWindowHandle | null>(null);
+  const [desktopWindow, setDesktopWindow] =
+    useState<DesktopWindowHandle | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
 
   useEffect(() => {
     if (typeof document === "undefined") {
@@ -183,7 +162,13 @@ export function DesktopShell({ children }: PropsWithChildren) {
     };
   }, [nativeDesktopShell]);
 
-  const shellInsetClass = nativeDesktopShell ? "rounded-none" : "m-2 rounded-[30px]";
+  useEffect(() => {
+    setIsMoreMenuOpen(false);
+  }, [pathname]);
+
+  const shellInsetClass = nativeDesktopShell
+    ? "rounded-none"
+    : "m-2 rounded-[30px]";
 
   const handleTitleBarMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
     if (event.button !== 0 || !desktopWindow) {
@@ -191,7 +176,9 @@ export function DesktopShell({ children }: PropsWithChildren) {
     }
 
     const target = event.target as HTMLElement | null;
-    if (target?.closest("button, a, input, textarea, select, [role='button']")) {
+    if (
+      target?.closest("button, a, input, textarea, select, [role='button']")
+    ) {
       return;
     }
 
@@ -236,8 +223,12 @@ export function DesktopShell({ children }: PropsWithChildren) {
                   YJ
                 </div>
                 <div className="leading-none">
-                  <div className="text-sm font-medium text-[color:var(--text-primary)]">Yinjie</div>
-                  <div className="mt-1 text-[11px] tracking-[0.22em] text-[color:var(--text-dim)]">DESKTOP WORLD</div>
+                  <div className="text-sm font-medium text-[color:var(--text-primary)]">
+                    Yinjie
+                  </div>
+                  <div className="mt-1 text-[11px] tracking-[0.22em] text-[color:var(--text-dim)]">
+                    DESKTOP WORLD
+                  </div>
                 </div>
               </div>
             </div>
@@ -284,7 +275,21 @@ export function DesktopShell({ children }: PropsWithChildren) {
           </header>
         ) : null}
 
-        <div className={cn("relative z-10 flex min-h-0 flex-1 gap-4 p-4", nativeDesktopShell ? "pt-3" : undefined)}>
+        <div
+          className={cn(
+            "relative z-10 flex min-h-0 flex-1 gap-4 p-4",
+            nativeDesktopShell ? "pt-3" : undefined,
+          )}
+        >
+          {isMoreMenuOpen ? (
+            <button
+              type="button"
+              aria-label="关闭更多菜单"
+              onClick={() => setIsMoreMenuOpen(false)}
+              className="absolute inset-0 z-20 cursor-default"
+            />
+          ) : null}
+
           <aside className="hidden w-[104px] shrink-0 rounded-[30px] border border-[rgba(249,115,22,0.10)] bg-[linear-gradient(180deg,rgba(255,254,250,0.95),rgba(255,249,238,0.90))] p-3 shadow-[var(--shadow-section)] backdrop-blur-2xl lg:flex lg:flex-col">
             <Link
               to="/tabs/profile"
@@ -300,46 +305,130 @@ export function DesktopShell({ children }: PropsWithChildren) {
               </div>
             </Link>
 
-            <nav className="flex flex-1 flex-col gap-2">
-              {navItems.map(({ to, label, icon: Icon, shortLabel }) => {
-                const active = isActive(pathname, to);
-
-                return (
-                  <Link
-                    key={to}
-                    to={to}
-                    className={cn(
-                      "group flex flex-col items-center gap-2 rounded-[22px] px-3 py-3 text-[11px] transition-[background-color,color,box-shadow,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
-                      active
-                        ? "bg-white/92 text-[color:var(--brand-primary)] shadow-[var(--shadow-card)]"
-                        : "text-[color:var(--text-secondary)] hover:bg-white/88 hover:text-[color:var(--text-primary)]",
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "flex h-11 w-11 items-center justify-center rounded-[18px] border transition-[background-color,border-color,filter]",
-                        active
-                          ? "border-[color:var(--border-brand)] bg-[rgba(249,115,22,0.12)] [filter:drop-shadow(0_0_8px_rgba(249,115,22,0.35))]"
-                          : "border-transparent bg-[rgba(255,255,255,0.82)] group-hover:border-[color:var(--border-faint)] group-hover:bg-white",
-                      )}
-                    >
-                      <Icon size={18} />
-                    </div>
-                    <span className="hidden xl:block">{label}</span>
-                    <span className="xl:hidden">{shortLabel}</span>
-                  </Link>
-                );
-              })}
+            <nav className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <div className="flex flex-col gap-2 pb-3">
+                {desktopPrimaryNavItems.map((item) => (
+                  <DesktopNavLink
+                    key={item.to}
+                    active={isDesktopNavItemActive(pathname, item)}
+                    item={item}
+                  />
+                ))}
+              </div>
             </nav>
+
+            <div className="relative mt-3 border-t border-[rgba(249,115,22,0.10)] pt-3">
+              <div className="flex flex-col gap-2">
+                {desktopBottomNavItems.map((item) => (
+                  <DesktopActionButton
+                    key={item.action}
+                    active={
+                      item.action === "open-more-menu"
+                        ? isMoreMenuOpen ||
+                          isDesktopNavItemActive(pathname, item)
+                        : isDesktopNavItemActive(pathname, item)
+                    }
+                    item={item}
+                    onClick={() => {
+                      if (item.action === "open-mobile-panel") {
+                        void navigate({ to: "/desktop/mobile" });
+                        return;
+                      }
+
+                      setIsMoreMenuOpen((current) => !current);
+                    }}
+                  />
+                ))}
+              </div>
+
+              {isMoreMenuOpen ? (
+                <div className="absolute bottom-0 left-[calc(100%+0.75rem)] z-30 w-[248px] rounded-[26px] border border-[rgba(255,255,255,0.7)] bg-[rgba(255,252,246,0.98)] p-2 shadow-[0_24px_48px_rgba(135,78,24,0.18)] backdrop-blur-2xl">
+                  <div className="px-3 pb-2 pt-2 text-[11px] uppercase tracking-[0.22em] text-[color:var(--text-dim)]">
+                    更多
+                  </div>
+                  <div className="space-y-1">
+                    {desktopMoreMenuItems.map((item) => (
+                      <DesktopMoreMenuButton
+                        key={item.action}
+                        item={item}
+                        onClick={() => {
+                          handleDesktopAction(item.action);
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </aside>
 
           <main className="min-w-0 flex-1 overflow-hidden rounded-[32px] border border-[rgba(249,115,22,0.10)] bg-[rgba(255,253,248,0.92)] shadow-[var(--shadow-section)] backdrop-blur-2xl">
             {children}
           </main>
         </div>
+
+        {isLocked ? (
+          <div className="absolute inset-0 z-40 flex items-center justify-center bg-[rgba(22,18,14,0.48)] p-6 backdrop-blur-md">
+            <div className="w-full max-w-md rounded-[32px] border border-[rgba(255,255,255,0.28)] bg-[rgba(255,252,247,0.92)] p-8 text-center shadow-[0_28px_80px_rgba(15,23,42,0.22)]">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[rgba(249,115,22,0.10)] text-[color:var(--brand-primary)]">
+                <AvatarChip
+                  name={ownerName ?? "世界主人"}
+                  src={ownerAvatar}
+                  size="wechat"
+                />
+              </div>
+              <div className="mt-5 text-2xl font-semibold text-[color:var(--text-primary)]">
+                已锁定桌面端
+              </div>
+              <div className="mt-3 text-sm leading-7 text-[color:var(--text-secondary)]">
+                当前先提供本地锁定层，避免桌面端离开时工作区继续暴露。后续再补本地口令或系统级验证。
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLocked(false)}
+                className="mt-6 inline-flex h-12 items-center justify-center rounded-2xl bg-[var(--brand-gradient)] px-6 text-sm font-medium text-white shadow-[0_12px_30px_rgba(249,115,22,0.24)]"
+              >
+                解锁继续使用
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );
+
+  function handleDesktopAction(action: DesktopNavActionItem["action"]) {
+    setIsMoreMenuOpen(false);
+
+    if (action === "open-live-companion") {
+      void navigate({ to: "/desktop/channels/live-companion" });
+      return;
+    }
+
+    if (action === "open-chat-files") {
+      void navigate({ to: "/desktop/chat-files" });
+      return;
+    }
+
+    if (action === "open-chat-history" || action === "load-history") {
+      void navigate({ to: "/desktop/chat-history" });
+      return;
+    }
+
+    if (action === "open-feedback") {
+      void navigate({ to: "/desktop/feedback" });
+      return;
+    }
+
+    if (action === "open-settings") {
+      void navigate({ to: "/desktop/settings" });
+      return;
+    }
+
+    if (action === "lock") {
+      setIsLocked(true);
+    }
+  }
 }
 
 function DesktopWindowButton({
@@ -368,6 +457,105 @@ function DesktopWindowButton({
       )}
     >
       {children}
+    </button>
+  );
+}
+
+function DesktopNavLink({
+  active,
+  item,
+}: {
+  active: boolean;
+  item: (typeof desktopPrimaryNavItems)[number];
+}) {
+  const Icon = item.icon;
+
+  return (
+    <Link
+      key={item.to}
+      to={item.to as never}
+      className={cn(
+        "group flex flex-col items-center gap-2 rounded-[22px] px-3 py-3 text-[11px] transition-[background-color,color,box-shadow,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
+        active
+          ? "bg-white/92 text-[color:var(--brand-primary)] shadow-[var(--shadow-card)]"
+          : "text-[color:var(--text-secondary)] hover:bg-white/88 hover:text-[color:var(--text-primary)]",
+      )}
+    >
+      <div
+        className={cn(
+          "flex h-11 w-11 items-center justify-center rounded-[18px] border transition-[background-color,border-color,filter]",
+          active
+            ? "border-[color:var(--border-brand)] bg-[rgba(249,115,22,0.12)] [filter:drop-shadow(0_0_8px_rgba(249,115,22,0.35))]"
+            : "border-transparent bg-[rgba(255,255,255,0.82)] group-hover:border-[color:var(--border-faint)] group-hover:bg-white",
+        )}
+      >
+        <Icon size={18} />
+      </div>
+      <span className="hidden xl:block">{item.label}</span>
+      <span className="xl:hidden">{item.shortLabel}</span>
+    </Link>
+  );
+}
+
+function DesktopActionButton({
+  active,
+  item,
+  onClick,
+}: {
+  active: boolean;
+  item: (typeof desktopBottomNavItems)[number];
+  onClick: () => void;
+}) {
+  const Icon = item.icon;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "group flex w-full flex-col items-center gap-2 rounded-[22px] px-3 py-3 text-[11px] transition-[background-color,color,box-shadow,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
+        active
+          ? "bg-white/92 text-[color:var(--brand-primary)] shadow-[var(--shadow-card)]"
+          : "text-[color:var(--text-secondary)] hover:bg-white/88 hover:text-[color:var(--text-primary)]",
+      )}
+    >
+      <div
+        className={cn(
+          "flex h-11 w-11 items-center justify-center rounded-[18px] border transition-[background-color,border-color,filter]",
+          active
+            ? "border-[color:var(--border-brand)] bg-[rgba(249,115,22,0.12)] [filter:drop-shadow(0_0_8px_rgba(249,115,22,0.35))]"
+            : "border-transparent bg-[rgba(255,255,255,0.82)] group-hover:border-[color:var(--border-faint)] group-hover:bg-white",
+        )}
+      >
+        <Icon size={18} />
+      </div>
+      <span className="hidden xl:block">{item.label}</span>
+      <span className="xl:hidden">{item.shortLabel}</span>
+    </button>
+  );
+}
+
+function DesktopMoreMenuButton({
+  item,
+  onClick,
+}: {
+  item: (typeof desktopMoreMenuItems)[number];
+  onClick: () => void;
+}) {
+  const Icon = item.icon;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex w-full items-center gap-3 rounded-[18px] px-3 py-3 text-left text-sm text-[color:var(--text-primary)] transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[rgba(255,138,61,0.08)]"
+    >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-[rgba(255,255,255,0.88)] text-[color:var(--brand-primary)]">
+        <Icon size={17} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-medium">{item.label}</div>
+      </div>
     </button>
   );
 }

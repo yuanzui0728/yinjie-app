@@ -23,9 +23,39 @@ const ChatListPage = lazy(async () => {
   return { default: mod.ChatListPage };
 });
 
+const FavoritesPage = lazy(async () => {
+  const mod = await import("./routes/favorites-page");
+  return { default: mod.FavoritesPage };
+});
+
 const MomentsPage = lazy(async () => {
   const mod = await import("./routes/moments-page");
   return { default: mod.MomentsPage };
+});
+
+const FeedPage = lazy(async () => {
+  const mod = await import("./routes/feed-page");
+  return { default: mod.FeedPage };
+});
+
+const ChannelsPage = lazy(async () => {
+  const mod = await import("./routes/channels-page");
+  return { default: mod.ChannelsPage };
+});
+
+const SearchPage = lazy(async () => {
+  const mod = await import("./routes/search-page");
+  return { default: mod.SearchPage };
+});
+
+const GamesPage = lazy(async () => {
+  const mod = await import("./routes/games-page");
+  return { default: mod.GamesPage };
+});
+
+const MiniProgramsPage = lazy(async () => {
+  const mod = await import("./routes/mini-programs-page");
+  return { default: mod.MiniProgramsPage };
 });
 
 const DiscoverPage = lazy(async () => {
@@ -81,6 +111,36 @@ const ProfilePage = lazy(async () => {
 const ProfileSettingsPage = lazy(async () => {
   const mod = await import("./routes/profile-settings-page");
   return { default: mod.ProfileSettingsPage };
+});
+
+const DesktopMobilePage = lazy(async () => {
+  const mod = await import("./routes/desktop-mobile-page");
+  return { default: mod.DesktopMobilePage };
+});
+
+const DesktopChatFilesPage = lazy(async () => {
+  const mod = await import("./routes/desktop-chat-files-page");
+  return { default: mod.DesktopChatFilesPage };
+});
+
+const DesktopChatHistoryPage = lazy(async () => {
+  const mod = await import("./routes/desktop-chat-history-page");
+  return { default: mod.DesktopChatHistoryPage };
+});
+
+const DesktopFeedbackPage = lazy(async () => {
+  const mod = await import("./routes/desktop-feedback-page");
+  return { default: mod.DesktopFeedbackPage };
+});
+
+const DesktopSettingsPage = lazy(async () => {
+  const mod = await import("./routes/desktop-settings-page");
+  return { default: mod.DesktopSettingsPage };
+});
+
+const LiveCompanionPage = lazy(async () => {
+  const mod = await import("./routes/live-companion-page");
+  return { default: mod.LiveCompanionPage };
 });
 
 const ChatRoomPage = lazy(async () => {
@@ -208,6 +268,42 @@ const momentsRoute = createRoute({
   getParentRoute: () => tabsRoute,
   path: "/moments",
   component: MomentsPage,
+});
+
+const favoritesRoute = createRoute({
+  getParentRoute: () => tabsRoute,
+  path: "/favorites",
+  component: FavoritesPage,
+});
+
+const feedRoute = createRoute({
+  getParentRoute: () => tabsRoute,
+  path: "/feed",
+  component: FeedPage,
+});
+
+const channelsRoute = createRoute({
+  getParentRoute: () => tabsRoute,
+  path: "/channels",
+  component: ChannelsPage,
+});
+
+const searchRoute = createRoute({
+  getParentRoute: () => tabsRoute,
+  path: "/search",
+  component: SearchPage,
+});
+
+const gamesRoute = createRoute({
+  getParentRoute: () => tabsRoute,
+  path: "/games",
+  component: GamesPage,
+});
+
+const miniProgramsRoute = createRoute({
+  getParentRoute: () => tabsRoute,
+  path: "/mini-programs",
+  component: MiniProgramsPage,
 });
 
 const discoverRoute = createRoute({
@@ -368,6 +464,48 @@ const profileSettingsRoute = createRoute({
   component: ProfileSettingsPage,
 });
 
+const desktopMobileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/desktop/mobile",
+  beforeLoad: requireWorldReady,
+  component: DesktopMobilePage,
+});
+
+const desktopChatFilesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/desktop/chat-files",
+  beforeLoad: requireWorldReady,
+  component: DesktopChatFilesPage,
+});
+
+const desktopChatHistoryRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/desktop/chat-history",
+  beforeLoad: requireWorldReady,
+  component: DesktopChatHistoryPage,
+});
+
+const desktopFeedbackRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/desktop/feedback",
+  beforeLoad: requireWorldReady,
+  component: DesktopFeedbackPage,
+});
+
+const desktopSettingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/desktop/settings",
+  beforeLoad: requireWorldReady,
+  component: DesktopSettingsPage,
+});
+
+const liveCompanionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/desktop/channels/live-companion",
+  beforeLoad: requireWorldReady,
+  component: LiveCompanionPage,
+});
+
 const legalPrivacyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/legal/privacy",
@@ -393,7 +531,13 @@ const routeTree = rootRoute.addChildren([
   setupRoute,
   tabsRoute.addChildren([
     chatListRoute,
+    favoritesRoute,
     momentsRoute,
+    feedRoute,
+    channelsRoute,
+    searchRoute,
+    gamesRoute,
+    miniProgramsRoute,
     discoverRoute,
     contactsRoute,
     profileRoute,
@@ -418,6 +562,12 @@ const routeTree = rootRoute.addChildren([
   discoverSceneRoute,
   discoverFeedRoute,
   profileSettingsRoute,
+  desktopMobileRoute,
+  desktopChatFilesRoute,
+  desktopChatHistoryRoute,
+  desktopFeedbackRoute,
+  desktopSettingsRoute,
+  liveCompanionRoute,
   legalPrivacyRoute,
   legalTermsRoute,
   legalCommunityRoute,
