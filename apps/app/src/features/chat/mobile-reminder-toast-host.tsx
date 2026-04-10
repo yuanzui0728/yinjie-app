@@ -7,9 +7,11 @@ import { useAppRuntimeConfig } from "../../runtime/runtime-config-store";
 import { buildDueChatReminderEntries } from "./chat-reminder-entries";
 import {
   removeLocalChatMessageReminder,
+  markLocalChatMessageReminderNotified,
   useLocalChatMessageActionState,
 } from "./local-chat-message-actions";
 import { formatMessageTimestamp } from "../../lib/format";
+import { showLocalNotification } from "../../runtime/mobile-bridge";
 
 export function MobileReminderToastHost() {
   const navigate = useNavigate();
@@ -67,6 +69,44 @@ export function MobileReminderToastHost() {
       ),
     );
   }, [dueReminders]);
+
+  useEffect(() => {
+    if (
+      !activeReminder ||
+      activeReminder.notifiedAt ||
+      typeof document === "undefined" ||
+      document.visibilityState === "visible"
+    ) {
+      return;
+    }
+
+    const targetRoute =
+      activeReminder.threadType === "group"
+        ? `/group/${activeReminder.threadId}#chat-message-${activeReminder.messageId}`
+        : `/chat/${activeReminder.threadId}#chat-message-${activeReminder.messageId}`;
+
+    void showLocalNotification({
+      id: `chat-reminder-${activeReminder.messageId}`,
+      title: activeReminder.title,
+      body: activeReminder.previewText,
+      route: targetRoute,
+      conversationId:
+        activeReminder.threadType === "direct"
+          ? activeReminder.threadId
+          : undefined,
+      groupId:
+        activeReminder.threadType === "group"
+          ? activeReminder.threadId
+          : undefined,
+      source: "local_reminder",
+    }).then((shown) => {
+      if (!shown) {
+        return;
+      }
+
+      markLocalChatMessageReminderNotified(activeReminder.messageId);
+    });
+  }, [activeReminder]);
 
   if (!activeReminder || pathname === "/tabs/chat") {
     return null;

@@ -1,5 +1,8 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
-import { normalizeMobilePushLaunchTarget, type MobilePushLaunchTarget } from "@yinjie/contracts";
+import {
+  normalizeMobilePushLaunchTarget,
+  type MobilePushLaunchTarget,
+} from "@yinjie/contracts";
 
 export type MobileBridgeSharePayload = {
   title?: string;
@@ -16,21 +19,41 @@ export type MobileBridgeImageAsset = {
 
 export type MobileBridgeLaunchTarget = MobilePushLaunchTarget;
 
+export type MobileBridgeLocalNotificationPayload = {
+  id?: string;
+  title: string;
+  body: string;
+  route?: string;
+  conversationId?: string;
+  groupId?: string;
+  source?: string;
+};
+
 type MobileBridgePlugin = {
   openExternalUrl(options: { url: string }): Promise<void>;
   share(options: MobileBridgeSharePayload): Promise<void>;
-  pickImages(options?: { multiple?: boolean }): Promise<{ assets: MobileBridgeImageAsset[] }>;
+  pickImages(options?: {
+    multiple?: boolean;
+  }): Promise<{ assets: MobileBridgeImageAsset[] }>;
   getPushToken(): Promise<{ token: string | null }>;
   getNotificationPermissionState(): Promise<{ state: string }>;
   requestNotificationPermission(): Promise<{ state: string }>;
-  getPendingLaunchTarget(): Promise<{ target: MobileBridgeLaunchTarget | null }>;
+  showLocalNotification(
+    options: MobileBridgeLocalNotificationPayload,
+  ): Promise<void>;
+  getPendingLaunchTarget(): Promise<{
+    target: MobileBridgeLaunchTarget | null;
+  }>;
   clearPendingLaunchTarget(): Promise<void>;
 };
 
 const mobileBridge = registerPlugin<MobileBridgePlugin>("YinjieMobileBridge");
 
 export function isNativeMobileBridgeAvailable() {
-  return Capacitor.isNativePlatform() && (Capacitor.getPlatform() === "ios" || Capacitor.getPlatform() === "android");
+  return (
+    Capacitor.isNativePlatform() &&
+    (Capacitor.getPlatform() === "ios" || Capacitor.getPlatform() === "android")
+  );
 }
 
 export async function openExternalUrl(url: string) {
@@ -101,6 +124,26 @@ export async function getNativeNotificationPermissionState() {
   }
 }
 
+export async function getNotificationPermissionState() {
+  if (isNativeMobileBridgeAvailable()) {
+    return getNativeNotificationPermissionState();
+  }
+
+  if (typeof Notification === "undefined") {
+    return "unsupported";
+  }
+
+  if (Notification.permission === "granted") {
+    return "granted";
+  }
+
+  if (Notification.permission === "denied") {
+    return "denied";
+  }
+
+  return "prompt";
+}
+
 export async function requestNativeNotificationPermission() {
   if (!isNativeMobileBridgeAvailable()) {
     return "unsupported";
@@ -111,6 +154,80 @@ export async function requestNativeNotificationPermission() {
     return result.state;
   } catch {
     return "unknown";
+  }
+}
+
+export async function requestNotificationPermission() {
+  if (isNativeMobileBridgeAvailable()) {
+    return requestNativeNotificationPermission();
+  }
+
+  if (typeof Notification === "undefined") {
+    return "unsupported";
+  }
+
+  try {
+    const result = await Notification.requestPermission();
+    if (result === "granted") {
+      return "granted";
+    }
+
+    if (result === "denied") {
+      return "denied";
+    }
+
+    return "prompt";
+  } catch {
+    return "unknown";
+  }
+}
+
+export async function showLocalNotification(
+  payload: MobileBridgeLocalNotificationPayload,
+) {
+  if (isNativeMobileBridgeAvailable()) {
+    try {
+      await mobileBridge.showLocalNotification(payload);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  if (typeof Notification === "undefined") {
+    return false;
+  }
+
+  if (Notification.permission !== "granted") {
+    return false;
+  }
+
+  try {
+    const notification = new Notification(payload.title, {
+      body: payload.body,
+      tag: payload.id,
+    });
+    const targetUrl = resolveLocalNotificationTargetUrl(payload);
+    if (targetUrl) {
+      notification.onclick = () => {
+        notification.close();
+        if (typeof window === "undefined") {
+          return;
+        }
+
+        window.focus();
+        if (window.location.pathname + window.location.hash === targetUrl) {
+          return;
+        }
+
+        if (targetUrl.startsWith("/")) {
+          window.location.assign(targetUrl);
+        }
+      };
+    }
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -138,4 +255,22 @@ export async function clearPendingNativeLaunchTarget() {
   } catch {
     return false;
   }
+}
+
+function resolveLocalNotificationTargetUrl(
+  payload: MobileBridgeLocalNotificationPayload,
+) {
+  if (payload.route?.trim()) {
+    return payload.route.trim();
+  }
+
+  if (payload.groupId?.trim()) {
+    return `/group/${payload.groupId.trim()}`;
+  }
+
+  if (payload.conversationId?.trim()) {
+    return `/chat/${payload.conversationId.trim()}`;
+  }
+
+  return null;
 }

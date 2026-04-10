@@ -11,6 +11,7 @@ export type ChatReminderEntry = {
   remindAt: string;
   isDue: boolean;
   participants: string[];
+  notifiedAt?: string;
 };
 
 export function buildChatReminderEntries(
@@ -40,6 +41,7 @@ export function buildChatReminderEntries(
         remindAt: item.remindAt,
         isDue: remindTimestamp <= nowTimestamp,
         participants: conversation?.participants ?? [],
+        notifiedAt: item.notifiedAt,
       };
     })
     .sort((left, right) => {

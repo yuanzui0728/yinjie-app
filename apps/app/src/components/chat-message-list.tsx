@@ -75,6 +75,7 @@ import {
   parseTimestamp,
 } from "../lib/format";
 import { emitChatMessage, joinConversationRoom } from "../lib/socket";
+import { requestNotificationPermission } from "../runtime/mobile-bridge";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export type ChatRenderableMessage = {
@@ -886,9 +887,28 @@ export function ChatMessageList({
     });
     setMessageReminders(nextState.reminders);
     setReminderTargetMessage(null);
-    setActionNotice({
-      message: `已设为本机提醒 · ${formatReminderSummary(option.remindAt)}。`,
-      tone: "success",
+    void requestNotificationPermission().then((permissionState) => {
+      const summary = formatReminderSummary(option.remindAt);
+      if (permissionState === "granted") {
+        setActionNotice({
+          message: `已设为本机提醒 · ${summary}，系统通知已开启。`,
+          tone: "success",
+        });
+        return;
+      }
+
+      if (permissionState === "denied") {
+        setActionNotice({
+          message: `已设为本机提醒 · ${summary}，系统通知未开启。`,
+          tone: "success",
+        });
+        return;
+      }
+
+      setActionNotice({
+        message: `已设为本机提醒 · ${summary}。`,
+        tone: "success",
+      });
     });
   };
 
@@ -1033,7 +1053,9 @@ export function ChatMessageList({
       return;
     }
 
-    const deletedMessageIdSet = new Set(messagesToDelete.map((message) => message.id));
+    const deletedMessageIdSet = new Set(
+      messagesToDelete.map((message) => message.id),
+    );
     setSelectionActionPending("delete");
 
     try {
@@ -1042,7 +1064,11 @@ export function ChatMessageList({
           if (threadContext.type === "group") {
             await deleteGroupMessage(threadContext.id, message.id, baseUrl);
           } else {
-            await deleteConversationMessage(threadContext.id, message.id, baseUrl);
+            await deleteConversationMessage(
+              threadContext.id,
+              message.id,
+              baseUrl,
+            );
           }
           clearTransientMessageState(message.id);
         }
@@ -1051,7 +1077,8 @@ export function ChatMessageList({
           queryClient.setQueryData<GroupMessage[] | undefined>(
             ["app-group-messages", baseUrl, threadContext.id],
             (current) =>
-              current?.filter((item) => !deletedMessageIdSet.has(item.id)) ?? current,
+              current?.filter((item) => !deletedMessageIdSet.has(item.id)) ??
+              current,
           );
           await queryClient.invalidateQueries({
             queryKey: ["app-group-messages", baseUrl, threadContext.id],
@@ -1060,7 +1087,8 @@ export function ChatMessageList({
           queryClient.setQueryData<Message[] | undefined>(
             ["app-conversation-messages", baseUrl, threadContext.id],
             (current) =>
-              current?.filter((item) => !deletedMessageIdSet.has(item.id)) ?? current,
+              current?.filter((item) => !deletedMessageIdSet.has(item.id)) ??
+              current,
           );
           await queryClient.invalidateQueries({
             queryKey: ["app-conversation-messages", baseUrl, threadContext.id],
@@ -1135,7 +1163,9 @@ export function ChatMessageList({
                 type="button"
                 variant="secondary"
                 size="sm"
-                disabled={!selectedMessageIds.length || selectionActionPending !== null}
+                disabled={
+                  !selectedMessageIds.length || selectionActionPending !== null
+                }
                 onClick={handleFavoriteSelectedMessages}
                 className="rounded-full"
               >
@@ -1144,7 +1174,9 @@ export function ChatMessageList({
               <Button
                 type="button"
                 size="sm"
-                disabled={!selectedMessageIds.length || selectionActionPending !== null}
+                disabled={
+                  !selectedMessageIds.length || selectionActionPending !== null
+                }
                 onClick={() => setForwardMessages(selectedMessages)}
                 className="rounded-full"
               >
@@ -1154,7 +1186,9 @@ export function ChatMessageList({
                 type="button"
                 variant="secondary"
                 size="sm"
-                disabled={!selectedMessageIds.length || selectionActionPending !== null}
+                disabled={
+                  !selectedMessageIds.length || selectionActionPending !== null
+                }
                 onClick={() => {
                   void handleDeleteSelectedMessages();
                 }}
@@ -1178,7 +1212,9 @@ export function ChatMessageList({
             </div>
             <button
               type="button"
-              disabled={!visibleMessages.length || selectionActionPending !== null}
+              disabled={
+                !visibleMessages.length || selectionActionPending !== null
+              }
               onClick={handleToggleSelectAllMessages}
               className="flex h-10 min-w-16 items-center justify-end rounded-[10px] px-2 text-[16px] font-medium text-[#07c160] disabled:text-[#b8b8b8]"
             >
@@ -1384,20 +1420,26 @@ export function ChatMessageList({
             <SelectionModeActionButton
               icon={<Star size={17} />}
               label={selectionActionPending === "favorite" ? "收藏中" : "收藏"}
-              disabled={!selectedMessageIds.length || selectionActionPending !== null}
+              disabled={
+                !selectedMessageIds.length || selectionActionPending !== null
+              }
               onClick={handleFavoriteSelectedMessages}
             />
             <SelectionModeActionButton
               icon={<Forward size={17} />}
               label="转发"
-              disabled={!selectedMessageIds.length || selectionActionPending !== null}
+              disabled={
+                !selectedMessageIds.length || selectionActionPending !== null
+              }
               onClick={() => setForwardMessages(selectedMessages)}
             />
             <SelectionModeActionButton
               icon={<Trash2 size={17} />}
               label={selectionActionPending === "delete" ? "删除中" : "删除"}
               danger
-              disabled={!selectedMessageIds.length || selectionActionPending !== null}
+              disabled={
+                !selectedMessageIds.length || selectionActionPending !== null
+              }
               onClick={() => {
                 void handleDeleteSelectedMessages();
               }}
@@ -1419,7 +1461,8 @@ export function ChatMessageList({
               : undefined
           }
           onQuoteSelection={
-            onReplyMessage && getPartialQuoteSourceText(contextMenuState.message)
+            onReplyMessage &&
+            getPartialQuoteSourceText(contextMenuState.message)
               ? () => {
                   handleOpenQuoteSelection(contextMenuState.message);
                   setContextMenuState(null);
@@ -1689,7 +1732,7 @@ export function ChatMessageList({
         }
         messageText={
           quoteSelectionMessage
-            ? getPartialQuoteSourceText(quoteSelectionMessage) ?? ""
+            ? (getPartialQuoteSourceText(quoteSelectionMessage) ?? "")
             : ""
         }
         onClose={() => setQuoteSelectionMessage(null)}
