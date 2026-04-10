@@ -2,12 +2,13 @@ import {
   useEffect,
   useMemo,
   useState,
+  type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { BellOff, FileText, Plus, UserPlus, Users } from "lucide-react";
+import { BellOff, FileText, Plus, Search, UserPlus, Users } from "lucide-react";
 import {
   clearConversationHistory,
   clearGroupMessages,
@@ -32,6 +33,7 @@ import { OfficialServiceConversationCard } from "../../../components/official-se
 import { SubscriptionInboxCard } from "../../../components/subscription-inbox-card";
 import { DesktopSubscriptionWorkspace } from "../official-accounts/desktop-subscription-workspace";
 import { OfficialAccountServiceThread } from "../../official-accounts/service/official-account-service-thread";
+import { buildSearchRouteHash } from "../../search/search-route-state";
 import {
   sanitizeDisplayedChatText,
   splitChatTextSegments,
@@ -160,8 +162,10 @@ export function DesktopChatWorkspace({
     });
   }, [conversations, searchTerm]);
   const subscriptionInboxSummary = messageEntriesQuery.data?.subscriptionInbox;
-  const serviceConversations =
-    messageEntriesQuery.data?.serviceConversations ?? [];
+  const serviceConversations = useMemo(
+    () => messageEntriesQuery.data?.serviceConversations ?? [],
+    [messageEntriesQuery.data?.serviceConversations],
+  );
   const subscriptionInboxActive = selectedSpecialView === "subscription-inbox";
   const serviceConversationActive = Boolean(selectedServiceAccountId);
   const showSubscriptionInboxItem = useMemo(() => {
@@ -373,6 +377,25 @@ export function DesktopChatWorkspace({
     setRightPanelMode((current) => (current === mode ? null : mode));
   }
 
+  function openDesktopSearch(keyword = searchTerm) {
+    void navigate({
+      to: "/tabs/search",
+      hash: buildSearchRouteHash({
+        category: "all",
+        keyword,
+      }),
+    });
+  }
+
+  function handleSearchFieldKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    openDesktopSearch();
+  }
+
   function handleDesktopCallAction(kind: DesktopChatCallKind) {
     setNotice(
       kind === "video"
@@ -407,12 +430,24 @@ export function DesktopChatWorkspace({
       <section className="flex w-[320px] shrink-0 flex-col border-r border-[color:var(--border-faint)] bg-[#f5f5f5]">
         <div className="border-b border-[color:var(--border-faint)] bg-[#f7f7f7] px-4 py-4">
           <div className="relative z-20 flex items-center gap-2">
-            <TextField
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="搜索"
-              className="flex-1 rounded-[18px] border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-4 py-2.5 shadow-none hover:bg-white focus:shadow-none"
-            />
+            <div className="relative min-w-0 flex-1">
+              <TextField
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                onKeyDown={handleSearchFieldKeyDown}
+                placeholder="搜索"
+                className="flex-1 rounded-[18px] border-[color:var(--border-faint)] bg-[color:var(--surface-card)] py-2.5 pl-4 pr-12 shadow-none hover:bg-white focus:shadow-none"
+              />
+              <button
+                type="button"
+                onClick={() => openDesktopSearch()}
+                className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[color:var(--text-dim)] transition hover:bg-white hover:text-[color:var(--text-primary)]"
+                aria-label="在搜一搜中搜索"
+                title="回车或点击进入搜一搜"
+              >
+                <Search size={16} />
+              </button>
+            </div>
             <div className="relative shrink-0">
               <button
                 type="button"
