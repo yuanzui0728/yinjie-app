@@ -45,8 +45,10 @@ type DesktopGamesWorkspaceProps = {
   selectedGameId: string;
   lastOpenedAtById: Record<string, string>;
   successNotice?: string;
+  noticeTone?: "success" | "info";
   onCategoryChange: (categoryId: GameCenterCategoryId) => void;
   onCompleteEventAction: (eventId: string) => void;
+  onCopyGameToMobile: (gameId: string) => void;
   onDismissActiveGame: () => void;
   onLaunchGame: (gameId: string) => void;
   onSelectGame: (gameId: string) => void;
@@ -69,8 +71,10 @@ export function DesktopGamesWorkspace({
   selectedGameId,
   lastOpenedAtById,
   successNotice,
+  noticeTone = "success",
   onCategoryChange,
   onCompleteEventAction,
+  onCopyGameToMobile,
   onDismissActiveGame,
   onLaunchGame,
   onSelectGame,
@@ -231,7 +235,7 @@ export function DesktopGamesWorkspace({
                 首版先不做小游戏运行容器，点击开始游戏会先记录使用状态并回到内容工作区。
               </div>
             </div>
-            {successNotice ? <InlineNotice tone="success">{successNotice}</InlineNotice> : null}
+            {successNotice ? <InlineNotice tone={noticeTone}>{successNotice}</InlineNotice> : null}
           </div>
         </div>
 
@@ -309,6 +313,14 @@ export function DesktopGamesWorkspace({
                     >
                       <Pin size={16} />
                       {selectedPinned ? "取消固定" : "固定常玩"}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      onClick={() => onCopyGameToMobile(selectedGame.id)}
+                      className="border-white/18 bg-white/10 text-white hover:bg-white/18"
+                    >
+                      发到手机
                     </Button>
                   </div>
                 </div>
@@ -422,6 +434,7 @@ export function DesktopGamesWorkspace({
                 isActive={activeGameId === selectedGame.id}
                 launchCount={launchCountById[selectedGame.id] ?? 0}
                 lastOpenedAt={lastOpenedAtById[selectedGame.id]}
+                onCopyToMobile={onCopyGameToMobile}
                 onDismiss={activeGameId === selectedGame.id ? onDismissActiveGame : undefined}
                 onLaunch={onLaunchGame}
               />

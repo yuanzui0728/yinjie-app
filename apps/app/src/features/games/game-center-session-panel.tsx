@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Button, cn } from "@yinjie/ui";
-import { Clock3, Flag, Play, Sparkles, X } from "lucide-react";
+import { Clock3, Flag, Play, Smartphone, Sparkles, X } from "lucide-react";
 import { formatConversationTimestamp } from "../../lib/format";
 import {
   getGameCenterToneStyle,
@@ -14,6 +14,7 @@ type GameCenterSessionPanelProps = {
   lastOpenedAt?: string;
   compact?: boolean;
   onDismiss?: () => void;
+  onCopyToMobile?: (gameId: string) => void;
   onLaunch: (gameId: string) => void;
 };
 
@@ -24,6 +25,7 @@ export function GameCenterSessionPanel({
   lastOpenedAt,
   compact = false,
   onDismiss,
+  onCopyToMobile,
   onLaunch,
 }: GameCenterSessionPanelProps) {
   const tone = getGameCenterToneStyle(game.tone);
@@ -108,6 +110,12 @@ export function GameCenterSessionPanel({
           <Play size={16} />
           {isActive ? "继续游戏" : "开始游戏"}
         </Button>
+        {onCopyToMobile ? (
+          <Button variant="secondary" onClick={() => onCopyToMobile(game.id)}>
+            <Smartphone size={16} />
+            发到手机
+          </Button>
+        ) : null}
         <div className="flex items-center text-xs leading-6 text-[color:var(--text-muted)]">
           {isActive
             ? "当前先由游戏中心工作区承接会话，后续再接真实小游戏容器。"
