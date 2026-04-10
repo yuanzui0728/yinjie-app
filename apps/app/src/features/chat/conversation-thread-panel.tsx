@@ -278,6 +278,8 @@ export function ConversationThreadPanel({
     if (isDesktop) {
       setDesktopCallPanelKind(kind);
       return;
+    }
+
     if (kind === "voice") {
       setPendingCallFallback(null);
       void navigate({
@@ -285,8 +287,6 @@ export function ConversationThreadPanel({
         params: { conversationId },
       });
       return;
-    }
-
     }
 
     setPendingCallFallback(kind);
@@ -604,13 +604,6 @@ export function ConversationThreadPanel({
             setPendingCallFallback(null);
             setMobileShortcutRequest(null);
           }}
-          replyPreview={replyPreview}
-          onCancelReply={() => setReplyDraft(null)}
-          onSubmit={() => void handleSubmit()}
-        />
-      ) : null}
-    </div>
-  );
           onStartVoiceCall={() => {
             setPendingCallFallback(null);
             void navigate({
@@ -618,6 +611,13 @@ export function ConversationThreadPanel({
               params: { conversationId },
             });
           }}
+          replyPreview={replyPreview}
+          onCancelReply={() => setReplyDraft(null)}
+          onSubmit={() => void handleSubmit()}
+        />
+      ) : null}
+    </div>
+  );
 }
 
 function describeReplyPreview(message: ChatRenderableMessage) {

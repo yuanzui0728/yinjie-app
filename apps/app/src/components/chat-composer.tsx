@@ -81,9 +81,9 @@ type ChatComposerProps = {
   mobileShortcutRequest?: {
     action: "voice-message" | "camera" | "album";
     nonce: number;
-  onStartVoiceCall?: () => void;
   } | null;
   onMobileShortcutHandled?: () => void;
+  onStartVoiceCall?: () => void;
   onCancelReply?: () => void;
   onOpenDesktopHistory?: () => void;
   onChange: (value: string) => void;
@@ -149,7 +149,6 @@ type AttachmentDraft =
 
 export function ChatComposer({
   value,
-  onStartVoiceCall,
   placeholder,
   variant = "mobile",
   pending = false,
@@ -162,6 +161,7 @@ export function ChatComposer({
   replyPreview = null,
   mobileShortcutRequest = null,
   onMobileShortcutHandled,
+  onStartVoiceCall,
   onCancelReply,
   onOpenDesktopHistory,
   onChange,
@@ -656,7 +656,11 @@ export function ChatComposer({
     }
 
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || !event.shiftKey || event.altKey) {
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        !event.shiftKey ||
+        event.altKey
+      ) {
         return;
       }
 
@@ -670,12 +674,7 @@ export function ChatComposer({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    attachmentBusy,
-    desktopScreenshotDraft,
-    isDesktop,
-    onSendAttachment,
-  ]);
+  }, [attachmentBusy, desktopScreenshotDraft, isDesktop, onSendAttachment]);
 
   useEffect(() => {
     if (isDesktop && onSendAttachment && !attachmentBusy) {
@@ -1292,10 +1291,9 @@ export function ChatComposer({
         current.currentX - current.anchorX,
         current.currentY - current.anchorY,
       );
-      const validArrow = arrowLength >= Math.min(
-        current.boundsWidth,
-        current.boundsHeight,
-      ) * 0.03;
+      const validArrow =
+        arrowLength >=
+        Math.min(current.boundsWidth, current.boundsHeight) * 0.03;
 
       if (current.mode === "crop") {
         setDesktopScreenshotCrop(validSelection);
@@ -1331,9 +1329,7 @@ export function ChatComposer({
     });
   };
 
-  const buildDesktopScreenshotResult = async (
-    mode: "original" | "cropped",
-  ) => {
+  const buildDesktopScreenshotResult = async (mode: "original" | "cropped") => {
     if (!desktopScreenshotDraft) {
       return null;
     }
@@ -1968,7 +1964,6 @@ export function ChatComposer({
                     ref={mobileTextareaRef}
                     rows={1}
                     value={value}
-            onStartVoiceCall={onStartVoiceCall}
                     onChange={(event) => {
                       onChange(event.target.value);
                       setInputCursor(
@@ -2048,6 +2043,7 @@ export function ChatComposer({
           <MobileChatPlusPanel
             open={plusPanelOpen}
             busy={attachmentBusy}
+            onStartVoiceCall={onStartVoiceCall}
             onPickAlbum={pickAlbum}
             onPickCamera={pickCamera}
             onPickFile={pickFile}
@@ -2504,9 +2500,7 @@ function DesktopScreenshotEditor({
   const selectionRect = selection ? getSelectionPreviewRect(selection) : null;
   const cropRect = crop ? getNormalizedCropPreviewRect(crop) : null;
   const previewRect =
-    selectionRect && selection?.mode !== "arrow"
-      ? selectionRect
-      : null;
+    selectionRect && selection?.mode !== "arrow" ? selectionRect : null;
   const previewArrow =
     selection && selection.mode === "arrow"
       ? getSelectionArrowPreview(selection)
@@ -3443,7 +3437,10 @@ function getArrowHeadGeometry(
 }
 
 function createScreenshotAnnotationId() {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
 
