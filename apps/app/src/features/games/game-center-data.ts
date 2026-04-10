@@ -54,6 +54,8 @@ export type GameCenterEvent = {
   description: string;
   meta: string;
   ctaLabel: string;
+  relatedGameId: string;
+  actionKind: "mission" | "reminder" | "join";
   tone: GameCenterTone;
 };
 
@@ -368,6 +370,8 @@ export const gameCenterEvents: GameCenterEvent[] = [
     description: "完成周任务可解锁全队共享外观和回放徽章。",
     meta: "今天 20:00 开始",
     ctaLabel: "去做任务",
+    relatedGameId: "signal-squad",
+    actionKind: "mission",
     tone: "forest",
   },
   {
@@ -376,6 +380,8 @@ export const gameCenterEvents: GameCenterEvent[] = [
     description: "指定时段营业收益翻倍，适合回流和好友互访。",
     meta: "周五 - 周日",
     ctaLabel: "预约提醒",
+    relatedGameId: "night-market",
+    actionKind: "reminder",
     tone: "sunset",
   },
   {
@@ -384,6 +390,8 @@ export const gameCenterEvents: GameCenterEvent[] = [
     description: "邀请两位好友合奏可解锁限定海报。",
     meta: "限时 3 天",
     ctaLabel: "立即参加",
+    relatedGameId: "island-concert",
+    actionKind: "join",
     tone: "gold",
   },
 ];
@@ -461,4 +469,26 @@ export function getGameCenterGame(gameId: string) {
 
 export function getGameCenterToneStyle(tone: GameCenterTone) {
   return gameCenterToneStyles[tone];
+}
+
+export function getGameCenterEventStatusLabel(event: GameCenterEvent) {
+  switch (event.actionKind) {
+    case "mission":
+      return "任务中";
+    case "reminder":
+      return "已预约";
+    case "join":
+      return "已参加";
+  }
+}
+
+export function getGameCenterEventActionLabel(
+  event: GameCenterEvent,
+  engaged: boolean,
+) {
+  if (!engaged) {
+    return event.ctaLabel;
+  }
+
+  return getGameCenterEventStatusLabel(event);
 }

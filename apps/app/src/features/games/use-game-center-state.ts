@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   dismissActiveGame,
+  markGameCenterEventAction,
   markGameOpened,
   readGameCenterState,
   togglePinnedGame,
@@ -24,6 +25,14 @@ export function useGameCenterState() {
     },
     togglePinned(gameId: string) {
       setState((current) => togglePinnedGame(current, gameId));
+    },
+    applyEventAction(eventId: string, status: string) {
+      setState((current) =>
+        markGameCenterEventAction(current, {
+          eventId,
+          status,
+        }),
+      );
     },
     dismissActiveGame() {
       setState((current) => dismissActiveGame(current));

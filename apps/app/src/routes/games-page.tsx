@@ -28,7 +28,9 @@ import {
   gameCenterGames,
   gameCenterHotRankings,
   gameCenterNewRankings,
+  getGameCenterEventActionLabel,
   getGameCenterGame,
+  getGameCenterEventStatusLabel,
   getGameCenterToneStyle,
   type GameCenterCategoryId,
   type GameCenterGame,
@@ -50,11 +52,13 @@ export function GamesPage() {
   const isDesktopLayout = useDesktopLayout();
   const {
     activeGameId,
+    eventActionStatusById,
     launchCountById,
     lastOpenedAtById,
     pinnedGameIds,
     recentGameIds,
     dismissActiveGame,
+    applyEventAction,
     launchGame,
     togglePinned,
   } = useGameCenterState();
@@ -107,11 +111,28 @@ export function GamesPage() {
     );
   }
 
+  function handleCompleteEventAction(eventId: string) {
+    const event = gameCenterEvents.find((item) => item.id === eventId);
+    if (!event) {
+      return;
+    }
+
+    const nextStatus =
+      event.actionKind === "reminder" ? "reminder_set" : event.actionKind === "join" ? "joined" : "task_started";
+
+    applyEventAction(eventId, nextStatus);
+    setSelectedGameId(event.relatedGameId);
+    setSuccessNotice(
+      `${event.title} 已标记为${getGameCenterEventStatusLabel(event)}。`,
+    );
+  }
+
   if (isDesktopLayout) {
     return (
       <DesktopGamesWorkspace
         activeCategory={activeCategory}
         activeGameId={activeGameId}
+        eventActionStatusById={eventActionStatusById}
         launchCountById={launchCountById}
         pinnedGameIds={pinnedGameIds}
         recentGameIds={recentGameIds}
@@ -119,6 +140,7 @@ export function GamesPage() {
         lastOpenedAtById={lastOpenedAtById}
         successNotice={successNotice}
         onCategoryChange={setActiveCategory}
+        onCompleteEventAction={handleCompleteEventAction}
         onDismissActiveGame={dismissActiveGame}
         onLaunchGame={handleLaunchGame}
         onSelectGame={setSelectedGameId}
@@ -423,6 +445,7 @@ export function GamesPage() {
         <div className="space-y-3">
           {gameCenterEvents.map((event) => {
             const tone = getGameCenterToneStyle(event.tone);
+            const engaged = Boolean(eventActionStatusById[event.id]);
             return (
               <article
                 key={event.id}
@@ -433,8 +456,15 @@ export function GamesPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-[color:var(--text-primary)]">
-                      {event.title}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="text-sm font-semibold text-[color:var(--text-primary)]">
+                        {event.title}
+                      </div>
+                      {engaged ? (
+                        <div className="rounded-full bg-white/84 px-2 py-1 text-[10px] text-[color:var(--text-muted)]">
+                          {getGameCenterEventStatusLabel(event)}
+                        </div>
+                      ) : null}
                     </div>
                     <div className="mt-2 text-xs leading-6 text-[color:var(--text-secondary)]">
                       {event.description}
@@ -443,8 +473,12 @@ export function GamesPage() {
                       {event.meta}
                     </div>
                   </div>
-                  <Button variant="secondary" size="sm">
-                    {event.ctaLabel}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleCompleteEventAction(event.id)}
+                  >
+                    {getGameCenterEventActionLabel(event, engaged)}
                   </Button>
                 </div>
               </article>
