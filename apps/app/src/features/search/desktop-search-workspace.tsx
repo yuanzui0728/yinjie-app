@@ -209,9 +209,11 @@ export function DesktopSearchWorkspace({
           {error ? <ErrorBlock message={error} /> : null}
 
           {!loading && !error && hasKeyword && searchingMessages ? (
-            <InlineNotice tone="info">
-              正在补全所有会话的聊天记录索引，消息结果会继续刷新。
-            </InlineNotice>
+            <div className="mb-4">
+              <InlineNotice tone="info">
+                正在补全所有会话的聊天记录索引，消息结果会继续刷新。
+              </InlineNotice>
+            </div>
           ) : null}
 
           {!loading && !error && !hasKeyword ? (
@@ -233,18 +235,22 @@ export function DesktopSearchWorkspace({
                   description="支持搜朋友圈、广场动态和公众号最近内容。"
                 />
               </div>
-              <EmptyState
-                title="输入关键词开始搜索"
-                description="桌面端搜一搜已经接入全局聊天记录索引，首条消息命中也能找到。"
-              />
+              <div className="pt-2">
+                <EmptyState
+                  title="输入关键词开始搜索"
+                  description="桌面端搜一搜已经接入全局聊天记录索引，首条消息命中也能找到。"
+                />
+              </div>
             </div>
           ) : null}
 
           {!loading && !error && hasKeyword && !visibleResults.length ? (
-            <EmptyState
-              title="没有找到匹配结果"
-              description="换个关键词，或者切换左侧分类后再试。"
-            />
+            <div className="mx-auto max-w-[560px] py-10">
+              <EmptyState
+                title="没有找到匹配结果"
+                description="换个关键词，或者切换左侧分类后再试。"
+              />
+            </div>
           ) : null}
 
           {!loading && !error && hasKeyword ? (
@@ -252,11 +258,16 @@ export function DesktopSearchWorkspace({
               <div className="space-y-6">
                 {groupedResults.map((section) => (
                   <section key={section.category} className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="text-sm font-medium text-[color:var(--text-primary)]">
-                        {section.label}
+                    <div className="flex items-center justify-between gap-3 rounded-[16px] border border-black/6 bg-white px-4 py-3">
+                      <div>
+                        <div className="text-[11px] font-medium tracking-[0.12em] text-[color:var(--text-muted)]">
+                          搜索结果
+                        </div>
+                        <div className="mt-1 text-sm font-medium text-[color:var(--text-primary)]">
+                          {section.label}
+                        </div>
                       </div>
-                      <div className="text-xs text-[color:var(--text-muted)]">
+                      <div className="rounded-md bg-[#f3f3f3] px-2.5 py-1 text-xs text-[color:var(--text-muted)]">
                         {section.results.length} 条
                       </div>
                     </div>
@@ -276,9 +287,18 @@ export function DesktopSearchWorkspace({
               </div>
             ) : (
               <div className="space-y-3">
-                <div className="text-sm font-medium text-[color:var(--text-primary)]">
-                  {searchCategoryTitles[activeCategory]} ·{" "}
-                  {visibleResults.length} 条
+                <div className="flex items-center justify-between gap-3 rounded-[16px] border border-black/6 bg-white px-4 py-3">
+                  <div>
+                    <div className="text-[11px] font-medium tracking-[0.12em] text-[color:var(--text-muted)]">
+                      搜索结果
+                    </div>
+                    <div className="mt-1 text-sm font-medium text-[color:var(--text-primary)]">
+                      {searchCategoryTitles[activeCategory]}
+                    </div>
+                  </div>
+                  <div className="rounded-md bg-[#f3f3f3] px-2.5 py-1 text-xs text-[color:var(--text-muted)]">
+                    {visibleResults.length} 条
+                  </div>
                 </div>
                 {visibleResults.map((item) => (
                   <SearchResultCard
