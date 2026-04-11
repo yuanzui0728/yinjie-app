@@ -163,6 +163,9 @@ export function DesktopChatWorkspace({
     useState(false);
   const [rightPanelMode, setRightPanelMode] =
     useState<DesktopChatSidePanelMode>(null);
+  const [detailsAnnouncementRequest, setDetailsAnnouncementRequest] = useState<
+    number | null
+  >(null);
   const [detailsMemberSearchRequest, setDetailsMemberSearchRequest] = useState<
     number | null
   >(null);
@@ -332,6 +335,7 @@ export function DesktopChatWorkspace({
       serviceConversationActive
     ) {
       setRightPanelMode(null);
+      setDetailsAnnouncementRequest(null);
       setDetailsMemberSearchRequest(null);
     }
   }, [activeConversation, serviceConversationActive, subscriptionInboxActive]);
@@ -603,12 +607,20 @@ export function DesktopChatWorkspace({
     mode: Exclude<DesktopChatSidePanelMode, null>,
   ) {
     setRightPanelMode((current) => (current === mode ? null : mode));
+    setDetailsAnnouncementRequest(null);
+    setDetailsMemberSearchRequest(null);
+  }
+
+  function handleOpenGroupAnnouncementDetails() {
+    setRightPanelMode("details");
+    setDetailsAnnouncementRequest(Date.now());
     setDetailsMemberSearchRequest(null);
   }
 
   function handleOpenGroupMemberSearch() {
     setRightPanelMode("details");
     setDetailsMemberSearchRequest(Date.now());
+    setDetailsAnnouncementRequest(null);
   }
 
   function openDesktopSearch(keyword = searchTerm) {
@@ -1005,6 +1017,7 @@ export function DesktopChatWorkspace({
               desktopSidePanelMode={rightPanelMode}
               onToggleDesktopHistory={() => handleToggleSidePanel("history")}
               onToggleDesktopDetails={() => handleToggleSidePanel("details")}
+              onOpenDesktopAnnouncementDetails={handleOpenGroupAnnouncementDetails}
               onOpenDesktopMemberSearch={handleOpenGroupMemberSearch}
               onDesktopCallAction={handleDesktopCallAction}
               highlightedMessageId={
@@ -1059,6 +1072,7 @@ export function DesktopChatWorkspace({
           subtitle={activeConversation.title}
           onClose={() => {
             setRightPanelMode(null);
+            setDetailsAnnouncementRequest(null);
             setDetailsMemberSearchRequest(null);
           }}
         >
@@ -1067,9 +1081,11 @@ export function DesktopChatWorkspace({
           ) : (
             <DesktopChatDetailsPanel
               conversation={activeConversation}
+              announcementRequest={detailsAnnouncementRequest}
               memberSearchRequest={detailsMemberSearchRequest}
               onOpenHistory={() => {
                 setRightPanelMode("history");
+                setDetailsAnnouncementRequest(null);
                 setDetailsMemberSearchRequest(null);
               }}
               onCreateGroup={(input) => {

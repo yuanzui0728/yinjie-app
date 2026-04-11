@@ -64,6 +64,7 @@ import { useWorldOwnerStore } from "../../../store/world-owner-store";
 
 type DesktopChatDetailsPanelProps = {
   conversation: ConversationListItem;
+  announcementRequest?: number | null;
   memberSearchRequest?: number | null;
   onOpenHistory: () => void;
   onCreateGroup?: (input: {
@@ -101,6 +102,7 @@ type DesktopGroupMemberBrowserFilter = "all" | "owner" | "admin" | "character";
 
 export function DesktopChatDetailsPanel({
   conversation,
+  announcementRequest = null,
   memberSearchRequest = null,
   onOpenHistory,
   onCreateGroup,
@@ -109,6 +111,7 @@ export function DesktopChatDetailsPanel({
     return (
       <GroupChatDetailsPanel
         conversation={conversation}
+        announcementRequest={announcementRequest}
         memberSearchRequest={memberSearchRequest}
         onOpenHistory={onOpenHistory}
       />
@@ -698,6 +701,7 @@ function DirectChatDetailsPanel({
 
 function GroupChatDetailsPanel({
   conversation,
+  announcementRequest,
   memberSearchRequest,
   onOpenHistory,
 }: DesktopChatDetailsPanelProps) {
@@ -748,6 +752,14 @@ function GroupChatDetailsPanel({
     setMemberBrowserAutoFocusSearch(true);
     setMemberBrowserOpen(true);
   }, [memberSearchRequest]);
+
+  useEffect(() => {
+    if (!announcementRequest) {
+      return;
+    }
+
+    setEditorMode("announcement");
+  }, [announcementRequest]);
 
   const groupQuery = useQuery({
     queryKey: ["app-group", baseUrl, conversation.id],

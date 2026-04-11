@@ -64,6 +64,7 @@ type GroupChatThreadPanelProps = {
   desktopSidePanelMode?: DesktopChatSidePanelMode;
   onToggleDesktopHistory?: () => void;
   onToggleDesktopDetails?: () => void;
+  onOpenDesktopAnnouncementDetails?: () => void;
   onOpenDesktopMemberSearch?: () => void;
   onDesktopCallAction?: (kind: DesktopChatCallKind) => void;
   highlightedMessageId?: string;
@@ -79,6 +80,7 @@ export function GroupChatThreadPanel({
   desktopSidePanelMode = null,
   onToggleDesktopHistory,
   onToggleDesktopDetails,
+  onOpenDesktopAnnouncementDetails,
   onOpenDesktopMemberSearch,
   onDesktopCallAction,
   highlightedMessageId,
@@ -723,10 +725,7 @@ export function GroupChatThreadPanel({
           <button
             type="button"
             onClick={() => {
-              void navigate({
-                to: "/group/$groupId/announcement",
-                params: { groupId },
-              });
+              onOpenDesktopAnnouncementDetails?.();
             }}
             className="flex min-w-0 flex-1 items-start gap-3 text-left transition hover:opacity-90"
           >
@@ -746,12 +745,17 @@ export function GroupChatThreadPanel({
           </button>
           <button
             type="button"
-            onClick={() => onToggleDesktopDetails?.()}
+            onClick={() => {
+              void navigate({
+                to: "/group/$groupId/announcement",
+                params: { groupId },
+              });
+            }}
             className="shrink-0 rounded-full border border-black/8 bg-white px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] transition hover:border-black/10 hover:bg-[#f3f3f3] hover:text-[color:var(--text-primary)]"
-            aria-label="打开聊天信息"
-            title="打开聊天信息"
+            aria-label="打开群公告页"
+            title="打开群公告页"
           >
-            聊天信息
+            公告页
           </button>
         </div>
       ) : null}
