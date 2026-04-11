@@ -153,7 +153,7 @@ export function GroupChatDetailsPage() {
           queryKey: ["app-conversations", baseUrl],
         }),
       ]);
-      void navigate({ to: "/tabs/chat" });
+      void navigate({ to: "/tabs/chat", replace: true });
     },
   });
 
@@ -168,7 +168,7 @@ export function GroupChatDetailsPage() {
           queryKey: ["app-conversations", baseUrl],
         }),
       ]);
-      void navigate({ to: "/tabs/chat" });
+      void navigate({ to: "/tabs/chat", replace: true });
     },
   });
 

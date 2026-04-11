@@ -182,6 +182,7 @@ function GroupMemberPickerPage({
       void navigate({
         to: "/group/$groupId/details",
         params: { groupId },
+        replace: true,
       });
     },
   });
