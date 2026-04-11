@@ -401,15 +401,18 @@ export function GroupChatThreadPanel({
       return;
     }
 
-    const target = document.getElementById(
-      `chat-message-${highlightedMessageId}`,
-    );
-    if (!target) {
-      return;
-    }
+    const frame = window.requestAnimationFrame(() => {
+      const targetSelector = escapeIdSelector(
+        `chat-message-${highlightedMessageId}`,
+      );
+      const target = scrollAnchorRef.current?.querySelector<HTMLElement>(
+        `#${targetSelector}`,
+      );
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
 
-    target.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [hasHighlightedMessage, highlightedMessageId]);
+    return () => window.cancelAnimationFrame(frame);
+  }, [hasHighlightedMessage, highlightedMessageId, scrollAnchorRef]);
 
   useEffect(() => {
     if (
@@ -427,11 +430,12 @@ export function GroupChatThreadPanel({
     });
 
     window.requestAnimationFrame(() => {
-      document
-        .getElementById(markerId)
+      const markerSelector = escapeIdSelector(markerId);
+      scrollAnchorRef.current
+        ?.querySelector<HTMLElement>(`#${markerSelector}`)
         ?.scrollIntoView({ behavior: "auto", block: "center" });
     });
-  }, [groupId, highlightedMessageId, unreadMarkerMessageId]);
+  }, [groupId, highlightedMessageId, scrollAnchorRef, unreadMarkerMessageId]);
 
   const sendAttachmentMessage = async (
     payload: ChatComposerAttachmentPayload,
@@ -1125,3 +1129,11 @@ function upsertGroupMessage(
 
 const INITIAL_MESSAGE_LIMIT = 60;
 const HISTORY_PAGE_SIZE = 40;
+
+function escapeIdSelector(value: string) {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(value);
+  }
+
+  return value;
+}
