@@ -6,6 +6,7 @@ import {
   ForbiddenException,
   Get,
   Headers,
+  Logger,
   Param,
   Patch,
   Post,
@@ -36,7 +37,6 @@ import type {
   ImageAttachment,
   LocationCardAttachment,
   StickerAttachment,
-  VoiceAttachment,
 } from './chat.types';
 
 @Controller('conversations')
@@ -427,6 +427,8 @@ export class MessageRemindersController {
 
 @Controller('groups')
 export class GroupController {
+  private readonly logger = new Logger(GroupController.name);
+
   constructor(private readonly groupService: GroupService) {}
 
   @Post()
@@ -592,7 +594,15 @@ export class GroupController {
         },
   ) {
     const message = await this.groupService.sendOwnerMessage(id, body);
-    this.groupService.triggerAiReplies(id, message);
+    void this.groupService.triggerAiReplies(id, message).catch((error: unknown) => {
+      const messageText =
+        error instanceof Error ? error.message : 'Unknown group AI reply error';
+      const trace = error instanceof Error ? error.stack : undefined;
+      this.logger.error(
+        `Failed to trigger AI replies for group ${id}: ${messageText}`,
+        trace,
+      );
+    });
     return message;
   }
 }
