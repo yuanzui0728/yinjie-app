@@ -20,13 +20,25 @@ import {
   cn,
 } from "@yinjie/ui";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
-import { DesktopEntryShell } from "../features/desktop/desktop-entry-shell";
+import { DesktopUtilityShell } from "../features/desktop/desktop-utility-shell";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../store/world-owner-store";
 
 type SettingsTab = "profile" | "ai" | "legal";
 type LegalTab = "privacy" | "terms" | "community";
+
+const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
+  { id: "profile", label: "个人资料" },
+  { id: "ai", label: "AI 设置" },
+  { id: "legal", label: "协议与规范" },
+];
+
+const legalTabs: Array<{ id: LegalTab; label: string }> = [
+  { id: "privacy", label: "隐私政策" },
+  { id: "terms", label: "用户协议" },
+  { id: "community", label: "社区规范" },
+];
 
 export function ProfileSettingsPage() {
   const navigate = useNavigate();
@@ -124,29 +136,25 @@ export function ProfileSettingsPage() {
 
   const content = (
     <>
-      <div className="flex gap-1 rounded-[12px] border border-black/6 bg-[#f7f7f7] p-1">
-        {(
-          [
-            { id: "profile", label: "个人资料" },
-            { id: "ai", label: "AI 设置" },
-            { id: "legal", label: "协议与规范" },
-          ] as { id: SettingsTab; label: string }[]
-        ).map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setActiveTab(tab.id)}
-            className={cn(
-              "flex-1 rounded-[10px] py-2 text-[13px] font-medium transition-all duration-[var(--motion-fast)]",
-              activeTab === tab.id
-                ? "bg-white text-[color:var(--text-primary)] shadow-sm"
-                : "text-[color:var(--text-muted)] hover:bg-white/70",
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {desktopMode ? null : (
+        <div className="flex gap-1 rounded-[12px] border border-black/6 bg-[#f7f7f7] p-1">
+          {settingsTabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={cn(
+                "flex-1 rounded-[10px] py-2 text-[13px] font-medium transition-all duration-[var(--motion-fast)]",
+                activeTab === tab.id
+                  ? "bg-white text-[color:var(--text-primary)] shadow-sm"
+                  : "text-[color:var(--text-muted)] hover:bg-white/70",
+              )}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {activeTab === "profile" ? (
         <AppSection className="space-y-4">
@@ -253,13 +261,7 @@ export function ProfileSettingsPage() {
       {activeTab === "legal" ? (
         <AppSection className="space-y-4">
           <div className="flex gap-1 rounded-[12px] border border-black/6 bg-[#f7f7f7] p-1">
-            {(
-              [
-                { id: "privacy", label: "隐私政策" },
-                { id: "terms", label: "用户协议" },
-                { id: "community", label: "社区规范" },
-              ] as { id: LegalTab; label: string }[]
-            ).map((tab) => (
+            {legalTabs.map((tab) => (
               <button
                 key={tab.id}
                 type="button"
@@ -307,46 +309,107 @@ export function ProfileSettingsPage() {
 
   if (desktopMode) {
     return (
-      <div className="h-full overflow-auto bg-[#f3f3f3] px-6 py-6">
-        <DesktopEntryShell
-          badge={desktopSettingsRoute ? "Settings" : "Profile"}
-          title="桌面模式下统一收口世界资料和 AI 配置"
-          description={
-            desktopSettingsRoute
-              ? "更多菜单进入设置后，不再跳回手机式页面，而是在桌面工作区内完成资料编辑、专属 API Key 管理和协议查看。"
-              : "从头像进入资料与设置时，也保持桌面工作区形态，避免切回手机式页面。"
-          }
-          aside={
-            <div className="space-y-3">
-              <DesktopStatCard
-                label="当前世界主人"
-                value={username ?? "世界主人"}
-              />
-              <DesktopStatCard
-                label="配置状态"
-                value={
-                  ownerQuery.data?.hasCustomApiKey
-                    ? "已配置专属 API Key"
-                    : "使用实例级 Provider"
-                }
-              />
+      <DesktopUtilityShell
+        title={desktopSettingsRoute ? "设置" : "资料与设置"}
+        subtitle={
+          activeTab === "profile"
+            ? "在桌面工作区里管理世界主人的资料与签名。"
+            : activeTab === "ai"
+              ? "管理专属 API Key 和兼容 Base URL。"
+              : "查看当前世界相关的协议和社区规范。"
+        }
+        toolbar={
+          <Button
+            onClick={() => navigate({ to: desktopBackTo })}
+            variant="secondary"
+            className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:bg-[#f5f7f7]"
+          >
+            {desktopBackLabel}
+          </Button>
+        }
+        sidebar={
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="border-b border-[color:var(--border-faint)] px-4 py-4">
+              <div className="text-sm font-medium text-[color:var(--text-primary)]">
+                设置分类
+              </div>
+              <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                桌面端把资料、AI 配置和协议查看收口到同一个工作区。
+              </div>
             </div>
-          }
-        >
-          <div className="space-y-4">
-            <div className="flex justify-end">
-              <Button
-                onClick={() => navigate({ to: desktopBackTo })}
-                variant="ghost"
-                className="rounded-[10px] border-black/8 bg-white shadow-none hover:bg-[#efefef]"
-              >
-                {desktopBackLabel}
-              </Button>
+
+            <div className="min-h-0 flex-1 overflow-auto p-3">
+              <div className="space-y-1">
+                {settingsTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-[12px] px-3 py-2.5 text-left text-sm transition",
+                      activeTab === tab.id
+                        ? "bg-[rgba(7,193,96,0.10)] text-[color:var(--text-primary)]"
+                        : "text-[color:var(--text-secondary)] hover:bg-white/80 hover:text-[color:var(--text-primary)]",
+                    )}
+                  >
+                    <span>{tab.label}</span>
+                    {activeTab === tab.id ? (
+                      <span className="h-2 w-2 rounded-full bg-[color:var(--brand-primary)]" />
+                    ) : null}
+                  </button>
+                ))}
+              </div>
             </div>
-            {content}
           </div>
-        </DesktopEntryShell>
-      </div>
+        }
+        aside={
+          <div className="flex h-full min-h-0 flex-col">
+            <div className="border-b border-[color:var(--border-faint)] px-5 py-4">
+              <div className="text-sm font-medium text-[color:var(--text-primary)]">
+                当前状态
+              </div>
+              <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                右侧显示世界主人信息和当前配置摘要。
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-auto p-5">
+              <div className="space-y-3">
+                <DesktopStatCard
+                  label="当前世界主人"
+                  value={username ?? "世界主人"}
+                />
+                <DesktopStatCard
+                  label="签名"
+                  value={signature?.trim() || "暂无签名"}
+                />
+                <DesktopStatCard
+                  label="配置状态"
+                  value={
+                    ownerQuery.data?.hasCustomApiKey
+                      ? "已配置专属 API Key"
+                      : "使用实例级 Provider"
+                  }
+                />
+                {activeTab === "legal" ? (
+                  <DesktopStatCard
+                    label="当前文档"
+                    value={
+                      activeLegalTab === "privacy"
+                        ? "隐私政策"
+                        : activeLegalTab === "terms"
+                          ? "用户协议"
+                          : "社区规范"
+                    }
+                  />
+                ) : null}
+              </div>
+            </div>
+          </div>
+        }
+      >
+        <div className="p-5">{content}</div>
+      </DesktopUtilityShell>
     );
   }
 
