@@ -341,15 +341,15 @@ export function ConversationThreadPanel({
   return (
     <div
       className={`flex h-full min-h-0 flex-col ${
-        isDesktop ? "bg-[#f5f5f5]" : "bg-[#ededed]"
+        isDesktop ? "bg-[rgba(245,247,247,0.96)]" : "bg-[#ededed]"
       }`}
     >
       {isDesktop ? (
-        <header className="flex items-center gap-3 border-b border-black/5 bg-[#f3f3f3] px-6 py-3">
+        <header className="flex items-center gap-3 border-b border-[color:var(--border-faint)] bg-white/74 px-6 py-3 backdrop-blur-xl">
           <button
             type="button"
             onClick={() => onToggleDesktopDetails?.()}
-            className="min-w-0 flex-1 rounded-[10px] px-1 py-1 text-left transition hover:bg-white/40"
+            className="min-w-0 flex-1 rounded-[10px] px-1 py-1 text-left transition hover:bg-[rgba(7,193,96,0.06)]"
             aria-label="打开聊天信息"
             title="打开聊天信息"
           >
@@ -409,7 +409,7 @@ export function ConversationThreadPanel({
         <div
           className={
             isDesktop
-              ? "border-b border-black/5 bg-[#f7f7f7] px-6 py-3"
+              ? "border-b border-[color:var(--border-faint)] bg-[rgba(249,251,250,0.92)] px-6 py-3"
               : "border-b border-black/6 bg-white/82 px-3 py-2.5"
           }
         >
@@ -447,7 +447,7 @@ export function ConversationThreadPanel({
         <div
           className={
             isDesktop
-              ? "border-b border-black/5 bg-[#f7f7f7] px-6 py-3"
+              ? "border-b border-[color:var(--border-faint)] bg-[rgba(249,251,250,0.92)] px-6 py-3"
               : "border-b border-black/6 bg-white/82 px-3 py-2.5"
           }
         >
