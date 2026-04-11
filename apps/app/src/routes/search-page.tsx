@@ -53,6 +53,7 @@ export function SearchPage() {
     const nextHash = buildSearchRouteHash({
       category: activeCategory,
       keyword: searchText,
+      source: routeState.source,
     });
     const normalizedHash = hash.startsWith("#") ? hash.slice(1) : hash;
 
@@ -98,7 +99,9 @@ export function SearchPage() {
       return;
     }
 
-    void navigate({ to: "/tabs/chat" });
+    void navigate({
+      to: routeState.source === "contacts" ? "/tabs/contacts" : "/tabs/chat",
+    });
   }
 
   if (isDesktopLayout) {

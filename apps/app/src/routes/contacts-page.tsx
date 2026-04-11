@@ -50,6 +50,7 @@ import {
   type FriendDirectoryItem,
   type WorldCharacterDirectoryItem,
 } from "../features/contacts/contact-utils";
+import { buildSearchRouteHash } from "../features/search/search-route-state";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { isPersistedGroupConversation } from "../lib/conversation-route";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
@@ -1023,7 +1024,14 @@ export function ContactsPage() {
             <button
               type="button"
               onClick={() => {
-                void navigate({ to: "/tabs/search" });
+                void navigate({
+                  to: "/tabs/search",
+                  hash: buildSearchRouteHash({
+                    category: "all",
+                    keyword: "",
+                    source: "contacts",
+                  }),
+                });
               }}
               className="flex w-full items-center gap-2 rounded-[10px] border border-[color:var(--border-faint)] bg-[rgba(255,249,238,0.85)] px-3 py-2.5 text-sm text-[color:var(--text-dim)]"
               aria-label="打开搜一搜"
