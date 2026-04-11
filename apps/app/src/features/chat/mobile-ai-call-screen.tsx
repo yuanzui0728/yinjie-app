@@ -56,6 +56,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
   const [recordButtonHolding, setRecordButtonHolding] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(mode === "video");
   const [callTipsDismissed, setCallTipsDismissed] = useState(false);
+  const [leavingScreen, setLeavingScreen] = useState(false);
   const waitingNoticeSentRef = useRef(false);
   const connectedNoticeSentRef = useRef(false);
   const endedNoticeSentRef = useRef(false);
@@ -348,7 +349,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
   ]);
 
   const handlePressStart = async () => {
-    if (busy || isDesktopLayout) {
+    if (busy || isDesktopLayout || leavingScreen) {
       return;
     }
 
@@ -363,37 +364,52 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
   };
 
   const handleBack = async () => {
+    if (leavingScreen) {
+      return;
+    }
+
+    setLeavingScreen(true);
     activeCall.stopReplyPlayback();
-    if (isVideoMode) {
-      await digitalHumanCall.endSession();
-    }
+    try {
+      if (isVideoMode) {
+        await digitalHumanCall.endSession();
+      }
 
-    if (
-      conversation?.type === "direct" &&
-      waitingNoticeSentRef.current &&
-      !endedNoticeSentRef.current
-    ) {
-      endedNoticeSentRef.current = true;
-      await sendCallStatusMessage("ended");
+      if (
+        conversation?.type === "direct" &&
+        waitingNoticeSentRef.current &&
+        !endedNoticeSentRef.current
+      ) {
+        endedNoticeSentRef.current = true;
+        await sendCallStatusMessage("ended");
+      }
+    } finally {
+      void navigate({
+        to: "/chat/$conversationId",
+        params: { conversationId: resolvedConversationId },
+        search:
+          buildChatCallReturnSearch({
+            kind: mode,
+          }) || undefined,
+      });
     }
-
-    void navigate({
-      to: "/chat/$conversationId",
-      params: { conversationId: resolvedConversationId },
-      search:
-        buildChatCallReturnSearch({
-          kind: mode,
-        }) || undefined,
-    });
   };
 
   const handleSwitchToVoiceCall = async () => {
+    if (leavingScreen) {
+      return;
+    }
+
+    setLeavingScreen(true);
     activeCall.stopReplyPlayback();
-    await digitalHumanCall.endSession();
-    void navigate({
-      to: "/chat/$conversationId/voice-call",
-      params: { conversationId: resolvedConversationId },
-    });
+    try {
+      await digitalHumanCall.endSession();
+    } finally {
+      void navigate({
+        to: "/chat/$conversationId/voice-call",
+        params: { conversationId: resolvedConversationId },
+      });
+    }
   };
 
   useEffect(() => {
@@ -598,6 +614,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
           <button
             type="button"
             onClick={handleBack}
+            disabled={leavingScreen}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition active:bg-white/16"
             aria-label="返回聊天"
           >
@@ -614,7 +631,8 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
           <button
             type="button"
             onClick={() => activeCall.setAudioMuted((current) => !current)}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition active:bg-white/16"
+            disabled={leavingScreen}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition active:bg-white/16 disabled:opacity-55"
             aria-label={activeCall.audioMuted ? "取消静音播放" : "静音播放"}
           >
             {activeCall.audioMuted ? (
@@ -748,6 +766,11 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
               这类失败通常是会话网关瞬时不可用。你可以先点“重新连接数字人”，不行再切到语音通话继续聊。
             </InlineNotice>
           ) : null}
+          {leavingScreen ? (
+            <InlineNotice tone="info">
+              正在结束当前通话并返回聊天，请稍候。
+            </InlineNotice>
+          ) : null}
           {activeCall.turnMutation.error instanceof Error ? (
             <ErrorBlock message={activeCall.turnMutation.error.message} />
           ) : null}
@@ -798,7 +821,9 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
                 onClick={() => {
                   digitalHumanCall.retrySession();
                 }}
-                disabled={digitalHumanCall.sessionState === "connecting"}
+                disabled={
+                  digitalHumanCall.sessionState === "connecting" || leavingScreen
+                }
                 className="flex h-12 min-w-[148px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition disabled:opacity-45"
               >
                 <RotateCcw size={16} />
@@ -811,7 +836,8 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
                 onClick={() => {
                   void handleSwitchToVoiceCall();
                 }}
-                className="flex h-12 min-w-[148px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition"
+                disabled={leavingScreen}
+                className="flex h-12 min-w-[148px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition disabled:opacity-45"
               >
                 <PhoneOff size={16} />
                 改用语音通话
@@ -823,7 +849,8 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
                 onClick={() => {
                   void activeCall.replayLastTurn();
                 }}
-                className="flex h-12 min-w-[148px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition"
+                disabled={leavingScreen}
+                className="flex h-12 min-w-[148px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition disabled:opacity-45"
               >
                 <Volume2 size={16} />
                 点按播放回复
@@ -833,7 +860,8 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
               <button
                 type="button"
                 onClick={() => setCameraEnabled((current) => !current)}
-                className="flex h-12 min-w-[120px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition"
+                disabled={leavingScreen}
+                className="flex h-12 min-w-[120px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition disabled:opacity-45"
               >
                 {cameraEnabled ? <CameraOff size={16} /> : <Camera size={16} />}
                 {cameraEnabled ? "关闭摄像头" : "打开摄像头"}
@@ -844,7 +872,11 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
               onClick={() => {
                 void activeCall.replayLastTurn();
               }}
-              disabled={!lastAssistantText || activeCall.turnMutation.isPending}
+              disabled={
+                !lastAssistantText ||
+                activeCall.turnMutation.isPending ||
+                leavingScreen
+              }
               className="flex h-12 min-w-[120px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition disabled:opacity-45"
             >
               <RotateCcw size={16} />
@@ -853,10 +885,11 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
             <button
               type="button"
               onClick={handleBack}
-              className="flex h-12 min-w-[120px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition"
+              disabled={leavingScreen}
+              className="flex h-12 min-w-[120px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition disabled:opacity-45"
             >
               <MessageCircleMore size={16} />
-              切回聊天
+              {leavingScreen ? "返回中..." : "切回聊天"}
             </button>
           </div>
 
@@ -878,7 +911,9 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
                 }
               }}
               disabled={
-                busy || (isVideoMode && digitalHumanCall.sessionState !== "ready")
+                busy ||
+                leavingScreen ||
+                (isVideoMode && digitalHumanCall.sessionState !== "ready")
               }
               className={cn(
                 "flex items-center justify-center rounded-full border shadow-[0_30px_80px_rgba(16,185,129,0.3)] transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55",
@@ -921,10 +956,11 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
             <button
               type="button"
               onClick={handleBack}
-              className="flex h-12 min-w-[132px] items-center justify-center gap-2 rounded-full bg-[rgba(239,68,68,0.16)] px-4 text-sm font-medium text-[#fecaca] transition active:opacity-90"
+              disabled={leavingScreen}
+              className="flex h-12 min-w-[132px] items-center justify-center gap-2 rounded-full bg-[rgba(239,68,68,0.16)] px-4 text-sm font-medium text-[#fecaca] transition active:opacity-90 disabled:opacity-55"
             >
               <PhoneOff size={16} />
-              挂断
+              {leavingScreen ? "挂断中..." : "挂断"}
             </button>
           </div>
         </div>
