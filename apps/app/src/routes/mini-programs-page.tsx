@@ -90,6 +90,7 @@ export function MiniProgramsPage() {
   );
   const groupRelayCompletedTaskIds =
     completedTaskIdsByMiniProgramId["group-relay"] ?? [];
+  const groupRelayEntry = getMiniProgramEntry("group-relay");
   const [successNotice, setSuccessNotice] = useState("");
   const [noticeTone, setNoticeTone] = useState<"success" | "info">("success");
   const relaySummaryPublishedAt = useMemo(
@@ -104,6 +105,8 @@ export function MiniProgramsPage() {
         relaySummaryPublishedAt,
         isDesktopLayout ? "desktop" : "mobile",
         isDesktopLayout ? "desktop" : "mobile",
+        resolveGroupRelayMetricValue(groupRelayEntry?.usersLabel, "接龙进行中"),
+        resolveGroupRelayMetricValue(groupRelayEntry?.serviceLabel, "待确认"),
       )
     : "";
 
@@ -365,4 +368,21 @@ function resolveGroupRelaySummaryStatus(
   }
 
   return "pending";
+}
+
+function resolveGroupRelayMetricValue(
+  label: string | undefined,
+  suffix: string,
+) {
+  const value = label?.trim() ?? "";
+
+  if (!value) {
+    return null;
+  }
+
+  if (value.endsWith(suffix)) {
+    return value.slice(0, -suffix.length).trim() || value;
+  }
+
+  return value;
 }

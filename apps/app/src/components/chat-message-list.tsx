@@ -3635,6 +3635,12 @@ function GroupRelaySummaryMessage({
         {completionTimeLabel ? (
           <CallInviteMetric label="完成时间" value={completionTimeLabel} />
         ) : null}
+        {summary.activeRelayCountLabel ? (
+          <CallInviteMetric label="进行中" value={summary.activeRelayCountLabel} />
+        ) : null}
+        {summary.pendingMemberCountLabel ? (
+          <CallInviteMetric label="待确认" value={summary.pendingMemberCountLabel} />
+        ) : null}
         {summary.resultSummaryLabel ? (
           <CallInviteMetric label="结果摘要" value={summary.resultSummaryLabel} />
         ) : null}
