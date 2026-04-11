@@ -6,6 +6,7 @@ import {
   type RefObject,
   type ReactNode,
 } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Camera,
   CameraOff,
@@ -21,8 +22,9 @@ import {
   VolumeX,
 } from "lucide-react";
 import { Button, ErrorBlock, InlineNotice, cn } from "@yinjie/ui";
-import type { VoiceCallTurnResult } from "@yinjie/contracts";
+import { getSystemStatus, type VoiceCallTurnResult } from "@yinjie/contracts";
 import { AvatarChip } from "../../../components/avatar-chip";
+import { resolveDigitalHumanGatewayStatusCopy } from "../../chat/digital-human-gateway-copy";
 import { DigitalHumanPlayer } from "../../chat/digital-human-player";
 import { useDigitalHumanCallSession } from "../../chat/use-digital-human-call-session";
 import { useSelfCameraPreview } from "../../chat/use-self-camera-preview";
@@ -107,9 +109,21 @@ export function DesktopDirectCallPanel({
       cameraEnabled,
   });
   const isVideoMode = kind === "video";
+  const systemStatusQuery = useQuery({
+    queryKey: ["desktop-direct-call-system-status", runtimeConfig.apiBaseUrl],
+    queryFn: () => getSystemStatus(runtimeConfig.apiBaseUrl),
+    enabled:
+      runtimeConfig.appPlatform === "web" &&
+      kind === "video" &&
+      Boolean(conversationId),
+    retry: false,
+  });
   const activeCall = isVideoMode ? digitalHumanCall : voiceCall;
   const speech = activeCall.speech;
   const speakerEnabled = !activeCall.audioMuted;
+  const digitalHumanGatewayCopy = resolveDigitalHumanGatewayStatusCopy(
+    systemStatusQuery.data?.digitalHumanGateway,
+  );
   const latestTurn = isVideoMode
     ? digitalHumanCall.lastTurn
     : voiceCall.lastTurn;
@@ -161,6 +175,10 @@ export function DesktopDirectCallPanel({
       return "数字人视频已接通";
     }
 
+    if (isVideoMode && digitalHumanGatewayCopy?.statusLabel) {
+      return digitalHumanGatewayCopy.statusLabel;
+    }
+
     if (latestTurn) {
       return isVideoMode ? "继续通话" : "继续说话";
     }
@@ -173,6 +191,7 @@ export function DesktopDirectCallPanel({
     digitalHumanCall.session?.renderStatus,
     digitalHumanCall.session?.streamUrl,
     digitalHumanCall.sessionState,
+    digitalHumanGatewayCopy?.statusLabel,
     isVideoMode,
     latestTurn,
     micMuted,
@@ -242,6 +261,10 @@ export function DesktopDirectCallPanel({
         : "当前浏览器不支持桌面端语音录制，请改用键盘聊天。";
     }
 
+    if (isVideoMode && digitalHumanGatewayCopy?.statusHint) {
+      return digitalHumanGatewayCopy.statusHint;
+    }
+
     return isVideoMode
       ? "远端是 AI 数字人舞台，本地摄像头只用于你的桌面预览，不影响 AI 回复链路。"
       : "按住说一段，AI 会写入聊天并自动语音回复。";
@@ -257,6 +280,7 @@ export function DesktopDirectCallPanel({
     digitalHumanCall.session?.renderStatus,
     digitalHumanCall.session?.streamUrl,
     digitalHumanCall.sessionState,
+    digitalHumanGatewayCopy?.statusHint,
   ]);
   const callLabel = isVideoMode ? "AI 数字人视频通话" : "桌面 AI 语音通话";
   const callSubtitle = isVideoMode
@@ -468,6 +492,13 @@ export function DesktopDirectCallPanel({
             cameraPreview.error &&
             cameraPreview.status !== "requesting-permission" ? (
               <InlineNotice tone="warning">{cameraPreview.error}</InlineNotice>
+            ) : null}
+            {isVideoMode &&
+            !digitalHumanCall.sessionError &&
+            digitalHumanGatewayCopy?.noticeMessage ? (
+              <InlineNotice tone={digitalHumanGatewayCopy.noticeTone}>
+                {digitalHumanGatewayCopy.noticeMessage}
+              </InlineNotice>
             ) : null}
             {!speech.supported ? (
               <InlineNotice tone="warning">

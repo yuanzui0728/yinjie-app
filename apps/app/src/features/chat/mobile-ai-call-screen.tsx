@@ -33,6 +33,7 @@ import { useDesktopLayout } from "../shell/use-desktop-layout";
 import { useAppRuntimeConfig } from "../../runtime/runtime-config-store";
 import { useSelfCameraPreview } from "./use-self-camera-preview";
 import { DigitalHumanPlayer } from "./digital-human-player";
+import { resolveDigitalHumanGatewayStatusCopy } from "./digital-human-gateway-copy";
 import { useDigitalHumanCallSession } from "./use-digital-human-call-session";
 import { useVoiceCallSession } from "./use-voice-call-session";
 import { buildChatCallReturnSearch } from "./chat-compose-shortcut-route";
@@ -164,6 +165,10 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
     ? digitalHumanCall.lastTurn?.assistantText
     : voiceCall.lastTurn?.assistantText;
   const speechStatus = systemStatusQuery.data?.inferenceGateway;
+  const digitalHumanGateway = systemStatusQuery.data?.digitalHumanGateway;
+  const digitalHumanGatewayCopy = resolveDigitalHumanGatewayStatusCopy(
+    digitalHumanGateway,
+  );
   const latencySummary = activeCall.lastTurn
     ? `转写 ${formatCallLatency(activeCall.lastTurn.transcriptionDurationMs)} · 播报 ${formatCallLatency(activeCall.lastTurn.synthesisDurationMs)} · 总耗时 ${formatCallLatency(activeCall.lastTurn.totalDurationMs)}`
     : null;
@@ -255,6 +260,10 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
       return isVideoMode ? "继续通话" : "继续说话";
     }
 
+    if (isVideoMode && digitalHumanGatewayCopy?.statusLabel) {
+      return digitalHumanGatewayCopy.statusLabel;
+    }
+
     return "按住说话";
   }, [
     activeCall.playbackState,
@@ -264,6 +273,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
     digitalHumanCall.session?.renderStatus,
     digitalHumanCall.session?.streamUrl,
     digitalHumanCall.sessionState,
+    digitalHumanGatewayCopy?.statusLabel,
     isVideoMode,
     lastAssistantText,
     speech.status,
@@ -314,6 +324,10 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
       return "松开按钮后会自动发起这一轮通话。";
     }
 
+    if (isVideoMode && digitalHumanGatewayCopy?.statusHint) {
+      return digitalHumanGatewayCopy.statusHint;
+    }
+
     return isVideoMode
       ? digitalSession?.presentationMode === "mock_stage"
         ? "当前已接入数字人会话接口，远端先以内置数字人舞台承载，后续可替换真实 provider 流。"
@@ -327,6 +341,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
     digitalHumanCall.session?.renderStatus,
     digitalHumanCall.session?.streamUrl,
     digitalHumanCall.sessionState,
+    digitalHumanGatewayCopy?.statusHint,
     digitalSession?.presentationMode,
     isVideoMode,
     speech.status,
@@ -718,9 +733,11 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
           cameraPreview.status !== "requesting-permission" ? (
             <InlineNotice tone="warning">{cameraPreview.error}</InlineNotice>
           ) : null}
-          {isVideoMode && digitalHumanCall.session?.presentationMode === "mock_stage" ? (
-            <InlineNotice tone="info">
-              当前视频通话已走数字人会话接口，远端先以内置数字人舞台承载，后续可替换真实 provider 视频输出。
+          {isVideoMode &&
+          !digitalHumanCall.sessionError &&
+          digitalHumanGatewayCopy?.noticeMessage ? (
+            <InlineNotice tone={digitalHumanGatewayCopy.noticeTone}>
+              {digitalHumanGatewayCopy.noticeMessage}
             </InlineNotice>
           ) : null}
           {isVideoMode && digitalHumanCall.sessionError ? (
