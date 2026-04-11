@@ -1,4 +1,4 @@
-import type { HTMLAttributes, ReactNode } from "react";
+import { useEffect, useRef, useState, type HTMLAttributes, type ReactNode } from "react";
 import { cn } from "@yinjie/ui";
 
 type TabPageTopBarProps = HTMLAttributes<HTMLDivElement> & {
@@ -23,6 +23,44 @@ export function TabPageTopBar({
   children,
   ...props
 }: TabPageTopBarProps) {
+  const leftActionsRef = useRef<HTMLDivElement | null>(null);
+  const rightActionsRef = useRef<HTMLDivElement | null>(null);
+  const [centerInset, setCenterInset] = useState(48);
+
+  useEffect(() => {
+    if (titleAlign !== "center") {
+      return;
+    }
+
+    const syncCenterInset = () => {
+      const leftWidth = leftActionsRef.current?.offsetWidth ?? 36;
+      const rightWidth = rightActionsRef.current?.offsetWidth ?? 36;
+      const nextInset = Math.max(leftWidth, rightWidth) + 12;
+      setCenterInset((currentInset) =>
+        currentInset === nextInset ? currentInset : nextInset,
+      );
+    };
+
+    syncCenterInset();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", syncCenterInset);
+      return () => window.removeEventListener("resize", syncCenterInset);
+    }
+
+    const observer = new ResizeObserver(syncCenterInset);
+
+    if (leftActionsRef.current) {
+      observer.observe(leftActionsRef.current);
+    }
+
+    if (rightActionsRef.current) {
+      observer.observe(rightActionsRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [leftActions, rightActions, titleAlign]);
+
   return (
     <div
       className={cn(
@@ -33,12 +71,28 @@ export function TabPageTopBar({
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(180deg,rgba(255,255,255,0.56),rgba(255,255,255,0))]" />
       <div className="relative flex min-h-11 items-center justify-between gap-3">
-        {leftActions ? <div className="shrink-0">{leftActions}</div> : titleAlign === "center" ? <div className="w-9 shrink-0" aria-hidden="true" /> : null}
+        {titleAlign === "center" ? (
+          <div ref={leftActionsRef} className="shrink-0">
+            {leftActions ? leftActions : <div className="w-9 shrink-0" aria-hidden="true" />}
+          </div>
+        ) : leftActions ? (
+          <div className="shrink-0">{leftActions}</div>
+        ) : null}
         <div
           className={cn(
             "min-w-0",
-            titleAlign === "center" ? "pointer-events-none absolute inset-x-12 text-center" : undefined,
+            titleAlign === "center"
+              ? "pointer-events-none absolute text-center"
+              : undefined,
           )}
+          style={
+            titleAlign === "center"
+              ? {
+                  left: `${centerInset}px`,
+                  right: `${centerInset}px`,
+                }
+              : undefined
+          }
         >
           {eyebrow ? <div className="truncate text-[11px] uppercase tracking-[0.26em] text-[color:var(--brand-secondary)]">{eyebrow}</div> : null}
           <h1
@@ -53,8 +107,15 @@ export function TabPageTopBar({
           {subtitle ? <div className="mt-1 truncate text-xs text-[color:var(--text-muted)]">{subtitle}</div> : null}
         </div>
         {rightActions ? (
-          <div className={cn("shrink-0", titleAlign === "center" ? "ml-auto" : undefined)}>{rightActions}</div>
-        ) : titleAlign === "center" ? <div className="w-9 shrink-0" aria-hidden="true" /> : null}
+          <div
+            ref={titleAlign === "center" ? rightActionsRef : undefined}
+            className={cn("shrink-0", titleAlign === "center" ? "ml-auto" : undefined)}
+          >
+            {rightActions}
+          </div>
+        ) : titleAlign === "center" ? (
+          <div ref={rightActionsRef} className="w-9 shrink-0" aria-hidden="true" />
+        ) : null}
       </div>
       {children}
     </div>
