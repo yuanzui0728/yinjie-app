@@ -26,16 +26,16 @@ import {
   InlineNotice,
   ListItemCard,
   MetricCard,
-  SelectField as UiSelectField,
   SectionHeading,
   SnapshotPanel,
   StatusPill,
   TagBadge,
-  TextField,
 } from "@yinjie/ui";
 import {
   AdminActionFeedback,
   AdminEmptyState,
+  AdminInlineSelectField,
+  AdminInlineTextField,
   AdminInfoRows,
   AdminPageHero,
   AdminPillSelectField,
@@ -1343,51 +1343,28 @@ export function EvalsPage() {
             这里是运行入口。先填实验标签和候选覆盖配置，再按数据集执行单次运行或成对评测。
           </InlineNotice>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <TextField
-              value={experimentLabel}
-              onChange={(event) => setExperimentLabel(event.target.value)}
-              placeholder="实验标签"
-              className="rounded-2xl"
-            />
-            <TextField
-              value={pairwiseProviderOverride}
-              onChange={(event) => setPairwiseProviderOverride(event.target.value)}
-              placeholder="候选模型覆盖"
-              className="rounded-2xl"
-            />
+            <AdminInlineTextField value={experimentLabel} onChange={setExperimentLabel} placeholder="实验标签" />
+            <AdminInlineTextField value={pairwiseProviderOverride} onChange={setPairwiseProviderOverride} placeholder="候选模型覆盖" />
           </div>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <TextField
-              value={pairwiseJudgeModelOverride}
-              onChange={(event) => setPairwiseJudgeModelOverride(event.target.value)}
-              placeholder="裁判模型覆盖"
-              className="rounded-2xl"
-            />
-            <UiSelectField
-              value={pairwisePromptVariant}
-              onChange={(event) => setPairwisePromptVariant(event.target.value)}
-              className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-input)] px-4 py-3 text-sm text-[color:var(--text-primary)]"
-            >
+            <AdminInlineTextField value={pairwiseJudgeModelOverride} onChange={setPairwiseJudgeModelOverride} placeholder="裁判模型覆盖" />
+            <AdminInlineSelectField value={pairwisePromptVariant} onChange={setPairwisePromptVariant}>
               {promptVariants.map((variant) => (
                 <option key={variant.id} value={variant.id}>
                   {variant.label}
                 </option>
               ))}
-            </UiSelectField>
+            </AdminInlineSelectField>
           </div>
           <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <UiSelectField
-              value={pairwiseMemoryPolicyVariant}
-              onChange={(event) => setPairwiseMemoryPolicyVariant(event.target.value)}
-              className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-input)] px-4 py-3 text-sm text-[color:var(--text-primary)]"
-            >
+            <AdminInlineSelectField value={pairwiseMemoryPolicyVariant} onChange={setPairwiseMemoryPolicyVariant}>
               <option value="default">默认记忆策略</option>
               {memoryStrategies.map((strategy) => (
                 <option key={strategy.id} value={strategy.id}>
                   {strategy.label}
                 </option>
               ))}
-            </UiSelectField>
+            </AdminInlineSelectField>
           </div>
           <div className="mt-4 space-y-3">
             {(datasetsQuery.data ?? []).map((dataset) => {
