@@ -62,6 +62,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
   const baseUrl = runtimeConfig.apiBaseUrl;
   const [recordButtonHolding, setRecordButtonHolding] = useState(false);
   const [cameraEnabled, setCameraEnabled] = useState(mode === "video");
+  const [cameraRestartKey, setCameraRestartKey] = useState(0);
   const [callTipsDismissed, setCallTipsDismissed] = useState(false);
   const [leavingScreen, setLeavingScreen] = useState(false);
   const [playbackSettling, setPlaybackSettling] = useState(false);
@@ -165,6 +166,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
       !isDesktopLayout &&
       Boolean(conversationId) &&
       cameraEnabled,
+    restartKey: cameraRestartKey,
   });
   const isVideoMode = mode === "video";
   const activeCall = isVideoMode ? digitalHumanCall : voiceCall;
@@ -181,6 +183,24 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
   const digitalHumanGatewayCopy = resolveDigitalHumanGatewayStatusCopy(
     digitalHumanGateway,
   );
+  const cameraPreviewMetaLabel = !cameraEnabled
+    ? "已关闭"
+    : cameraPreview.status === "ready"
+      ? "预览中"
+      : cameraPreview.status === "requesting-permission"
+        ? "请求中"
+        : cameraPreview.status === "unsupported"
+          ? "不可用"
+          : cameraPreview.error
+            ? "未就绪"
+            : "待开启";
+  const cameraPreviewMessage = !cameraEnabled
+    ? "本地摄像头已关闭"
+    : cameraPreview.status === "requesting-permission"
+      ? "申请摄像头权限中"
+      : cameraPreview.error
+        ? cameraPreview.error
+        : "点下方按钮可重新接通本地画面";
   const latencySummary = activeCall.lastTurn
     ? `转写 ${formatCallLatency(activeCall.lastTurn.transcriptionDurationMs)} · 播报 ${formatCallLatency(activeCall.lastTurn.synthesisDurationMs)} · 总耗时 ${formatCallLatency(activeCall.lastTurn.totalDurationMs)}`
     : null;
@@ -564,6 +584,23 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
         replace: true,
       });
     }
+  };
+
+  const handleToggleCamera = () => {
+    setCallTipsDismissed(true);
+
+    if (
+      cameraEnabled &&
+      cameraPreview.supported &&
+      cameraPreview.status !== "ready" &&
+      cameraPreview.status !== "requesting-permission" &&
+      cameraPreview.error
+    ) {
+      setCameraRestartKey((current) => current + 1);
+      return;
+    }
+
+    setCameraEnabled((current) => !current);
   };
 
   const handleRetryCurrentTurn = () => {
@@ -1062,7 +1099,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
                   我
                 </span>
                 <span className="text-[11px] text-white/48">
-                  {cameraEnabled ? "预览中" : "已关闭"}
+                  {cameraPreviewMetaLabel}
                 </span>
               </div>
               <div className="relative aspect-[3/4] bg-[linear-gradient(180deg,rgba(30,41,59,0.98),rgba(15,23,42,0.96))]">
@@ -1088,11 +1125,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
                       )}
                     </div>
                     <div className="px-3 text-[12px] leading-5 text-white/58">
-                      {cameraEnabled
-                        ? cameraPreview.status === "requesting-permission"
-                          ? "申请摄像头权限中"
-                          : cameraPreview.error || "等待接通本地画面"
-                        : "本地摄像头已关闭"}
+                      {cameraPreviewMessage}
                     </div>
                   </div>
                 )}
@@ -1289,12 +1322,20 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
               {isVideoMode ? (
                 <button
                   type="button"
-                  onClick={() => setCameraEnabled((current) => !current)}
+                  onClick={handleToggleCamera}
                   disabled={leavingScreen}
                   className="flex h-12 min-w-[120px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition disabled:opacity-45"
                 >
                   {cameraEnabled ? <CameraOff size={16} /> : <Camera size={16} />}
-                  {cameraEnabled ? "关闭摄像头" : "打开摄像头"}
+                  {!cameraEnabled
+                    ? "打开摄像头"
+                    : cameraPreview.status === "requesting-permission"
+                      ? "等待摄像头授权"
+                      : cameraPreview.status === "ready"
+                        ? "关闭摄像头"
+                        : cameraPreview.supported
+                          ? "重试摄像头"
+                          : "摄像头不可用"}
                 </button>
               ) : null}
               {showReplayShortcut ? (

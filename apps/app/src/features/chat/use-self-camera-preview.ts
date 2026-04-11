@@ -8,9 +8,13 @@ type CameraPreviewStatus =
 
 type UseSelfCameraPreviewOptions = {
   enabled: boolean;
+  restartKey?: number;
 };
 
-export function useSelfCameraPreview({ enabled }: UseSelfCameraPreviewOptions) {
+export function useSelfCameraPreview({
+  enabled,
+  restartKey = 0,
+}: UseSelfCameraPreviewOptions) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [status, setStatus] = useState<CameraPreviewStatus>("idle");
@@ -83,9 +87,7 @@ export function useSelfCameraPreview({ enabled }: UseSelfCameraPreviewOptions) {
         stopCurrentStream();
         setStatus("idle");
         setError(
-          cameraError instanceof Error
-            ? cameraError.message
-            : "无法打开摄像头，请检查浏览器权限。",
+          mapCameraPreviewError(cameraError),
         );
       }
     };
@@ -96,7 +98,7 @@ export function useSelfCameraPreview({ enabled }: UseSelfCameraPreviewOptions) {
       disposed = true;
       stopCurrentStream();
     };
-  }, [enabled, supported]);
+  }, [enabled, restartKey, supported]);
 
   return {
     error,
@@ -104,4 +106,31 @@ export function useSelfCameraPreview({ enabled }: UseSelfCameraPreviewOptions) {
     supported,
     videoRef,
   };
+}
+
+function mapCameraPreviewError(error: unknown) {
+  if (error instanceof DOMException) {
+    switch (error.name) {
+      case "AbortError":
+        return "摄像头启动被中断了，请再试一次。";
+      case "NotAllowedError":
+      case "SecurityError":
+        return "摄像头权限被拒绝，请先允许浏览器访问摄像头。";
+      case "NotFoundError":
+        return "当前设备没有可用的摄像头。";
+      case "NotReadableError":
+      case "TrackStartError":
+        return "摄像头可能正被其他应用占用，请关闭后重试。";
+      case "OverconstrainedError":
+        return "当前摄像头参数不可用，请重试。";
+      default:
+        break;
+    }
+  }
+
+  if (error instanceof Error) {
+    return error.message || "无法打开摄像头，请检查浏览器权限。";
+  }
+
+  return "无法打开摄像头，请检查浏览器权限。";
 }
