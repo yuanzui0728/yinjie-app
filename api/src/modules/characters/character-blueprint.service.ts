@@ -6,7 +6,6 @@ import type {
   CharacterBlueprintRecipeValue,
   CharacterBlueprintSourceTypeValue,
   CharacterFactoryFieldSourceContract,
-  CharacterFactoryPublishDiffItemContract,
   CharacterFactorySnapshotContract,
 } from './character-blueprint.types';
 import { Repository } from 'typeorm';
@@ -493,7 +492,38 @@ function summarizeValue(value: unknown) {
     return '未设置';
   }
 
-  return String(value);
+  if (typeof value === 'object') {
+    try {
+      const serialized = JSON.stringify(value);
+      if (!serialized) {
+        return '复杂对象';
+      }
+
+      return serialized.length > 120
+        ? `${serialized.slice(0, 117)}...`
+        : serialized;
+    } catch {
+      return '复杂对象';
+    }
+  }
+
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (typeof value === 'number' || typeof value === 'bigint') {
+    return `${value}`;
+  }
+
+  if (typeof value === 'symbol') {
+    return value.description ? `Symbol(${value.description})` : 'Symbol';
+  }
+
+  if (typeof value === 'function') {
+    return value.name ? `[Function ${value.name}]` : '[Function]';
+  }
+
+  return '复杂值';
 }
 
 @Injectable()
