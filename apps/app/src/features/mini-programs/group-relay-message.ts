@@ -8,12 +8,18 @@ export type GroupRelaySummaryStatus =
 export function buildGroupRelaySummaryMessage(
   sourceGroupName: string,
   status: GroupRelaySummaryStatus = "pending",
+  recordedAt = new Date().toISOString(),
+  publishedAt?: string,
 ) {
   return [
     `${GROUP_RELAY_MESSAGE_PREFIX} ${sourceGroupName}`,
     `状态 ${formatGroupRelayStatusLabel(status)}`,
+    `时间 ${recordedAt}`,
+    publishedAt ? `回填于 ${publishedAt}` : null,
     ...buildGroupRelaySummaryLines(status),
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 export function parseGroupRelaySummaryMessage(text: string) {
@@ -30,14 +36,31 @@ export function parseGroupRelaySummaryMessage(text: string) {
   const sourceGroupName =
     header.slice(GROUP_RELAY_MESSAGE_PREFIX.length).trim() || "当前群聊";
   const statusLabel = parseGroupRelayStatusLabel(lines[1]);
+  const timestampLabel = parseGroupRelayTimestampLabel(
+    lines[1 + Number(Boolean(statusLabel))],
+  );
+  const publishedAtLabel = parseGroupRelayPublishedAtLabel(
+    lines[
+      1 +
+        Number(Boolean(statusLabel)) +
+        Number(Boolean(timestampLabel))
+    ],
+  );
   const summaryLines = lines
-    .slice(1 + Number(Boolean(statusLabel)))
+    .slice(
+      1 +
+        Number(Boolean(statusLabel)) +
+        Number(Boolean(timestampLabel)) +
+        Number(Boolean(publishedAtLabel)),
+    )
     .map((line) => line.replace(/^\d+\.\s*/, "").trim())
     .filter(Boolean);
 
   return {
     sourceGroupName,
     statusLabel,
+    timestampLabel,
+    publishedAtLabel,
     summaryLines,
   };
 }
@@ -48,6 +71,22 @@ function parseGroupRelayStatusLabel(line: string | undefined) {
   }
 
   return line.replace(/^状态\s+/, "").trim() || null;
+}
+
+function parseGroupRelayTimestampLabel(line: string | undefined) {
+  if (!line || !line.startsWith("时间 ")) {
+    return null;
+  }
+
+  return line.replace(/^时间\s+/, "").trim() || null;
+}
+
+function parseGroupRelayPublishedAtLabel(line: string | undefined) {
+  if (!line || !line.startsWith("回填于 ")) {
+    return null;
+  }
+
+  return line.replace(/^回填于\s+/, "").trim() || null;
 }
 
 function formatGroupRelayStatusLabel(status: GroupRelaySummaryStatus) {
