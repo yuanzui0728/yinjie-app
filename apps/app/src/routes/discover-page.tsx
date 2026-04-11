@@ -91,7 +91,15 @@ const mobileDiscoverEntries: MobileDiscoverEntry[] = [
       "bg-[var(--brand-gradient)] text-[color:var(--text-on-brand)]",
     to: "/discover/encounter",
   },
-
+  {
+    key: "scene",
+    label: "场景相遇",
+    description: "按地点触发",
+    detail: "先选一个地点，再让世界按场景把新的靠近方式推到你面前。",
+    icon: Sparkles,
+    iconClassName: "bg-[linear-gradient(135deg,#16a34a,#0f766e)] text-white",
+    to: "/discover/scene",
+  },
   {
     key: "feed",
     label: "广场动态",
