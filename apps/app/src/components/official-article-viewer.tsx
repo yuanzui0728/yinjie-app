@@ -46,22 +46,22 @@ export function OfficialArticleViewer({
   }
 
   return (
-    <article className="mx-auto w-full max-w-[760px] rounded-[28px] border border-[color:var(--border-faint)] bg-white/94 px-5 py-6 shadow-[var(--shadow-section)] sm:px-8">
+    <article className="mx-auto w-full max-w-[760px] rounded-[28px] border border-black/6 bg-white px-5 py-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)] sm:px-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <button
             type="button"
             onClick={() => onOpenAccount?.(article.account.id)}
-            className="text-left text-xs uppercase tracking-[0.26em] text-[color:var(--text-muted)] transition hover:text-[color:var(--brand-primary)]"
+            className="text-left text-xs font-medium tracking-[0.12em] text-[color:var(--text-muted)] transition hover:text-[#15803d]"
           >
             {accountName ?? article.account.name}
           </button>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[color:var(--text-muted)]">
-            <span className="rounded-full bg-[rgba(47,122,63,0.08)] px-2.5 py-1 text-[#2f7a3f]">
+            <span className="rounded-md border border-[#d8e6d3] bg-[#f5faf3] px-2.5 py-1 text-[#557d37]">
               {article.account.accountType === "service" ? "服务号" : "订阅号"}
             </span>
             {article.account.isVerified ? (
-              <span className="rounded-full bg-[rgba(93,103,201,0.10)] px-2.5 py-1 text-[#4951a3]">
+              <span className="rounded-md border border-[#d7e5fb] bg-[#f3f7ff] px-2.5 py-1 text-[#315b9a]">
                 已认证
               </span>
             ) : null}
@@ -75,7 +75,7 @@ export function OfficialArticleViewer({
               variant="secondary"
               size="sm"
               onClick={() => onToggleFavorite(article)}
-              className="rounded-full"
+              className="rounded-xl"
             >
               <Star size={14} className={favorite ? "fill-current" : ""} />
               {favorite ? "已收藏" : "收藏"}
@@ -86,7 +86,7 @@ export function OfficialArticleViewer({
             variant="secondary"
             size="sm"
             onClick={() => void handleCopyLink()}
-            className="rounded-full"
+            className="rounded-xl"
           >
             <Copy size={14} />
             复制链接
@@ -110,7 +110,7 @@ export function OfficialArticleViewer({
         </InlineNotice>
       ) : null}
       {article.coverImage ? (
-        <div className="mt-6 overflow-hidden rounded-[24px] border border-[color:var(--border-faint)] bg-[rgba(255,248,240,0.85)]">
+        <div className="mt-6 overflow-hidden rounded-[24px] border border-black/6 bg-[#f7f7f7]">
           <img
             src={article.coverImage}
             alt={article.title}
@@ -118,21 +118,18 @@ export function OfficialArticleViewer({
           />
         </div>
       ) : null}
-      <div className="mt-6 rounded-[22px] bg-[rgba(249,115,22,0.05)] px-4 py-3 text-sm leading-7 text-[color:var(--text-secondary)]">
+      <div className="mt-6 rounded-[22px] border border-black/6 bg-[#fafafa] px-4 py-3 text-sm leading-7 text-[color:var(--text-secondary)]">
         {article.summary}
       </div>
       <div
-        className="official-article-content mt-7 space-y-4 text-[15px] leading-8 text-[color:var(--text-primary)] [&_blockquote]:rounded-[20px] [&_blockquote]:border-l-4 [&_blockquote]:border-[rgba(249,115,22,0.45)] [&_blockquote]:bg-[rgba(249,115,22,0.06)] [&_blockquote]:px-4 [&_blockquote]:py-3 [&_h3]:mt-8 [&_h3]:text-xl [&_h3]:font-semibold [&_img]:rounded-[20px] [&_p]:my-0"
+        className="official-article-content mt-7 space-y-4 text-[15px] leading-8 text-[color:var(--text-primary)] [&_blockquote]:rounded-[20px] [&_blockquote]:border-l-4 [&_blockquote]:border-[#cfe8d6] [&_blockquote]:bg-[#f5faf6] [&_blockquote]:px-4 [&_blockquote]:py-3 [&_h3]:mt-8 [&_h3]:text-xl [&_h3]:font-semibold [&_img]:rounded-[20px] [&_p]:my-0"
         dangerouslySetInnerHTML={{ __html: article.contentHtml }}
       />
 
       {article.relatedArticles.length ? (
-        <section className="mt-10 rounded-[24px] border border-[color:var(--border-faint)] bg-[rgba(255,249,242,0.82)] p-5">
+        <section className="mt-10 rounded-[24px] border border-black/6 bg-[#f8f8f8] p-5">
           <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
-            <Newspaper
-              size={16}
-              className="text-[color:var(--brand-primary)]"
-            />
+            <Newspaper size={16} className="text-[#15803d]" />
             <span>该号更多内容</span>
           </div>
 
@@ -142,7 +139,7 @@ export function OfficialArticleViewer({
                 key={relatedArticle.id}
                 type="button"
                 onClick={() => onOpenArticle?.(relatedArticle.id)}
-                className="flex w-full items-start justify-between gap-3 rounded-[18px] border border-[color:var(--border-faint)] bg-white/92 px-4 py-3 text-left transition hover:bg-white"
+                className="flex w-full items-start justify-between gap-3 rounded-[18px] border border-black/6 bg-white px-4 py-3 text-left transition hover:border-black/10 hover:bg-[#fcfcfc]"
               >
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium leading-6 text-[color:var(--text-primary)]">
