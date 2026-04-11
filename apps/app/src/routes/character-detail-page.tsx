@@ -17,6 +17,7 @@ import {
   getFriendRequests,
   getFriends,
   getOrCreateConversation,
+  getSystemStatus,
   sendFriendRequest,
   setFriendStarred,
   unblockCharacter,
@@ -33,6 +34,7 @@ import {
 } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
+import { resolveDigitalHumanEntryGuardCopy } from "../features/chat/digital-human-entry-guard";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { formatTimestamp } from "../lib/format";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
@@ -53,8 +55,14 @@ export function CharacterDetailPage() {
   const isDesktopLayout = useDesktopLayout();
   const baseUrl = runtimeConfig.apiBaseUrl;
   const ownerName = useWorldOwnerStore((state) => state.username) ?? "我";
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{
+    tone: "success" | "info" | "warning";
+    message: string;
+  } | null>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [videoGuardMessage, setVideoGuardMessage] = useState<string | null>(
+    null,
+  );
   const [profileForm, setProfileForm] = useState<FriendProfileFormState>({
     remarkName: "",
     region: "",
@@ -77,6 +85,10 @@ export function CharacterDetailPage() {
   const blockedQuery = useQuery({
     queryKey: ["app-chat-details-blocked", baseUrl],
     queryFn: () => getBlockedCharacters(baseUrl),
+  });
+  const systemStatusQuery = useQuery({
+    queryKey: ["system-status", baseUrl],
+    queryFn: () => getSystemStatus(baseUrl),
   });
 
   const character = characterQuery.data;
@@ -116,6 +128,7 @@ export function CharacterDetailPage() {
   useEffect(() => {
     setNotice(null);
     setIsEditingProfile(false);
+    setVideoGuardMessage(null);
     setProfileForm({
       remarkName: friendship?.remarkName ?? "",
       region: friendship?.region ?? "",
@@ -189,7 +202,10 @@ export function CharacterDetailPage() {
         baseUrl,
       ),
     onSuccess: async () => {
-      setNotice("已发送好友申请。");
+      setNotice({
+        tone: "success",
+        message: "已发送好友申请。",
+      });
       await queryClient.invalidateQueries({
         queryKey: ["app-friend-requests", baseUrl],
       });
@@ -199,7 +215,10 @@ export function CharacterDetailPage() {
     mutationFn: (starred: boolean) =>
       setFriendStarred(characterId, { starred }, baseUrl),
     onSuccess: async (_, starred) => {
-      setNotice(starred ? "已设为星标朋友。" : "已取消星标朋友。");
+      setNotice({
+        tone: "success",
+        message: starred ? "已设为星标朋友。" : "已取消星标朋友。",
+      });
       await queryClient.invalidateQueries({
         queryKey: ["app-friends", baseUrl],
       });
@@ -209,7 +228,10 @@ export function CharacterDetailPage() {
     mutationFn: (payload: UpdateFriendProfileRequest) =>
       updateFriendProfile(characterId, payload, baseUrl),
     onSuccess: async () => {
-      setNotice("朋友资料已更新。");
+      setNotice({
+        tone: "success",
+        message: "朋友资料已更新。",
+      });
       setIsEditingProfile(false);
       await queryClient.invalidateQueries({
         queryKey: ["app-friends", baseUrl],
@@ -232,7 +254,10 @@ export function CharacterDetailPage() {
       );
     },
     onSuccess: async (_, blocked) => {
-      setNotice(blocked ? "已移出黑名单。" : "已加入黑名单。");
+      setNotice({
+        tone: "success",
+        message: blocked ? "已移出黑名单。" : "已加入黑名单。",
+      });
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ["app-chat-details-blocked", baseUrl],
@@ -282,11 +307,23 @@ export function CharacterDetailPage() {
 
   const handleVoiceCall = () => {
     setNotice(null);
+    setVideoGuardMessage(null);
     openCallMutation.mutate("voice");
   };
 
   const handleVideoCall = () => {
     setNotice(null);
+    const guardCopy = resolveDigitalHumanEntryGuardCopy(
+      systemStatusQuery.data?.digitalHumanGateway,
+    );
+
+    if (guardCopy && videoGuardMessage !== guardCopy.message) {
+      setVideoGuardMessage(guardCopy.message);
+      setNotice(guardCopy);
+      return;
+    }
+
+    setVideoGuardMessage(null);
     openCallMutation.mutate("video");
   };
 
@@ -342,7 +379,9 @@ export function CharacterDetailPage() {
             isDesktopLayout ? "mx-auto w-full max-w-[720px]" : undefined,
           )}
         >
-          {notice ? <InlineNotice tone="success">{notice}</InlineNotice> : null}
+          {notice ? (
+            <InlineNotice tone={notice.tone}>{notice.message}</InlineNotice>
+          ) : null}
           {friendsQuery.isError && friendsQuery.error instanceof Error ? (
             <ErrorBlock message={friendsQuery.error.message} />
           ) : null}
