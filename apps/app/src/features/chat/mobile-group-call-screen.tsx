@@ -110,6 +110,13 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
     kind: mode,
     status: "ongoing",
     sourceLabel,
+    counts: totalCount
+      ? {
+          activeCount,
+          totalCount,
+          waitingCount,
+        }
+      : null,
   });
 
   useEffect(() => {
