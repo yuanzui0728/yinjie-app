@@ -42,10 +42,15 @@ export function DesktopMomentsFeed({
 }: DesktopMomentsFeedProps) {
   return (
     <>
-      {isLoading ? <LoadingBlock label="正在读取朋友圈..." /> : null}
+      {isLoading ? (
+        <LoadingBlock
+          label="正在读取朋友圈..."
+          className="rounded-[20px] border-black/6 bg-white py-10 shadow-[0_14px_36px_rgba(15,23,42,0.05)]"
+        />
+      ) : null}
 
       {!isLoading && moments.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-4 pb-6">
           {moments.map((moment) => (
             <DesktopMomentRow
               key={moment.id}
@@ -68,19 +73,21 @@ export function DesktopMomentsFeed({
       ) : null}
 
       {!isLoading && !moments.length ? (
-        <EmptyState
-          title={totalMomentsCount ? "当前筛选下没有动态" : "朋友圈还很安静"}
-          description={
-            totalMomentsCount
-              ? "换个筛选条件试试，或者直接发一条新的朋友圈。"
-              : "你先发一条，或者等世界里的其他人先开口。"
-          }
-          action={
-            <Button variant="primary" onClick={onOpenCompose}>
-              发朋友圈
-            </Button>
-          }
-        />
+        <div className="mx-auto max-w-[560px] py-10">
+          <EmptyState
+            title={totalMomentsCount ? "当前筛选下没有动态" : "朋友圈还很安静"}
+            description={
+              totalMomentsCount
+                ? "换个筛选条件试试，或者直接发一条新的朋友圈。"
+                : "你先发一条，或者等世界里的其他人先开口。"
+            }
+            action={
+              <Button variant="primary" onClick={onOpenCompose}>
+                发朋友圈
+              </Button>
+            }
+          />
+        </div>
       ) : null}
     </>
   );
