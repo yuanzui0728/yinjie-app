@@ -1,14 +1,17 @@
+import { useEffect, useState } from "react";
 import {
   useProviderSetup,
   Button,
   Card,
+  ErrorBlock,
+  InlineNotice,
   ProviderSetupForm,
   SectionHeading,
   SetupStatusCard,
   SetupStepList,
   StatusPill,
 } from "@yinjie/ui";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { getSystemStatus } from "@yinjie/contracts";
 import {
@@ -16,8 +19,12 @@ import {
   AdminInfoRows,
   AdminJumpCard,
   AdminPageHero,
+  AdminSelectField,
   AdminStatusCard,
+  AdminTextArea,
+  AdminTextField,
 } from "../components/admin-workbench";
+import { adminApi } from "../lib/admin-api";
 import { resolveAdminCoreApiBaseUrl } from "../lib/core-api-base";
 
 function formatProviderMode(mode?: string | null) {
@@ -34,6 +41,10 @@ function formatProviderMode(mode?: string | null) {
 
 export function SetupPage() {
   const baseUrl = resolveAdminCoreApiBaseUrl();
+  const queryClient = useQueryClient();
+  const [digitalHumanDraft, setDigitalHumanDraft] = useState(() =>
+    createDigitalHumanConfigDraft(),
+  );
 
   const systemStatusQuery = useQuery({
     queryKey: ["admin-setup-system-status", baseUrl],
@@ -51,10 +62,57 @@ export function SetupPage() {
       ["admin-system-status", baseUrl],
     ],
   });
+  const digitalHumanConfigQuery = useQuery({
+    queryKey: ["admin-digital-human-config", baseUrl],
+    queryFn: () => adminApi.getConfig(),
+  });
+  const digitalHumanSaveMutation = useMutation({
+    mutationFn: async () => {
+      await Promise.all([
+        adminApi.setConfig(
+          "digital_human_provider_mode",
+          digitalHumanDraft.mode.trim(),
+        ),
+        adminApi.setConfig(
+          "digital_human_player_url_template",
+          digitalHumanDraft.playerUrlTemplate,
+        ),
+        adminApi.setConfig(
+          "digital_human_provider_callback_token",
+          digitalHumanDraft.callbackToken,
+        ),
+        adminApi.setConfig(
+          "digital_human_provider_params",
+          digitalHumanDraft.providerParams,
+        ),
+      ]);
+      return digitalHumanDraft;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["admin-digital-human-config", baseUrl],
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (!digitalHumanConfigQuery.data) {
+      return;
+    }
+
+    setDigitalHumanDraft(
+      createDigitalHumanConfigDraft(digitalHumanConfigQuery.data),
+    );
+  }, [digitalHumanConfigQuery.data]);
 
   const coreApiReady = Boolean(systemStatusQuery.data?.coreApi.healthy);
   const providerReady = providerSetup.providerReady;
   const speechReady = Boolean(systemStatusQuery.data?.inferenceGateway.speechReady);
+  const digitalHumanProviderReady = Boolean(
+    digitalHumanDraft.mode === "external_iframe"
+      ? digitalHumanDraft.playerUrlTemplate.trim()
+      : digitalHumanDraft.mode,
+  );
   const worldOwnerReady = (systemStatusQuery.data?.worldSurface.ownerCount ?? 0) === 1;
   const schedulerReady = Boolean(systemStatusQuery.data?.scheduler.healthy);
   const setupSteps = [
@@ -74,6 +132,13 @@ export function SetupPage() {
       hint: speechReady
         ? systemStatusQuery.data?.inferenceGateway.speechMessage ?? "语音转写已就绪"
         : "补齐主推理或独立转写密钥，才能启用 AI 语音通话",
+    },
+    {
+      label: "数字人 Provider",
+      ok: digitalHumanProviderReady,
+      hint: digitalHumanProviderReady
+        ? `当前模式：${formatDigitalHumanMode(digitalHumanDraft.mode)}`
+        : "补齐数字人模式与模板参数，才能接真实视频流",
     },
     {
       label: "后台就绪",
@@ -122,6 +187,14 @@ export function SetupPage() {
       value: worldOwnerReady
         ? "1 个，状态正确"
         : `${systemStatusQuery.data?.worldSurface.ownerCount ?? 0} 个，需要处理`,
+    },
+    {
+      label: "数字人 Provider",
+      value: digitalHumanProviderReady
+        ? `${formatDigitalHumanMode(digitalHumanDraft.mode)} · ${
+            digitalHumanDraft.playerUrlTemplate.trim() ? "模板已配置" : "内置模式"
+          }`
+        : "待配置",
     },
     {
       label: "下一步",
@@ -205,6 +278,12 @@ export function SetupPage() {
                 }
                 tone={speechReady ? "healthy" : "warning"}
                 statusLabel={speechReady ? "完成" : "待处理"}
+              />
+              <AdminStatusCard
+                title="补齐数字人 Provider 参数"
+                description="如果要接真实数字人视频流，这里需要保存模式、播放器模板和 provider 参数 JSON。"
+                tone={digitalHumanProviderReady ? "healthy" : "warning"}
+                statusLabel={digitalHumanProviderReady ? "完成" : "待处理"}
               />
             </div>
           </Card>
@@ -330,8 +409,125 @@ export function SetupPage() {
             probePending={providerSetup.providerProbeMutation.isPending}
             savePending={providerSetup.providerSaveMutation.isPending}
           />
+
+          <Card className="rounded-[30px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-6 shadow-[var(--shadow-card)]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <SectionHeading>数字人 Provider 配置</SectionHeading>
+                <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+                  这里保存 AI 数字人视频通话的 provider 模式、播放器模板和扩展参数。`external_iframe`
+                  模式下，模板可直接消费 `{`sessionId`}`、`{`conversationId`}`、`{`characterId`}`、`{`characterName`}`、`{`callbackUrl`}`、`{`callbackToken`}`，以及参数 JSON 里的同名键。
+                </p>
+              </div>
+              <StatusPill tone={digitalHumanProviderReady ? "healthy" : "warning"}>
+                {digitalHumanProviderReady ? "已配置" : "待配置"}
+              </StatusPill>
+            </div>
+
+            <div className="mt-5 grid gap-4">
+              <AdminSelectField
+                label="Provider 模式"
+                value={digitalHumanDraft.mode}
+                onChange={(value) =>
+                  setDigitalHumanDraft((current) => ({ ...current, mode: value }))
+                }
+                options={[
+                  { value: "mock_stage", label: "mock_stage · 内置舞台" },
+                  { value: "mock_iframe", label: "mock_iframe · 内置 iframe 播放页" },
+                  { value: "external_iframe", label: "external_iframe · 外部数字人播放器" },
+                ]}
+              />
+              <AdminTextArea
+                label="播放器 URL 模板"
+                value={digitalHumanDraft.playerUrlTemplate}
+                onChange={(value) =>
+                  setDigitalHumanDraft((current) => ({
+                    ...current,
+                    playerUrlTemplate: value,
+                  }))
+                }
+                placeholder="https://provider.example.com/player?session={sessionId}&avatar={avatarId}&callback={callbackUrl}"
+                textareaClassName="min-h-24"
+              />
+              <AdminTextField
+                label="回调鉴权 Token"
+                value={digitalHumanDraft.callbackToken}
+                onChange={(value) =>
+                  setDigitalHumanDraft((current) => ({
+                    ...current,
+                    callbackToken: value,
+                  }))
+                }
+                placeholder="为空则不附加 provider-state 回调 token"
+              />
+              <AdminTextArea
+                label="扩展参数 JSON"
+                value={digitalHumanDraft.providerParams}
+                onChange={(value) =>
+                  setDigitalHumanDraft((current) => ({
+                    ...current,
+                    providerParams: value,
+                  }))
+                }
+                placeholder={'{"appId":"demo-app","avatarId":"host-001","sceneId":"lobby"}'}
+                textareaClassName="min-h-32"
+              />
+            </div>
+
+            <InlineNotice className="mt-4" tone="info">
+              建议把 provider 固定参数都放进扩展参数 JSON，再在播放器模板中直接使用对应占位符。
+            </InlineNotice>
+
+            {digitalHumanConfigQuery.error instanceof Error ? (
+              <ErrorBlock className="mt-4" message={digitalHumanConfigQuery.error.message} />
+            ) : null}
+            {digitalHumanSaveMutation.error instanceof Error ? (
+              <ErrorBlock className="mt-4" message={digitalHumanSaveMutation.error.message} />
+            ) : null}
+            {digitalHumanSaveMutation.isSuccess ? (
+              <AdminCallout
+                className="mt-4"
+                tone="success"
+                title="数字人配置已保存"
+                description={`当前模式：${formatDigitalHumanMode(
+                  digitalHumanDraft.mode,
+                )}`}
+              />
+            ) : null}
+
+            <div className="mt-4 flex justify-end">
+              <Button
+                onClick={() => digitalHumanSaveMutation.mutate()}
+                disabled={digitalHumanSaveMutation.isPending}
+              >
+                {digitalHumanSaveMutation.isPending ? "保存中..." : "保存数字人配置"}
+              </Button>
+            </div>
+          </Card>
         </div>
       </div>
     </div>
   );
+}
+
+function formatDigitalHumanMode(mode: string) {
+  switch (mode) {
+    case "mock_stage":
+      return "内置舞台";
+    case "mock_iframe":
+      return "内置 iframe";
+    case "external_iframe":
+      return "外部 iframe";
+    default:
+      return mode || "未设置";
+  }
+}
+
+function createDigitalHumanConfigDraft(config?: Record<string, string>) {
+  return {
+    mode: config?.digital_human_provider_mode?.trim() || "mock_iframe",
+    playerUrlTemplate: config?.digital_human_player_url_template ?? "",
+    callbackToken: config?.digital_human_provider_callback_token ?? "",
+    providerParams: config?.digital_human_provider_params ?? "",
+  };
 }
