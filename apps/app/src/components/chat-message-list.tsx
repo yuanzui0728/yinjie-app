@@ -90,8 +90,8 @@ import { emitChatMessage, joinConversationRoom } from "../lib/socket";
 import { requestNotificationPermission } from "../runtime/mobile-bridge";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { buildChatUnreadMarkerDomId } from "../features/chat/chat-unread-marker";
-import { resolveChatCardBadgeClassName } from "../features/chat/chat-card-badge";
 import { DigitalHumanEntryNotice } from "../features/chat/digital-human-entry-notice";
+import { ResultCardBadge } from "../features/chat/result-card-badge";
 import { resolveResultCardFooterActionClassName } from "../features/chat/result-card-footer";
 import {
   resolveDirectCallFooterCopy,
@@ -3677,40 +3677,39 @@ function GroupRelaySummaryMessage({
           </div>
         </div>
         <div className="flex flex-col items-end gap-1.5">
-          <div
-            className={resolveChatCardBadgeClassName(
-              summary.publishedSource === "mobile" ? "info" : "warning",
-            )}
-          >
-            {summary.publishedSource === "mobile" ? "手机回填" : "桌面回填"}
-          </div>
+          <ResultCardBadge
+            tone={summary.publishedSource === "mobile" ? "info" : "warning"}
+            label={summary.publishedSource === "mobile" ? "手机回填" : "桌面回填"}
+          />
           {summary.launchSourceLabel ? (
-            <div className={resolveChatCardBadgeClassName("neutral")}>
-              {summary.launchSource === "mobile" ? "手机发起" : "桌面发起"}
-            </div>
+            <ResultCardBadge
+              tone="neutral"
+              label={summary.launchSource === "mobile" ? "手机发起" : "桌面发起"}
+            />
           ) : null}
           {summary.statusLabel ? (
-            <div
-              className={resolveChatCardBadgeClassName(
+            <ResultCardBadge
+              tone={
                 summary.statusLabel === "已回填"
                   ? "success"
                   : summary.statusLabel === "已完成"
                     ? "info"
-                    : "warning",
-              )}
-            >
-              {summary.statusLabel}
-            </div>
+                    : "warning"
+              }
+              label={summary.statusLabel}
+            />
           ) : null}
           {publishStageBadge ? (
-            <div className={resolveChatCardBadgeClassName(publishStageBadge.tone)}>
-              {publishStageBadge.label}
-            </div>
+            <ResultCardBadge
+              tone={publishStageBadge.tone}
+              label={publishStageBadge.label}
+            />
           ) : null}
           {completionBadge ? (
-            <div className={resolveChatCardBadgeClassName(completionBadge.tone)}>
-              {completionBadge.label}
-            </div>
+            <ResultCardBadge
+              tone={completionBadge.tone}
+              label={completionBadge.label}
+            />
           ) : null}
         </div>
       </div>
@@ -3927,21 +3926,21 @@ function GroupCallInviteMessage({
           </div>
         </div>
         <div className="flex flex-col items-end gap-1.5">
-          <div
-            className={resolveChatCardBadgeClassName(
-              invite.status === "ended" ? "danger" : "info",
-            )}
-          >
-            {invite.status === "ended"
-              ? "已结束"
-              : invite.sourceLabel
-                ? `${invite.sourceLabel}发起`
-                : "桌面发起"}
-          </div>
+          <ResultCardBadge
+            tone={invite.status === "ended" ? "danger" : "info"}
+            label={
+              invite.status === "ended"
+                ? "已结束"
+                : invite.sourceLabel
+                  ? `${invite.sourceLabel}发起`
+                  : "桌面发起"
+            }
+          />
           {completionBadge ? (
-            <div className={resolveChatCardBadgeClassName(completionBadge.tone)}>
-              {completionBadge.label}
-            </div>
+            <ResultCardBadge
+              tone={completionBadge.tone}
+              label={completionBadge.label}
+            />
           ) : null}
         </div>
       </div>
@@ -4072,17 +4071,16 @@ function DirectCallInviteMessage({
             {invite.title}
           </div>
         </div>
-        <div
-          className={resolveChatCardBadgeClassName(
-            invite.connectionStatus === "ended" ? "danger" : "info",
-          )}
-        >
-          {invite.connectionStatus === "ended"
-            ? "已结束"
-            : invite.sourceLabel
-              ? `${invite.sourceLabel}发起`
-              : "桌面发起"}
-        </div>
+        <ResultCardBadge
+          tone={invite.connectionStatus === "ended" ? "danger" : "info"}
+          label={
+            invite.connectionStatus === "ended"
+              ? "已结束"
+              : invite.sourceLabel
+                ? `${invite.sourceLabel}发起`
+                : "桌面发起"
+          }
+        />
       </div>
 
       <div className="mt-3 space-y-2">
