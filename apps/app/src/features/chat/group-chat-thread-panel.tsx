@@ -31,7 +31,6 @@ import { buildDesktopMobileCallHandoffHash } from "../desktop/chat/desktop-mobil
 import { DesktopGroupCallPanel } from "../desktop/chat/desktop-group-call-panel";
 import { type ChatRenderableMessage } from "../../components/chat-message-list";
 import { type ChatRouteContextNotice } from "./conversation-thread-panel";
-import { ChatCallFallbackNotice } from "./chat-call-fallback-notice";
 import { type ChatComposeShortcutAction } from "./chat-compose-shortcut-route";
 import { type ChatComposerAttachmentPayload } from "./chat-plus-types";
 import {
@@ -95,8 +94,6 @@ export function GroupChatThreadPanel({
     kind: DesktopChatCallKind;
     source: CallInviteSource | null;
   } | null>(null);
-  const [pendingCallFallback, setPendingCallFallback] =
-    useState<DesktopChatCallKind | null>(null);
   const [mobileShortcutRequest, setMobileShortcutRequest] = useState<{
     action: ChatComposeShortcutAction;
     nonce: number;
@@ -151,8 +148,7 @@ export function GroupChatThreadPanel({
   useEffect(() => {
     setText("");
     setReplyDraft(null);
-      setDesktopCallPanelState(null);
-    setPendingCallFallback(null);
+    setDesktopCallPanelState(null);
     setMobileShortcutRequest(null);
     setSelectionModeActive(false);
     setLastPublishedCallCounts(null);
@@ -632,15 +628,14 @@ export function GroupChatThreadPanel({
       return;
     }
 
-    setPendingCallFallback(kind);
-    onDesktopCallAction?.(kind);
-  };
-  const handleApplyMobileCallFallback = (kind: DesktopChatCallKind) => {
-    setMobileShortcutRequest({
-      action: kind === "voice" ? "voice-message" : "camera",
-      nonce: Date.now(),
+    void navigate({
+      to:
+        kind === "voice"
+          ? "/group/$groupId/voice-call"
+          : "/group/$groupId/video-call",
+      params: { groupId },
     });
-    setPendingCallFallback(null);
+    onDesktopCallAction?.(kind);
   };
 
   return (
@@ -695,28 +690,6 @@ export function GroupChatThreadPanel({
           }}
         />
       )}
-
-      {pendingCallFallback && !isDesktop ? (
-        <div className="border-b border-black/6 bg-white/82 px-3 py-2.5">
-          <ChatCallFallbackNotice
-            kind={pendingCallFallback}
-            scope="group"
-            description={
-              pendingCallFallback === "voice"
-                ? "先在群里发语音消息继续，后续再补群实时语音通话。"
-                : "先用拍摄或图片消息继续，把当前内容先同步到群里。"
-            }
-            primaryLabel={
-              pendingCallFallback === "voice" ? "改发语音" : "改为拍摄"
-            }
-            secondaryLabel="收起"
-            onPrimaryAction={() =>
-              handleApplyMobileCallFallback(pendingCallFallback)
-            }
-            onSecondaryAction={() => setPendingCallFallback(null)}
-          />
-        </div>
-      ) : null}
 
       {isDesktop ? (
         <div className="flex items-center gap-3 border-b border-black/5 bg-[#f7f7f7] px-6 py-3">
@@ -939,7 +912,16 @@ export function GroupChatThreadPanel({
               onOpenGroupCallInvite={(input) => {
                 if (isDesktop) {
                   setDesktopCallPanelState(input);
+                  return;
                 }
+
+                void navigate({
+                  to:
+                    input.kind === "voice"
+                      ? "/group/$groupId/voice-call"
+                      : "/group/$groupId/video-call",
+                  params: { groupId },
+                });
               }}
               onSelectionModeChange={setSelectionModeActive}
               emptyState={
@@ -992,7 +974,6 @@ export function GroupChatThreadPanel({
           onOpenDesktopHistory={onToggleDesktopHistory}
           mobileShortcutRequest={mobileShortcutRequest}
           onMobileShortcutHandled={() => {
-            setPendingCallFallback(null);
             setMobileShortcutRequest(null);
           }}
           replyPreview={replyPreview}
