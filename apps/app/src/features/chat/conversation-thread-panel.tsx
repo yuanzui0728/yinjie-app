@@ -164,15 +164,18 @@ export function ConversationThreadPanel({
       return;
     }
 
-    const target = document.getElementById(
-      `chat-message-${highlightedMessageId}`,
-    );
-    if (!target) {
-      return;
-    }
+    const frame = window.requestAnimationFrame(() => {
+      const targetSelector = escapeIdSelector(
+        `chat-message-${highlightedMessageId}`,
+      );
+      const target = scrollAnchorRef.current?.querySelector<HTMLElement>(
+        `#${targetSelector}`,
+      );
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
 
-    target.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, [hasHighlightedMessage, highlightedMessageId]);
+    return () => window.cancelAnimationFrame(frame);
+  }, [hasHighlightedMessage, highlightedMessageId, scrollAnchorRef]);
 
   useEffect(() => {
     setReplyDraft(null);
@@ -223,11 +226,12 @@ export function ConversationThreadPanel({
     });
 
     window.requestAnimationFrame(() => {
-      document
-        .getElementById(markerId)
+      const markerSelector = escapeIdSelector(markerId);
+      scrollAnchorRef.current
+        ?.querySelector<HTMLElement>(`#${markerSelector}`)
         ?.scrollIntoView({ behavior: "auto", block: "center" });
     });
-  }, [conversationId, highlightedMessageId, unreadMarkerMessageId]);
+  }, [conversationId, highlightedMessageId, scrollAnchorRef, unreadMarkerMessageId]);
 
   const handleReplyMessage = (
     message: ChatRenderableMessage,
@@ -671,6 +675,14 @@ export function ConversationThreadPanel({
       ) : null}
     </div>
   );
+}
+
+function escapeIdSelector(value: string) {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(value);
+  }
+
+  return value;
 }
 
 function describeReplyPreview(message: ChatRenderableMessage) {
