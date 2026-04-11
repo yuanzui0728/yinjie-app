@@ -292,6 +292,20 @@ export function AdminMetaText({
   );
 }
 
+export function AdminEyebrow({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("text-[11px] uppercase tracking-[0.26em] text-[color:var(--text-muted)]", className)}>
+      {children}
+    </div>
+  );
+}
+
 export function AdminSoftBox({
   children,
   className,

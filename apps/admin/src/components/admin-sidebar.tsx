@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Button, StatusPill } from "@yinjie/ui";
-import { AdminCompactStatusCard } from "./admin-workbench";
+import { AdminCompactStatusCard, AdminEyebrow } from "./admin-workbench";
 
 type SidebarLink = {
   label: string;
@@ -81,7 +81,7 @@ export function AdminSidebar({
   return (
     <aside className="flex h-full flex-col border-b border-[color:var(--border-faint)] bg-[color:var(--surface-shell)]/92 px-4 py-4 shadow-[var(--shadow-shell)] backdrop-blur xl:px-5 xl:py-5 lg:border-b-0 lg:border-r">
       <div className="rounded-[28px] border border-[color:var(--border-subtle)] bg-[linear-gradient(160deg,rgba(255,255,255,0.96),rgba(255,247,235,0.92))] p-5 shadow-[var(--shadow-card)]">
-        <div className="text-[11px] uppercase tracking-[0.3em] text-[color:var(--text-muted)]">隐界 Admin</div>
+        <AdminEyebrow className="tracking-[0.3em]">隐界 Admin</AdminEyebrow>
         <div className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">运营控制台</div>
         <div className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">
           先看实例健康，再进入角色、回复逻辑和评测工作区。
@@ -115,7 +115,7 @@ export function AdminSidebar({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="text-[11px] uppercase tracking-[0.26em] text-[color:var(--text-muted)]">优先处理</div>
+            <AdminEyebrow>优先处理</AdminEyebrow>
             <div className="mt-2 text-sm font-semibold text-[color:var(--text-primary)]">
               {issueCount > 0 ? `当前有 ${issueCount} 项待处理` : "实例已达到可操作状态"}
             </div>
@@ -147,7 +147,7 @@ export function AdminSidebar({
 
       <nav className="mt-5 flex-1 space-y-5 overflow-y-auto pr-1">
         <section>
-          <div className="px-3 text-[11px] uppercase tracking-[0.26em] text-[color:var(--text-muted)]">主导航</div>
+          <AdminEyebrow className="px-3">主导航</AdminEyebrow>
           <div className="mt-3 space-y-2">
             {navLinks.map((item) => (
               <Link key={item.to} to={item.to} className={NAV_LINK} activeProps={{ className: NAV_LINK_ACTIVE }}>
@@ -162,9 +162,9 @@ export function AdminSidebar({
 
         {contextLinks?.length ? (
           <section>
-            <div className="px-3 text-[11px] uppercase tracking-[0.26em] text-[color:var(--text-muted)]">
+            <AdminEyebrow className="px-3">
               {contextTitle ?? "当前上下文"}
-            </div>
+            </AdminEyebrow>
             <div className="mt-3 space-y-2 rounded-[26px] border border-[color:var(--border-faint)] bg-[color:var(--surface-primary)] p-3 shadow-[var(--shadow-soft)]">
               {contextLinks.map((item) => (
                 <a
@@ -185,7 +185,7 @@ export function AdminSidebar({
       </nav>
 
       <section className="mt-5 rounded-[26px] border border-[color:var(--border-faint)] bg-[color:var(--surface-primary)] p-4 shadow-[var(--shadow-soft)]">
-        <div className="text-[11px] uppercase tracking-[0.26em] text-[color:var(--text-muted)]">管理密钥</div>
+        <AdminEyebrow>管理密钥</AdminEyebrow>
         {editingSecret ? (
           <div className="mt-3 space-y-3">
             <input
