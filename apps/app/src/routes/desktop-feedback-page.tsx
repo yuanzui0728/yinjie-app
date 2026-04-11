@@ -142,7 +142,7 @@ export function DesktopFeedbackPage() {
   }
 
   return (
-    <div className="h-full overflow-auto px-6 py-6">
+    <div className="h-full overflow-auto bg-[#f3f3f3] px-6 py-6">
       <DesktopEntryShell
         badge="Feedback"
         title="意见反馈把问题和上下文一起交付"
@@ -175,7 +175,7 @@ export function DesktopFeedbackPage() {
           ) : null}
 
           <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-            <section className="rounded-[28px] border border-[color:var(--border-faint)] bg-white/92 p-5 shadow-[var(--shadow-soft)]">
+            <section className="rounded-[18px] border border-black/6 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
               <div className="text-sm font-medium text-[color:var(--text-primary)]">
                 提交反馈
               </div>
@@ -186,7 +186,7 @@ export function DesktopFeedbackPage() {
 
               <div className="mt-4 space-y-4">
                 <div>
-                  <div className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+                  <div className="text-xs tracking-[0.14em] text-[color:var(--text-dim)]">
                     问题分类
                   </div>
                   <div className="mt-3 grid gap-3 md:grid-cols-2">
@@ -205,16 +205,20 @@ export function DesktopFeedbackPage() {
                             setError(null);
                           }}
                           className={cn(
-                            "rounded-[22px] border p-4 text-left transition",
+                            "rounded-[12px] border p-4 text-left transition",
                             draft.category === item.id
-                              ? "border-[rgba(249,115,22,0.24)] bg-[rgba(249,115,22,0.10)]"
-                              : "border-[color:var(--border-faint)] bg-[rgba(255,250,244,0.82)] hover:bg-white",
+                              ? "border-[rgba(7,193,96,0.22)] bg-[rgba(7,193,96,0.08)]"
+                              : "border-black/6 bg-[#fafafa] hover:bg-white",
                           )}
                         >
                           <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
                             <Icon
                               size={16}
-                              className="text-[color:var(--brand-primary)]"
+                              className={cn(
+                                draft.category === item.id
+                                  ? "text-[#1f8f4f]"
+                                  : "text-[color:var(--text-secondary)]",
+                              )}
                             />
                             <span>{item.label}</span>
                           </div>
@@ -229,7 +233,7 @@ export function DesktopFeedbackPage() {
 
                 <div className="grid gap-4 md:grid-cols-[1fr_180px]">
                   <div>
-                    <div className="mb-2 text-xs uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+                    <div className="mb-2 text-xs tracking-[0.14em] text-[color:var(--text-dim)]">
                       标题
                     </div>
                     <TextField
@@ -246,7 +250,7 @@ export function DesktopFeedbackPage() {
                   </div>
 
                   <div>
-                    <div className="mb-2 text-xs uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+                    <div className="mb-2 text-xs tracking-[0.14em] text-[color:var(--text-dim)]">
                       优先级
                     </div>
                     <div className="flex gap-2">
@@ -262,10 +266,10 @@ export function DesktopFeedbackPage() {
                             setError(null);
                           }}
                           className={cn(
-                            "flex-1 rounded-full border px-3 py-2 text-xs font-medium transition",
+                            "flex-1 rounded-[10px] border px-3 py-2 text-xs font-medium transition",
                             draft.priority === item.id
-                              ? "border-[rgba(249,115,22,0.24)] bg-[rgba(249,115,22,0.10)] text-[color:var(--brand-primary)]"
-                              : "border-[color:var(--border-faint)] bg-white/90 text-[color:var(--text-secondary)]",
+                              ? "border-[rgba(7,193,96,0.22)] bg-[rgba(7,193,96,0.08)] text-[#1f8f4f]"
+                              : "border-black/8 bg-white text-[color:var(--text-secondary)]",
                           )}
                         >
                           {item.label}
@@ -308,7 +312,7 @@ export function DesktopFeedbackPage() {
                   }}
                 />
 
-                <label className="flex items-start gap-3 rounded-[22px] border border-[color:var(--border-faint)] bg-[rgba(255,250,244,0.82)] px-4 py-3">
+                <label className="flex items-start gap-3 rounded-[12px] border border-black/6 bg-[#fafafa] px-4 py-3">
                   <input
                     type="checkbox"
                     checked={draft.includeSystemSnapshot}
@@ -318,7 +322,7 @@ export function DesktopFeedbackPage() {
                         includeSystemSnapshot: event.target.checked,
                       }))
                     }
-                    className="mt-1 h-4 w-4 rounded border-[color:var(--border-faint)] text-[color:var(--brand-primary)]"
+                    className="mt-1 h-4 w-4 rounded border-black/8 text-[#07c160]"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium text-[color:var(--text-primary)]">
@@ -334,7 +338,7 @@ export function DesktopFeedbackPage() {
                   <Button
                     type="button"
                     onClick={() => void handleSubmitFeedback()}
-                    className="rounded-2xl"
+                    className="rounded-[10px] bg-[#07c160] text-white hover:bg-[#06ad56]"
                   >
                     <Send size={15} />
                     保存反馈
@@ -343,7 +347,7 @@ export function DesktopFeedbackPage() {
                     type="button"
                     variant="secondary"
                     onClick={() => void handleCopyFeedbackPackage()}
-                    className="rounded-2xl"
+                    className="rounded-[10px] border-black/8 bg-white shadow-none hover:bg-[#efefef]"
                   >
                     <Sparkles size={15} />
                     复制反馈包
@@ -357,7 +361,7 @@ export function DesktopFeedbackPage() {
                       setNotice("反馈草稿已清空。");
                       setError(null);
                     }}
-                    className="rounded-2xl"
+                    className="rounded-[10px] border-black/8 bg-white shadow-none hover:bg-[#efefef]"
                   >
                     清空草稿
                   </Button>
@@ -366,7 +370,7 @@ export function DesktopFeedbackPage() {
             </section>
 
             <section className="space-y-5">
-              <div className="rounded-[28px] border border-[color:var(--border-faint)] bg-white/92 p-5 shadow-[var(--shadow-soft)]">
+              <div className="rounded-[18px] border border-black/6 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
                 <div className="text-sm font-medium text-[color:var(--text-primary)]">
                   当前上下文
                 </div>
@@ -390,7 +394,7 @@ export function DesktopFeedbackPage() {
                 </div>
               </div>
 
-              <div className="rounded-[28px] border border-[color:var(--border-faint)] bg-white/92 p-5 shadow-[var(--shadow-soft)]">
+              <div className="rounded-[18px] border border-black/6 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
                 <div className="text-sm font-medium text-[color:var(--text-primary)]">
                   诊断摘要
                 </div>
@@ -443,11 +447,11 @@ export function DesktopFeedbackPage() {
                 </div>
               </div>
 
-              <div className="rounded-[28px] border border-[color:var(--border-faint)] bg-white/92 p-5 shadow-[var(--shadow-soft)]">
+              <div className="rounded-[18px] border border-black/6 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
                 <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
                   <AlertCircle
                     size={16}
-                    className="text-[color:var(--brand-primary)]"
+                    className="text-[#1f8f4f]"
                   />
                   <span>最近反馈</span>
                 </div>
@@ -456,7 +460,7 @@ export function DesktopFeedbackPage() {
                     history.map((item) => (
                       <div
                         key={item.id}
-                        className="rounded-[22px] border border-[color:var(--border-faint)] bg-[rgba(255,250,244,0.82)] p-4"
+                        className="rounded-[12px] border border-black/6 bg-[#fafafa] p-4"
                       >
                         <div className="flex items-center gap-2 text-xs text-[color:var(--text-muted)]">
                           <span>{resolveCategoryLabel(item.category)}</span>
@@ -477,7 +481,7 @@ export function DesktopFeedbackPage() {
                       </div>
                     ))
                   ) : (
-                    <div className="rounded-[22px] border border-dashed border-[color:var(--border-faint)] bg-[rgba(255,250,244,0.58)] p-5 text-sm leading-7 text-[color:var(--text-secondary)]">
+                    <div className="rounded-[12px] border border-dashed border-black/8 bg-[#fafafa] p-5 text-sm leading-7 text-[color:var(--text-secondary)]">
                       还没有保存过反馈。先把一个真实问题记下来，后续再接正式提交流。
                     </div>
                   )}
@@ -566,14 +570,14 @@ function FeedbackTextarea({
 }) {
   return (
     <div>
-      <div className="mb-2 text-xs uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+      <div className="mb-2 text-xs tracking-[0.14em] text-[color:var(--text-dim)]">
         {label}
       </div>
       <textarea
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="min-h-[116px] w-full rounded-[20px] border border-[color:var(--border-faint)] bg-[color:var(--surface-input)] px-4 py-3.5 text-sm leading-7 text-[color:var(--text-primary)] shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] outline-none transition-[border-color,background-color,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)] placeholder:text-[color:var(--text-dim)] hover:border-[color:var(--border-subtle)] hover:bg-white focus:border-[color:var(--border-brand)] focus:bg-white focus:shadow-[var(--shadow-focus)]"
+        className="min-h-[116px] w-full rounded-[12px] border border-black/8 bg-white px-4 py-3.5 text-sm leading-7 text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-dim)] hover:border-black/12 focus:border-black/12"
       />
     </div>
   );
@@ -587,7 +591,7 @@ function FeedbackContextRow({
   value: string;
 }) {
   return (
-    <div className="rounded-[20px] border border-[color:var(--border-faint)] bg-[rgba(255,250,244,0.82)] px-4 py-3">
+    <div className="rounded-[12px] border border-black/6 bg-[#fafafa] px-4 py-3">
       <div className="text-xs text-[color:var(--text-muted)]">{label}</div>
       <div className="mt-1 text-sm leading-6 text-[color:var(--text-primary)]">
         {value}
@@ -606,7 +610,7 @@ function FeedbackStatCard({
   value: string;
 }) {
   return (
-    <div className="rounded-[22px] border border-[color:var(--border-faint)] bg-white/88 p-4 shadow-[var(--shadow-soft)]">
+    <div className="rounded-[12px] border border-black/6 bg-white p-4 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
       <div className="text-xs text-[color:var(--text-muted)]">{label}</div>
       <div
         className={cn(
