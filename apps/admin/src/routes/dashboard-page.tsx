@@ -492,11 +492,11 @@ export function DashboardPage() {
                   : desktopStatusQuery.data?.message ?? "桌面运行时尚未完成初始化，进入设置页可集中恢复。"}
               </InlineNotice>
 
-              <div className="mt-4 rounded-2xl border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4 text-sm text-[color:var(--text-secondary)]">
+              <AdminDetailPanel className="mt-4" title="运行诊断">
                 {runtimeDiagnosticsQuery.data
                   ? formatDesktopDiagnostics(runtimeDiagnosticsQuery.data)
                   : "正在读取桌面运行时诊断..."}
-              </div>
+              </AdminDetailPanel>
 
               <div className="mt-4 flex flex-wrap gap-3">
                 <Link to="/setup">
@@ -579,13 +579,10 @@ export function DashboardPage() {
               }
             />
 
-            <div className="rounded-2xl border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4 md:col-span-2">
+            <AdminDetailPanel className="md:col-span-2" title="评测运行时">
               <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="text-xs uppercase tracking-[0.2em] text-[color:var(--text-muted)]">评测运行时</div>
-                  <div className="mt-2 text-2xl font-semibold">
-                    {evalOverviewQuery.data?.runCount ?? 0} 次运行 / {evalOverviewQuery.data?.traceCount ?? 0} 条链路
-                  </div>
+                <div className="text-2xl font-semibold text-[color:var(--text-primary)]">
+                  {evalOverviewQuery.data?.runCount ?? 0} 次运行 / {evalOverviewQuery.data?.traceCount ?? 0} 条链路
                 </div>
                 <Link to="/evals">
                   <Button variant="secondary" size="sm">
@@ -593,18 +590,18 @@ export function DashboardPage() {
                   </Button>
                 </Link>
               </div>
-              <div className="mt-3 grid gap-2 text-sm text-[color:var(--text-secondary)] md:grid-cols-3">
+              <div className="mt-3 grid gap-2 md:grid-cols-3">
                 <div>数据集：{evalOverviewQuery.data?.datasetCount ?? 0}</div>
                 <div>失败运行：{evalOverviewQuery.data?.failedRunCount ?? 0}</div>
                 <div>回退链路：{evalOverviewQuery.data?.fallbackTraceCount ?? 0}</div>
               </div>
-            </div>
+            </AdminDetailPanel>
           </div>
 
-          <div className="mt-6 rounded-2xl border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4 text-sm leading-7 text-[color:var(--text-secondary)]">
+          <AdminDetailPanel className="mt-6" title="兼容迁移摘要" contentClassName="leading-7">
             当前控制台已经与共享契约层对齐。已迁移的兼容面覆盖配置、角色、社交、聊天、朋友圈、广场和世界上下文。
             调度器也已经接入实际 Rust 运行切片，运行时统计和手动触发都已纳入本页。叙事弧线与智能行为日志也已经同步纳入新运行时。
-          </div>
+          </AdminDetailPanel>
         </Card>
 
         <Card className="bg-[color:var(--surface-console)]">
