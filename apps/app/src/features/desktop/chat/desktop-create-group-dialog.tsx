@@ -450,13 +450,13 @@ export function DesktopCreateGroupDialog({
     createMutation.mutate();
   };
 
-  const clearSearch = () => {
+  function clearSearch() {
     setSearchTerm("");
     setFocusedFriendIndex(0);
     window.requestAnimationFrame(() => {
       searchInputRef.current?.focus();
     });
-  };
+  }
 
   const handleDialogKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (
