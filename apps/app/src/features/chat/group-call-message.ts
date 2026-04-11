@@ -87,6 +87,13 @@ export function buildGroupCallInviteMessage(
     kind,
     status,
     sourceLabel,
+    counts: normalizedTotalCount
+      ? {
+          activeCount: normalizedActiveCount,
+          totalCount: normalizedTotalCount,
+          waitingCount,
+        }
+      : null,
   });
 
   return [
@@ -427,14 +434,22 @@ export function buildGroupCallSummaryLines(input: {
   kind: DesktopChatCallKind;
   status: GroupCallInviteStatus;
   sourceLabel: string | null;
+  counts: {
+    activeCount: number;
+    totalCount: number;
+    waitingCount: number;
+  } | null;
 }) {
   const callLabel = input.kind === "video" ? "群视频通话" : "群语音通话";
   const panelLabel = input.kind === "video" ? "群视频通话面板" : "群语音通话面板";
   const sourceLabel = input.sourceLabel ?? "当前设备";
+  const countsSummary = input.counts
+    ? `最终在线 ${input.counts.activeCount}/${input.counts.totalCount} 人，${input.counts.waitingCount > 0 ? `仍有 ${input.counts.waitingCount} 人未加入。` : "本轮成员已全部完成加入。"}`
+    : "当前没有保留完整在线人数快照。";
 
   if (input.status === "ended") {
     return [
-      `本轮${callLabel}已结束，当前卡片会保留这轮状态记录。`,
+      `本轮${callLabel}已结束，${countsSummary}`,
       `如需再次发起，请重新打开当前群聊顶部的${panelLabel}。`,
     ];
   }

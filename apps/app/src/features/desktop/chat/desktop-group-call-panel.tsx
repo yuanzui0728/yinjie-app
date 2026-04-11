@@ -93,6 +93,13 @@ export function DesktopGroupCallPanel({
     kind,
     status: "ongoing",
     sourceLabel: "桌面端",
+    counts: members.length
+      ? {
+          activeCount,
+          totalCount: members.length,
+          waitingCount,
+        }
+      : null,
   });
 
   useEffect(() => {

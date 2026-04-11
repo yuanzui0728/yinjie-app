@@ -3699,6 +3699,36 @@ function GroupCallInviteMessage({
     return null;
   }
 
+  const canReopenCall = Boolean(onOpen);
+  const footerDescription =
+    invite.status === "ended"
+      ? canReopenCall
+        ? invite.kind === "video"
+          ? "点击可基于这张卡片重新发起当前群视频通话。"
+          : "点击可基于这张卡片重新发起当前群语音通话。"
+        : invite.kind === "video"
+          ? "这轮群视频通话已经结束，当前保留为状态记录卡片。"
+          : "这轮群语音通话已经结束，当前保留为状态记录卡片。"
+      : canReopenCall
+        ? invite.kind === "video"
+          ? "点击可回到当前群视频通话工作台。"
+          : "点击可回到当前群语音通话工作台。"
+        : invite.kind === "video"
+          ? "当前消息已转成群视频通话卡片，便于群成员识别画面状态。"
+          : "当前消息已转成群语音通话卡片，便于群成员识别状态。";
+  const footerActionLabel =
+    invite.status === "ended"
+      ? canReopenCall
+        ? "重新发起"
+        : "查看记录"
+      : canReopenCall
+        ? invite.kind === "voice"
+          ? "回到语音"
+          : "回到视频"
+        : invite.kind === "voice"
+          ? "语音中"
+          : "视频中";
+
   const card = (
     <div
       className={cn(
@@ -3733,11 +3763,11 @@ function GroupCallInviteMessage({
         </div>
       </div>
 
-        <div className="mt-3 space-y-2">
-          <CallInviteMetric
-            label="当前状态"
-            value={formatGroupCallStatusLabel(invite.kind, invite.status)}
-          />
+      <div className="mt-3 space-y-2">
+        <CallInviteMetric
+          label="当前状态"
+          value={formatGroupCallStatusLabel(invite.kind, invite.status)}
+        />
         {invite.timestampLabel ? (
           <CallInviteMetric label="时间" value={invite.timestampLabel} />
         ) : null}
@@ -3782,28 +3812,10 @@ function GroupCallInviteMessage({
 
       <div className="mt-4 flex items-center justify-between gap-3 border-t border-black/6 pt-3">
         <div className="text-[11px] leading-5 text-[color:var(--text-muted)]">
-          {invite.status === "ended"
-            ? invite.kind === "video"
-              ? "这轮群视频通话已经结束，当前保留为状态记录卡片。"
-              : "这轮群语音通话已经结束，当前保留为状态记录卡片。"
-            : onOpen
-              ? invite.kind === "video"
-                ? "点击可回到当前群视频通话工作台。"
-                : "点击可回到当前群语音通话工作台。"
-              : invite.kind === "video"
-                ? "当前消息已转成群视频通话卡片，便于群成员识别画面状态。"
-                : "当前消息已转成群语音通话卡片，便于群成员识别状态。"}
+          {footerDescription}
         </div>
         <div className="text-[11px] font-medium text-[#2563eb]">
-          {invite.status === "ended"
-            ? "通话结束"
-            : onOpen
-              ? invite.kind === "voice"
-                ? "回到语音"
-                : "回到视频"
-              : invite.kind === "voice"
-                ? "语音中"
-                : "视频中"}
+          {footerActionLabel}
         </div>
       </div>
     </div>
@@ -3818,7 +3830,11 @@ function GroupCallInviteMessage({
       type="button"
       onClick={onOpen}
       className="text-left transition hover:opacity-95"
-      aria-label={`回到 ${invite.groupName} 的群通话工作台`}
+      aria-label={
+        invite.status === "ended"
+          ? `重新发起 ${invite.groupName} 的群通话`
+          : `回到 ${invite.groupName} 的群通话工作台`
+      }
     >
       {card}
     </button>
