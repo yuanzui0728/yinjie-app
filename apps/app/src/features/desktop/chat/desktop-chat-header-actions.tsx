@@ -56,10 +56,14 @@ export function DesktopChatHeaderActions({
         </DesktopChatHeaderButton>
 
         {callMenuOpen ? (
-          <div className="absolute right-0 top-[calc(100%+0.4rem)] z-30 w-36 overflow-hidden rounded-[12px] border border-black/8 bg-white py-1.5 shadow-[0_10px_24px_rgba(15,23,42,0.10)]">
+          <div className="absolute right-0 top-[calc(100%+0.45rem)] z-30 w-40 overflow-hidden rounded-[14px] border border-[color:var(--border-faint)] bg-white/96 p-1.5 shadow-[var(--shadow-overlay)] backdrop-blur-xl">
             <CallMenuButton
               label="语音通话"
-              icon={<Phone size={15} />}
+              icon={
+                <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[rgba(7,193,96,0.10)] text-[color:var(--brand-primary)]">
+                  <Phone size={15} />
+                </span>
+              }
               onClick={() => {
                 setCallMenuOpen(false);
                 onSelectCall("voice");
@@ -67,7 +71,11 @@ export function DesktopChatHeaderActions({
             />
             <CallMenuButton
               label="视频通话"
-              icon={<Video size={15} />}
+              icon={
+                <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-[rgba(7,193,96,0.10)] text-[color:var(--brand-primary)]">
+                  <Video size={15} />
+                </span>
+              }
               onClick={() => {
                 setCallMenuOpen(false);
                 onSelectCall("video");
@@ -106,10 +114,10 @@ function DesktopChatHeaderButton({
       aria-label={label}
       title={label}
       className={cn(
-        "flex h-[34px] w-[34px] items-center justify-center rounded-[8px] border border-transparent text-[color:var(--text-secondary)] transition-colors",
+        "flex h-[36px] w-[36px] items-center justify-center rounded-[10px] border border-transparent bg-transparent text-[color:var(--text-secondary)] transition-[background-color,border-color,box-shadow,color]",
         active
-          ? "border-black/8 bg-white text-[color:var(--text-primary)] shadow-[0_1px_2px_rgba(15,23,42,0.05)]"
-          : "hover:border-black/6 hover:bg-white/80 hover:text-[color:var(--text-primary)]",
+          ? "border-[rgba(7,193,96,0.16)] bg-white text-[color:var(--text-primary)] shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
+          : "hover:border-[color:var(--border-faint)] hover:bg-white/86 hover:text-[color:var(--text-primary)]",
       )}
     >
       {children}
@@ -130,9 +138,9 @@ function CallMenuButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm text-[color:var(--text-primary)] transition hover:bg-[#f5f5f5]"
+      className="flex w-full items-center gap-3 rounded-[12px] px-2 py-2 text-left text-sm text-[color:var(--text-primary)] transition hover:bg-[rgba(7,193,96,0.08)]"
     >
-      <span className="text-[color:var(--text-secondary)]">{icon}</span>
+      <span className="shrink-0 text-[color:var(--text-secondary)]">{icon}</span>
       <span>{label}</span>
     </button>
   );

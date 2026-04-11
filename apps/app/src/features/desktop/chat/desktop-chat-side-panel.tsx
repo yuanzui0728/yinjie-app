@@ -23,12 +23,12 @@ export function DesktopChatSidePanel({
   return (
     <aside
       className={cn(
-        "absolute bottom-0 right-0 top-[65px] z-20 hidden w-[340px] border-l border-black/6 bg-[#f5f5f5] xl:flex xl:flex-col",
+        "absolute bottom-0 right-0 top-[64px] z-20 hidden w-[340px] border-l border-[color:var(--border-faint)] bg-[rgba(249,251,251,0.96)] shadow-[-14px_0_36px_rgba(15,23,42,0.06)] backdrop-blur-xl xl:flex xl:flex-col",
         className,
       )}
       data-mode={mode}
     >
-      <div className="border-b border-black/6 bg-[#f7f7f7] px-4 py-3">
+      <div className="border-b border-[color:var(--border-faint)] bg-white/74 px-4 py-3 backdrop-blur-xl">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="text-[11px] tracking-[0.12em] text-[color:var(--text-dim)]">
@@ -41,7 +41,7 @@ export function DesktopChatSidePanel({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border border-black/6 bg-white text-[color:var(--text-secondary)] transition hover:bg-[#ededed] hover:text-[color:var(--text-primary)]"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.18)] hover:bg-[rgba(7,193,96,0.08)] hover:text-[color:var(--text-primary)]"
             aria-label="关闭侧栏"
           >
             <X size={16} />
@@ -68,7 +68,7 @@ export function DesktopChatSidePanelPlaceholder({
 }) {
   return (
     <div className="flex h-full flex-col items-center justify-center px-8 text-center">
-      <div className="rounded-full bg-[rgba(15,23,42,0.05)] px-3 py-1 text-[11px] tracking-[0.12em] text-[color:var(--text-dim)]">
+      <div className="rounded-full border border-[color:var(--border-faint)] bg-white px-3 py-1 text-[11px] tracking-[0.12em] text-[color:var(--text-dim)] shadow-[var(--shadow-soft)]">
         侧栏面板
       </div>
       <div className="mt-4 text-[15px] font-medium text-[color:var(--text-primary)]">

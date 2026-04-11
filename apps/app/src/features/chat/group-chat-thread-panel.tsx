@@ -680,16 +680,16 @@ export function GroupChatThreadPanel({
   return (
     <div
       className={`flex h-full min-h-0 flex-col ${
-        isDesktop ? "bg-[#f5f5f5]" : "bg-[#ededed]"
+        isDesktop ? "bg-[rgba(245,247,247,0.96)]" : "bg-[#ededed]"
       }`}
     >
       {isDesktop ? (
-        <header className="flex items-center gap-3 border-b border-black/5 bg-[#f3f3f3] px-6 py-3">
+        <header className="flex items-center gap-3 border-b border-[color:var(--border-faint)] bg-white/74 px-6 py-3 backdrop-blur-xl">
           <div className="min-w-0 flex-1 px-1 py-1">
             <button
               type="button"
               onClick={() => onToggleDesktopDetails?.()}
-              className="block w-full rounded-[10px] px-0 py-0 text-left transition hover:bg-white/40"
+              className="block w-full rounded-[10px] px-0 py-0 text-left transition hover:bg-[rgba(7,193,96,0.06)]"
               aria-label="打开群聊信息"
               title="打开群聊信息"
             >
@@ -747,7 +747,7 @@ export function GroupChatThreadPanel({
       )}
 
       {isDesktop ? (
-        <div className="flex items-center gap-3 border-b border-black/5 bg-[#f7f7f7] px-6 py-3">
+        <div className="flex items-center gap-3 border-b border-[color:var(--border-faint)] bg-[rgba(249,251,250,0.92)] px-6 py-3">
           <button
             type="button"
             onClick={() => {
@@ -777,7 +777,7 @@ export function GroupChatThreadPanel({
                 params: { groupId },
               });
             }}
-            className="shrink-0 rounded-full border border-black/8 bg-white px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] transition hover:border-black/10 hover:bg-[#f3f3f3] hover:text-[color:var(--text-primary)]"
+            className="shrink-0 rounded-full border border-[color:var(--border-faint)] bg-white px-3 py-1.5 text-[12px] text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)] hover:text-[color:var(--text-primary)]"
             aria-label="打开群公告页"
             title="打开群公告页"
           >
@@ -810,7 +810,7 @@ export function GroupChatThreadPanel({
         <div
           className={
             isDesktop
-              ? "border-b border-black/5 bg-[#f7f7f7] px-6 py-3"
+              ? "border-b border-[color:var(--border-faint)] bg-[rgba(249,251,250,0.92)] px-6 py-3"
               : "border-b border-black/6 bg-white/82 px-3 py-2.5"
           }
         >

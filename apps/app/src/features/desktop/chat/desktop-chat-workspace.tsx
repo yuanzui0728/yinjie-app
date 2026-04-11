@@ -798,8 +798,8 @@ export function DesktopChatWorkspace({
       ) : null}
 
       {standaloneWindow ? null : (
-        <section className="flex w-[324px] shrink-0 flex-col border-r border-black/6 bg-[#ededed]">
-          <div className="border-b border-black/6 bg-[#f3f3f3] px-3 py-3">
+        <section className="flex w-[324px] shrink-0 flex-col border-r border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.88)]">
+          <div className="border-b border-[color:var(--border-faint)] bg-[rgba(255,255,255,0.78)] px-3 py-3 backdrop-blur-xl">
             <div className="relative z-20 flex items-center gap-2">
               <div className="relative min-w-0 flex-1">
                 <TextField
@@ -807,12 +807,12 @@ export function DesktopChatWorkspace({
                   onChange={(event) => setSearchTerm(event.target.value)}
                   onKeyDown={handleSearchFieldKeyDown}
                   placeholder="搜索"
-                  className="flex-1 rounded-[8px] border-black/6 bg-white py-2 pl-3.5 pr-11 text-[13px] shadow-none hover:bg-white focus:border-black/10 focus:shadow-none"
+                  className="flex-1 rounded-[12px] border-[color:var(--border-faint)] bg-[color:var(--surface-console)] py-2 pl-3.5 pr-11 text-[13px] shadow-none hover:bg-white focus:border-[color:var(--border-brand)] focus:bg-white focus:shadow-none"
                 />
                 <button
                   type="button"
                   onClick={() => openDesktopSearch()}
-                  className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-[7px] text-[color:var(--text-dim)] transition hover:bg-[#f5f5f5] hover:text-[color:var(--text-primary)]"
+                  className="absolute right-1 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-[8px] text-[color:var(--text-dim)] transition hover:bg-[rgba(7,193,96,0.08)] hover:text-[color:var(--text-primary)]"
                   aria-label="在搜一搜中搜索"
                   title="回车或点击进入搜一搜"
                 >
@@ -823,14 +823,14 @@ export function DesktopChatWorkspace({
                 <button
                   type="button"
                   onClick={() => setIsQuickMenuOpen((current) => !current)}
-                  className="flex h-9 w-9 items-center justify-center rounded-[8px] border border-black/6 bg-white text-[color:var(--text-primary)] transition hover:bg-[#f8f8f8]"
+                  className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white text-[color:var(--text-primary)] transition hover:bg-[rgba(7,193,96,0.08)]"
                   aria-label="打开快捷菜单"
                 >
                   <Plus size={17} strokeWidth={2.2} />
                 </button>
 
                 {isQuickMenuOpen ? (
-                  <div className="absolute right-0 top-[calc(100%+0.4rem)] z-20 w-44 overflow-hidden rounded-[12px] border border-black/8 bg-white p-1.5 shadow-[0_12px_28px_rgba(15,23,42,0.14)]">
+                  <div className="absolute right-0 top-[calc(100%+0.4rem)] z-20 w-44 overflow-hidden rounded-[14px] border border-[color:var(--border-faint)] bg-white p-1.5 shadow-[var(--shadow-overlay)]">
                     {desktopQuickActionItems.map((item) => {
                       const Icon = item.icon;
 
@@ -839,9 +839,9 @@ export function DesktopChatWorkspace({
                           key={item.key}
                           type="button"
                           onClick={() => handleQuickAction(item.key)}
-                          className="flex w-full items-center gap-3 rounded-[8px] px-3 py-2.5 text-left text-sm text-[color:var(--text-primary)] transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[#f5f5f5]"
+                          className="flex w-full items-center gap-3 rounded-[10px] px-3 py-2.5 text-left text-sm text-[color:var(--text-primary)] transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[rgba(7,193,96,0.08)]"
                         >
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-[#f3f3f3] text-[color:var(--text-secondary)]">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-[rgba(7,193,96,0.10)] text-[color:var(--brand-primary)]">
                             <Icon size={16} />
                           </div>
                           <span>{item.label}</span>
@@ -854,7 +854,7 @@ export function DesktopChatWorkspace({
             </div>
             {notice ? (
               <InlineNotice
-                className="mt-3 border-black/6 bg-white text-xs"
+                className="mt-3 border-[color:var(--border-faint)] bg-white text-xs"
                 tone="info"
               >
                 {notice}
@@ -880,7 +880,7 @@ export function DesktopChatWorkspace({
 
             <div className="space-y-1">
               {filteredReminderEntries.length ? (
-                <section className="overflow-hidden rounded-[10px] border border-[#dcefe3] bg-[#f8fcf9] p-2 shadow-none">
+                <section className="overflow-hidden rounded-[12px] border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.05)] p-2 shadow-none">
                   <div className="flex items-center justify-between gap-3 px-2 py-1.5">
                     <div className="flex items-center gap-2 text-[13px] font-medium text-[color:var(--text-primary)]">
                       <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#eaf8ef] text-[#07c160]">
@@ -907,7 +907,7 @@ export function DesktopChatWorkspace({
                         return (
                           <section
                             key={group.status}
-                            className="rounded-[12px] border border-white/70 bg-white/78"
+                            className="rounded-[12px] border border-white/80 bg-white/90"
                           >
                             {collapsible ? (
                               <div className="flex items-center justify-between px-3 py-1.5">
@@ -989,7 +989,7 @@ export function DesktopChatWorkspace({
                               )}
                             >
                               <div className="overflow-hidden">
-                                <div className="space-y-0.5 border-t border-white/80 p-1">
+                                <div className="space-y-0.5 border-t border-[color:var(--border-faint)]/70 p-1">
                                   {group.entries.map((entry) => (
                                     <DesktopReminderCard
                                       key={entry.messageId}
@@ -1125,7 +1125,7 @@ export function DesktopChatWorkspace({
           )
         ) : standaloneWindow ? (
           <div className="flex h-full items-center justify-center px-10">
-            <div className="w-full max-w-md rounded-[22px] border border-black/6 bg-white px-8 py-10 shadow-[0_18px_48px_rgba(15,23,42,0.06)]">
+            <div className="w-full max-w-md rounded-[18px] border border-[color:var(--border-faint)] bg-white px-8 py-10 shadow-[var(--shadow-section)]">
               <EmptyState
                 title="这段聊天已经不存在"
                 description="它可能已被隐藏、删除，或者当前上下文已经失效。"
@@ -1133,7 +1133,14 @@ export function DesktopChatWorkspace({
             </div>
           </div>
         ) : (
-          <div className="flex h-full items-center justify-center px-10" />
+          <div className="flex h-full items-center justify-center px-10">
+            <div className="w-full max-w-md rounded-[18px] border border-[color:var(--border-faint)] bg-white/86 px-8 py-10 shadow-[var(--shadow-soft)]">
+              <EmptyState
+                title="选择一段聊天开始工作"
+                description="左侧会话列表用于切换聊天，右侧再按需展开聊天信息或记录。"
+              />
+            </div>
+          </div>
         )}
       </section>
 
@@ -1404,12 +1411,12 @@ function ConversationCardLink({
   ) => void;
 }) {
   const className = active
-    ? "flex items-center gap-3 rounded-[8px] border border-black/6 bg-[#dcdcdc] px-3 py-2.5"
+    ? "flex items-center gap-3 rounded-[10px] border border-[rgba(7,193,96,0.16)] bg-white px-3 py-2.5 shadow-[0_8px_22px_rgba(15,23,42,0.04)]"
     : contextMenuOpen
-      ? "flex items-center gap-3 rounded-[8px] border border-black/6 bg-[#e4e4e4] px-3 py-2.5"
+      ? "flex items-center gap-3 rounded-[10px] border border-[color:var(--border-faint)] bg-white/88 px-3 py-2.5"
       : conversation.isPinned
-        ? "flex items-center gap-3 rounded-[8px] border border-transparent bg-[#e7e7e7] px-3 py-2.5 transition-[background-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[#e1e1e1]"
-        : "flex items-center gap-3 rounded-[8px] border border-transparent bg-transparent px-3 py-2.5 transition-[background-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[#e7e7e7]";
+        ? "flex items-center gap-3 rounded-[10px] border border-transparent bg-[rgba(240,244,242,0.92)] px-3 py-2.5 transition-[background-color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:border-[rgba(7,193,96,0.12)] hover:bg-[rgba(237,243,239,0.96)]"
+        : "flex items-center gap-3 rounded-[10px] border border-transparent bg-transparent px-3 py-2.5 transition-[background-color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:border-[rgba(7,193,96,0.10)] hover:bg-white/80";
   const preview = getConversationPreviewParts(
     conversation,
     localMessageActionState,
@@ -1445,7 +1452,7 @@ function ConversationCardLink({
               {conversation.title}
             </div>
             {isGroupConversation ? (
-              <span className="shrink-0 rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] text-[color:var(--text-muted)]">
+              <span className="shrink-0 rounded-full border border-[rgba(7,193,96,0.12)] bg-[rgba(7,193,96,0.06)] px-1.5 py-0.5 text-[10px] text-[color:var(--text-muted)]">
                 群聊
               </span>
             ) : null}
@@ -1469,7 +1476,7 @@ function ConversationCardLink({
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             {hasMentionAllReminder ? (
-              <span className="shrink-0 rounded-full bg-[rgba(249,115,22,0.14)] px-2 py-0.5 text-[10px] font-medium text-[#c2410c]">
+              <span className="shrink-0 rounded-full border border-[#f3ddba] bg-[#fff8ec] px-2 py-0.5 text-[10px] font-medium text-[#ba740f]">
                 有人@所有人
               </span>
             ) : null}
@@ -1596,8 +1603,8 @@ function renderConversationPreviewText(text: string): ReactNode {
         key={`mention-${index}-${segment.text}`}
         className={
           segment.tone === "all"
-            ? "rounded-[7px] bg-[rgba(249,115,22,0.14)] px-1 py-0.5 text-[#c2410c]"
-            : "rounded-[7px] bg-[rgba(59,130,246,0.12)] px-1 py-0.5 text-[#2563eb]"
+            ? "rounded-[7px] bg-[#fff4df] px-1 py-0.5 text-[#b67206]"
+            : "rounded-[7px] bg-[rgba(7,193,96,0.12)] px-1 py-0.5 text-[#0d8a51]"
         }
       >
         {segment.text}
