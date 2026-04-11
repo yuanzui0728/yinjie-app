@@ -3704,25 +3704,13 @@ function collapseGroupCallMessages(messages: ChatRenderableMessage[]) {
       collapsedMessages.length > 0
         ? collapsedMessages[collapsedMessages.length - 1]
         : null;
-    const currentInvite = resolveGroupCallInvite(message);
-    const previousInvite = previousMessage
-      ? resolveGroupCallInvite(previousMessage)
-      : null;
 
     if (
       previousMessage &&
-      currentInvite &&
-      previousInvite &&
-      previousInvite.status === "ongoing" &&
-      currentInvite.kind === previousInvite.kind &&
-      currentInvite.groupName === previousInvite.groupName
+      (shouldCollapseGroupCallMessage(previousMessage, message) ||
+        shouldCollapseGroupRelayMessage(previousMessage, message))
     ) {
-      redirectedIds.set(previousMessage.id, message.id);
-      for (const [sourceId, targetId] of redirectedIds.entries()) {
-        if (targetId === previousMessage.id) {
-          redirectedIds.set(sourceId, message.id);
-        }
-      }
+      redirectCollapsedMessage(redirectedIds, previousMessage.id, message.id);
       collapsedMessages[collapsedMessages.length - 1] = message;
       continue;
     }
@@ -3751,6 +3739,70 @@ function resolveGroupCallInvite(message: ChatRenderableMessage) {
   }
 
   return invite;
+}
+
+function shouldCollapseGroupCallMessage(
+  previousMessage: ChatRenderableMessage | null,
+  currentMessage: ChatRenderableMessage,
+) {
+  if (!previousMessage) {
+    return false;
+  }
+
+  const currentInvite = resolveGroupCallInvite(currentMessage);
+  const previousInvite = resolveGroupCallInvite(previousMessage);
+
+  return Boolean(
+    currentInvite &&
+      previousInvite &&
+      previousInvite.status === "ongoing" &&
+      currentInvite.kind === previousInvite.kind &&
+      currentInvite.groupName === previousInvite.groupName,
+  );
+}
+
+function shouldCollapseGroupRelayMessage(
+  previousMessage: ChatRenderableMessage | null,
+  currentMessage: ChatRenderableMessage,
+) {
+  if (!previousMessage) {
+    return false;
+  }
+
+  const currentSummary = resolveGroupRelaySummary(currentMessage);
+  const previousSummary = resolveGroupRelaySummary(previousMessage);
+
+  return Boolean(
+    currentSummary &&
+      previousSummary &&
+      currentSummary.sourceGroupName === previousSummary.sourceGroupName,
+  );
+}
+
+function redirectCollapsedMessage(
+  redirectedIds: Map<string, string>,
+  previousMessageId: string,
+  nextMessageId: string,
+) {
+  redirectedIds.set(previousMessageId, nextMessageId);
+  for (const [sourceId, targetId] of redirectedIds.entries()) {
+    if (targetId === previousMessageId) {
+      redirectedIds.set(sourceId, nextMessageId);
+    }
+  }
+}
+
+function resolveGroupRelaySummary(message: ChatRenderableMessage) {
+  return parseGroupRelaySummaryMessage(resolveRenderableMessageText(message));
+}
+
+function resolveRenderableMessageText(message: ChatRenderableMessage) {
+  const isSystem = message.type === "system" || message.senderType === "system";
+  if (message.senderType === "user" && !isSystem) {
+    return extractChatReplyMetadata(message.text).body.trim();
+  }
+
+  return sanitizeDisplayedChatText(message.text);
 }
 
 function GroupCallInviteMessage({
