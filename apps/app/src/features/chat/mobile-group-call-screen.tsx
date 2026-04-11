@@ -70,6 +70,7 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
   const [speakerEnabled, setSpeakerEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(mode === "video");
   const [callTipsDismissed, setCallTipsDismissed] = useState(false);
+  const [leavingScreen, setLeavingScreen] = useState(false);
   const [joinedMemberIds, setJoinedMemberIds] = useState<string[]>([]);
   const [startedAt, setStartedAt] = useState(() => new Date().toISOString());
   const [lastPublishedCounts, setLastPublishedCounts] = useState<{
@@ -124,6 +125,7 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
     setMuted(false);
     setSpeakerEnabled(true);
     setCameraEnabled(mode === "video");
+    setLeavingScreen(false);
     setStartedAt(
       routeState?.recordedAt ??
         routeState?.snapshotRecordedAt ??
@@ -268,6 +270,11 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
   ]);
 
   const handleBack = () => {
+    if (leavingScreen) {
+      return;
+    }
+
+    setLeavingScreen(true);
     void navigate({
       to: "/group/$groupId",
       params: { groupId: resolvedGroupId },
@@ -275,26 +282,38 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
   };
 
   const handleEndCall = async () => {
+    if (leavingScreen) {
+      return;
+    }
+
+    setLeavingScreen(true);
     if (!resolvedGroupId || !groupQuery.data || !totalCount) {
-      handleBack();
+      void navigate({
+        to: "/group/$groupId",
+        params: { groupId: resolvedGroupId },
+      });
       return;
     }
 
     const durationMs = Math.max(Date.now() - new Date(startedAt).getTime(), 0);
-    await endStatusMutation.mutateAsync({
-      activeCount,
-      totalCount,
-      durationMs,
-      startedAt,
-    });
-    void navigate({
-      to: "/group/$groupId",
-      params: { groupId: resolvedGroupId },
-      search:
-        buildChatCallReturnSearch({
-          kind: mode,
-        }) || undefined,
-    });
+    try {
+      await endStatusMutation.mutateAsync({
+        activeCount,
+        totalCount,
+        durationMs,
+        startedAt,
+      });
+      void navigate({
+        to: "/group/$groupId",
+        params: { groupId: resolvedGroupId },
+        search:
+          buildChatCallReturnSearch({
+            kind: mode,
+          }) || undefined,
+      });
+    } catch (error) {
+      setLeavingScreen(false);
+    }
   };
 
   const toggleJoinedState = (memberId: string) => {
@@ -496,6 +515,7 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
           <button
             type="button"
             onClick={handleBack}
+            disabled={leavingScreen}
             className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition active:bg-white/16"
             aria-label="返回群聊"
           >
@@ -550,6 +570,7 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
           <div className="mt-4 flex flex-wrap gap-2.5">
             <CallControlButton
               active={!muted}
+              disabled={leavingScreen}
               label={muted ? "解除静音" : "静音麦克风"}
               icon={muted ? <Mic size={16} /> : <MicOff size={16} />}
               onClick={() => {
@@ -559,6 +580,7 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
             />
             <CallControlButton
               active={speakerEnabled}
+              disabled={leavingScreen}
               label={speakerEnabled ? "扬声器已开" : "开启扬声器"}
               icon={<Volume2 size={16} />}
               onClick={() => {
@@ -569,6 +591,7 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
             {mode === "video" ? (
               <CallControlButton
                 active={cameraEnabled}
+                disabled={leavingScreen}
                 label={cameraEnabled ? "关闭摄像头" : "打开摄像头"}
                 icon={
                   cameraEnabled ? <VideoOff size={16} /> : <Camera size={16} />
@@ -616,6 +639,11 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
           {endStatusMutation.error instanceof Error ? (
             <ErrorBlock message={endStatusMutation.error.message} />
           ) : null}
+          {leavingScreen ? (
+            <InlineNotice tone="info">
+              正在结束当前群通话并返回群聊，请稍候。
+            </InlineNotice>
+          ) : null}
         </div>
 
         <section className="mt-4 min-h-0 flex-1 rounded-[28px] border border-white/10 bg-[rgba(15,23,42,0.76)] px-4 py-4 shadow-[0_24px_60px_rgba(2,6,23,0.34)]">
@@ -645,8 +673,8 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
                 <button
                   key={member.id}
                   type="button"
-                  disabled={member.memberType === "user"}
                   onClick={() => toggleJoinedState(member.memberId)}
+                  disabled={leavingScreen || member.memberType === "user"}
                   className={cn(
                     "rounded-[20px] border px-4 py-3 text-left transition",
                     joined
@@ -655,6 +683,7 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
                     member.memberType === "user"
                       ? "cursor-default"
                       : "active:bg-white/10",
+                    leavingScreen ? "opacity-60" : null,
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -711,7 +740,7 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
               setCallTipsDismissed(true);
               void syncCurrentStatus();
             }}
-            disabled={syncStatusMutation.isPending || !totalCount}
+            disabled={syncStatusMutation.isPending || !totalCount || leavingScreen}
             className="h-12 rounded-full border-white/10 bg-white/8 text-white shadow-none hover:bg-white/12"
           >
             <Users size={16} />
@@ -727,11 +756,13 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
             onClick={() => {
               void handleEndCall();
             }}
-            disabled={endStatusMutation.isPending}
+            disabled={endStatusMutation.isPending || leavingScreen}
             className="h-12 rounded-full border-[#fca5a5]/26 bg-[#ef4444]/14 text-[#fecaca] shadow-none hover:bg-[#ef4444]/20"
           >
             <PhoneOff size={16} />
-            {endStatusMutation.isPending ? "结束中..." : "结束通话"}
+            {leavingScreen || endStatusMutation.isPending
+              ? "结束中..."
+              : "结束通话"}
           </Button>
         </div>
       </div>
@@ -792,11 +823,13 @@ function CallMetricCard({
 
 function CallControlButton({
   active,
+  disabled = false,
   icon,
   label,
   onClick,
 }: {
   active: boolean;
+  disabled?: boolean;
   icon: ReactNode;
   label: string;
   onClick: () => void;
@@ -805,8 +838,9 @@ function CallControlButton({
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       className={cn(
-        "inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm transition",
+        "inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm transition disabled:opacity-55",
         active
           ? "border-[rgba(34,197,94,0.24)] bg-[rgba(34,197,94,0.12)] text-[#bbf7d0]"
           : "border-white/10 bg-white/4 text-white/72",
