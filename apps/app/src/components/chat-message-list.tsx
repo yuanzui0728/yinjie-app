@@ -3774,7 +3774,7 @@ function GroupRelaySummaryMessage({
       type="button"
       onClick={onOpen}
       className="text-left transition hover:opacity-95"
-      aria-label={`继续查看 ${summary.sourceGroupName} 的群接龙`}
+      aria-label={`${ctaCopy.actionLabel}${summary.sourceGroupName}的群接龙结果`}
     >
       {card}
     </button>
