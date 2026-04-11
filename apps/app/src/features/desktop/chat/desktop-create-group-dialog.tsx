@@ -875,11 +875,11 @@ export function DesktopCreateGroupDialog({
                                         toggleMessageSelection(message.id)
                                       }
                                       className={cn(
-                                        "group relative flex w-full items-start gap-3 rounded-[12px] px-2 text-left transition",
+                                        "group relative flex w-full items-start gap-3 rounded-[12px] px-2 text-left transition duration-150 active:translate-y-[1px]",
                                         continuedFromPrevious ? "py-0.5" : "py-1.5",
                                         checked
                                           ? "bg-[rgba(7,193,96,0.05)]"
-                                          : "hover:bg-[#f7f7f7]",
+                                          : "hover:bg-[#f7f7f7] active:bg-[#f3f3f3]",
                                         focused
                                           ? "ring-1 ring-[rgba(7,193,96,0.24)]"
                                           : "",
@@ -893,19 +893,22 @@ export function DesktopCreateGroupDialog({
                                       >
                                         <div
                                           className={cn(
-                                            "h-3 w-3 rounded-full border-2 bg-white transition-colors",
+                                            "h-3 w-3 rounded-full border-2 bg-white transition-colors duration-150",
                                             checked
                                               ? "border-[#07c160] bg-[#07c160]"
                                               : focused
                                                 ? "border-[rgba(7,193,96,0.5)]"
-                                                : "border-[rgba(15,23,42,0.14)]",
+                                                : "border-[rgba(15,23,42,0.14)] group-hover:border-[rgba(15,23,42,0.22)]",
                                           )}
                                         />
                                       </div>
                                       <div
                                         className={cn(
-                                          "w-10 shrink-0 text-[11px] text-[color:var(--text-dim)]",
+                                          "w-10 shrink-0 text-[11px] transition-colors duration-150",
                                           continuedFromPrevious ? "pt-0.5" : "pt-1",
+                                          checked
+                                            ? "text-[#17803d]"
+                                            : "text-[color:var(--text-dim)] group-hover:text-[color:var(--text-muted)]",
                                         )}
                                       >
                                         <span
@@ -938,8 +941,8 @@ export function DesktopCreateGroupDialog({
                                           checked
                                             ? "border-[rgba(7,193,96,0.24)] bg-[rgba(7,193,96,0.10)] shadow-[0_0_0_1px_rgba(7,193,96,0.05)]"
                                             : isGroupLead
-                                              ? "border-black/6 bg-white group-hover:border-black/10 group-hover:bg-[#fcfcfc]"
-                                              : "border-[rgba(15,23,42,0.05)] bg-[#fcfcfc] group-hover:border-[rgba(15,23,42,0.08)] group-hover:bg-[#fafafa]",
+                                              ? "border-black/6 bg-white group-hover:border-black/10 group-hover:bg-[#fcfcfc] group-active:bg-[#f8f8f8]"
+                                              : "border-[rgba(15,23,42,0.05)] bg-[#fcfcfc] group-hover:border-[rgba(15,23,42,0.08)] group-hover:bg-[#fafafa] group-active:bg-[#f5f5f5]",
                                           focused && !checked
                                             ? "shadow-[0_0_0_1px_rgba(7,193,96,0.05)]"
                                             : "",
