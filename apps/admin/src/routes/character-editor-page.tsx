@@ -15,18 +15,18 @@ import {
   InlineNotice,
   LoadingBlock,
   MetricCard,
-  SelectField as UiSelectField,
   SectionHeading,
   StatusPill,
-  TextAreaField as UiTextAreaField,
-  TextField as UiTextField,
-  ToggleChip,
 } from "@yinjie/ui";
 import {
   AdminActionFeedback,
   AdminInfoRows,
   AdminPageHero,
   AdminSectionNav,
+  AdminSelectField as SelectField,
+  AdminTextArea as TextAreaField,
+  AdminTextField as Field,
+  AdminToggle as Toggle,
 } from "../components/admin-workbench";
 import { resolveAdminCoreApiBaseUrl } from "../lib/core-api-base";
 
@@ -279,6 +279,7 @@ export function CharacterEditorPage() {
               />
             </div>
             <TextAreaField
+              className="mt-4"
               label="简介"
               value={draft.bio ?? ""}
               onChange={(value) => setDraft((current) => ({ ...current, bio: value }))}
@@ -300,11 +301,13 @@ export function CharacterEditorPage() {
           <Card id="character-editor-prompt" className="bg-[color:var(--surface-console)]">
             <SectionHeading>提示词与特征</SectionHeading>
             <TextAreaField
+              className="mt-4"
               label="基础提示词"
               value={profile.basePrompt ?? ""}
               onChange={(value) => setDraft((current) => ({ ...current, profile: { ...profile, basePrompt: value } }))}
             />
             <TextAreaField
+              className="mt-4"
               label="系统提示词"
               value={profile.systemPrompt ?? ""}
               onChange={(value) => setDraft((current) => ({ ...current, profile: { ...profile, systemPrompt: value } }))}
@@ -379,11 +382,13 @@ export function CharacterEditorPage() {
           <Card id="character-editor-memory" className="bg-[color:var(--surface-console)]">
             <SectionHeading>推理与记忆</SectionHeading>
             <TextAreaField
+              className="mt-4"
               label="记忆摘要"
               value={profile.memorySummary}
               onChange={(value) => setDraft((current) => ({ ...current, profile: { ...profile, memorySummary: value } }))}
             />
             <TextAreaField
+              className="mt-4"
               label="核心记忆"
               value={profile.memory?.coreMemory ?? ""}
               onChange={(value) =>
@@ -471,6 +476,7 @@ export function CharacterEditorPage() {
               }
             />
             <TextAreaField
+              className="mt-4"
               label="背景"
               value={profile.identity?.background ?? ""}
               onChange={(value) =>
@@ -507,6 +513,7 @@ export function CharacterEditorPage() {
               }
             />
             <TextAreaField
+              className="mt-4"
               label="能力边界说明"
               value={profile.cognitiveBoundaries?.expertiseDescription ?? ""}
               onChange={(value) =>
@@ -602,87 +609,6 @@ function normalizeDraft(draft: CharacterDraft, characterId: string, isNew: boole
       },
     },
   };
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label className="block">
-      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{label}</div>
-      <UiTextField
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
-    </label>
-  );
-}
-
-function TextAreaField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <label className="mt-4 block">
-      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{label}</div>
-      <UiTextAreaField
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="min-h-28"
-      />
-    </label>
-  );
-}
-
-function SelectField({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: Array<string | { value: string; label: string }>;
-}) {
-  return (
-    <label className="block">
-      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{label}</div>
-      <UiSelectField
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {options.map((option) => (
-          <option key={typeof option === "string" ? option : option.value} value={typeof option === "string" ? option : option.value}>
-            {typeof option === "string" ? option : option.label}
-          </option>
-        ))}
-      </UiSelectField>
-    </label>
-  );
-}
-
-function Toggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}) {
-  return <ToggleChip label={label} checked={checked} onChange={(event) => onChange(event.target.checked)} />;
 }
 
 function formatRelationshipType(type: Character["relationshipType"]) {

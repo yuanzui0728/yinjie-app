@@ -8,6 +8,7 @@ import {
   StatusPill,
   TextAreaField,
   TextField,
+  ToggleChip,
   cn,
 } from "@yinjie/ui";
 
@@ -376,6 +377,24 @@ export function AdminValueCard({
     >
       <div className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{label}</div>
       <div className="mt-2 text-sm text-[color:var(--text-secondary)]">{value}</div>
+    </div>
+  );
+}
+
+export function AdminToggle({
+  label,
+  checked,
+  onChange,
+  className,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <ToggleChip label={label} checked={checked} onChange={(event) => onChange(event.target.checked)} />
     </div>
   );
 }
