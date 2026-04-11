@@ -64,6 +64,7 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
   const [muted, setMuted] = useState(false);
   const [speakerEnabled, setSpeakerEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(mode === "video");
+  const [callTipsDismissed, setCallTipsDismissed] = useState(false);
   const [joinedMemberIds, setJoinedMemberIds] = useState<string[]>([]);
   const [startedAt, setStartedAt] = useState(() => new Date().toISOString());
   const [lastPublishedCounts, setLastPublishedCounts] = useState<{
@@ -99,6 +100,8 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
   const hasSyncedStatus =
     lastPublishedCounts?.activeCount === activeCount &&
     lastPublishedCounts?.totalCount === totalCount;
+  const showWorkspacePrimer = !callTipsDismissed && !hasResumeCounts;
+  const showResumeHint = hasResumeCounts && !callTipsDismissed;
 
   useEffect(() => {
     setMuted(false);
@@ -109,6 +112,7 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
         routeState?.snapshotRecordedAt ??
         new Date().toISOString(),
     );
+    setCallTipsDismissed(hasResumeCounts);
     setLastPublishedCounts(resumeCounts);
     panelOpenedReportedRef.current = hasResumeCounts;
     setJoinedMemberIds(
@@ -259,6 +263,7 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
   };
 
   const toggleJoinedState = (memberId: string) => {
+    setCallTipsDismissed(true);
     setJoinedMemberIds((current) =>
       current.includes(memberId)
         ? current.filter((item) => item !== memberId)
@@ -512,13 +517,19 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
               active={!muted}
               label={muted ? "解除静音" : "静音麦克风"}
               icon={muted ? <Mic size={16} /> : <MicOff size={16} />}
-              onClick={() => setMuted((current) => !current)}
+              onClick={() => {
+                setCallTipsDismissed(true);
+                setMuted((current) => !current);
+              }}
             />
             <CallControlButton
               active={speakerEnabled}
               label={speakerEnabled ? "扬声器已开" : "开启扬声器"}
               icon={<Volume2 size={16} />}
-              onClick={() => setSpeakerEnabled((current) => !current)}
+              onClick={() => {
+                setCallTipsDismissed(true);
+                setSpeakerEnabled((current) => !current);
+              }}
             />
             {mode === "video" ? (
               <CallControlButton
@@ -527,17 +538,35 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
                 icon={
                   cameraEnabled ? <VideoOff size={16} /> : <Camera size={16} />
                 }
-                onClick={() => setCameraEnabled((current) => !current)}
+                onClick={() => {
+                  setCallTipsDismissed(true);
+                  setCameraEnabled((current) => !current);
+                }}
               />
             ) : null}
           </div>
         </section>
 
         <div className="mt-4 space-y-3">
+          {showWorkspacePrimer ? (
+            <InlineNotice tone="info">
+              首次进入可先点下方成员席位切换“已加入/待加入”，再点“同步最新状态”把在线人数回写到群聊卡片。
+            </InlineNotice>
+          ) : null}
+          {showResumeHint ? (
+            <InlineNotice tone="info">
+              当前沿用了上一端的群通话快照，可继续调整在线成员后再同步到群聊。
+            </InlineNotice>
+          ) : null}
           <InlineNotice tone="info">
             当前会沿用 {sourceLabel}
             的群通话来源语义，并把在线人数快照继续同步回群聊消息卡片。
           </InlineNotice>
+          {mode === "video" ? (
+            <InlineNotice tone="info">
+              当前群视频页先承载移动工作台状态，本地摄像头开关只影响当前页面提示，不会上传真实画面。
+            </InlineNotice>
+          ) : null}
           {!hasSyncedStatus ? (
             <InlineNotice tone="warning">
               {syncStatusMutation.isPending
@@ -643,6 +672,7 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
             type="button"
             variant="secondary"
             onClick={() => {
+              setCallTipsDismissed(true);
               void syncCurrentStatus();
             }}
             disabled={syncStatusMutation.isPending || !totalCount}
