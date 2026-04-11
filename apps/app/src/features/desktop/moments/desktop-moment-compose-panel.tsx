@@ -46,8 +46,8 @@ export function DesktopMomentComposePanel({
         }
       }}
     >
-      <div className="flex h-full w-full max-w-[380px] flex-col border-l border-black/6 bg-[#f6f6f6] shadow-[-24px_0_48px_rgba(15,23,42,0.08)]">
-        <div className="flex items-center justify-between border-b border-black/6 bg-[#fbfbfb] px-5 py-4">
+      <div className="flex h-full w-full max-w-[380px] flex-col border-l border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.96)] shadow-[-24px_0_48px_rgba(15,23,42,0.08)]">
+        <div className="flex items-center justify-between border-b border-[color:var(--border-faint)] bg-white/82 px-5 py-4 backdrop-blur-xl">
           <div>
             <div className="text-[11px] font-medium tracking-[0.12em] text-[color:var(--text-muted)]">
               发朋友圈
@@ -59,15 +59,15 @@ export function DesktopMomentComposePanel({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-black/6 bg-white text-[color:var(--text-secondary)] transition hover:bg-[#f3f3f3]"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[color:var(--surface-console)]"
             aria-label="关闭发帖面板"
           >
             <X size={16} />
           </button>
         </div>
 
-        <div className="flex-1 px-5 py-5">
-          <div className="rounded-[18px] border border-black/6 bg-white p-5 shadow-[0_14px_36px_rgba(15,23,42,0.06)]">
+        <div className="flex-1 bg-[rgba(242,246,245,0.76)] px-5 py-5">
+          <div className="rounded-[18px] border border-[color:var(--border-faint)] bg-white p-5 shadow-[var(--shadow-card)]">
             <div className="flex items-center gap-3">
               <AvatarChip name={ownerUsername} src={ownerAvatar} />
               <div className="min-w-0">
@@ -84,7 +84,7 @@ export function DesktopMomentComposePanel({
               value={text}
               onChange={(event) => onTextChange(event.target.value)}
               placeholder="写下这一刻的想法..."
-              className="mt-5 min-h-[200px] resize-none rounded-2xl border-black/8 bg-[#fafafa]"
+              className="mt-5 min-h-[200px] resize-none rounded-2xl border-[color:var(--border-faint)] bg-[color:var(--surface-console)]"
               autoFocus
             />
 
@@ -104,6 +104,7 @@ export function DesktopMomentComposePanel({
                 variant="primary"
                 disabled={!text.trim() || createPending}
                 onClick={onCreate}
+                className="bg-[#07c160] text-white shadow-none hover:bg-[#06ad56]"
               >
                 {createPending ? "发布中..." : "发布"}
               </Button>
