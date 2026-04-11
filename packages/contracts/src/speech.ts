@@ -63,6 +63,14 @@ export interface CreateDigitalHumanSessionRequest {
   mode?: DigitalHumanCallMode;
 }
 
+export interface UpdateDigitalHumanProviderStateRequest {
+  renderStatus: DigitalHumanRenderStatus;
+  status?: DigitalHumanSessionStatus;
+  playerUrl?: string;
+  streamUrl?: string;
+  posterUrl?: string;
+}
+
 export interface DigitalHumanSession {
   id: string;
   conversationId: string;

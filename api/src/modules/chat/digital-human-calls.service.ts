@@ -29,7 +29,7 @@ type DigitalHumanSessionRecord = {
   mode: DigitalHumanCallMode;
   provider: 'mock_digital_human' | 'external_digital_human';
   presentationMode: 'mock_stage' | 'provider_stream';
-  transport: 'audio_poster' | 'player_url';
+  transport: 'audio_poster' | 'player_url' | 'stream_url';
   playerUrl?: string;
   streamUrl?: string;
   posterUrl?: string;
@@ -118,6 +118,49 @@ export class DigitalHumanCallsService {
 
   getSession(sessionId: string) {
     return this.serializeSession(this.requireSession(sessionId));
+  }
+
+  updateProviderState(
+    sessionId: string,
+    input: {
+      renderStatus: DigitalHumanRenderStatus;
+      status?: DigitalHumanSessionStatus;
+      playerUrl?: string;
+      streamUrl?: string;
+      posterUrl?: string;
+    },
+  ) {
+    const session = this.requireSession(sessionId);
+    session.renderStatus = input.renderStatus;
+
+    if (input.status) {
+      session.status = input.status;
+    }
+
+    if (typeof input.posterUrl === 'string') {
+      session.posterUrl = input.posterUrl || undefined;
+    }
+
+    if (typeof input.playerUrl === 'string') {
+      session.playerUrl = input.playerUrl || undefined;
+      if (session.playerUrl) {
+        session.presentationMode = 'provider_stream';
+        session.transport = 'player_url';
+      }
+    }
+
+    if (typeof input.streamUrl === 'string') {
+      session.streamUrl = input.streamUrl || undefined;
+      if (session.streamUrl) {
+        session.presentationMode = 'provider_stream';
+        session.transport = 'stream_url';
+      }
+    }
+
+    session.updatedAt = new Date().toISOString();
+    this.sessions.set(session.id, session);
+    this.emitSessionUpdate(session.id);
+    return this.serializeSession(session);
   }
 
   closeSession(sessionId: string) {
