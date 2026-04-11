@@ -3110,6 +3110,7 @@ function DesktopScreenshotEditor({
   } | null>(null);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [previewSpacePressed, setPreviewSpacePressed] = useState(false);
+  const [shortcutHelpEntered, setShortcutHelpEntered] = useState(false);
   const [shortcutDemoGroup, setShortcutDemoGroup] =
     useState<ScreenshotShortcutHelpGroupId | null>(null);
   const [previewPanDrag, setPreviewPanDrag] = useState<{
@@ -3213,8 +3214,15 @@ function DesktopScreenshotEditor({
 
   useEffect(() => {
     if (!shortcutHelpOpen) {
+      setShortcutHelpEntered(false);
       return;
     }
+
+    let animationFrameId = 0;
+    setShortcutHelpEntered(false);
+    animationFrameId = window.requestAnimationFrame(() => {
+      setShortcutHelpEntered(true);
+    });
 
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
@@ -3229,6 +3237,9 @@ function DesktopScreenshotEditor({
 
     window.addEventListener("pointerdown", handlePointerDown);
     return () => {
+      if (animationFrameId) {
+        window.cancelAnimationFrame(animationFrameId);
+      }
       window.removeEventListener("pointerdown", handlePointerDown);
     };
   }, [onShortcutHelpOpenChange, shortcutHelpOpen]);
@@ -3811,7 +3822,14 @@ function DesktopScreenshotEditor({
                   <span>快捷键</span>
                 </button>
                 {shortcutHelpOpen ? (
-                  <div className="absolute right-0 top-full z-30 mt-2 w-[288px] rounded-[14px] border border-white/12 bg-[#181818] p-2.5 text-[11px] text-white/72 shadow-[0_18px_40px_rgba(0,0,0,0.28)]">
+                  <div
+                    className={cn(
+                      "absolute right-0 top-full z-30 mt-2 w-[288px] rounded-[14px] border border-white/12 bg-[#181818] p-2.5 text-[11px] text-white/72 shadow-[0_18px_40px_rgba(0,0,0,0.28)] transition duration-150 ease-out",
+                      shortcutHelpEntered
+                        ? "translate-y-0 opacity-100"
+                        : "-translate-y-1 opacity-0",
+                    )}
+                  >
                     <div className="mb-1.5 flex items-center gap-2 text-[10px] text-white/44">
                       <span className="rounded-full border border-white/10 bg-white/6 px-1.5 py-0.5 leading-none text-white/62">
                         ?
