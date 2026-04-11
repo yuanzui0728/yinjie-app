@@ -3,6 +3,7 @@ import { AppPage } from "@yinjie/ui";
 import { DesktopChatWorkspace } from "../features/desktop/chat/desktop-chat-workspace";
 import { OfficialAccountServiceThread } from "../features/official-accounts/service/official-account-service-thread";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
+import { navigateBackOrFallback } from "../lib/history-back";
 
 export function OfficialAccountServicePage() {
   const { accountId } = useParams({
@@ -20,7 +21,9 @@ export function OfficialAccountServicePage() {
       <OfficialAccountServiceThread
         accountId={accountId}
         onBack={() => {
-          void navigate({ to: "/tabs/chat" });
+          navigateBackOrFallback(() => {
+            void navigate({ to: "/tabs/chat" });
+          });
         }}
       />
     </AppPage>

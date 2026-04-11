@@ -18,6 +18,7 @@ import { EmptyState } from "../components/empty-state";
 import { OfficialArticleCard } from "../components/official-article-card";
 import { DesktopChatWorkspace } from "../features/desktop/chat/desktop-chat-workspace";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
+import { navigateBackOrFallback } from "../lib/history-back";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export function SubscriptionInboxPage() {
@@ -81,7 +82,11 @@ function MobileSubscriptionInboxPage() {
         description="已关注订阅号的最近推送会汇总在这里。"
         actions={
           <Button
-            onClick={() => navigate({ to: "/tabs/chat" })}
+            onClick={() =>
+              navigateBackOrFallback(() => {
+                void navigate({ to: "/tabs/chat" });
+              })
+            }
             variant="ghost"
             size="icon"
             className="text-[color:var(--text-secondary)]"

@@ -27,6 +27,7 @@ import {
 } from "../features/desktop/favorites/desktop-favorites-storage";
 import { DesktopOfficialAccountsWorkspace } from "../features/desktop/official-accounts/desktop-official-accounts-workspace";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
+import { navigateBackOrFallback } from "../lib/history-back";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export function OfficialAccountDetailPage() {
@@ -127,7 +128,11 @@ function MobileOfficialAccountDetailPage({ accountId }: { accountId: string }) {
         }
         actions={
           <Button
-            onClick={() => navigate({ to: "/contacts/official-accounts" })}
+            onClick={() =>
+              navigateBackOrFallback(() => {
+                void navigate({ to: "/contacts/official-accounts" });
+              })
+            }
             variant="ghost"
             size="icon"
             className="text-[color:var(--text-secondary)]"
