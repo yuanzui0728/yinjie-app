@@ -4,6 +4,7 @@ import {
   closeDigitalHumanSession,
   createDigitalHumanSession,
   createDigitalHumanTurn,
+  getDigitalHumanSession,
   type DigitalHumanCallMode,
   type DigitalHumanSession,
   type DigitalHumanTurnResult,
@@ -294,6 +295,44 @@ export function useDigitalHumanCallSession({
     sessionAttempt,
     stopReplyPlayback,
   ]);
+
+  useEffect(() => {
+    if (
+      !enabled ||
+      !session ||
+      session.status === "ended" ||
+      session.presentationMode !== "provider_stream" ||
+      (session.renderStatus !== "queued" && session.renderStatus !== "rendering")
+    ) {
+      return;
+    }
+
+    let disposed = false;
+
+    const syncSession = async () => {
+      try {
+        const nextSession = await getDigitalHumanSession(session.id, baseUrl);
+
+        if (disposed) {
+          return;
+        }
+
+        setSession(nextSession);
+      } catch {
+        // Polling is best-effort. Keep the last snapshot and let manual retry recover.
+      }
+    };
+
+    void syncSession();
+    const intervalId = window.setInterval(() => {
+      void syncSession();
+    }, 3000);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(intervalId);
+    };
+  }, [baseUrl, enabled, session]);
 
   const retrySession = useCallback(() => {
     autoSubmitRecordingRef.current = false;
