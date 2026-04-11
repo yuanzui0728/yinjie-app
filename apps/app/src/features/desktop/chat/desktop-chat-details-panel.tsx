@@ -1928,27 +1928,29 @@ function DesktopGroupMemberBrowserDialog({
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <Button
-              type="button"
-              variant="primary"
-              onClick={onAddMembers}
-              disabled={pending}
-              className="h-8 rounded-[8px] bg-[#07c160] px-3 text-[12px] text-white hover:bg-[#06ad56]"
-            >
-              添加成员
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onRemoveMembers}
-              disabled={pending || !canRemoveMembers}
-              className="h-8 rounded-[8px] border-black/8 bg-white px-3 text-[12px] shadow-none hover:bg-[#efefef]"
-            >
-              移除成员
-            </Button>
-            <div className="text-xs leading-6 text-[color:var(--text-muted)]">
-              先在这里看完整列表，再决定继续加人、减人或跳转资料。
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-black/6 pt-4">
+            <div className="text-[11px] leading-5 text-[color:var(--text-dim)]">
+              先看完整列表，再继续加人、减人或跳转资料。
+            </div>
+            <div className="flex items-center gap-2 rounded-full bg-[#f3f3f3] p-1">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={onRemoveMembers}
+                disabled={pending || !canRemoveMembers}
+                className="h-8 rounded-full border-black/8 bg-white px-3 text-[12px] shadow-none hover:bg-[#efefef]"
+              >
+                移除成员
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                onClick={onAddMembers}
+                disabled={pending}
+                className="h-8 rounded-full bg-[#07c160] px-3 text-[12px] text-white hover:bg-[#06ad56]"
+              >
+                添加成员
+              </Button>
             </div>
           </div>
         </div>
