@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   ArrowLeft,
   Bookmark,
@@ -45,6 +45,9 @@ import { useWorldOwnerStore } from "../store/world-owner-store";
 export function ChannelsPage() {
   const isDesktopLayout = useDesktopLayout();
   const navigate = useNavigate();
+  const hash = useRouterState({
+    select: (state) => state.location.hash,
+  });
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const ownerId = useWorldOwnerStore((state) => state.id);
@@ -54,6 +57,7 @@ export function ChannelsPage() {
   );
   const [favoriteSourceIds, setFavoriteSourceIds] = useState<string[]>([]);
   const [successNotice, setSuccessNotice] = useState("");
+  const routeSelectedPostId = parseDesktopChannelsRouteHash(hash);
 
   const channelsQuery = useQuery({
     queryKey: ["app-channels", baseUrl],
@@ -158,6 +162,7 @@ export function ChannelsPage() {
 
   function toggleFavorite(post: (typeof visiblePosts)[number]) {
     const sourceId = `channels-${post.id}`;
+    const routeHash = buildDesktopChannelsRouteHash(post.id);
     const nextFavorites = favoriteSourceIds.includes(sourceId)
       ? removeDesktopFavorite(sourceId)
       : upsertDesktopFavorite({
@@ -167,7 +172,7 @@ export function ChannelsPage() {
           title: post.authorName,
           description: post.text,
           meta: `视频号 · ${formatTimestamp(post.createdAt)}`,
-          to: "/tabs/channels",
+          to: `/tabs/channels${routeHash ? `#${routeHash}` : ""}`,
           badge: "视频号",
           avatarName: post.authorName,
           avatarSrc: post.authorAvatar,
@@ -185,6 +190,7 @@ export function ChannelsPage() {
         isLoading={channelsQuery.isLoading}
         likePendingPostId={pendingLikePostId}
         posts={visiblePosts}
+        routeSelectedPostId={routeSelectedPostId}
         successNotice={successNotice}
         isPostFavorite={(postId) =>
           favoriteSourceIds.includes(`channels-${postId}`)
@@ -289,6 +295,26 @@ export function ChannelsPage() {
       </div>
     </AppPage>
   );
+}
+
+function parseDesktopChannelsRouteHash(hash: string) {
+  const normalizedHash = hash.startsWith("#") ? hash.slice(1) : hash;
+  if (!normalizedHash) {
+    return null;
+  }
+
+  const params = new URLSearchParams(normalizedHash);
+  return params.get("post")?.trim() || null;
+}
+
+function buildDesktopChannelsRouteHash(postId?: string | null) {
+  if (!postId) {
+    return undefined;
+  }
+
+  const params = new URLSearchParams();
+  params.set("post", postId);
+  return params.toString();
 }
 
 type MobileChannelsViewportProps = {
