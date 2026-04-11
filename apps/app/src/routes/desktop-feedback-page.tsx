@@ -19,7 +19,7 @@ import {
   TextField,
   cn,
 } from "@yinjie/ui";
-import { DesktopEntryShell } from "../features/desktop/desktop-entry-shell";
+import { DesktopUtilityShell } from "../features/desktop/desktop-utility-shell";
 import {
   clearDesktopFeedbackDraft,
   defaultDesktopFeedbackDraft,
@@ -142,235 +142,86 @@ export function DesktopFeedbackPage() {
   }
 
   return (
-    <div className="h-full overflow-auto bg-[#f3f3f3] px-6 py-6">
-      <DesktopEntryShell
-        badge="Feedback"
-        title="意见反馈把问题和上下文一起交付"
-        description="当前没有正式反馈后端，就先把桌面反馈表单、本地记录和诊断摘要做实。这样提问题时不是一句空话，而是能带着分类、复现步骤和实例上下文一起落下。"
-        aside={
-          <div className="space-y-3">
-            <FeedbackStatCard label="最近反馈" value={`${recentCount} 条`} />
-            <FeedbackStatCard
-              label="高优先级"
-              value={`${highPriorityCount} 条`}
-            />
-            <FeedbackStatCard
-              label="当前实例"
-              value={ownerName ?? "世界主人"}
-            />
-            <FeedbackStatCard
-              label="诊断摘要"
-              value={diagnosticSummary}
-              compact
-            />
+    <DesktopUtilityShell
+      title="意见反馈"
+      subtitle={`${recentCount} 条本地反馈记录，${highPriorityCount} 条高优先级`}
+      sidebar={
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="border-b border-[color:var(--border-faint)] px-4 py-4">
+            <div className="text-sm font-medium text-[color:var(--text-primary)]">
+              反馈历史
+            </div>
+            <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+              左侧保留本地草稿和已保存记录，便于继续追问题。
+            </div>
           </div>
-        }
-      >
-        <div className="space-y-5">
-          {notice ? <InlineNotice tone="success">{notice}</InlineNotice> : null}
-          {error ? <InlineNotice tone="info">{error}</InlineNotice> : null}
-          {systemStatusQuery.isError &&
-          systemStatusQuery.error instanceof Error ? (
-            <ErrorBlock message={systemStatusQuery.error.message} />
-          ) : null}
 
-          <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
-            <section className="rounded-[18px] border border-black/6 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
-              <div className="text-sm font-medium text-[color:var(--text-primary)]">
-                提交反馈
+          <div className="min-h-0 flex-1 overflow-auto p-3">
+            <div className="space-y-3">
+              <FeedbackStatCard label="最近反馈" value={`${recentCount} 条`} />
+              <FeedbackStatCard
+                label="高优先级"
+                value={`${highPriorityCount} 条`}
+              />
+              <FeedbackStatCard
+                label="当前实例"
+                value={ownerName ?? "世界主人"}
+              />
+            </div>
+
+            <div className="mt-4 rounded-[14px] border border-[color:var(--border-faint)] bg-white p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
+                <AlertCircle size={16} className="text-[#15803d]" />
+                <span>最近反馈</span>
               </div>
-              <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
-                先把问题说清楚，再决定后面是接
-                webhook、正式接口还是更细分的诊断流程。
+
+              <div className="mt-4 space-y-3">
+                {history.length ? (
+                  history.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-[12px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-4"
+                    >
+                      <div className="flex items-center gap-2 text-xs text-[color:var(--text-muted)]">
+                        <span>{resolveCategoryLabel(item.category)}</span>
+                        <span>·</span>
+                        <span>{resolvePriorityLabel(item.priority)}</span>
+                      </div>
+                      <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
+                        {item.title}
+                      </div>
+                      <div className="mt-2 line-clamp-3 text-xs leading-5 text-[color:var(--text-secondary)]">
+                        {item.detail}
+                      </div>
+                      <div className="mt-3 text-[11px] text-[color:var(--text-muted)]">
+                        {formatTimestamp(item.submittedAt)}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="rounded-[12px] border border-dashed border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-4 text-sm leading-7 text-[color:var(--text-secondary)]">
+                    还没有保存过反馈。先把一个真实问题记下来，后续再接正式提交流。
+                  </div>
+                )}
               </div>
+            </div>
+          </div>
+        </div>
+      }
+      aside={
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="border-b border-[color:var(--border-faint)] px-5 py-4">
+            <div className="text-sm font-medium text-[color:var(--text-primary)]">
+              实例上下文
+            </div>
+            <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+              右侧承接当前实例、诊断摘要和系统状态。
+            </div>
+          </div>
 
-              <div className="mt-4 space-y-4">
-                <div>
-                  <div className="text-xs tracking-[0.14em] text-[color:var(--text-dim)]">
-                    问题分类
-                  </div>
-                  <div className="mt-3 grid gap-3 md:grid-cols-2">
-                    {categoryOptions.map((item) => {
-                      const Icon = item.icon;
-
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => {
-                            setDraft((current) => ({
-                              ...current,
-                              category: item.id,
-                            }));
-                            setError(null);
-                          }}
-                          className={cn(
-                            "rounded-[12px] border p-4 text-left transition",
-                            draft.category === item.id
-                              ? "border-[rgba(7,193,96,0.22)] bg-[rgba(7,193,96,0.08)]"
-                              : "border-black/6 bg-[#fafafa] hover:bg-white",
-                          )}
-                        >
-                          <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
-                            <Icon
-                              size={16}
-                              className={cn(
-                                draft.category === item.id
-                                  ? "text-[#1f8f4f]"
-                                  : "text-[color:var(--text-secondary)]",
-                              )}
-                            />
-                            <span>{item.label}</span>
-                          </div>
-                          <div className="mt-2 text-xs leading-5 text-[color:var(--text-secondary)]">
-                            {item.description}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-[1fr_180px]">
-                  <div>
-                    <div className="mb-2 text-xs tracking-[0.14em] text-[color:var(--text-dim)]">
-                      标题
-                    </div>
-                    <TextField
-                      value={draft.title}
-                      onChange={(event) => {
-                        setDraft((current) => ({
-                          ...current,
-                          title: event.target.value,
-                        }));
-                        setError(null);
-                      }}
-                      placeholder="一句话说明问题，例如：桌面壳切回聊天后导航状态错乱"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="mb-2 text-xs tracking-[0.14em] text-[color:var(--text-dim)]">
-                      优先级
-                    </div>
-                    <div className="flex gap-2">
-                      {priorityOptions.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => {
-                            setDraft((current) => ({
-                              ...current,
-                              priority: item.id,
-                            }));
-                            setError(null);
-                          }}
-                          className={cn(
-                            "flex-1 rounded-[10px] border px-3 py-2 text-xs font-medium transition",
-                            draft.priority === item.id
-                              ? "border-[rgba(7,193,96,0.22)] bg-[rgba(7,193,96,0.08)] text-[#1f8f4f]"
-                              : "border-black/8 bg-white text-[color:var(--text-secondary)]",
-                          )}
-                        >
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <FeedbackTextarea
-                  label="问题描述"
-                  placeholder="描述你看到的现象、涉及的页面或入口。"
-                  value={draft.detail}
-                  onChange={(value) => {
-                    setDraft((current) => ({ ...current, detail: value }));
-                    setError(null);
-                  }}
-                />
-
-                <FeedbackTextarea
-                  label="复现步骤"
-                  placeholder="按 1. 2. 3. 描述怎么触发这个问题。"
-                  value={draft.reproduction}
-                  onChange={(value) => {
-                    setDraft((current) => ({
-                      ...current,
-                      reproduction: value,
-                    }));
-                    setError(null);
-                  }}
-                />
-
-                <FeedbackTextarea
-                  label="期望结果"
-                  placeholder="说明你希望它变成什么样。"
-                  value={draft.expected}
-                  onChange={(value) => {
-                    setDraft((current) => ({ ...current, expected: value }));
-                    setError(null);
-                  }}
-                />
-
-                <label className="flex items-start gap-3 rounded-[12px] border border-black/6 bg-[#fafafa] px-4 py-3">
-                  <input
-                    type="checkbox"
-                    checked={draft.includeSystemSnapshot}
-                    onChange={(event) =>
-                      setDraft((current) => ({
-                        ...current,
-                        includeSystemSnapshot: event.target.checked,
-                      }))
-                    }
-                    className="mt-1 h-4 w-4 rounded border-black/8 text-[#07c160]"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-sm font-medium text-[color:var(--text-primary)]">
-                      附带实例诊断摘要
-                    </div>
-                    <div className="mt-1 text-xs leading-5 text-[color:var(--text-secondary)]">
-                      当前会附带世界连接、数据库、推理网关和实例模式摘要，不包含敏感消息正文。
-                    </div>
-                  </div>
-                </label>
-
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    type="button"
-                    onClick={() => void handleSubmitFeedback()}
-                    className="rounded-[10px] bg-[#07c160] text-white hover:bg-[#06ad56]"
-                  >
-                    <Send size={15} />
-                    保存反馈
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => void handleCopyFeedbackPackage()}
-                    className="rounded-[10px] border-black/8 bg-white shadow-none hover:bg-[#efefef]"
-                  >
-                    <Sparkles size={15} />
-                    复制反馈包
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => {
-                      setDraft({ ...defaultDesktopFeedbackDraft });
-                      clearDesktopFeedbackDraft();
-                      setNotice("反馈草稿已清空。");
-                      setError(null);
-                    }}
-                    className="rounded-[10px] border-black/8 bg-white shadow-none hover:bg-[#efefef]"
-                  >
-                    清空草稿
-                  </Button>
-                </div>
-              </div>
-            </section>
-
-            <section className="space-y-5">
-              <div className="rounded-[18px] border border-black/6 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
+          <div className="min-h-0 flex-1 overflow-auto p-5">
+            <div className="space-y-5">
+              <div className="rounded-[14px] border border-[color:var(--border-faint)] bg-white p-4">
                 <div className="text-sm font-medium text-[color:var(--text-primary)]">
                   当前上下文
                 </div>
@@ -394,7 +245,7 @@ export function DesktopFeedbackPage() {
                 </div>
               </div>
 
-              <div className="rounded-[18px] border border-black/6 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
+              <div className="rounded-[14px] border border-[color:var(--border-faint)] bg-white p-4">
                 <div className="text-sm font-medium text-[color:var(--text-primary)]">
                   诊断摘要
                 </div>
@@ -447,51 +298,220 @@ export function DesktopFeedbackPage() {
                 </div>
               </div>
 
-              <div className="rounded-[18px] border border-black/6 bg-white p-5 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
-                <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
-                  <AlertCircle
-                    size={16}
-                    className="text-[#1f8f4f]"
-                  />
-                  <span>最近反馈</span>
-                </div>
-                <div className="mt-4 space-y-3">
-                  {history.length ? (
-                    history.map((item) => (
-                      <div
-                        key={item.id}
-                        className="rounded-[12px] border border-black/6 bg-[#fafafa] p-4"
-                      >
-                        <div className="flex items-center gap-2 text-xs text-[color:var(--text-muted)]">
-                          <span>{resolveCategoryLabel(item.category)}</span>
-                          <span>·</span>
-                          <span>{resolvePriorityLabel(item.priority)}</span>
-                          <span>·</span>
-                          <span>{formatTimestamp(item.submittedAt)}</span>
-                        </div>
-                        <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
-                          {item.title}
-                        </div>
-                        <div className="mt-2 line-clamp-3 text-xs leading-5 text-[color:var(--text-secondary)]">
-                          {item.detail}
-                        </div>
-                        <div className="mt-3 text-[11px] leading-5 text-[color:var(--text-muted)]">
-                          {item.diagnosticSummary}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="rounded-[12px] border border-dashed border-black/8 bg-[#fafafa] p-5 text-sm leading-7 text-[color:var(--text-secondary)]">
-                      还没有保存过反馈。先把一个真实问题记下来，后续再接正式提交流。
-                    </div>
-                  )}
-                </div>
-              </div>
-            </section>
+              <FeedbackStatCard
+                label="反馈包摘要"
+                value={diagnosticSummary}
+                compact
+              />
+            </div>
           </div>
         </div>
-      </DesktopEntryShell>
-    </div>
+      }
+    >
+      <div className="p-5">
+        {notice ? <InlineNotice tone="success">{notice}</InlineNotice> : null}
+        {error ? <InlineNotice tone="info">{error}</InlineNotice> : null}
+        {systemStatusQuery.isError &&
+        systemStatusQuery.error instanceof Error ? (
+          <div className="mt-4">
+            <ErrorBlock message={systemStatusQuery.error.message} />
+          </div>
+        ) : null}
+
+        <section className="mt-4 rounded-[16px] border border-[color:var(--border-faint)] bg-white p-5">
+          <div className="text-sm font-medium text-[color:var(--text-primary)]">
+            提交反馈
+          </div>
+          <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
+            先把问题描述、复现步骤和期望结果写清楚，再决定后续如何跟进。
+          </div>
+
+          <div className="mt-4 space-y-4">
+            <div>
+              <div className="text-xs tracking-[0.14em] text-[color:var(--text-dim)]">
+                问题分类
+              </div>
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
+                {categoryOptions.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setDraft((current) => ({
+                          ...current,
+                          category: item.id,
+                        }));
+                        setError(null);
+                      }}
+                      className={cn(
+                        "rounded-[12px] border p-4 text-left transition",
+                        draft.category === item.id
+                          ? "border-[rgba(7,193,96,0.22)] bg-[rgba(7,193,96,0.08)]"
+                          : "border-black/6 bg-[#fafafa] hover:bg-white",
+                      )}
+                    >
+                      <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
+                        <Icon
+                          size={16}
+                          className={cn(
+                            draft.category === item.id
+                              ? "text-[#1f8f4f]"
+                              : "text-[color:var(--text-secondary)]",
+                          )}
+                        />
+                        <span>{item.label}</span>
+                      </div>
+                      <div className="mt-2 text-xs leading-5 text-[color:var(--text-secondary)]">
+                        {item.description}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-[1fr_180px]">
+              <div>
+                <div className="mb-2 text-xs tracking-[0.14em] text-[color:var(--text-dim)]">
+                  标题
+                </div>
+                <TextField
+                  value={draft.title}
+                  onChange={(event) => {
+                    setDraft((current) => ({
+                      ...current,
+                      title: event.target.value,
+                    }));
+                    setError(null);
+                  }}
+                  placeholder="一句话说明问题，例如：桌面壳切回聊天后导航状态错乱"
+                />
+              </div>
+
+              <div>
+                <div className="mb-2 text-xs tracking-[0.14em] text-[color:var(--text-dim)]">
+                  优先级
+                </div>
+                <div className="flex gap-2">
+                  {priorityOptions.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setDraft((current) => ({
+                          ...current,
+                          priority: item.id,
+                        }));
+                        setError(null);
+                      }}
+                      className={cn(
+                        "flex-1 rounded-[10px] border px-3 py-2 text-xs font-medium transition",
+                        draft.priority === item.id
+                          ? "border-[rgba(7,193,96,0.22)] bg-[rgba(7,193,96,0.08)] text-[#1f8f4f]"
+                          : "border-black/8 bg-white text-[color:var(--text-secondary)]",
+                      )}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <FeedbackTextarea
+              label="问题描述"
+              placeholder="描述你看到的现象、涉及的页面或入口。"
+              value={draft.detail}
+              onChange={(value) => {
+                setDraft((current) => ({ ...current, detail: value }));
+                setError(null);
+              }}
+            />
+
+            <FeedbackTextarea
+              label="复现步骤"
+              placeholder="按 1. 2. 3. 描述怎么触发这个问题。"
+              value={draft.reproduction}
+              onChange={(value) => {
+                setDraft((current) => ({
+                  ...current,
+                  reproduction: value,
+                }));
+                setError(null);
+              }}
+            />
+
+            <FeedbackTextarea
+              label="期望结果"
+              placeholder="说明你希望它变成什么样。"
+              value={draft.expected}
+              onChange={(value) => {
+                setDraft((current) => ({ ...current, expected: value }));
+                setError(null);
+              }}
+            />
+
+            <label className="flex items-start gap-3 rounded-[12px] border border-black/6 bg-[#fafafa] px-4 py-3">
+              <input
+                type="checkbox"
+                checked={draft.includeSystemSnapshot}
+                onChange={(event) =>
+                  setDraft((current) => ({
+                    ...current,
+                    includeSystemSnapshot: event.target.checked,
+                  }))
+                }
+                className="mt-1 h-4 w-4 rounded border-black/8 text-[#07c160]"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium text-[color:var(--text-primary)]">
+                  附带实例诊断摘要
+                </div>
+                <div className="mt-1 text-xs leading-5 text-[color:var(--text-secondary)]">
+                  当前会附带世界连接、数据库、推理网关和实例模式摘要，不包含敏感消息正文。
+                </div>
+              </div>
+            </label>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                type="button"
+                onClick={() => void handleSubmitFeedback()}
+                className="rounded-[10px] bg-[#07c160] text-white hover:bg-[#06ad56]"
+              >
+                <Send size={15} />
+                保存反馈
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => void handleCopyFeedbackPackage()}
+                className="rounded-[10px] border-black/8 bg-white shadow-none hover:bg-[#efefef]"
+              >
+                <Sparkles size={15} />
+                复制反馈包
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setDraft({ ...defaultDesktopFeedbackDraft });
+                  clearDesktopFeedbackDraft();
+                  setNotice("反馈草稿已清空。");
+                  setError(null);
+                }}
+                className="rounded-[10px] border-black/8 bg-white shadow-none hover:bg-[#efefef]"
+              >
+                清空草稿
+              </Button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </DesktopUtilityShell>
   );
 
   async function handleSubmitFeedback() {
