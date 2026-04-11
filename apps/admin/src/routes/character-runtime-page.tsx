@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
 import {
+  getSystemStatus,
   updateCharacter,
   type Character,
   type ReplyLogicCharacterSnapshot,
@@ -18,6 +19,7 @@ import {
   ToggleChip,
 } from "@yinjie/ui";
 import {
+  AdminCallout,
   AdminActionFeedback,
   AdminCodeBlock as CodeBlock,
   AdminInfoRows,
@@ -32,6 +34,7 @@ import {
 } from "../components/admin-workbench";
 import { adminApi } from "../lib/admin-api";
 import { resolveAdminCoreApiBaseUrl } from "../lib/core-api-base";
+import { buildDigitalHumanAdminSummary } from "../lib/digital-human-admin-summary";
 
 const ACTIVITY_OPTIONS = [
   { value: "", label: "未设置" },
@@ -53,15 +56,20 @@ export function CharacterRuntimePage() {
     queryKey: ["admin-reply-logic-character", baseUrl, characterId],
     queryFn: () => adminApi.getReplyLogicCharacterSnapshot(characterId),
   });
+  const systemStatusQuery = useQuery({
+    queryKey: ["admin-character-runtime-system-status", baseUrl],
+    queryFn: () => getSystemStatus(baseUrl),
+  });
+  const snapshotCharacter = snapshotQuery.data?.character ?? null;
 
   const seedSignature = useMemo(
-    () => (snapshotQuery.data?.character ? JSON.stringify(snapshotQuery.data.character) : ""),
-    [snapshotQuery.data?.character],
+    () => (snapshotCharacter ? JSON.stringify(snapshotCharacter) : ""),
+    [snapshotCharacter],
   );
 
   useEffect(() => {
-    setDraft(snapshotQuery.data?.character ?? null);
-  }, [seedSignature]);
+    setDraft(snapshotCharacter);
+  }, [snapshotCharacter]);
 
   const isDirty = useMemo(() => {
     if (!draft || !seedSignature) {
@@ -105,6 +113,9 @@ export function CharacterRuntimePage() {
 
   const snapshot = snapshotQuery.data;
   const latestRun = snapshot.observability.recentRuns[0] ?? null;
+  const digitalHumanSummary = buildDigitalHumanAdminSummary(
+    systemStatusQuery.data?.digitalHumanGateway,
+  );
 
   function jumpToSection(sectionId: string) {
     if (typeof document === "undefined") {
@@ -159,6 +170,16 @@ export function CharacterRuntimePage() {
           </div>
         </Card>
       </div>
+
+      <AdminCallout
+        tone={digitalHumanSummary.ready ? "success" : "warning"}
+        title={
+          digitalHumanSummary.ready
+            ? "数字人链路已进入可联调状态"
+            : `数字人当前阻塞：${digitalHumanSummary.statusLabel}`
+        }
+        description={`${digitalHumanSummary.description} ${digitalHumanSummary.nextStep}`}
+      />
 
       {saveMutation.isError && saveMutation.error instanceof Error ? (
         <ErrorBlock message={saveMutation.error.message} />
