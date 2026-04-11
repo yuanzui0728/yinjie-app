@@ -1057,6 +1057,21 @@ export function DesktopCreateGroupDialog({
           }}
           className="min-h-0 flex-1 overflow-auto px-3 py-3"
         >
+          <div className="mb-3 flex items-center justify-between gap-3 px-3">
+            <div>
+              <div className="text-[12px] font-medium tracking-[0.08em] text-[color:var(--text-primary)]">
+                联系人列表
+              </div>
+              <div className="mt-1 text-[11px] text-[color:var(--text-dim)]">
+                可用 `↑/↓`、`Alt+字母` 或右侧索引快速定位联系人。
+              </div>
+            </div>
+            <div className="shrink-0 rounded-full bg-[#f3f4f6] px-2.5 py-1 text-[11px] text-[color:var(--text-muted)]">
+              {filteredFriends.length} 位可选
+            </div>
+          </div>
+
+          <div className="rounded-[14px] border border-black/6 bg-[#fcfcfc] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
           {friendsQuery.isLoading ? (
             <LoadingBlock className="px-3 py-4 text-left" label="正在读取联系人..." />
           ) : null}
@@ -1178,6 +1193,7 @@ export function DesktopCreateGroupDialog({
               </div>
             </div>
           ) : null}
+          </div>
         </div>
 
         <div className="flex items-center justify-between gap-4 border-t border-black/6 bg-[linear-gradient(180deg,#fbfbfb_0%,#f4f4f4_100%)] px-6 py-4">
