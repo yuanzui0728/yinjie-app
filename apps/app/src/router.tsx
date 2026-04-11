@@ -193,6 +193,16 @@ const ChatVideoCallPage = lazy(async () => {
   return { default: mod.ChatVideoCallPage };
 });
 
+const GroupVoiceCallPage = lazy(async () => {
+  const mod = await import("./routes/group-voice-call-page");
+  return { default: mod.GroupVoiceCallPage };
+});
+
+const GroupVideoCallPage = lazy(async () => {
+  const mod = await import("./routes/group-video-call-page");
+  return { default: mod.GroupVideoCallPage };
+});
+
 const ChatBackgroundPage = lazy(async () => {
   const mod = await import("./routes/chat-background-page");
   return { default: mod.ChatBackgroundPage };
@@ -523,6 +533,20 @@ const groupChatRoute = createRoute({
   component: GroupChatPage,
 });
 
+const groupVoiceCallRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/group/$groupId/voice-call",
+  beforeLoad: requireWorldReady,
+  component: GroupVoiceCallPage,
+});
+
+const groupVideoCallRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/group/$groupId/video-call",
+  beforeLoad: requireWorldReady,
+  component: GroupVideoCallPage,
+});
+
 const groupChatDetailsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/group/$groupId/details",
@@ -765,6 +789,8 @@ const routeTree = rootRoute.addChildren([
   officialAccountArticleRoute,
   officialAccountServiceRoute,
   groupChatRoute,
+  groupVoiceCallRoute,
+  groupVideoCallRoute,
   groupChatDetailsRoute,
   groupChatNameEditRoute,
   groupChatNicknameEditRoute,
