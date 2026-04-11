@@ -82,7 +82,6 @@ export class DigitalHumanCallsService {
     const sessionId = randomUUID();
     const providerSession = this.digitalHumanProvider.createSession({
       sessionId,
-      characterName: character.name,
       posterUrl: character.avatar || undefined,
     });
     const session: DigitalHumanSessionRecord = {

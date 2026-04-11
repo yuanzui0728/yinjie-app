@@ -27,6 +27,10 @@ export function DigitalHumanPlayer({
     session?.presentationMode === "provider_stream"
       ? "数字人视频流"
       : "内置数字人舞台";
+  const playerUrl =
+    session?.presentationMode === "provider_stream"
+      ? session.playerUrl?.trim() || undefined
+      : undefined;
   const posterSrc = session?.posterUrl || fallbackSrc;
   const streamUrl =
     session?.presentationMode === "provider_stream"
@@ -34,6 +38,39 @@ export function DigitalHumanPlayer({
       : undefined;
 
   if (!streamUrl) {
+    if (playerUrl) {
+      return (
+        <section
+          className={cn(
+            "relative overflow-hidden border text-white",
+            variant === "mobile"
+              ? "rounded-[30px] border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.88),rgba(2,6,23,0.96))] shadow-[0_26px_80px_rgba(15,23,42,0.34)]"
+              : "flex min-h-0 flex-1 rounded-[28px] border-[rgba(15,23,42,0.06)] bg-[linear-gradient(180deg,#111827_0%,#0f172a_46%,#020617_100%)] shadow-[0_22px_60px_rgba(15,23,42,0.22)]",
+          )}
+        >
+          <iframe
+            src={playerUrl}
+            title={`${name} digital human player`}
+            allow="autoplay"
+            className="absolute inset-0 h-full w-full border-0"
+          />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 rounded-t-[22px] bg-[linear-gradient(180deg,rgba(2,6,23,0),rgba(2,6,23,0.78))] px-4 pb-4 pt-10">
+            <div className="rounded-[18px] border border-white/10 bg-[rgba(2,6,23,0.44)] px-4 py-3 backdrop-blur">
+              <div className="text-[11px] uppercase tracking-[0.18em] text-white/42">
+                通话提示
+              </div>
+              <div className="mt-1 text-[13px] leading-6 text-white/78">
+                {statusHint}
+              </div>
+              <div className="mt-2 text-[11px] text-white/52">
+                {providerLabel}
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
     return (
       <DigitalHumanStage
         variant={variant}
