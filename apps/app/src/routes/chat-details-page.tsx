@@ -31,6 +31,7 @@ import { ChatDetailsShell } from "../features/chat-details/chat-details-shell";
 import { ChatDetailsSection } from "../features/chat-details/chat-details-section";
 import { ChatMemberGrid } from "../features/chat-details/chat-member-grid";
 import { ChatSettingRow } from "../features/chat-details/chat-setting-row";
+import { MobileDetailsActionSheet } from "../features/chat-details/mobile-details-action-sheet";
 import { buildCreateGroupRouteHash } from "../lib/create-group-route-state";
 import { requestNotificationPermission } from "../runtime/mobile-bridge";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
@@ -51,6 +52,10 @@ export function ChatDetailsPage() {
     message: string;
   } | null>(null);
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
+  const [managementSheetOpen, setManagementSheetOpen] = useState(false);
+  const [dangerSheetAction, setDangerSheetAction] = useState<
+    "hide" | "clear" | "report" | "block" | null
+  >(null);
   const { entryNotice, guardVideoEntry, resetEntryGuard } =
     useDigitalHumanEntryGuard({
       baseUrl,
@@ -58,6 +63,8 @@ export function ChatDetailsPage() {
 
   useEffect(() => {
     setNotice(null);
+    setManagementSheetOpen(false);
+    setDangerSheetAction(null);
     resetEntryGuard();
   }, [conversationId, resetEntryGuard]);
 
@@ -363,11 +370,50 @@ export function ChatDetailsPage() {
       },
     },
   ];
+  const dangerSheetConfig =
+    dangerSheetAction === "hide"
+      ? {
+          title: "隐藏聊天",
+          description: "该聊天会先从消息列表中隐藏，收到新消息后会再次出现。",
+          confirmLabel: "隐藏聊天",
+          confirmDescription: "不删除现有聊天记录",
+          confirmDanger: false,
+          onConfirm: () => hideMutation.mutate(),
+        }
+      : dangerSheetAction === "clear"
+        ? {
+            title: "清空聊天记录",
+            description: "仅清空当前聊天历史消息，对方资料和会话入口会继续保留。",
+            confirmLabel: "清空聊天记录",
+            confirmDescription: "此操作不可恢复",
+            confirmDanger: true,
+            onConfirm: () => clearMutation.mutate(),
+          }
+        : dangerSheetAction === "report"
+          ? {
+              title: "提交投诉",
+              description: "会以当前会话作为来源，提交一次聊天场景投诉。",
+              confirmLabel: "确认投诉",
+              confirmDescription: "投诉后可继续查看聊天",
+              confirmDanger: true,
+              onConfirm: () => reportMutation.mutate(),
+            }
+          : dangerSheetAction === "block"
+            ? {
+                title: "加入黑名单",
+                description:
+                  "加入黑名单后，将不再接收该角色的互动，也不会再继续这段聊天。",
+                confirmLabel: "加入黑名单",
+                confirmDescription: "该角色后续互动会被拦截",
+                confirmDanger: true,
+                onConfirm: () => blockMutation.mutate(),
+              }
+            : null;
 
   return (
     <ChatDetailsShell
       title={conversation?.title ?? "聊天信息"}
-      subtitle={targetCharacter?.relationship ?? "聊天信息"}
+      subtitle={targetCharacter?.relationship?.trim() || undefined}
       onBack={() => {
         void navigate({
           to: "/chat/$conversationId",
@@ -443,14 +489,15 @@ export function ChatDetailsPage() {
 
       {conversation ? (
         <>
-          <ChatDetailsSection title="聊天成员">
-            <ChatMemberGrid items={memberItems} />
+          <ChatDetailsSection title="聊天成员" variant="wechat">
+            <ChatMemberGrid items={memberItems} variant="wechat" />
           </ChatDetailsSection>
 
-          <ChatDetailsSection title="聊天记录">
+          <ChatDetailsSection title="聊天记录" variant="wechat">
             <div className="divide-y divide-black/5">
               <ChatSettingRow
                 label="查找聊天记录"
+                variant="wechat"
                 onClick={() => {
                   void navigate({
                     to: "/chat/$conversationId/search",
@@ -461,21 +508,24 @@ export function ChatDetailsPage() {
             </div>
           </ChatDetailsSection>
 
-          <ChatDetailsSection title="消息设置">
+          <ChatDetailsSection title="消息设置" variant="wechat">
             <div className="divide-y divide-black/5">
               <ChatSettingRow
                 label="消息免打扰"
+                variant="wechat"
                 checked={conversation?.isMuted ?? false}
                 onToggle={(checked) => muteMutation.mutate(checked)}
               />
               <ChatSettingRow
                 label="置顶聊天"
+                variant="wechat"
                 checked={isPinned}
                 onToggle={(checked) => pinMutation.mutate(checked)}
               />
               <ChatSettingRow
                 label="强提醒"
                 value={strongReminderActive ? strongReminderLabel : undefined}
+                variant="wechat"
                 checked={strongReminderActive}
                 disabled={busy}
                 onToggle={(checked) => strongReminderMutation.mutate(checked)}
@@ -484,6 +534,7 @@ export function ChatDetailsPage() {
           </ChatDetailsSection>
 
           <ChatCallFallbackSection
+            variant="wechat"
             disabled={!targetCharacterId}
             voiceValue="AI 语音"
             videoValue="AI 数字人"
@@ -504,11 +555,12 @@ export function ChatDetailsPage() {
             }}
           />
 
-          <ChatDetailsSection title="聊天扩展">
+          <ChatDetailsSection title="聊天扩展" variant="wechat">
             <div className="divide-y divide-black/5">
               <ChatSettingRow
                 label="保存到通讯录"
                 value={isFriend ? "已添加" : undefined}
+                variant="wechat"
                 disabled={isFriend || !targetCharacterId}
                 onClick={() => saveToContactsMutation.mutate()}
               />
@@ -517,6 +569,7 @@ export function ChatDetailsPage() {
                 value={getChatBackgroundLabel(
                   backgroundQuery.data?.effectiveBackground,
                 )}
+                variant="wechat"
                 onClick={() => {
                   void navigate({
                     to: "/chat/$conversationId/background",
@@ -527,58 +580,16 @@ export function ChatDetailsPage() {
             </div>
           </ChatDetailsSection>
 
-          <ChatDetailsSection title="危险操作">
+          <ChatDetailsSection title="聊天管理" variant="wechat">
             <div className="divide-y divide-black/5">
               <ChatSettingRow
-                label="隐藏聊天"
+                label="更多聊天操作"
+                value={
+                  isBlocked ? "隐藏 / 清空 / 投诉" : "隐藏 / 清空 / 投诉 / 拉黑"
+                }
+                variant="wechat"
                 disabled={busy}
-                onClick={() => {
-                  if (
-                    !window.confirm(
-                      "确认将这段聊天从消息列表中隐藏吗？有新消息时会再次出现。",
-                    )
-                  ) {
-                    return;
-                  }
-                  hideMutation.mutate();
-                }}
-              />
-              <ChatSettingRow
-                label="清空聊天记录"
-                danger
-                disabled={busy}
-                onClick={() => {
-                  if (!window.confirm("确认清空这段聊天记录吗？")) {
-                    return;
-                  }
-                  clearMutation.mutate();
-                }}
-              />
-              <ChatSettingRow
-                label="投诉"
-                danger
-                disabled={busy || !targetCharacterId}
-                onClick={() => {
-                  if (!window.confirm("确认提交投诉吗？")) {
-                    return;
-                  }
-                  reportMutation.mutate();
-                }}
-              />
-              <ChatSettingRow
-                label={isBlocked ? "已加入黑名单" : "加入黑名单"}
-                danger
-                disabled={busy || isBlocked || !targetCharacterId}
-                onClick={() => {
-                  if (
-                    !window.confirm(
-                      "加入黑名单后，将不再接收该角色的互动。确认继续吗？",
-                    )
-                  ) {
-                    return;
-                  }
-                  blockMutation.mutate();
-                }}
+                onClick={() => setManagementSheetOpen(true)}
               />
             </div>
           </ChatDetailsSection>
@@ -619,6 +630,84 @@ export function ChatDetailsPage() {
               <ErrorBlock message={blockMutation.error.message} />
             </div>
           ) : null}
+
+          <MobileDetailsActionSheet
+            open={managementSheetOpen}
+            title="聊天管理"
+            description={`对 ${targetCharacter?.name ?? conversation.title ?? "当前聊天"} 进行隐藏、清空或安全操作。`}
+            onClose={() => setManagementSheetOpen(false)}
+            actions={[
+              {
+                key: "hide",
+                label: "隐藏聊天",
+                description: "先从消息列表隐藏，后续有新消息时再次出现",
+                disabled: busy,
+                onClick: () => {
+                  setManagementSheetOpen(false);
+                  setDangerSheetAction("hide");
+                },
+              },
+              {
+                key: "clear",
+                label: "清空聊天记录",
+                description: "仅清空这段聊天，不影响联系人关系",
+                danger: true,
+                disabled: busy,
+                onClick: () => {
+                  setManagementSheetOpen(false);
+                  setDangerSheetAction("clear");
+                },
+              },
+              {
+                key: "report",
+                label: "投诉",
+                description: "提交一次聊天场景投诉",
+                danger: true,
+                disabled: busy || !targetCharacterId,
+                onClick: () => {
+                  setManagementSheetOpen(false);
+                  setDangerSheetAction("report");
+                },
+              },
+              {
+                key: "block",
+                label: isBlocked ? "已加入黑名单" : "加入黑名单",
+                description: isBlocked
+                  ? "当前已经处于黑名单中"
+                  : "不再接收该角色后续互动",
+                danger: true,
+                disabled: busy || isBlocked || !targetCharacterId,
+                onClick: () => {
+                  setManagementSheetOpen(false);
+                  setDangerSheetAction("block");
+                },
+              },
+            ]}
+          />
+
+          <MobileDetailsActionSheet
+            open={dangerSheetConfig !== null}
+            title={dangerSheetConfig?.title ?? ""}
+            description={dangerSheetConfig?.description}
+            onClose={() => setDangerSheetAction(null)}
+            actions={
+              dangerSheetConfig
+                ? [
+                    {
+                      key: "confirm",
+                      label: dangerSheetConfig.confirmLabel,
+                      description: dangerSheetConfig.confirmDescription,
+                      danger: dangerSheetConfig.confirmDanger,
+                      disabled: busy,
+                      onClick: () => {
+                        setDangerSheetAction(null);
+                        dangerSheetConfig.onConfirm();
+                      },
+                    },
+                  ]
+                : []
+            }
+          />
         </>
       ) : null}
     </ChatDetailsShell>
