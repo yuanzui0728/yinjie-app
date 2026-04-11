@@ -665,6 +665,20 @@ export function DesktopCreateGroupDialog({
         </div>
 
         <div className="border-b border-black/6 px-6 py-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[12px] font-medium tracking-[0.08em] text-[color:var(--text-primary)]">
+                选择成员
+              </div>
+              <div className="mt-1 text-[11px] text-[color:var(--text-dim)]">
+                先补齐要拉进群的人，再决定要不要带上聊天上下文。
+              </div>
+            </div>
+            <div className="shrink-0 rounded-full bg-[#f3f4f6] px-2.5 py-1 text-[11px] text-[color:var(--text-muted)]">
+              已选 {selectedIds.length}
+            </div>
+          </div>
+
           {seedMemberIds.length ? (
             <div className="mb-3 rounded-[10px] border border-[rgba(7,193,96,0.14)] bg-[#f3fff8] px-3 py-2.5 text-[12px] leading-5 text-[#2f7a4c]">
               已按当前聊天默认勾选对方，你可以继续添加其他联系人。
@@ -687,7 +701,7 @@ export function DesktopCreateGroupDialog({
             />
           </label>
 
-          <div className="mt-3 min-h-9">
+          <div className="mt-3 min-h-9 rounded-[10px] bg-[#fafafa] px-3 py-2.5">
             {selectedFriends.length ? (
               <div className="flex flex-wrap gap-2">
                 {selectedFriends.map((item) => {
@@ -718,7 +732,22 @@ export function DesktopCreateGroupDialog({
           </div>
 
           {conversationId ? (
-            <div className="mt-4 rounded-[12px] border border-black/6 bg-[#fafafa] px-4 py-3">
+            <div className="mt-4 border-t border-dashed border-black/8 pt-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[12px] font-medium tracking-[0.08em] text-[color:var(--text-primary)]">
+                    聊天上下文
+                  </div>
+                  <div className="mt-1 text-[11px] text-[color:var(--text-dim)]">
+                    从当前单聊里带几条最近消息进群，减少重新说明成本。
+                  </div>
+                </div>
+                <div className="shrink-0 rounded-full bg-[#f3f4f6] px-2.5 py-1 text-[11px] text-[color:var(--text-muted)]">
+                  {shareHistory ? `已选 ${selectedMessageIds.length}` : "可选"}
+                </div>
+              </div>
+
+              <div className="rounded-[12px] border border-black/6 bg-[#fafafa] px-4 py-3">
               <label className="flex items-start gap-3 text-left">
                 <input
                   type="checkbox"
@@ -1014,6 +1043,7 @@ export function DesktopCreateGroupDialog({
                   ) : null}
                 </div>
               ) : null}
+            </div>
             </div>
           ) : null}
         </div>
