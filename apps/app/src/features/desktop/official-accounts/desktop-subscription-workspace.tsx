@@ -60,6 +60,14 @@ export function DesktopSubscriptionWorkspace() {
   }, [activeArticleId, deliveries]);
 
   useEffect(() => {
+    if (deliveries.length > 0) {
+      return;
+    }
+
+    setActiveArticleId(null);
+  }, [deliveries.length]);
+
+  useEffect(() => {
     const latestDeliveryAt = inboxQuery.data?.summary?.lastDeliveredAt;
     if (
       !inboxQuery.data?.summary?.unreadCount ||
