@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 
 type ProviderSessionInput = {
   sessionId: string;
-  characterName: string;
   posterUrl?: string;
 };
 
@@ -65,7 +64,6 @@ export class MockDigitalHumanProviderAdapter
     return {
       ...this.createSession({
         sessionId: input.sessionId,
-        characterName: input.assistantText,
         posterUrl: input.posterUrl,
       }),
       renderStatus: 'ready',
@@ -319,7 +317,14 @@ export class MockDigitalHumanProviderAdapter
   }
 
   private buildPlayerUrl(sessionId: string) {
-    return `/api/chat/digital-human-calls/sessions/${sessionId}/player`;
+    return `${this.resolvePublicApiBaseUrl()}/api/chat/digital-human-calls/sessions/${sessionId}/player`;
+  }
+
+  private resolvePublicApiBaseUrl() {
+    return (
+      process.env.PUBLIC_API_BASE_URL?.trim() ||
+      `http://localhost:${process.env.PORT ?? '3000'}`
+    );
   }
 }
 
