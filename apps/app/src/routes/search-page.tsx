@@ -66,7 +66,7 @@ export function SearchPage() {
       hash: nextHash,
       replace: true,
     });
-  }, [activeCategory, hash, navigate, searchText]);
+  }, [activeCategory, hash, navigate, routeState.source, searchText]);
 
   function handleCommitSearch(keyword: string) {
     setHistory(pushSearchHistory(keyword));
