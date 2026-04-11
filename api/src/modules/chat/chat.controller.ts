@@ -16,6 +16,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
+import { SystemConfigService } from '../config/config.service';
 import { ChatService } from './chat.service';
 import {
   FavoritesService,
@@ -215,10 +216,8 @@ export class VoiceCallsController {
 export class DigitalHumanCallsController {
   constructor(
     private readonly digitalHumanCallsService: DigitalHumanCallsService,
+    private readonly systemConfigService: SystemConfigService,
   ) {}
-
-  private readonly providerCallbackToken =
-    process.env.DIGITAL_HUMAN_PROVIDER_CALLBACK_TOKEN?.trim() || null;
 
   @Post('sessions')
   createSession(
@@ -286,7 +285,7 @@ export class DigitalHumanCallsController {
   }
 
   @Patch('sessions/:sessionId/provider-state')
-  updateProviderState(
+  async updateProviderState(
     @Param('sessionId') sessionId: string,
     @Body()
     body: {
@@ -300,7 +299,7 @@ export class DigitalHumanCallsController {
     @Headers('authorization') authorization?: string,
     @Query('token') token?: string,
   ) {
-    const expectedToken = this.providerCallbackToken;
+    const expectedToken = await this.resolveProviderCallbackToken();
     if (expectedToken) {
       const bearerToken = authorization?.startsWith('Bearer ')
         ? authorization.slice('Bearer '.length).trim()
@@ -337,6 +336,15 @@ export class DigitalHumanCallsController {
       streamUrl: body.streamUrl?.trim(),
       posterUrl: body.posterUrl?.trim(),
     });
+  }
+
+  private async resolveProviderCallbackToken() {
+    return (
+      (await this.systemConfigService.getConfig(
+        'digital_human_provider_callback_token',
+      )) ??
+      process.env.DIGITAL_HUMAN_PROVIDER_CALLBACK_TOKEN
+    )?.trim() || null;
   }
 
   @Delete('sessions/:sessionId')
