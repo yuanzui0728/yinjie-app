@@ -364,13 +364,13 @@ export function DesktopDirectCallPanel({
   };
 
   return (
-    <section className="flex h-full min-h-0 gap-4 rounded-[18px] border border-black/8 bg-[#f3f3f3] p-4 shadow-[0_20px_48px_rgba(15,23,42,0.10)]">
+    <section className="flex h-full min-h-0 gap-4 rounded-[22px] border border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.88)] p-5 shadow-[var(--shadow-card)]">
       <audio ref={activeCall.audioRef} preload="auto" />
 
-      <div className="flex min-w-0 flex-[1.06] flex-col rounded-[16px] border border-black/6 bg-white p-5">
+      <div className="flex min-w-0 flex-[1.06] flex-col rounded-[20px] border border-[color:var(--border-faint)] bg-white p-5 shadow-[var(--shadow-section)]">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full bg-[rgba(7,193,96,0.10)] px-3 py-1 text-[11px] font-medium tracking-[0.12em] text-[#1f8f4f]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(7,193,96,0.16)] bg-[rgba(7,193,96,0.08)] px-3 py-1 text-[11px] font-medium tracking-[0.12em] text-[#1f8f4f]">
               {kind === "video" ? <Video size={13} /> : <Mic size={13} />}
               {callLabel}
             </div>
@@ -391,7 +391,7 @@ export function DesktopDirectCallPanel({
             type="button"
             variant="secondary"
             onClick={handleClose}
-            className="shrink-0 rounded-[10px] border-black/8 bg-[#f7f7f7] shadow-none hover:bg-[#ededed]"
+            className="shrink-0 rounded-[10px] border-[color:var(--border-faint)] bg-[color:var(--surface-console)] text-[color:var(--text-secondary)] shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-white hover:text-[color:var(--text-primary)]"
           >
             返回聊天
           </Button>
@@ -423,7 +423,7 @@ export function DesktopDirectCallPanel({
           />
         </div>
 
-        <div className="mt-5 rounded-[14px] border border-black/6 bg-[#fafafa] p-4">
+        <div className="mt-5 rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-4">
           <div className="flex flex-wrap gap-3">
             <CallControlButton
               active={!micMuted}
@@ -574,7 +574,7 @@ export function DesktopDirectCallPanel({
                 }
               }}
               disabled={micMuted || activeCall.busy || !speech.supported}
-              className="rounded-[10px] bg-[#07c160] text-white hover:bg-[#06ad56] disabled:bg-[#07c160] disabled:text-white"
+              className="rounded-[10px] bg-[#07c160] text-white shadow-none hover:bg-[#06ad56] disabled:bg-[#07c160] disabled:text-white"
             >
               <Mic size={16} />
               {recordButtonLabel}
@@ -587,7 +587,7 @@ export function DesktopDirectCallPanel({
               void activeCall.replayLastTurn();
             }}
             disabled={!latestTurn}
-            className="rounded-[10px] border-black/8 bg-[#f7f7f7] shadow-none hover:bg-[#ededed]"
+            className="rounded-[10px] border-[color:var(--border-faint)] bg-[color:var(--surface-console)] text-[color:var(--text-secondary)] shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-white hover:text-[color:var(--text-primary)]"
           >
             <RotateCcw size={16} />
             重播上一句
@@ -596,7 +596,7 @@ export function DesktopDirectCallPanel({
             type="button"
             variant="secondary"
             onClick={handleClose}
-            className="rounded-[10px] border-black/8 bg-[#f7f7f7] shadow-none hover:bg-[#ededed]"
+            className="rounded-[10px] border-[color:var(--border-faint)] bg-[color:var(--surface-console)] text-[color:var(--text-secondary)] shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-white hover:text-[color:var(--text-primary)]"
           >
             切回聊天
           </Button>
@@ -605,7 +605,7 @@ export function DesktopDirectCallPanel({
             variant="secondary"
             onClick={handleEndCall}
             disabled={endCallPending}
-            className="rounded-[10px] border-[#e9c3c1] bg-[#fff5f5] text-[#d74b45] shadow-none hover:bg-[#fdeaea]"
+            className="rounded-[10px] border-[rgba(220,38,38,0.14)] bg-[rgba(254,242,242,0.92)] text-[#d74b45] shadow-none hover:border-[rgba(220,38,38,0.2)] hover:bg-[rgba(254,226,226,0.96)]"
           >
             <PhoneOff size={16} />
             {endCallPending ? "结束中..." : "结束通话"}
@@ -613,7 +613,7 @@ export function DesktopDirectCallPanel({
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-[0.94] flex-col rounded-[16px] border border-black/6 bg-white p-5">
+      <div className="flex min-w-0 flex-[0.94] flex-col rounded-[20px] border border-[color:var(--border-faint)] bg-white p-5 shadow-[var(--shadow-section)]">
         <div className="flex items-center justify-between gap-3">
           <div>
             <div className="text-sm font-medium text-[color:var(--text-primary)]">
@@ -627,10 +627,10 @@ export function DesktopDirectCallPanel({
           </div>
           <div
             className={cn(
-              "rounded-full px-3 py-1 text-[11px] font-medium",
+              "rounded-full border px-3 py-1 text-[11px] font-medium",
               activeCall.playbackState === "playing"
-                ? "bg-[rgba(7,193,96,0.10)] text-[#1f8f4f]"
-                : "bg-[rgba(15,23,42,0.06)] text-[color:var(--text-muted)]",
+                ? "border-[rgba(7,193,96,0.16)] bg-[rgba(7,193,96,0.08)] text-[#1f8f4f]"
+                : "border-[color:var(--border-faint)] bg-white text-[color:var(--text-muted)]",
             )}
           >
             {activeCall.playbackState === "playing"
@@ -745,7 +745,7 @@ function CallMetricCard({
   detail: string;
 }) {
   return (
-    <div className="rounded-[12px] border border-black/6 bg-[#fafafa] px-4 py-4">
+    <div className="rounded-[14px] border border-[color:var(--border-faint)] bg-white px-4 py-4 shadow-[var(--shadow-soft)]">
       <div className="text-[11px] tracking-[0.12em] text-[color:var(--text-dim)]">
         {label}
       </div>
@@ -781,8 +781,10 @@ function CallControlButton({
         "inline-flex items-center gap-2 rounded-[10px] border px-3.5 py-2 text-sm transition",
         active
           ? "border-[rgba(7,193,96,0.20)] bg-[rgba(7,193,96,0.08)] text-[#1f8f4f]"
-          : "border-black/8 bg-white text-[color:var(--text-secondary)]",
-        disabled ? "cursor-not-allowed opacity-45" : "hover:bg-[#f5f5f5]",
+          : "border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)]",
+        disabled
+          ? "cursor-not-allowed opacity-45"
+          : "hover:border-[rgba(7,193,96,0.16)] hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]",
       )}
     >
       {icon}
@@ -803,8 +805,8 @@ function CameraPreviewCard({
   videoRef: RefObject<HTMLVideoElement | null>;
 }) {
   return (
-    <section className="overflow-hidden rounded-[12px] border border-black/6 bg-[#fafafa]">
-      <div className="flex items-center justify-between border-b border-black/6 bg-[#f7f7f7] px-4 py-3">
+    <section className="overflow-hidden rounded-[16px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] shadow-[var(--shadow-soft)]">
+      <div className="flex items-center justify-between border-b border-[color:var(--border-faint)] bg-white/82 px-4 py-3 backdrop-blur-xl">
         <div className="text-[11px] tracking-[0.12em] text-[color:var(--text-dim)]">
           我的摄像头预览
         </div>
@@ -860,10 +862,10 @@ function TranscriptCard({
   return (
     <section
       className={cn(
-        "rounded-[12px] px-4 py-4",
+        "rounded-[14px] px-4 py-4 shadow-[var(--shadow-soft)]",
         own
           ? "border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)]"
-          : "border border-black/6 bg-[#fafafa]",
+          : "border border-[color:var(--border-faint)] bg-[color:var(--surface-console)]",
       )}
     >
       <div className="text-[11px] tracking-[0.12em] text-[color:var(--text-dim)]">
