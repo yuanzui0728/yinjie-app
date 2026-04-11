@@ -13,6 +13,8 @@ export function buildGroupRelaySummaryMessage(
   publishedAt?: string,
   launchSource: GroupRelaySummarySource = "desktop",
   publishedSource: GroupRelaySummarySource = launchSource,
+  activeRelayCountLabel?: string | null,
+  pendingMemberCountLabel?: string | null,
 ) {
   return [
     `${GROUP_RELAY_MESSAGE_PREFIX} ${sourceGroupName}`,
@@ -21,6 +23,8 @@ export function buildGroupRelaySummaryMessage(
     publishedAt ? `回填于 ${publishedAt}` : null,
     `发起来源 ${formatGroupRelaySourceLabel(launchSource)}`,
     publishedAt ? `回填来源 ${formatGroupRelaySourceLabel(publishedSource)}` : null,
+    activeRelayCountLabel ? `进行中 ${activeRelayCountLabel}` : null,
+    pendingMemberCountLabel ? `待确认 ${pendingMemberCountLabel}` : null,
     `结果摘要 ${formatGroupRelayResultSummary(status)}`,
     ...buildGroupRelaySummaryLines(status, launchSource),
   ]
@@ -41,56 +45,58 @@ export function parseGroupRelaySummaryMessage(text: string) {
 
   const sourceGroupName =
     header.slice(GROUP_RELAY_MESSAGE_PREFIX.length).trim() || "当前群聊";
-  const statusLabel = parseGroupRelayStatusLabel(lines[1]);
-  const timestampLabel = parseGroupRelayTimestampLabel(
-    lines[1 + Number(Boolean(statusLabel))],
-  );
-  const publishedAtLabel = parseGroupRelayPublishedAtLabel(
-    lines[
-      1 +
-        Number(Boolean(statusLabel)) +
-        Number(Boolean(timestampLabel))
-    ],
-  );
-  const launchSourceLabel = parseGroupRelayLaunchSourceLabel(
-    lines[
-      1 +
-        Number(Boolean(statusLabel)) +
-        Number(Boolean(timestampLabel)) +
-        Number(Boolean(publishedAtLabel))
-    ],
-  );
+  let cursor = 1;
+
+  const statusLabel = parseGroupRelayStatusLabel(lines[cursor]);
+  if (statusLabel) {
+    cursor += 1;
+  }
+
+  const timestampLabel = parseGroupRelayTimestampLabel(lines[cursor]);
+  if (timestampLabel) {
+    cursor += 1;
+  }
+
+  const publishedAtLabel = parseGroupRelayPublishedAtLabel(lines[cursor]);
+  if (publishedAtLabel) {
+    cursor += 1;
+  }
+
+  const launchSourceLabel = parseGroupRelayLaunchSourceLabel(lines[cursor]);
   const launchSource = parseGroupRelaySourceValue(launchSourceLabel);
+  if (launchSourceLabel) {
+    cursor += 1;
+  }
+
   const publishedSourceLabel = parseGroupRelayPublishedSourceLabel(
-    lines[
-      1 +
-        Number(Boolean(statusLabel)) +
-        Number(Boolean(timestampLabel)) +
-        Number(Boolean(publishedAtLabel)) +
-        Number(Boolean(launchSourceLabel))
-    ],
+    lines[cursor],
   );
   const publishedSource = parseGroupRelaySourceValue(publishedSourceLabel);
-  const resultSummaryLabel = parseGroupRelayResultSummaryLabel(
-    lines[
-      1 +
-        Number(Boolean(statusLabel)) +
-        Number(Boolean(timestampLabel)) +
-        Number(Boolean(publishedAtLabel)) +
-        Number(Boolean(launchSourceLabel)) +
-        Number(Boolean(publishedSourceLabel))
-    ],
+  if (publishedSourceLabel) {
+    cursor += 1;
+  }
+
+  const activeRelayCountLabel = parseGroupRelayActiveRelayCountLabel(
+    lines[cursor],
   );
+  if (activeRelayCountLabel) {
+    cursor += 1;
+  }
+
+  const pendingMemberCountLabel = parseGroupRelayPendingMemberCountLabel(
+    lines[cursor],
+  );
+  if (pendingMemberCountLabel) {
+    cursor += 1;
+  }
+
+  const resultSummaryLabel = parseGroupRelayResultSummaryLabel(lines[cursor]);
+  if (resultSummaryLabel) {
+    cursor += 1;
+  }
+
   const summaryLines = lines
-    .slice(
-      1 +
-        Number(Boolean(statusLabel)) +
-        Number(Boolean(timestampLabel)) +
-        Number(Boolean(publishedAtLabel)) +
-        Number(Boolean(launchSourceLabel)) +
-        Number(Boolean(publishedSourceLabel)) +
-        Number(Boolean(resultSummaryLabel)),
-    )
+    .slice(cursor)
     .map((line) => line.replace(/^\d+\.\s*/, "").trim())
     .filter(Boolean);
 
@@ -103,6 +109,8 @@ export function parseGroupRelaySummaryMessage(text: string) {
     launchSource,
     publishedSourceLabel,
     publishedSource,
+    activeRelayCountLabel,
+    pendingMemberCountLabel,
     resultSummaryLabel,
     summaryLines,
   };
@@ -146,6 +154,22 @@ function parseGroupRelayPublishedSourceLabel(line: string | undefined) {
   }
 
   return line.replace(/^回填来源\s+/, "").trim() || null;
+}
+
+function parseGroupRelayActiveRelayCountLabel(line: string | undefined) {
+  if (!line || !line.startsWith("进行中 ")) {
+    return null;
+  }
+
+  return line.replace(/^进行中\s+/, "").trim() || null;
+}
+
+function parseGroupRelayPendingMemberCountLabel(line: string | undefined) {
+  if (!line || !line.startsWith("待确认 ")) {
+    return null;
+  }
+
+  return line.replace(/^待确认\s+/, "").trim() || null;
 }
 
 function parseGroupRelayResultSummaryLabel(line: string | undefined) {
