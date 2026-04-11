@@ -92,10 +92,16 @@ export function MiniProgramsPage() {
     completedTaskIdsByMiniProgramId["group-relay"] ?? [];
   const [successNotice, setSuccessNotice] = useState("");
   const [noticeTone, setNoticeTone] = useState<"success" | "info">("success");
+  const relaySummaryPublishedAt = useMemo(
+    () => new Date().toISOString(),
+    [launchContext?.sourceGroupId],
+  );
   const relaySummaryMessage = launchContext
     ? buildGroupRelaySummaryMessage(
         launchContext.sourceGroupName,
-        resolveGroupRelaySummaryStatus(groupRelayCompletedTaskIds),
+        "published",
+        relaySummaryPublishedAt,
+        relaySummaryPublishedAt,
       )
     : "";
 

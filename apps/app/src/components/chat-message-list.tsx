@@ -3616,6 +3616,12 @@ function GroupRelaySummaryMessage({
       </div>
 
       <div className="mt-3 space-y-2">
+        {summary.timestampLabel ? (
+          <CallInviteMetric label="时间" value={summary.timestampLabel} />
+        ) : null}
+        {summary.publishedAtLabel ? (
+          <CallInviteMetric label="回填时间" value={summary.publishedAtLabel} />
+        ) : null}
         {summary.summaryLines.map((line) => (
           <div
             key={line}
