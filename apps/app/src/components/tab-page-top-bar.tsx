@@ -64,12 +64,11 @@ export function TabPageTopBar({
   return (
     <div
       className={cn(
-        "sticky top-0 z-20 -mx-4 -mt-6 mb-5 overflow-hidden border-b border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,248,239,0.92))] px-4 py-3 backdrop-blur-xl sm:-mx-5 sm:px-5",
+        "sticky top-0 z-20 -mx-4 -mt-6 mb-4 overflow-hidden border-b border-[color:var(--border-faint)] bg-[rgba(247,247,247,0.94)] px-4 py-3 backdrop-blur-xl sm:-mx-5 sm:px-5",
         className,
       )}
       {...props}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-[linear-gradient(180deg,rgba(255,255,255,0.56),rgba(255,255,255,0))]" />
       <div className="relative flex min-h-11 items-center justify-between gap-3">
         {titleAlign === "center" ? (
           <div ref={leftActionsRef} className="shrink-0">
@@ -97,7 +96,10 @@ export function TabPageTopBar({
           {eyebrow ? <div className="truncate text-[11px] uppercase tracking-[0.26em] text-[color:var(--brand-secondary)]">{eyebrow}</div> : null}
           <h1
             className={cn(
-              "truncate text-xl font-semibold tracking-[0.01em] text-current",
+              "truncate tracking-[0.01em] text-current",
+              titleAlign === "center"
+                ? "text-[17px] font-medium"
+                : "text-[22px] font-semibold",
               eyebrow ? "mt-1" : undefined,
               titleClassName,
             )}
