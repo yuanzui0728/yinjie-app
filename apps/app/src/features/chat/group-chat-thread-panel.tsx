@@ -568,6 +568,25 @@ export function GroupChatThreadPanel({
     void loadOlderMessages();
   }, [loadOlderMessages, shouldLoadOlderForUnreadMarker]);
 
+  useEffect(() => {
+    if (
+      !highlightedMessageId ||
+      hasHighlightedMessage ||
+      messagesQuery.isFetching ||
+      !hasOlderMessages
+    ) {
+      return;
+    }
+
+    void loadOlderMessages();
+  }, [
+    hasHighlightedMessage,
+    hasOlderMessages,
+    highlightedMessageId,
+    loadOlderMessages,
+    messagesQuery.isFetching,
+  ]);
+
   const replyPreview = replyDraft
     ? {
         senderName: replyDraft.senderName,

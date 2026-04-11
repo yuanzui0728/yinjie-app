@@ -190,6 +190,25 @@ export function ConversationThreadPanel({
 
   useEffect(() => {
     if (
+      !highlightedMessageId ||
+      hasHighlightedMessage ||
+      loadingOlderMessages ||
+      !hasOlderMessages
+    ) {
+      return;
+    }
+
+    void loadOlderMessages();
+  }, [
+    hasHighlightedMessage,
+    hasOlderMessages,
+    highlightedMessageId,
+    loadOlderMessages,
+    loadingOlderMessages,
+  ]);
+
+  useEffect(() => {
+    if (
       highlightedMessageId ||
       !unreadMarkerMessageId ||
       unreadMarkerScrolledRef.current
