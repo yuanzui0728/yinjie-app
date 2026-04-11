@@ -57,9 +57,11 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
   const [cameraEnabled, setCameraEnabled] = useState(mode === "video");
   const [callTipsDismissed, setCallTipsDismissed] = useState(false);
   const [leavingScreen, setLeavingScreen] = useState(false);
+  const [playbackSettling, setPlaybackSettling] = useState(false);
   const waitingNoticeSentRef = useRef(false);
   const connectedNoticeSentRef = useRef(false);
   const endedNoticeSentRef = useRef(false);
+  const previousPlaybackStateRef = useRef<"idle" | "playing">("idle");
 
   const conversationsQuery = useQuery({
     queryKey: ["app-conversations", baseUrl],
@@ -213,6 +215,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
     !(activeCall.turnMutation.error instanceof Error) &&
     activeCall.playbackState === "idle" &&
     speech.status === "idle" &&
+    !playbackSettling &&
     Boolean(lastAssistantText) &&
     !speech.error &&
     !activeCall.playerError &&
@@ -228,6 +231,51 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
 
     setRecordButtonHolding(false);
   }, [speech.status]);
+
+  useEffect(() => {
+    const previousPlaybackState = previousPlaybackStateRef.current;
+    previousPlaybackStateRef.current = activeCall.playbackState;
+
+    if (!isVideoMode) {
+      if (playbackSettling) {
+        setPlaybackSettling(false);
+      }
+      return;
+    }
+
+    if (
+      previousPlaybackState === "playing" &&
+      activeCall.playbackState === "idle" &&
+      !activeCall.turnMutation.isPending &&
+      !leavingScreen
+    ) {
+      setPlaybackSettling(true);
+      const timeoutId = window.setTimeout(() => {
+        setPlaybackSettling(false);
+      }, 800);
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
+    }
+
+    if (
+      playbackSettling &&
+      (activeCall.playbackState === "playing" ||
+        activeCall.turnMutation.isPending ||
+        speech.status === "listening" ||
+        speech.status === "requesting-permission" ||
+        leavingScreen)
+    ) {
+      setPlaybackSettling(false);
+    }
+  }, [
+    activeCall.playbackState,
+    activeCall.turnMutation.isPending,
+    isVideoMode,
+    leavingScreen,
+    playbackSettling,
+    speech.status,
+  ]);
 
   const characterName =
     characterQuery.data?.name?.trim() ||
@@ -254,6 +302,10 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
 
     if (activeCall.playbackState === "playing") {
       return isVideoMode ? "数字人正在说话" : "正在说话";
+    }
+
+    if (isVideoMode && playbackSettling) {
+      return "准备下一轮";
     }
 
     if (
@@ -303,6 +355,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
     digitalHumanGatewayCopy?.statusLabel,
     isVideoMode,
     lastAssistantText,
+    playbackSettling,
     speech.status,
   ]);
   const statusHint = useMemo(() => {
@@ -322,6 +375,10 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
       return isVideoMode
         ? "当前是半双工数字人通话，等 TA 说完后再开始下一轮。"
         : "当前是半双工模式，等 TA 说完后再开始下一轮。";
+    }
+
+    if (isVideoMode && playbackSettling) {
+      return "这一轮刚结束，等播报收尾后就可以继续按住底部按钮说下一句。";
     }
 
     if (isVideoMode && digitalHumanCall.session?.renderStatus === "rendering") {
@@ -376,11 +433,12 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
     digitalSession?.presentationMode,
     isVideoMode,
     lastAssistantText,
+    playbackSettling,
     speech.status,
   ]);
 
   const handlePressStart = async () => {
-    if (busy || isDesktopLayout || leavingScreen) {
+    if (busy || isDesktopLayout || leavingScreen || playbackSettling) {
       return;
     }
 
@@ -1039,6 +1097,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
               disabled={
                 busy ||
                 leavingScreen ||
+                playbackSettling ||
                 (isVideoMode && digitalHumanCall.sessionState !== "ready")
               }
               className={cn(
@@ -1067,6 +1126,8 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
                       ? "松开发送"
                       : activeCall.playbackState === "playing"
                         ? "播放中"
+                        : isVideoMode && playbackSettling
+                          ? "准备下一轮"
                         : "按住说话"}
                 </span>
                 <span className="text-xs text-white/72">
