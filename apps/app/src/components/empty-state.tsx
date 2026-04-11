@@ -11,12 +11,16 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <AppSection className="px-5 py-9 text-center">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[linear-gradient(135deg,rgba(255,179,71,0.18),rgba(74,222,128,0.14))] text-[13px] font-semibold uppercase tracking-[0.22em] text-[color:var(--brand-primary)]">
-        YJ
+    <AppSection className="rounded-[20px] border-black/6 bg-white px-6 py-10 text-center shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
+      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl border border-black/6 bg-[#f6f6f6] text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--text-secondary)]">
+        空
       </div>
-      <div className="mt-5 text-lg font-medium text-[color:var(--text-primary)]">{title}</div>
-      <p className="mt-3 text-sm leading-7 text-[color:var(--text-secondary)]">{description}</p>
+      <div className="mt-5 text-lg font-medium text-[color:var(--text-primary)]">
+        {title}
+      </div>
+      <p className="mx-auto mt-3 max-w-[28rem] text-sm leading-7 text-[color:var(--text-secondary)]">
+        {description}
+      </p>
       {action ? <div className="mt-5">{action}</div> : null}
     </AppSection>
   );
