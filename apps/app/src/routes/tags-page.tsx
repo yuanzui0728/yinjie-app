@@ -71,7 +71,7 @@ function MobileTagsPage() {
       <TabPageTopBar
         title="标签"
         titleAlign="center"
-        className="mx-0 mt-0 mb-0 border-b border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(255,248,239,0.94))] px-4 py-3 text-[color:var(--text-primary)] shadow-none"
+        className="mx-0 mt-0 mb-0 border-b border-[color:var(--border-faint)] bg-[rgba(247,247,247,0.94)] px-4 py-3 text-[color:var(--text-primary)] shadow-none"
         leftActions={
           <Button
             type="button"
@@ -90,7 +90,7 @@ function MobileTagsPage() {
         }
       >
         <div className="pt-3">
-          <label className="flex items-center gap-2 rounded-[10px] border border-[color:var(--border-faint)] bg-[rgba(255,249,238,0.85)] px-3 py-2.5 text-sm text-[color:var(--text-dim)]">
+          <label className="flex items-center gap-2 rounded-[10px] border border-black/5 bg-white px-3 py-2.5 text-sm text-[color:var(--text-dim)]">
             <Search size={15} className="shrink-0" />
             <input
               type="search"
