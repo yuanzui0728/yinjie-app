@@ -3730,6 +3730,13 @@ function DesktopScreenshotEditor({
                 >
                   适应
                 </Button>
+              </div>
+              <div
+                className={cn(
+                  "flex flex-wrap items-center gap-2 rounded-[12px] border px-2 py-1 transition",
+                  getShortcutDemoClass("edit"),
+                )}
+              >
                 <Button
                   type="button"
                   variant="ghost"
