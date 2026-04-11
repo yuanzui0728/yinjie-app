@@ -6,6 +6,7 @@ export function useScrollAnchor<T extends HTMLElement>(itemCount: number) {
   const ref = useRef<T | null>(null);
   const previousItemCountRef = useRef(itemCount);
   const initializedRef = useRef(false);
+  const suppressNextPendingCountRef = useRef(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
 
@@ -42,6 +43,10 @@ export function useScrollAnchor<T extends HTMLElement>(itemCount: number) {
       setPendingCount(0);
     },
   );
+
+  const suppressNextPendingCount = useEffectEvent(() => {
+    suppressNextPendingCountRef.current = true;
+  });
 
   useEffect(() => {
     const element = ref.current;
@@ -86,6 +91,11 @@ export function useScrollAnchor<T extends HTMLElement>(itemCount: number) {
       return;
     }
 
+    if (suppressNextPendingCountRef.current) {
+      suppressNextPendingCountRef.current = false;
+      return;
+    }
+
     setPendingCount((current) => current + addedCount);
     setIsAtBottom(false);
   }, [itemCount, scrollToBottom]);
@@ -94,6 +104,7 @@ export function useScrollAnchor<T extends HTMLElement>(itemCount: number) {
     ref,
     isAtBottom,
     pendingCount,
+    suppressNextPendingCount,
     scrollToBottom,
   };
 }
