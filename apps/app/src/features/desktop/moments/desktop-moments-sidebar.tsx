@@ -78,7 +78,7 @@ export function DesktopMomentsSidebar({
 
   if (mode === "detail" && selectedMoment) {
     return (
-      <aside className="flex w-[320px] shrink-0 flex-col bg-[rgba(255,252,247,0.96)]">
+      <aside className="flex w-[320px] shrink-0 flex-col border-l border-black/6 bg-[#f7f7f7]">
         <DesktopMomentDetailPanel
           commentDraft={commentDrafts[selectedMoment.id] ?? ""}
           commentLoading={commentPendingMomentId === selectedMoment.id}
@@ -99,10 +99,10 @@ export function DesktopMomentsSidebar({
 
   if (mode === "author" && activeAuthorSummary) {
     return (
-      <aside className="flex w-[320px] shrink-0 flex-col bg-[rgba(255,252,247,0.96)]">
+      <aside className="flex w-[320px] shrink-0 flex-col border-l border-black/6 bg-[#f7f7f7]">
         <div className="flex h-full min-h-0 flex-col">
-          <div className="border-b border-[rgba(15,23,42,0.06)] px-5 py-4">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+          <div className="border-b border-black/6 px-5 py-4">
+            <div className="text-[11px] font-medium text-[color:var(--text-muted)]">
               作者时间线
             </div>
             <div className="mt-1 text-[16px] font-semibold text-[color:var(--text-primary)]">
@@ -117,7 +117,7 @@ export function DesktopMomentsSidebar({
             ref={authorScrollViewportRef}
             className="min-h-0 flex-1 overflow-auto px-5 py-5"
           >
-            <div className="rounded-[18px] border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-[var(--shadow-soft)]">
+            <div className="rounded-[18px] border border-black/6 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
               <div className="flex items-center gap-4">
                 <AvatarChip
                   name={activeAuthorSummary.authorName}
@@ -131,10 +131,10 @@ export function DesktopMomentsSidebar({
                     </div>
                     <span
                       className={cn(
-                        "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium tracking-[0.14em]",
+                        "inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-medium",
                         activeAuthorSummary.authorType === "character"
                           ? "bg-[rgba(56,189,248,0.12)] text-sky-700"
-                          : "bg-[rgba(249,115,22,0.10)] text-[color:var(--brand-primary)]",
+                          : "bg-[rgba(15,23,42,0.06)] text-[color:var(--text-secondary)]",
                       )}
                     >
                       {activeAuthorSummary.authorType === "character" ? (
@@ -189,7 +189,7 @@ export function DesktopMomentsSidebar({
               </div>
             </div>
 
-            <div className="mt-4 rounded-[18px] border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-[var(--shadow-soft)]">
+            <div className="mt-4 rounded-[18px] border border-black/6 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
               <div className="text-[14px] font-semibold text-[color:var(--text-primary)]">
                 最近动态
               </div>
@@ -199,7 +199,7 @@ export function DesktopMomentsSidebar({
                     key={moment.id}
                     type="button"
                     onClick={() => onSelectMoment(moment.id)}
-                    className="w-full rounded-[14px] border border-[rgba(15,23,42,0.06)] bg-[rgba(248,250,252,0.98)] px-3.5 py-3 text-left transition-[border-color,background-color] hover:border-[rgba(249,115,22,0.12)] hover:bg-white"
+                    className="w-full rounded-[14px] border border-black/6 bg-[#f8f8f8] px-3.5 py-3 text-left transition-[border-color,background-color] hover:border-black/10 hover:bg-white"
                   >
                     <div className="line-clamp-2 text-[13px] leading-6 text-[color:var(--text-primary)]">
                       {moment.text}
@@ -219,10 +219,10 @@ export function DesktopMomentsSidebar({
   }
 
   return (
-    <aside className="flex w-[320px] shrink-0 flex-col bg-[rgba(255,252,247,0.96)]">
+    <aside className="flex w-[320px] shrink-0 flex-col border-l border-black/6 bg-[#f7f7f7]">
       <div className="flex h-full min-h-0 flex-col">
-        <div className="border-b border-[rgba(15,23,42,0.06)] px-5 py-4">
-          <div className="text-[11px] uppercase tracking-[0.18em] text-[color:var(--text-dim)]">
+        <div className="border-b border-black/6 px-5 py-4">
+          <div className="text-[11px] font-medium text-[color:var(--text-muted)]">
             概览
           </div>
           <div className="mt-1 text-[16px] font-semibold text-[color:var(--text-primary)]">
@@ -231,7 +231,7 @@ export function DesktopMomentsSidebar({
         </div>
 
         <div className="min-h-0 flex-1 overflow-auto px-5 py-5">
-          <div className="rounded-[18px] border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-[var(--shadow-soft)]">
+          <div className="rounded-[18px] border border-black/6 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
             <div className="flex items-center gap-4">
               <AvatarChip name={ownerUsername} src={ownerAvatar} size="lg" />
               <div className="min-w-0">
@@ -254,7 +254,7 @@ export function DesktopMomentsSidebar({
             </Button>
           </div>
 
-          <div className="mt-4 rounded-[18px] border border-[rgba(15,23,42,0.06)] bg-white p-4 shadow-[var(--shadow-soft)]">
+          <div className="mt-4 rounded-[18px] border border-black/6 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
             <div className="flex items-center justify-between gap-3">
               <div className="text-[14px] font-semibold text-[color:var(--text-primary)]">
                 最近作者
@@ -273,8 +273,8 @@ export function DesktopMomentsSidebar({
                   className={cn(
                     "flex w-full items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition-[border-color,background-color]",
                     activeAuthorId === author.authorId
-                      ? "border-[rgba(16,185,129,0.16)] bg-[rgba(236,253,245,0.92)]"
-                      : "border-[rgba(15,23,42,0.06)] bg-[rgba(248,250,252,0.98)] hover:border-[rgba(249,115,22,0.12)] hover:bg-white",
+                      ? "border-[#b7e4c7] bg-[#edf8f0]"
+                      : "border-black/6 bg-[#f8f8f8] hover:border-black/10 hover:bg-white",
                   )}
                 >
                   <AvatarChip
@@ -300,7 +300,7 @@ export function DesktopMomentsSidebar({
                   ) : (
                     <UserRound
                       size={14}
-                      className="shrink-0 text-[color:var(--brand-primary)]"
+                      className="shrink-0 text-[color:var(--text-secondary)]"
                     />
                   )}
                 </button>
@@ -315,8 +315,8 @@ export function DesktopMomentsSidebar({
 
 function SidebarMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[14px] bg-[rgba(248,250,252,0.98)] px-4 py-4">
-      <div className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-dim)]">
+    <div className="rounded-[14px] border border-black/6 bg-[#f8f8f8] px-4 py-4">
+      <div className="text-[11px] font-medium text-[color:var(--text-muted)]">
         {label}
       </div>
       <div className="mt-2 text-[15px] font-semibold text-[color:var(--text-primary)]">
