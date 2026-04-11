@@ -448,6 +448,52 @@ export function AdminPillSelectField({
   );
 }
 
+export function AdminInlineTextField({
+  value,
+  onChange,
+  placeholder,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+}) {
+  return (
+    <TextField
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      placeholder={placeholder}
+      className={cn("rounded-2xl", className)}
+    />
+  );
+}
+
+export function AdminInlineSelectField({
+  value,
+  onChange,
+  children,
+  className,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <SelectField
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      className={cn(
+        "rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-input)] px-4 py-3 text-sm text-[color:var(--text-primary)]",
+        className,
+      )}
+    >
+      {children}
+    </SelectField>
+  );
+}
+
 export function AdminTextField({
   label,
   value,
