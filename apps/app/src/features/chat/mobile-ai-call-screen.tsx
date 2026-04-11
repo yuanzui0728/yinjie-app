@@ -594,6 +594,16 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
       : hasVideoPlaybackFailure
         ? "数字人回复已经生成，但浏览器没有自动播报。你可以立即播放这一句，或继续下一轮对话。"
         : null;
+  const hasCallProgress =
+    Boolean(lastUserTranscript) ||
+    Boolean(lastAssistantText) ||
+    speech.status === "listening" ||
+    speech.status === "requesting-permission" ||
+    activeCall.turnMutation.isPending;
+  const showReplayShortcut = Boolean(lastAssistantText);
+  const showBackShortcut = hasCallProgress || leavingScreen;
+  const showBottomShortcutRow =
+    (isVideoMode || showReplayShortcut || showBackShortcut) && !leavingScreen;
 
   useEffect(() => {
     if (
@@ -1103,45 +1113,47 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
         </div>
 
           <div className="mt-auto pt-6">
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {isVideoMode ? (
-              <button
-                type="button"
-                onClick={() => setCameraEnabled((current) => !current)}
-                disabled={leavingScreen}
-                className="flex h-12 min-w-[120px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition disabled:opacity-45"
-              >
-                {cameraEnabled ? <CameraOff size={16} /> : <Camera size={16} />}
-                {cameraEnabled ? "关闭摄像头" : "打开摄像头"}
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => {
-                void activeCall.replayLastTurn();
-              }}
-              disabled={
-                !lastAssistantText ||
-                activeCall.turnMutation.isPending ||
-                leavingScreen
-              }
-              className="flex h-12 min-w-[120px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition disabled:opacity-45"
-            >
-              <RotateCcw size={16} />
-              重播上一句
-            </button>
-            <button
-              type="button"
-              onClick={handleBack}
-              disabled={leavingScreen}
-              className="flex h-12 min-w-[120px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition disabled:opacity-45"
-            >
-              <MessageCircleMore size={16} />
-              {leavingScreen ? "返回中..." : "切回聊天"}
-            </button>
-          </div>
+          {showBottomShortcutRow ? (
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {isVideoMode ? (
+                <button
+                  type="button"
+                  onClick={() => setCameraEnabled((current) => !current)}
+                  disabled={leavingScreen}
+                  className="flex h-12 min-w-[120px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition disabled:opacity-45"
+                >
+                  {cameraEnabled ? <CameraOff size={16} /> : <Camera size={16} />}
+                  {cameraEnabled ? "关闭摄像头" : "打开摄像头"}
+                </button>
+              ) : null}
+              {showReplayShortcut ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void activeCall.replayLastTurn();
+                  }}
+                  disabled={activeCall.turnMutation.isPending || leavingScreen}
+                  className="flex h-12 min-w-[120px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition disabled:opacity-45"
+                >
+                  <RotateCcw size={16} />
+                  重播上一句
+                </button>
+              ) : null}
+              {showBackShortcut ? (
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  disabled={leavingScreen}
+                  className="flex h-12 min-w-[120px] items-center justify-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 text-sm text-white transition disabled:opacity-45"
+                >
+                  <MessageCircleMore size={16} />
+                  {leavingScreen ? "返回中..." : "切回聊天"}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
 
-          <div className="mt-5 flex justify-center">
+          <div className={showBottomShortcutRow ? "mt-5 flex justify-center" : "mt-3 flex justify-center"}>
             <button
               type="button"
               onPointerDown={(event) => {
