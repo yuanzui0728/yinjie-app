@@ -717,6 +717,58 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
               ? "border-[#60a5fa]/28 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.76),rgba(37,99,235,0.96))] shadow-[0_30px_80px_rgba(59,130,246,0.3)]"
               : "border-[#34d399]/28 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.72),rgba(5,150,105,0.96))] shadow-[0_30px_80px_rgba(16,185,129,0.3)]",
   );
+  const userBubblePlaceholder = useMemo(() => {
+    if (callPhase === "error") {
+      return "上一轮没有顺利完成，准备好后可以重新录这一句。";
+    }
+
+    if (callPhase === "listening") {
+      return "正在听你这一句，松开后会立刻发出。";
+    }
+
+    if (callPhase === "thinking") {
+      return "刚刚那句已经发出，正在等待这一轮回复。";
+    }
+
+    if (callPhase === "speaking") {
+      return "这一轮先到这里，等 TA 说完后再继续。";
+    }
+
+    if (callPhase === "followup") {
+      return "这一轮已经完成，准备好后继续按住底部按钮说下一句。";
+    }
+
+    if (isVideoMode) {
+      return "按住底部按钮说第一句，画面会保持在当前视频通话里。";
+    }
+
+    return "按住底部按钮，说出你想对 TA 说的话。";
+  }, [callPhase, isVideoMode]);
+  const assistantBubblePlaceholder = useMemo(() => {
+    if (callPhase === "error") {
+      return "这一轮的回复暂时没有顺利回来，恢复后会继续显示在这里。";
+    }
+
+    if (callPhase === "connecting") {
+      return "数字人接通后，会先在这里显示这一轮回复，再通过语音和画面回应你。";
+    }
+
+    if (callPhase === "thinking") {
+      return "正在整理这一轮回复，马上就会回到这里。";
+    }
+
+    if (callPhase === "speaking") {
+      return "TA 正在说这一轮回复，等说完后可以继续下一句。";
+    }
+
+    if (callPhase === "followup") {
+      return "这一轮回复已经结束，下一轮内容也会继续显示在这里。";
+    }
+
+    return isVideoMode
+      ? "数字人的回复会先显示在这里，再通过语音自动播报。"
+      : "TA 的回复会在这里显示，并自动播报给你听。";
+  }, [callPhase, isVideoMode]);
 
   useEffect(() => {
     if (
@@ -1225,21 +1277,13 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
             text={
               activeCall.turnMutation.isPending
                 ? speech.displayText || "本轮语音已发出，正在整理..."
-                : lastUserTranscript ||
-                  (isVideoMode
-                    ? "按住底部按钮说话，画面会保持在当前视频通话里。"
-                    : "按住底部按钮，说出你想对 TA 说的话。")
+                : lastUserTranscript || userBubblePlaceholder
             }
             align="right"
           />
           <CallBubble
             label={characterName}
-            text={
-              lastAssistantText ||
-              (isVideoMode
-                ? "数字人的回复会在这里显示，并通过语音自动播报。"
-                : "TA 的回复会在这里显示，并自动播报给你听。")
-            }
+            text={lastAssistantText || assistantBubblePlaceholder}
             align="left"
           />
         </div>
