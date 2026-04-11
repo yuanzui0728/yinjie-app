@@ -1067,11 +1067,17 @@ export function DesktopCreateGroupDialog({
               </div>
             </div>
             <div className="shrink-0 rounded-full bg-[#f3f4f6] px-2.5 py-1 text-[11px] text-[color:var(--text-muted)]">
-              {filteredFriends.length} 位可选
+              {searchTerm.trim()
+                ? `${filteredFriends.length} 条结果`
+                : `${filteredFriends.length} 位可选`}
             </div>
           </div>
 
           <div className="rounded-[14px] border border-black/6 bg-[#fcfcfc] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
+          <div className="mb-2 flex items-center justify-between gap-3 rounded-[10px] bg-white/80 px-3 py-2 text-[11px] text-[color:var(--text-dim)]">
+            <span>{searchTerm.trim() ? `搜索：${searchTerm.trim()}` : "联系人目录"}</span>
+            <span>{searchTerm.trim() ? "按名称 / 备注 / 关系筛选" : "按首字母分组"}</span>
+          </div>
           {friendsQuery.isLoading ? (
             <LoadingBlock className="px-3 py-4 text-left" label="正在读取联系人..." />
           ) : null}
@@ -1118,7 +1124,7 @@ export function DesktopCreateGroupDialog({
                     friendSectionRefs.current[section.key] = node;
                   }}
                 >
-                  <div className="mb-1 px-2 text-[11px] font-medium tracking-[0.12em] text-[color:var(--text-dim)]">
+                  <div className="sticky top-0 z-[1] mb-1 rounded-[8px] bg-[rgba(252,252,252,0.94)] px-2 py-1 text-[11px] font-medium tracking-[0.12em] text-[color:var(--text-dim)] backdrop-blur">
                     {section.title}
                   </div>
                   <div className="space-y-1">
@@ -1142,6 +1148,8 @@ export function DesktopCreateGroupDialog({
                           }}
                           disabled={createMutation.isPending}
                           onClick={() => toggleSelection(item.character.id)}
+                          aria-pressed={checked}
+                          aria-current={focused ? "true" : undefined}
                           className={cn(
                             "flex w-full items-center gap-3.5 rounded-[10px] border border-transparent px-3.5 py-2.5 text-left transition disabled:opacity-60",
                             checked
