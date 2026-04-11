@@ -31,6 +31,7 @@ import { ContactDetailPane } from "../features/contacts/contact-detail-pane";
 import { matchesCharacterSearch } from "../features/contacts/contact-utils";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { isPersistedGroupConversation } from "../lib/conversation-route";
+import { navigateBackOrFallback } from "../lib/history-back";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 type ContactTagGroup = {
@@ -77,9 +78,11 @@ function MobileTagsPage() {
             variant="ghost"
             size="icon"
             className="h-9 w-9 rounded-full text-[color:var(--text-primary)]"
-            onClick={() => {
-              void navigate({ to: "/tabs/contacts" });
-            }}
+            onClick={() =>
+              navigateBackOrFallback(() => {
+                void navigate({ to: "/tabs/contacts" });
+              })
+            }
             aria-label="返回通讯录"
           >
             <ArrowLeft size={18} />

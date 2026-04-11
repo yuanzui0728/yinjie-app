@@ -10,6 +10,7 @@ import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { buildCreateGroupRouteHash } from "../lib/create-group-route-state";
 import { formatConversationTimestamp } from "../lib/format";
+import { navigateBackOrFallback } from "../lib/history-back";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export function GroupContactsPage() {
@@ -48,9 +49,11 @@ function MobileGroupContactsPage() {
             variant="ghost"
             size="icon"
             className="h-9 w-9 rounded-full text-[color:var(--text-primary)]"
-            onClick={() => {
-              void navigate({ to: "/tabs/contacts" });
-            }}
+            onClick={() =>
+              navigateBackOrFallback(() => {
+                void navigate({ to: "/tabs/contacts" });
+              })
+            }
             aria-label="返回通讯录"
           >
             <ArrowLeft size={18} />

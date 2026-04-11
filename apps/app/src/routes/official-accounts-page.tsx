@@ -9,6 +9,7 @@ import { OfficialAccountListItem } from "../components/official-account-list-ite
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { DesktopOfficialAccountsWorkspace } from "../features/desktop/official-accounts/desktop-official-accounts-workspace";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
+import { navigateBackOrFallback } from "../lib/history-back";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export function OfficialAccountsPage() {
@@ -65,7 +66,11 @@ function MobileOfficialAccountsPage() {
         titleAlign="center"
         leftActions={
           <Button
-            onClick={() => navigate({ to: "/tabs/contacts" })}
+            onClick={() =>
+              navigateBackOrFallback(() => {
+                void navigate({ to: "/tabs/contacts" });
+              })
+            }
             variant="ghost"
             size="icon"
             className="border border-white/70 bg-white/82 text-[color:var(--text-primary)] shadow-[var(--shadow-soft)] hover:bg-white"
