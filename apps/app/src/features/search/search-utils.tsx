@@ -147,7 +147,7 @@ export function renderHighlightedText(text: string, keyword: string): ReactNode 
   return (
     <>
       {text.slice(0, start)}
-      <mark className="rounded bg-[rgba(255,214,102,0.5)] px-0.5 text-current">
+      <mark className="rounded bg-[#e6f4ea] px-0.5 text-current">
         {text.slice(start, end)}
       </mark>
       {text.slice(end)}
