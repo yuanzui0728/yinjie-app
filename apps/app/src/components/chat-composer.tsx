@@ -172,22 +172,26 @@ const SCREENSHOT_SHORTCUT_HELP_GROUPS = [
   {
     id: "draw",
     label: "绘制",
-    value: "C / R / A / T / 1-4",
+    primary: "C / R / A / T",
+    secondary: "1-4 切颜色",
   },
   {
     id: "history",
     label: "撤销与删除",
-    value: "⌘/Ctrl + Z / Shift+Z / Y / Delete / Esc",
+    primary: "⌘/Ctrl + Z / Shift+Z / Y",
+    secondary: "Delete 删除 / Esc 取消选中",
   },
   {
     id: "view",
     label: "视图",
-    value: "⌘/Ctrl + 滚轮 / 双击 / Space / ?",
+    primary: "⌘/Ctrl + 滚轮 / 双击",
+    secondary: "Space 拖动画布 / ? 开关帮助",
   },
   {
     id: "send",
     label: "发送",
-    value: "Enter / ⌘/Ctrl + Enter",
+    primary: "Enter 发送",
+    secondary: "⌘/Ctrl + Enter 原图发送",
   },
 ] as const;
 
@@ -3821,15 +3825,20 @@ function DesktopScreenshotEditor({
                           type="button"
                           onClick={() => triggerShortcutDemo(item.id)}
                           className={cn(
-                            "flex items-center justify-between gap-2.5 rounded-[9px] border px-2.5 py-1.5 text-left transition",
+                            "flex items-start justify-between gap-2.5 rounded-[9px] border px-2.5 py-1.5 text-left transition",
                             shortcutDemoGroup === item.id
                               ? "border-[#2d8f5b] bg-[rgba(7,193,96,0.14)] text-white"
                               : "border-transparent bg-white/5 hover:border-white/10 hover:bg-white/8",
                           )}
                         >
-                          <span>{item.label}</span>
-                          <span className="text-right text-white/92">
-                            {item.value}
+                          <span className="pt-0.5">{item.label}</span>
+                          <span className="text-right">
+                            <span className="block text-white/92">
+                              {item.primary}
+                            </span>
+                            <span className="mt-0.5 block text-[10px] text-white/50">
+                              {item.secondary}
+                            </span>
                           </span>
                         </button>
                       ))}
