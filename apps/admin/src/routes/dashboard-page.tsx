@@ -44,6 +44,7 @@ import {
   AdminCallout,
   AdminDetailPanel,
   AdminDangerZone,
+  AdminEyebrow,
   AdminJumpCard,
   AdminMetaText,
   AdminSoftBox,
@@ -339,7 +340,7 @@ export function DashboardPage() {
           </div>
 
           <div className="mt-5 rounded-[24px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4">
-            <div className="text-[11px] uppercase tracking-[0.26em] text-[color:var(--text-muted)]">最近内容信号</div>
+            <AdminEyebrow>最近内容信号</AdminEyebrow>
             <div className="mt-3 grid gap-3 sm:grid-cols-3">
               <MetricCard className="border-0 bg-transparent p-0 shadow-none" label="朋友圈" value={momentsQuery.data?.length ?? 0} detail="当前世界动态总数" />
               <MetricCard className="border-0 bg-transparent p-0 shadow-none" label="广场动态" value={feedQuery.data?.total ?? 0} detail="公开内容总数" />
@@ -347,7 +348,7 @@ export function DashboardPage() {
             </div>
           </div>
           <div className="mt-5 rounded-[24px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4">
-            <div className="text-[11px] uppercase tracking-[0.26em] text-[color:var(--text-muted)]">数字人 Provider 摘要</div>
+            <AdminEyebrow>数字人 Provider 摘要</AdminEyebrow>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <MetricCard
                 className="border-0 bg-transparent p-0 shadow-none"

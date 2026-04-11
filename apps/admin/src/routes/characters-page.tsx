@@ -17,6 +17,7 @@ import {
   AdminCallout,
   AdminDangerZone,
   AdminEmptyState,
+  AdminEyebrow,
   AdminHintCard,
   AdminInfoRow,
 } from "../components/admin-workbench";
@@ -132,7 +133,7 @@ export function CharactersPage() {
         <Card className="bg-[color:var(--surface-console)]">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <div className="text-[11px] uppercase tracking-[0.26em] text-[color:var(--text-muted)]">角色列表</div>
+              <AdminEyebrow>角色列表</AdminEyebrow>
               <div className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">
                 {filteredCharacters.length} / {charactersQuery.data?.length ?? 0}
               </div>
@@ -233,7 +234,7 @@ export function CharactersPage() {
               </Card>
 
               <Card className="bg-[color:var(--surface-console)]">
-                <div className="text-[11px] uppercase tracking-[0.26em] text-[color:var(--text-muted)]">角色摘要</div>
+                <AdminEyebrow>角色摘要</AdminEyebrow>
                 <div className="mt-4 grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
                   <div>
                     <div className="text-sm font-semibold text-[color:var(--text-primary)]">擅长领域</div>
@@ -271,7 +272,7 @@ export function CharactersPage() {
 
         <div className="space-y-6">
           <Card className="bg-[color:var(--surface-console)]">
-            <div className="text-[11px] uppercase tracking-[0.26em] text-[color:var(--text-muted)]">快捷动作</div>
+            <AdminEyebrow>快捷动作</AdminEyebrow>
             {selectedCharacter ? (
               <div className="mt-4 space-y-4">
                 <AdminActionGroup
@@ -318,7 +319,7 @@ export function CharactersPage() {
           </Card>
 
           <Card className="bg-[color:var(--surface-console)]">
-            <div className="text-[11px] uppercase tracking-[0.26em] text-[color:var(--text-muted)]">运营建议</div>
+            <AdminEyebrow>运营建议</AdminEyebrow>
             <div className="mt-4 space-y-3">
               <AdminHintCard title="新角色创建" detail="先补齐关系、擅长领域和触发场景，再进入编辑页完善提示词和记忆。" />
               <AdminHintCard title="角色制造" detail="需要大改人格、口头禅或长期设定时，优先进入工厂页维护配方。" />
