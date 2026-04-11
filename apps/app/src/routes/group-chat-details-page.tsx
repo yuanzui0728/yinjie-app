@@ -13,7 +13,6 @@ import {
 import { ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
 import { getChatBackgroundLabel } from "../features/chat/backgrounds/chat-background-helpers";
-import { buildChatCallFallbackShortcutSearch } from "../features/chat/chat-compose-shortcut-route";
 import { useDefaultChatBackground } from "../features/chat/backgrounds/use-conversation-background";
 import { ChatCallFallbackSection } from "../features/chat-details/chat-call-fallback-section";
 import { ChatDetailsShell } from "../features/chat-details/chat-details-shell";
@@ -30,9 +29,6 @@ export function GroupChatDetailsPage() {
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
   const [notice, setNotice] = useState<string | null>(null);
-  const [pendingCallFallback, setPendingCallFallback] = useState<
-    "voice" | "video" | null
-  >(null);
   const [memberGridExpanded, setMemberGridExpanded] = useState(false);
   const [managementSheetOpen, setManagementSheetOpen] = useState(false);
   const [dangerSheetAction, setDangerSheetAction] = useState<
@@ -52,7 +48,6 @@ export function GroupChatDetailsPage() {
 
   useEffect(() => {
     setNotice(null);
-    setPendingCallFallback(null);
     setMemberGridExpanded(false);
     setManagementSheetOpen(false);
     setDangerSheetAction(null);
@@ -456,21 +451,16 @@ export function GroupChatDetailsPage() {
           </ChatDetailsSection>
 
           <ChatCallFallbackSection
-            activeKind={pendingCallFallback}
-            scope="group"
             variant="wechat"
+            voiceValue="群语音"
+            videoValue="群视频"
             onSelectKind={(kind) => {
-              setNotice(null);
-              setPendingCallFallback(kind);
-            }}
-            onDismiss={() => setPendingCallFallback(null)}
-            onPrimaryAction={(kind) => {
               void navigate({
-                to: "/group/$groupId",
+                to:
+                  kind === "voice"
+                    ? "/group/$groupId/voice-call"
+                    : "/group/$groupId/video-call",
                 params: { groupId },
-                search: buildChatCallFallbackShortcutSearch({
-                  kind,
-                }),
               });
             }}
           />
