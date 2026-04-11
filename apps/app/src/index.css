@@ -27,6 +27,11 @@ body {
   background-attachment: fixed;
 }
 
+html.yj-mobile,
+body.yj-mobile {
+  background: #ededed;
+}
+
 @keyframes page-in {
   from {
     opacity: 0;
@@ -122,4 +127,74 @@ body::after {
   background-size: 32px 32px;
   mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.18), transparent 78%);
   opacity: 0.22;
+}
+
+body.yj-mobile::before,
+body.yj-mobile::after {
+  opacity: 0;
+}
+
+.yj-mobile-shell {
+  --bg-canvas: #ededed;
+  --bg-canvas-elevated: #ffffff;
+  --bg-accent: none;
+  --bg-glow-top: none;
+  --bg-glow-bottom: none;
+  --bg-grid: none;
+
+  --surface-primary: rgba(247, 247, 247, 0.98);
+  --surface-shell: #ededed;
+  --surface-section: #ffffff;
+  --surface-card: #ffffff;
+  --surface-card-hover: #f7f7f7;
+  --surface-soft: rgba(7, 193, 96, 0.08);
+  --surface-secondary: #f5f5f5;
+  --surface-tertiary: rgba(7, 193, 96, 0.12);
+  --surface-overlay: rgba(242, 242, 242, 0.98);
+  --surface-console: #f5f5f5;
+  --surface-input: #ffffff;
+
+  --border-faint: rgba(0, 0, 0, 0.06);
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-strong: rgba(0, 0, 0, 0.12);
+  --border-brand: rgba(7, 193, 96, 0.28);
+
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #8c8c8c;
+  --text-dim: #b4b4b4;
+  --text-on-brand: #ffffff;
+
+  --brand-primary: #07c160;
+  --brand-secondary: #21c87a;
+  --brand-accent: #34c759;
+  --brand-soft: rgba(7, 193, 96, 0.08);
+  --brand-gradient: linear-gradient(180deg, #21c87a, #07c160);
+
+  --state-success-bg: rgba(7, 193, 96, 0.1);
+  --state-success-text: #0f7a45;
+  --state-warning-bg: rgba(250, 173, 20, 0.1);
+  --state-warning-text: #ad6800;
+  --state-danger-bg: rgba(250, 81, 81, 0.1);
+  --state-danger-text: #cf1322;
+  --state-info-bg: rgba(64, 169, 255, 0.08);
+  --state-info-text: #0958d9;
+
+  --shadow-shell: none;
+  --shadow-section: 0 1px 2px rgba(15, 23, 42, 0.03);
+  --shadow-card: 0 8px 20px rgba(15, 23, 42, 0.05);
+  --shadow-soft: 0 4px 12px rgba(15, 23, 42, 0.04);
+  --shadow-lift: 0 12px 24px rgba(15, 23, 42, 0.06);
+  --shadow-overlay: 0 -8px 28px rgba(15, 23, 42, 0.08);
+  --shadow-focus: 0 0 0 3px rgba(7, 193, 96, 0.16);
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1rem;
+}
+
+.yj-mobile-shell,
+.yj-mobile-shell * {
+  -webkit-tap-highlight-color: transparent;
 }
