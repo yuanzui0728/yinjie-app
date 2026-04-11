@@ -37,7 +37,7 @@ import {
   type LiveDraft,
   type LiveSessionRecord,
 } from "../features/desktop/channels/live-companion-storage";
-import { DesktopEntryShell } from "../features/desktop/desktop-entry-shell";
+import { DesktopUtilityShell } from "../features/desktop/desktop-utility-shell";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import {
   pushMobileHandoffRecord,
@@ -148,36 +148,96 @@ export function LiveCompanionPage() {
   }
 
   return (
-    <div className="h-full overflow-auto bg-[#f5f5f5] px-6 py-6">
-      <DesktopEntryShell
-        badge="Live Companion"
-        title="直播伴侣把开播前准备和桌面控台收在一起"
-        description="这版先不碰真实推流接口，先把桌面直播伴侣做成一个可运营工具台：能准备直播主题、检查实例状态、记录开播历史，并直接从视频号内容流拿参考素材。"
-        aside={
-          <div className="space-y-3">
-            <MetricCard
-              label="当前状态"
-              value={activeSession ? "直播中" : "待开播"}
-            />
-            <MetricCard
-              label="开播检查"
-              value={`${passedCheckCount} / ${preflightChecks.length} 项通过`}
-            />
-            <MetricCard
-              label="最近直播"
-              value={
-                liveHistory[0]?.startedAt
-                  ? formatTimestamp(liveHistory[0].startedAt)
-                  : "暂无记录"
-              }
-            />
-            <MetricCard label="操作者" value={ownerName ?? "世界主人"} />
+    <DesktopUtilityShell
+      title="直播伴侣"
+      subtitle="把开播前准备、状态检查和参考内容收在一起。"
+      toolbar={
+        <div className="rounded-full border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.08)] px-3 py-1 text-[11px] font-medium text-[#15803d]">
+          {activeSession ? "直播中" : "待开播"}
+        </div>
+      }
+      sidebarClassName="w-[300px]"
+      sidebar={
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="border-b border-[color:var(--border-faint)] bg-white/74 px-4 py-4 backdrop-blur-xl">
+            <div className="text-[15px] font-medium text-[color:var(--text-primary)]">
+              直播伴侣
+            </div>
+            <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
+              先收口桌面直播准备、状态检查和本地历史。
+            </div>
           </div>
-        }
-      >
-        <div className="space-y-5">
-          {notice ? <InlineNotice tone="success">{notice}</InlineNotice> : null}
-          {error ? <InlineNotice tone="info">{error}</InlineNotice> : null}
+
+          <div className="min-h-0 flex-1 overflow-auto bg-[rgba(242,246,245,0.76)] px-4 py-4">
+            <div className="space-y-3">
+              <MetricCard
+                label="当前状态"
+                value={activeSession ? "直播中" : "待开播"}
+              />
+              <MetricCard
+                label="开播检查"
+                value={`${passedCheckCount} / ${preflightChecks.length} 项通过`}
+              />
+              <MetricCard
+                label="最近直播"
+                value={
+                  liveHistory[0]?.startedAt
+                    ? formatTimestamp(liveHistory[0].startedAt)
+                    : "暂无记录"
+                }
+              />
+              <MetricCard label="操作者" value={ownerName ?? "世界主人"} />
+
+              <div className="rounded-[18px] border border-[color:var(--border-faint)] bg-white p-4 shadow-[var(--shadow-section)]">
+                <div className="text-xs font-medium text-[color:var(--text-muted)]">
+                  开播检查清单
+                </div>
+                <div className="mt-3 space-y-2">
+                  {preflightChecks.map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex items-center justify-between gap-3 rounded-[12px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-3 py-2.5"
+                    >
+                      <div className="text-xs text-[color:var(--text-secondary)]">
+                        {item.label}
+                      </div>
+                      <div
+                        className={cn(
+                          "rounded-full px-2.5 py-1 text-[10px] font-medium",
+                          item.passed
+                            ? "bg-[rgba(7,193,96,0.10)] text-[#15803d]"
+                            : "bg-[rgba(239,68,68,0.10)] text-[color:var(--state-danger-text)]",
+                        )}
+                      >
+                        {item.passed ? "通过" : "待处理"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+      contentClassName="bg-[rgba(255,255,255,0.62)]"
+    >
+      <div className="space-y-5 p-5">
+        {notice ? (
+          <InlineNotice
+            tone="success"
+            className="border-[color:var(--border-faint)] bg-white"
+          >
+            {notice}
+          </InlineNotice>
+        ) : null}
+        {error ? (
+          <InlineNotice
+            tone="info"
+            className="border-[color:var(--border-faint)] bg-white"
+          >
+            {error}
+          </InlineNotice>
+        ) : null}
           {statusQuery.isError && statusQuery.error instanceof Error ? (
             <ErrorBlock message={statusQuery.error.message} />
           ) : null}
@@ -185,8 +245,8 @@ export function LiveCompanionPage() {
             <ErrorBlock message={channelsQuery.error.message} />
           ) : null}
 
-          <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
-            <section className="rounded-[20px] border border-black/6 bg-white p-5 shadow-[0_14px_32px_rgba(15,23,42,0.05)]">
+        <div className="grid gap-5 xl:grid-cols-[1.05fr_0.95fr]">
+          <section className="rounded-[20px] border border-[color:var(--border-faint)] bg-white p-5 shadow-[var(--shadow-section)]">
               <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
                 <RadioTower
                   size={16}
@@ -383,8 +443,8 @@ export function LiveCompanionPage() {
               </div>
             </section>
 
-            <section className="space-y-5">
-              <div className="rounded-[20px] border border-black/6 bg-white p-5 shadow-[0_14px_32px_rgba(15,23,42,0.05)]">
+          <section className="space-y-5">
+            <div className="rounded-[20px] border border-[color:var(--border-faint)] bg-white p-5 shadow-[var(--shadow-section)]">
                 <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
                   <BadgeCheck
                     size={16}
@@ -396,7 +456,7 @@ export function LiveCompanionPage() {
                   {preflightChecks.map((item) => (
                     <div
                       key={item.label}
-                      className="flex items-center justify-between gap-3 rounded-2xl border border-black/6 bg-[#f6f6f6] px-4 py-3"
+                      className="flex items-center justify-between gap-3 rounded-2xl border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-3"
                     >
                       <div className="text-sm text-[color:var(--text-primary)]">
                         {item.label}
@@ -416,7 +476,7 @@ export function LiveCompanionPage() {
                 </div>
               </div>
 
-              <div className="rounded-[20px] border border-black/6 bg-white p-5 shadow-[0_14px_32px_rgba(15,23,42,0.05)]">
+            <div className="rounded-[20px] border border-[color:var(--border-faint)] bg-white p-5 shadow-[var(--shadow-section)]">
                 <div className="text-sm font-medium text-[color:var(--text-primary)]">
                   当前实例状态
                 </div>
@@ -460,8 +520,8 @@ export function LiveCompanionPage() {
             </section>
           </div>
 
-          <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
-            <section className="rounded-[20px] border border-black/6 bg-white p-5 shadow-[0_14px_32px_rgba(15,23,42,0.05)]">
+        <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
+          <section className="rounded-[20px] border border-[color:var(--border-faint)] bg-white p-5 shadow-[var(--shadow-section)]">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-sm font-medium text-[color:var(--text-primary)]">
@@ -473,7 +533,7 @@ export function LiveCompanionPage() {
                 </div>
                 <Link
                   to="/tabs/channels"
-                  className="inline-flex h-9 items-center justify-center rounded-xl border border-black/6 bg-[#f8f8f8] px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:bg-white hover:text-[color:var(--text-primary)]"
+                  className="inline-flex h-9 items-center justify-center rounded-xl border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-white hover:text-[color:var(--text-primary)]"
                 >
                   打开视频号
                 </Link>
@@ -515,7 +575,7 @@ export function LiveCompanionPage() {
               </div>
             </section>
 
-            <section className="rounded-[20px] border border-black/6 bg-white p-5 shadow-[0_14px_32px_rgba(15,23,42,0.05)]">
+          <section className="rounded-[20px] border border-[color:var(--border-faint)] bg-white p-5 shadow-[var(--shadow-section)]">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <div className="text-sm font-medium text-[color:var(--text-primary)]">
@@ -557,7 +617,7 @@ export function LiveCompanionPage() {
                   liveHistory.map((item) => (
                     <div
                       key={item.id}
-                      className="rounded-[18px] border border-black/6 bg-[#f6f6f6] p-4"
+                      className="rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-4"
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="text-sm font-medium text-[color:var(--text-primary)]">
@@ -608,16 +668,15 @@ export function LiveCompanionPage() {
                     </div>
                   ))
                 ) : (
-                  <div className="rounded-[18px] border border-dashed border-black/8 bg-[#f8f8f8] p-5 text-sm leading-7 text-[color:var(--text-secondary)]">
+                  <div className="rounded-[18px] border border-dashed border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-5 text-sm leading-7 text-[color:var(--text-secondary)]">
                     还没有直播记录。先准备一场直播并切到“直播中”，这里就会开始积累桌面伴侣历史。
                   </div>
                 )}
               </div>
-            </section>
-          </div>
+          </section>
         </div>
-      </DesktopEntryShell>
-    </div>
+      </div>
+    </DesktopUtilityShell>
   );
 }
 
@@ -646,8 +705,8 @@ function SelectorCard({
             className={cn(
               "rounded-xl border px-3 py-2 text-xs font-medium transition",
               value === item.id
-                ? "border-[#b7e4c7] bg-[#eaf8ef] text-[#15803d]"
-                : "border-black/8 bg-[#f8f8f8] text-[color:var(--text-secondary)] hover:bg-white",
+                ? "border-[rgba(7,193,96,0.18)] bg-[rgba(7,193,96,0.08)] text-[#15803d]"
+                : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] text-[color:var(--text-secondary)] hover:border-[rgba(7,193,96,0.16)] hover:bg-white",
             )}
           >
             {item.label}
@@ -676,8 +735,8 @@ function ToggleCard({
       className={cn(
         "rounded-[18px] border px-4 py-4 text-left transition",
         checked
-          ? "border-[#b7e4c7] bg-[#eef8f1]"
-          : "border-black/6 bg-[#f7f7f7]",
+          ? "border-[rgba(7,193,96,0.18)] bg-[rgba(7,193,96,0.08)]"
+          : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)]",
       )}
     >
       <div className="flex items-center justify-between gap-3">
@@ -710,7 +769,7 @@ function PostReferenceCard({
   post: FeedPostListItem;
 }) {
   return (
-    <div className="rounded-[18px] border border-black/6 bg-[#f6f6f6] p-4">
+    <div className="rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-4">
       <div className="flex items-start gap-3">
         <AvatarChip
           name={post.authorName}
@@ -733,7 +792,7 @@ function PostReferenceCard({
               <Sparkles size={14} />
               带入直播准备
             </Button>
-            <span className="inline-flex items-center rounded-md bg-[rgba(15,23,42,0.06)] px-2.5 py-1 text-[11px] text-[color:var(--text-muted)]">
+            <span className="inline-flex items-center rounded-md border border-[color:var(--border-faint)] bg-white px-2.5 py-1 text-[11px] text-[color:var(--text-muted)]">
               {post.commentCount} 评论 · {post.likeCount} 赞
             </span>
           </div>
@@ -745,7 +804,7 @@ function PostReferenceCard({
 
 function StatusRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-black/6 bg-[#f6f6f6] px-4 py-3">
+    <div className="rounded-2xl border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-3">
       <div className="text-xs text-[color:var(--text-muted)]">{label}</div>
       <div className="mt-1 text-sm font-medium text-[color:var(--text-primary)]">
         {value}
@@ -756,7 +815,7 @@ function StatusRow({ label, value }: { label: string; value: string }) {
 
 function MetricCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[18px] border border-black/6 bg-white p-4 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+    <div className="rounded-[18px] border border-[color:var(--border-faint)] bg-white p-4 shadow-[var(--shadow-section)]">
       <div className="text-xs text-[color:var(--text-muted)]">{label}</div>
       <div className="mt-2 text-sm font-medium leading-6 text-[color:var(--text-primary)]">
         {value}
