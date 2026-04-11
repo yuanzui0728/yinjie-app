@@ -1,6 +1,6 @@
 import { Button } from "@yinjie/ui";
 import { AppPage } from "@yinjie/ui";
-import { DesktopEntryShell } from "./desktop-entry-shell";
+import { DesktopUtilityShell } from "./desktop-utility-shell";
 import { useDesktopLayout } from "../shell/use-desktop-layout";
 
 type DesktopPlaceholderWorkspaceProps = {
@@ -30,8 +30,8 @@ export function DesktopPlaceholderWorkspace({
 
   if (!isDesktopLayout) {
     return (
-      <AppPage className="flex h-full items-center justify-center bg-[#f3f3f3]">
-        <div className="w-full max-w-md rounded-[18px] border border-black/6 bg-white p-8 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
+      <AppPage className="flex h-full items-center justify-center bg-[color:var(--bg-app)]">
+        <div className="w-full max-w-md rounded-[20px] border border-[color:var(--border-faint)] bg-white p-8 shadow-[var(--shadow-card)]">
           <div className="text-xl font-semibold text-[color:var(--text-primary)]">
             该入口当前仅提供桌面布局
           </div>
@@ -50,28 +50,44 @@ export function DesktopPlaceholderWorkspace({
   }
 
   return (
-    <DesktopEntryShell
-      badge={badge}
+    <DesktopUtilityShell
       title={title}
-      description={description}
+      subtitle={description}
+      toolbar={
+        <div className="rounded-full border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.08)] px-3 py-1 text-[11px] font-medium text-[#15803d]">
+          {badge}
+        </div>
+      }
       aside={
-        <div className="relative space-y-4">
-          <div className="rounded-[14px] border border-black/6 bg-white p-5 shadow-[0_10px_28px_rgba(15,23,42,0.04)]">
-            <div className="text-xs tracking-[0.14em] text-[color:var(--text-dim)]">
+        <div className="flex h-full flex-col bg-[rgba(247,250,250,0.86)]">
+          <div className="border-b border-[color:var(--border-faint)] bg-white/78 px-5 py-4 backdrop-blur-xl">
+            <div className="text-[15px] font-medium text-[color:var(--text-primary)]">
               当前重点
             </div>
-            <div className="mt-3 text-xl font-semibold text-[color:var(--text-primary)]">
-              {spotlightTitle}
+            <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
+              先把桌面工作区骨架和关键信息位补完整。
             </div>
-            <div className="mt-3 text-sm leading-7 text-[color:var(--text-secondary)]">
-              {spotlightBody}
+          </div>
+
+          <div className="flex-1 px-4 py-4">
+            <div className="rounded-[18px] border border-[color:var(--border-faint)] bg-white p-5 shadow-[var(--shadow-section)]">
+              <div className="text-xs tracking-[0.14em] text-[color:var(--text-dim)]">
+                当前重点
+              </div>
+              <div className="mt-3 text-xl font-semibold text-[color:var(--text-primary)]">
+                {spotlightTitle}
+              </div>
+              <div className="mt-3 text-sm leading-7 text-[color:var(--text-secondary)]">
+                {spotlightBody}
+              </div>
             </div>
           </div>
         </div>
       }
+      contentClassName="bg-[rgba(255,255,255,0.62)]"
     >
-      <div className="space-y-5">
-        <div className="rounded-[18px] border border-black/6 bg-white p-6 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
+      <div className="space-y-5 p-5">
+        <div className="rounded-[18px] border border-[color:var(--border-faint)] bg-white p-6 shadow-[var(--shadow-card)]">
           <div className="text-xs tracking-[0.14em] text-[color:var(--text-dim)]">
             工作区规划
           </div>
@@ -79,7 +95,7 @@ export function DesktopPlaceholderWorkspace({
             {highlights.map((item) => (
               <div
                 key={item.label}
-                className="rounded-[12px] border border-black/6 bg-[#fafafa] p-4"
+                className="rounded-[14px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-4"
               >
                 <div className="text-xs text-[color:var(--text-muted)]">
                   {item.label}
@@ -102,6 +118,6 @@ export function DesktopPlaceholderWorkspace({
           ) : null}
         </div>
       </div>
-    </DesktopEntryShell>
+    </DesktopUtilityShell>
   );
 }
