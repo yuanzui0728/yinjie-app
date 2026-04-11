@@ -3831,7 +3831,9 @@ function DesktopScreenshotEditor({
                               : "border-transparent bg-white/5 hover:border-white/10 hover:bg-white/8",
                           )}
                         >
-                          <span className="pt-0.5">{item.label}</span>
+                          <span className="min-w-[56px] pt-0.5 text-[10px] font-medium text-white/38">
+                            {item.label}
+                          </span>
                           <span className="text-right">
                             <span className="block text-white/92">
                               {item.primary}
