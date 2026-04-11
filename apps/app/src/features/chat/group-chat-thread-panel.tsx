@@ -147,6 +147,7 @@ export function GroupChatThreadPanel({
     ref: scrollAnchorRef,
     isAtBottom,
     pendingCount,
+    suppressNextPendingCount,
     scrollToBottom,
   } = useScrollAnchor<HTMLDivElement>(messagesQuery.data?.length ?? 0);
   const handleDismissRouteContextNotice = () => {
@@ -551,6 +552,7 @@ export function GroupChatThreadPanel({
     }
 
     const element = scrollAnchorRef.current;
+    suppressNextPendingCount();
     loadMoreRequestRef.current = {
       previousCount: messagesQuery.data?.length ?? 0,
       scrollHeight: element?.scrollHeight ?? 0,
@@ -562,6 +564,7 @@ export function GroupChatThreadPanel({
     messagesQuery.data?.length,
     messagesQuery.isFetching,
     scrollAnchorRef,
+    suppressNextPendingCount,
   ]);
 
   useEffect(() => {

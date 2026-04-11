@@ -430,6 +430,7 @@ export function useConversationThread(conversationId: string) {
     }
 
     const element = scrollAnchor.ref.current;
+    scrollAnchor.suppressNextPendingCount();
     loadMoreRequestRef.current = {
       previousCount: messagesQuery.data?.length ?? 0,
       scrollHeight: element?.scrollHeight ?? 0,
@@ -440,7 +441,7 @@ export function useConversationThread(conversationId: string) {
     hasOlderMessages,
     messagesQuery.data?.length,
     messagesQuery.isFetching,
-    scrollAnchor.ref,
+    scrollAnchor,
   ]);
 
   return {
