@@ -170,9 +170,14 @@ const SCREENSHOT_ANNOTATION_PALETTE = [
 
 const SCREENSHOT_SHORTCUT_HELP_GROUPS = [
   {
-    id: "send",
-    label: "发送",
-    value: "Enter / ⌘/Ctrl + Enter",
+    id: "draw",
+    label: "绘制",
+    value: "C / R / A / T / 1-4",
+  },
+  {
+    id: "history",
+    label: "撤销与删除",
+    value: "⌘/Ctrl + Z / Shift+Z / Y / Delete / Esc",
   },
   {
     id: "view",
@@ -180,14 +185,9 @@ const SCREENSHOT_SHORTCUT_HELP_GROUPS = [
     value: "⌘/Ctrl + 滚轮 / 双击 / Space / ?",
   },
   {
-    id: "draw",
-    label: "绘制",
-    value: "C / R / A / T / 1-4",
-  },
-  {
-    id: "history",
-    label: "历史",
-    value: "⌘/Ctrl + Z / Shift+Z / Y / Delete / Esc",
+    id: "send",
+    label: "发送",
+    value: "Enter / ⌘/Ctrl + Enter",
   },
 ] as const;
 
