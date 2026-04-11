@@ -117,17 +117,31 @@ export function AdminInfoRows({
     <Card className="bg-[color:var(--surface-console)]">
       <SectionHeading>{title}</SectionHeading>
       <div className="mt-4 space-y-3 text-sm text-[color:var(--text-secondary)]">
-        {rows.map((row) => (
-          <div
-            key={row.label}
-            className="flex items-center justify-between gap-3 rounded-[16px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-3.5 py-3"
-          >
-            <span className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{row.label}</span>
-            <span className="text-right text-sm font-medium text-[color:var(--text-primary)]">{row.value}</span>
-          </div>
-        ))}
+        {rows.map((row) => <AdminInfoRow key={row.label} label={row.label} value={row.value} />)}
       </div>
     </Card>
+  );
+}
+
+export function AdminInfoRow({
+  label,
+  value,
+  className,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-between gap-3 rounded-[16px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-3.5 py-3",
+        className,
+      )}
+    >
+      <AdminMetaText>{label}</AdminMetaText>
+      <span className="text-right text-sm font-medium text-[color:var(--text-primary)]">{value}</span>
+    </div>
   );
 }
 

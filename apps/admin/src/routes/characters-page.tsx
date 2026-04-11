@@ -18,6 +18,7 @@ import {
   AdminDangerZone,
   AdminEmptyState,
   AdminHintCard,
+  AdminInfoRow,
 } from "../components/admin-workbench";
 import { resolveAdminCoreApiBaseUrl } from "../lib/core-api-base";
 
@@ -250,10 +251,10 @@ export function CharactersPage() {
                   <div>
                     <div className="text-sm font-semibold text-[color:var(--text-primary)]">运行信号</div>
                     <div className="mt-3 grid gap-2 text-sm text-[color:var(--text-secondary)]">
-                      <SignalRow label="触发场景" value={selectedCharacter.triggerScenes?.join("、") || "未配置"} />
-                      <SignalRow label="互动频率" value={selectedCharacter.activityFrequency || "未配置"} />
-                      <SignalRow label="亲密度" value={String(selectedCharacter.intimacyLevel ?? 0)} />
-                      <SignalRow label="模板角色" value={selectedCharacter.isTemplate ? "是" : "否"} />
+                      <AdminInfoRow label="触发场景" value={selectedCharacter.triggerScenes?.join("、") || "未配置"} />
+                      <AdminInfoRow label="互动频率" value={selectedCharacter.activityFrequency || "未配置"} />
+                      <AdminInfoRow label="亲密度" value={String(selectedCharacter.intimacyLevel ?? 0)} />
+                      <AdminInfoRow label="模板角色" value={selectedCharacter.isTemplate ? "是" : "否"} />
                     </div>
                   </div>
                 </div>
@@ -364,15 +365,6 @@ function formatActivity(activity: Character["currentActivity"]) {
     default:
       return "未设置";
   }
-}
-
-function SignalRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-[16px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-3.5 py-3">
-      <span className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{label}</span>
-      <span className="text-right text-sm font-medium text-[color:var(--text-primary)]">{value}</span>
-    </div>
-  );
 }
 
 function CharacterAvatar({ name, src }: { name: string; src?: string | null }) {
