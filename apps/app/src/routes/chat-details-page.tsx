@@ -231,7 +231,7 @@ export function ChatDetailsPage() {
       await queryClient.invalidateQueries({
         queryKey: ["app-conversations", baseUrl],
       });
-      void navigate({ to: "/tabs/chat" });
+      void navigate({ to: "/tabs/chat", replace: true });
     },
   });
 

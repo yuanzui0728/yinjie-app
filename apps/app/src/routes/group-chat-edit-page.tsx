@@ -80,7 +80,11 @@ function GroupChatEditPage({
           queryKey: ["app-conversations", baseUrl],
         }),
       ]);
-      void navigate({ to: "/group/$groupId/details", params: { groupId } });
+      void navigate({
+        to: "/group/$groupId/details",
+        params: { groupId },
+        replace: true,
+      });
     },
   });
 
@@ -96,7 +100,11 @@ function GroupChatEditPage({
           queryKey: ["app-conversations", baseUrl],
         }),
       ]);
-      void navigate({ to: "/group/$groupId/details", params: { groupId } });
+      void navigate({
+        to: "/group/$groupId/details",
+        params: { groupId },
+        replace: true,
+      });
     },
   });
 
