@@ -763,7 +763,7 @@ export function ChatMessageList({
   );
   const visibleMessagesSnapshot = useMemo(
     () =>
-      collapseOngoingGroupCallMessages(
+      collapseGroupCallMessages(
         messages.filter((message) => !hiddenMessageIdSet.has(message.id)),
       ),
     [hiddenMessageIdSet, messages],
@@ -3627,7 +3627,7 @@ function GroupRelaySummaryMessage({
   );
 }
 
-function collapseOngoingGroupCallMessages(messages: ChatRenderableMessage[]) {
+function collapseGroupCallMessages(messages: ChatRenderableMessage[]) {
   const redirectedIds = new Map<string, string>();
   const collapsedMessages: ChatRenderableMessage[] = [];
 
@@ -3636,15 +3636,16 @@ function collapseOngoingGroupCallMessages(messages: ChatRenderableMessage[]) {
       collapsedMessages.length > 0
         ? collapsedMessages[collapsedMessages.length - 1]
         : null;
-    const currentInvite = resolveOngoingGroupCallInvite(message);
+    const currentInvite = resolveGroupCallInvite(message);
     const previousInvite = previousMessage
-      ? resolveOngoingGroupCallInvite(previousMessage)
+      ? resolveGroupCallInvite(previousMessage)
       : null;
 
     if (
       previousMessage &&
       currentInvite &&
       previousInvite &&
+      previousInvite.status === "ongoing" &&
       currentInvite.kind === previousInvite.kind &&
       currentInvite.groupName === previousInvite.groupName
     ) {
@@ -3667,7 +3668,7 @@ function collapseOngoingGroupCallMessages(messages: ChatRenderableMessage[]) {
   };
 }
 
-function resolveOngoingGroupCallInvite(message: ChatRenderableMessage) {
+function resolveGroupCallInvite(message: ChatRenderableMessage) {
   const isSystem =
     message.type === "system" || message.senderType === "system";
   if (isSystem || message.senderType === "user") {
@@ -3677,7 +3678,7 @@ function resolveOngoingGroupCallInvite(message: ChatRenderableMessage) {
   const invite = parseGroupCallInviteMessage(
     sanitizeDisplayedChatText(message.text),
   );
-  if (!invite || invite.status !== "ongoing") {
+  if (!invite) {
     return null;
   }
 
