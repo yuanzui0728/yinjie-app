@@ -89,7 +89,9 @@ import { emitChatMessage, joinConversationRoom } from "../lib/socket";
 import { requestNotificationPermission } from "../runtime/mobile-bridge";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { buildChatUnreadMarkerDomId } from "../features/chat/chat-unread-marker";
+import { DigitalHumanEntryNotice } from "../features/chat/digital-human-entry-notice";
 import { useMessageReminders } from "../features/chat/use-message-reminders";
+import { useDigitalHumanEntryGuard } from "../features/chat/use-digital-human-entry-guard";
 import {
   parseDirectCallInviteMessage,
   formatGroupCallStatusLabel,
@@ -209,12 +211,20 @@ export function ChatMessageList({
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl ?? "";
+  const { entryNotice, clearEntryNotice, guardVideoEntry, resetEntryGuard } =
+    useDigitalHumanEntryGuard({
+      baseUrl,
+      enabled: threadContext?.type === "direct",
+    });
   const [activeHighlightedMessageId, setActiveHighlightedMessageId] = useState<
     string | undefined
   >(highlightedMessageId);
   const [actionNotice, setActionNotice] = useState<{
     message: string;
     tone: "success" | "danger";
+  } | null>(null);
+  const [pendingDirectCallInvite, setPendingDirectCallInvite] = useState<{
+    source: CallInviteSource | null;
   } | null>(null);
   const [contextMenuState, setContextMenuState] = useState<{
     message: ChatRenderableMessage;
@@ -285,6 +295,11 @@ export function ChatMessageList({
     const timer = window.setTimeout(() => setActionNotice(null), 2200);
     return () => window.clearTimeout(timer);
   }, [actionNotice]);
+
+  useEffect(() => {
+    setPendingDirectCallInvite(null);
+    resetEntryGuard();
+  }, [resetEntryGuard, threadContext?.id]);
 
   useEffect(() => {
     if (!contextMenuState) {
@@ -1231,6 +1246,24 @@ export function ChatMessageList({
     [forwardMessages],
   );
 
+  const handleOpenDirectCallInviteCard = (input: {
+    kind: "voice" | "video";
+    source: CallInviteSource | null;
+  }) => {
+    if (!onOpenDirectCallInvite) {
+      return;
+    }
+
+    if (input.kind === "video" && !guardVideoEntry()) {
+      setPendingDirectCallInvite({ source: input.source });
+      return;
+    }
+
+    setPendingDirectCallInvite(null);
+    clearEntryNotice();
+    onOpenDirectCallInvite(input);
+  };
+
   if (!visibleMessages.length) {
     return emptyState ?? null;
   }
@@ -1527,6 +1560,30 @@ export function ChatMessageList({
 
   return (
     <div className={isDesktop ? "space-y-4" : "space-y-4"}>
+      {entryNotice && pendingDirectCallInvite ? (
+        <DigitalHumanEntryNotice
+          tone={entryNotice.tone}
+          message={entryNotice.message}
+          continueLabel={entryNotice.continueLabel}
+          voiceLabel={entryNotice.voiceLabel}
+          onContinue={() => {
+            resetEntryGuard();
+            setPendingDirectCallInvite(null);
+            onOpenDirectCallInvite?.({
+              kind: "video",
+              source: pendingDirectCallInvite.source,
+            });
+          }}
+          onSwitchToVoice={() => {
+            resetEntryGuard();
+            setPendingDirectCallInvite(null);
+            onOpenDirectCallInvite?.({
+              kind: "voice",
+              source: pendingDirectCallInvite.source,
+            });
+          }}
+        />
+      ) : null}
       {actionNotice ? (
         <InlineNotice className="text-xs" tone={actionNotice.tone}>
           {actionNotice.message}
@@ -1892,7 +1949,7 @@ export function ChatMessageList({
                         !onOpenDirectCallInvite
                           ? undefined
                           : () =>
-                              onOpenDirectCallInvite({
+                              handleOpenDirectCallInviteCard({
                                 kind: directCallInvite.kind,
                                 source: directCallInvite.source,
                               })
