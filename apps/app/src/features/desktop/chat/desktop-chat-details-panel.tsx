@@ -1877,16 +1877,12 @@ function DesktopGroupMemberBrowserDialog({
         </div>
 
         <div className="border-b border-black/6 px-6 py-4">
-          <div className="flex flex-wrap items-center gap-2 text-[11px] text-[color:var(--text-muted)]">
-            <span className="rounded-full border border-black/8 bg-[#f5f5f5] px-3 py-1">
-              全部 {members.length} 人
-            </span>
-            <span className="rounded-full border border-black/8 bg-[#f5f5f5] px-3 py-1">
-              角色成员 {characterCount} 人
-            </span>
-            <span className="rounded-full border border-black/8 bg-[#f5f5f5] px-3 py-1">
-              群主与管理员 {ownerCount + adminCount} 人
-            </span>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-[color:var(--text-dim)]">
+            <span>全部 {members.length} 人</span>
+            <span className="text-black/10">·</span>
+            <span>角色成员 {characterCount} 人</span>
+            <span className="text-black/10">·</span>
+            <span>群主与管理员 {ownerCount + adminCount} 人</span>
           </div>
 
           <div className="mt-4 rounded-[14px] border border-black/8 bg-[#f7f7f7] px-4 py-4">
