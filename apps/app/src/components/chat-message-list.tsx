@@ -3594,8 +3594,15 @@ function GroupRelaySummaryMessage({
             {summary.sourceGroupName}
           </div>
         </div>
-        <div className="rounded-full bg-[rgba(245,158,11,0.12)] px-2.5 py-1 text-[10px] font-medium text-[#b45309]">
-          结果回填
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="rounded-full bg-[rgba(245,158,11,0.12)] px-2.5 py-1 text-[10px] font-medium text-[#b45309]">
+            结果回填
+          </div>
+          {summary.statusLabel ? (
+            <div className="rounded-full bg-[rgba(59,130,246,0.12)] px-2.5 py-1 text-[10px] font-medium text-[#2563eb]">
+              {summary.statusLabel}
+            </div>
+          ) : null}
         </div>
       </div>
 
