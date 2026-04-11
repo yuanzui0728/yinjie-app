@@ -3,7 +3,9 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -215,6 +217,9 @@ export class DigitalHumanCallsController {
     private readonly digitalHumanCallsService: DigitalHumanCallsService,
   ) {}
 
+  private readonly providerCallbackToken =
+    process.env.DIGITAL_HUMAN_PROVIDER_CALLBACK_TOKEN?.trim() || null;
+
   @Post('sessions')
   createSession(
     @Body()
@@ -277,6 +282,60 @@ export class DigitalHumanCallsController {
       clearInterval(heartbeat);
       unsubscribe();
       response.end();
+    });
+  }
+
+  @Patch('sessions/:sessionId/provider-state')
+  updateProviderState(
+    @Param('sessionId') sessionId: string,
+    @Body()
+    body: {
+      renderStatus?: 'queued' | 'rendering' | 'ready' | 'failed';
+      status?: 'ready' | 'playing' | 'ended';
+      playerUrl?: string;
+      streamUrl?: string;
+      posterUrl?: string;
+    },
+    @Headers('x-digital-human-token') digitalHumanToken?: string,
+    @Headers('authorization') authorization?: string,
+    @Query('token') token?: string,
+  ) {
+    const expectedToken = this.providerCallbackToken;
+    if (expectedToken) {
+      const bearerToken = authorization?.startsWith('Bearer ')
+        ? authorization.slice('Bearer '.length).trim()
+        : undefined;
+      const providedToken =
+        digitalHumanToken?.trim() || bearerToken || token?.trim() || undefined;
+      if (providedToken !== expectedToken) {
+        throw new ForbiddenException('数字人 provider 回调鉴权失败。');
+      }
+    }
+
+    if (
+      body.renderStatus !== 'queued' &&
+      body.renderStatus !== 'rendering' &&
+      body.renderStatus !== 'ready' &&
+      body.renderStatus !== 'failed'
+    ) {
+      throw new BadRequestException('缺少合法的 renderStatus。');
+    }
+
+    if (
+      body.status &&
+      body.status !== 'ready' &&
+      body.status !== 'playing' &&
+      body.status !== 'ended'
+    ) {
+      throw new BadRequestException('status 非法。');
+    }
+
+    return this.digitalHumanCallsService.updateProviderState(sessionId, {
+      renderStatus: body.renderStatus,
+      status: body.status,
+      playerUrl: body.playerUrl?.trim(),
+      streamUrl: body.streamUrl?.trim(),
+      posterUrl: body.posterUrl?.trim(),
     });
   }
 
