@@ -613,17 +613,109 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
     activeCall.playbackState === "playing" ||
     leavingScreen;
   const headerMetaLabel = isVideoMode ? "视频通话" : "语音通话";
-  const headerStatusClass = cn(
+  const callPhase = useMemo<
+    | "error"
+    | "connecting"
+    | "thinking"
+    | "listening"
+    | "speaking"
+    | "followup"
+    | "ready"
+    | "idle"
+  >(() => {
+    if (
+      digitalHumanCall.sessionError ||
+      activeCall.turnMutation.error instanceof Error ||
+      speech.error ||
+      activeCall.playerError ||
+      digitalHumanCall.session?.renderStatus === "failed"
+    ) {
+      return "error";
+    }
+
+    if (isVideoMode && digitalHumanCall.sessionState === "connecting") {
+      return "connecting";
+    }
+
+    if (
+      activeCall.turnMutation.isPending ||
+      (isVideoMode &&
+        (digitalHumanCall.session?.renderStatus === "rendering" ||
+          digitalHumanCall.session?.renderStatus === "queued"))
+    ) {
+      return "thinking";
+    }
+
+    if (
+      speech.status === "listening" ||
+      speech.status === "requesting-permission"
+    ) {
+      return "listening";
+    }
+
+    if (activeCall.playbackState === "playing") {
+      return "speaking";
+    }
+
+    if (playbackSettling || Boolean(lastAssistantText)) {
+      return "followup";
+    }
+
+    if (
+      isVideoMode &&
+      digitalHumanCall.sessionState === "ready" &&
+      (digitalHumanCall.session?.playerUrl || digitalHumanCall.session?.streamUrl)
+    ) {
+      return "ready";
+    }
+
+    return "idle";
+  }, [
+    activeCall.playerError,
+    activeCall.playbackState,
+    activeCall.turnMutation.error,
+    activeCall.turnMutation.isPending,
+    digitalHumanCall.session?.playerUrl,
+    digitalHumanCall.session?.renderStatus,
+    digitalHumanCall.session?.streamUrl,
+    digitalHumanCall.sessionError,
+    digitalHumanCall.sessionState,
+    isVideoMode,
+    lastAssistantText,
+    playbackSettling,
+    speech.error,
+    speech.status,
+  ]);
+  const phaseChipClass = cn(
     "inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-medium tracking-[0.08em]",
-    activeCall.playbackState === "playing"
-      ? "border-[#34d399]/28 bg-[#34d399]/16 text-[#bbf7d0]"
-      : speech.status === "listening" ||
-          speech.status === "requesting-permission" ||
-          activeCall.turnMutation.isPending
-        ? "border-[#60a5fa]/28 bg-[#60a5fa]/14 text-[#dbeafe]"
-        : leavingScreen
-          ? "border-white/12 bg-white/10 text-white/68"
-          : "border-white/10 bg-white/8 text-white/72",
+    callPhase === "error"
+      ? "border-[#fca5a5]/28 bg-[#ef4444]/14 text-[#fecaca]"
+      : callPhase === "speaking"
+        ? "border-[#34d399]/28 bg-[#34d399]/16 text-[#bbf7d0]"
+        : callPhase === "listening" ||
+            callPhase === "thinking" ||
+            callPhase === "connecting"
+          ? "border-[#60a5fa]/28 bg-[#60a5fa]/14 text-[#dbeafe]"
+          : callPhase === "followup" || callPhase === "ready"
+            ? "border-[#facc15]/26 bg-[#facc15]/12 text-[#fef08a]"
+            : leavingScreen
+              ? "border-white/12 bg-white/10 text-white/68"
+              : "border-white/10 bg-white/8 text-white/72",
+  );
+  const callButtonToneClass = cn(
+    callPhase === "error"
+      ? "border-[#fca5a5]/30 bg-[radial-gradient(circle_at_top,rgba(248,113,113,0.72),rgba(185,28,28,0.96))] shadow-[0_30px_80px_rgba(239,68,68,0.28)]"
+      : callPhase === "speaking"
+        ? "border-[#34d399]/28 bg-[radial-gradient(circle_at_top,rgba(52,211,153,0.78),rgba(5,150,105,0.96))] shadow-[0_30px_80px_rgba(16,185,129,0.32)]"
+        : callPhase === "listening" ||
+            callPhase === "thinking" ||
+            callPhase === "connecting"
+          ? "border-[#60a5fa]/28 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.8),rgba(37,99,235,0.96))] shadow-[0_30px_80px_rgba(59,130,246,0.32)]"
+          : callPhase === "followup" || callPhase === "ready"
+            ? "border-[#facc15]/28 bg-[radial-gradient(circle_at_top,rgba(250,204,21,0.72),rgba(202,138,4,0.94))] shadow-[0_30px_80px_rgba(234,179,8,0.28)]"
+            : isVideoMode
+              ? "border-[#60a5fa]/28 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.76),rgba(37,99,235,0.96))] shadow-[0_30px_80px_rgba(59,130,246,0.3)]"
+              : "border-[#34d399]/28 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.72),rgba(5,150,105,0.96))] shadow-[0_30px_80px_rgba(16,185,129,0.3)]",
   );
 
   useEffect(() => {
@@ -845,7 +937,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
             </div>
             {showHeaderStatusRow ? (
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className={headerStatusClass}>{statusLabel}</span>
+                <span className={phaseChipClass}>{statusLabel}</span>
                 {activeCall.audioMuted ? (
                   <span className="inline-flex items-center rounded-full border border-white/10 bg-white/8 px-3 py-1 text-[11px] text-white/58">
                     已静音播放
@@ -944,8 +1036,8 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
               {characterName}
             </div>
             <div className="mt-1 text-sm text-white/62">{characterStatus}</div>
-            <div className="mt-5 rounded-full border border-[#34d399]/22 bg-[#34d399]/10 px-4 py-2 text-sm text-[#bbf7d0]">
-              {statusLabel}
+            <div className="mt-5">
+              <span className={phaseChipClass}>{statusLabel}</span>
             </div>
             <div className="mt-2 text-[13px] leading-6 text-white/58">
               {statusHint}
@@ -1217,10 +1309,11 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
                 (isVideoMode && digitalHumanCall.sessionState !== "ready")
               }
               className={cn(
-                "flex items-center justify-center rounded-full border shadow-[0_30px_80px_rgba(16,185,129,0.3)] transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55",
+                "flex items-center justify-center rounded-full border transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55",
                 isVideoMode
-                  ? "h-[156px] w-[156px] border-[#60a5fa]/28 bg-[radial-gradient(circle_at_top,rgba(96,165,250,0.76),rgba(37,99,235,0.96))]"
-                  : "h-[172px] w-[172px] border-[#34d399]/28 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.72),rgba(5,150,105,0.96))]",
+                  ? "h-[156px] w-[156px]"
+                  : "h-[172px] w-[172px]",
+                callButtonToneClass,
               )}
             >
               <span className="flex flex-col items-center gap-3">
