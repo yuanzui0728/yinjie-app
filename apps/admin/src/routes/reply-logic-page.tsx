@@ -41,6 +41,7 @@ import {
   AdminFormSection as ConfigSection,
   AdminInfoRows,
   AdminPageHero,
+  AdminRecordCard,
   AdminSelectField as SelectFieldBlock,
   AdminSectionNav,
   AdminSubpanel,
@@ -1585,12 +1586,11 @@ function ConversationInspectorPanel({
           <MetricCard label="来源" value={formatConversationSource(query.data.conversation.source)} />
           <MetricCard label="参与角色" value={query.data.actors.length} />
         </div>
-        <div className="mt-4 rounded-[20px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4">
-          <div className="text-sm font-medium text-[color:var(--text-primary)]">
-            {formatReplyLogicText(query.data.branchSummary.title)}
-          </div>
-          <NoteList notes={query.data.branchSummary.notes} className="mt-3" />
-        </div>
+        <AdminRecordCard
+          className="mt-4"
+          title={formatReplyLogicText(query.data.branchSummary.title)}
+          details={<NoteList notes={query.data.branchSummary.notes} />}
+        />
       </Card>
 
       <Card className="bg-[color:var(--surface-console)]">
@@ -1751,36 +1751,38 @@ function HistoryList({
   }
 
   return (
-    <div className={className}>
-      <div className="space-y-3">
-        {items.map((item) => (
-          <div
-            key={item.id}
-            className="rounded-[20px] border border-[color:var(--border-faint)] bg-white/90 p-4"
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusPill tone={item.includedInWindow ? "healthy" : "muted"}>
-                {item.includedInWindow ? "进入窗口" : "仅可见"}
-              </StatusPill>
-              <StatusPill tone="muted">{formatSenderType(item.senderType)}</StatusPill>
-              <StatusPill tone="muted">{formatMessageType(item.type)}</StatusPill>
-              {item.attachmentKind ? (
-                <StatusPill tone="warning">{formatAttachmentKind(item.attachmentKind)}</StatusPill>
-              ) : null}
-            </div>
-            <div className="mt-3 text-sm font-medium text-[color:var(--text-primary)]">
-              {item.senderName} · {formatDateTime(item.createdAt)}
-            </div>
-            <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
-              {item.text}
-            </div>
-            <div className="mt-2 text-xs text-[color:var(--text-muted)]">
-              {formatReplyLogicText(item.note)}
-            </div>
-          </div>
-        ))}
+      <div className={className}>
+        <div className="space-y-3">
+          {items.map((item) => (
+            <AdminRecordCard
+              key={item.id}
+              title={item.senderName}
+              badges={
+                <>
+                  <StatusPill tone={item.includedInWindow ? "healthy" : "muted"}>
+                    {item.includedInWindow ? "进入窗口" : "仅可见"}
+                  </StatusPill>
+                  <StatusPill tone="muted">{formatSenderType(item.senderType)}</StatusPill>
+                  <StatusPill tone="muted">{formatMessageType(item.type)}</StatusPill>
+                  {item.attachmentKind ? (
+                    <StatusPill tone="warning">{formatAttachmentKind(item.attachmentKind)}</StatusPill>
+                  ) : null}
+                </>
+              }
+              meta={formatDateTime(item.createdAt)}
+              description={item.text}
+              details={
+                item.note ? (
+                  <div className="text-xs text-[color:var(--text-muted)]">
+                    {formatReplyLogicText(item.note)}
+                  </div>
+                ) : undefined
+              }
+              className="bg-white/90"
+            />
+          ))}
+        </div>
       </div>
-    </div>
   );
 }
 
@@ -1840,30 +1842,28 @@ function NarrativeCard({
       ) : (
         <div className="mt-4 space-y-4">
           {arcs.map((arc) => (
-            <div
+            <AdminRecordCard
               key={arc.id}
-              className="rounded-[20px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="text-sm font-medium text-[color:var(--text-primary)]">
-                  {formatNarrativeTitle(arc.title, narrativePresentation)}
-                </div>
-                <StatusPill tone={arc.status === "completed" ? "healthy" : "warning"}>
-                  {formatNarrativeStatus(arc.status)}
-                </StatusPill>
-                <StatusPill tone="muted">{arc.progress}%</StatusPill>
-              </div>
-              <div className="mt-3 text-xs text-[color:var(--text-muted)]">
-                创建：{formatDateTime(arc.createdAt)} · 完成：{formatDateTime(arc.completedAt)}
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {arc.milestones.map((item) => (
-                  <StatusPill key={`${arc.id}-${item.label}`} tone="healthy">
-                    {formatNarrativeMilestoneLabel(item.label, narrativePresentation)}
+              title={formatNarrativeTitle(arc.title, narrativePresentation)}
+              badges={
+                <>
+                  <StatusPill tone={arc.status === "completed" ? "healthy" : "warning"}>
+                    {formatNarrativeStatus(arc.status)}
                   </StatusPill>
-                ))}
-              </div>
-            </div>
+                  <StatusPill tone="muted">{arc.progress}%</StatusPill>
+                </>
+              }
+              meta={`创建：${formatDateTime(arc.createdAt)} · 完成：${formatDateTime(arc.completedAt)}`}
+              details={
+                <div className="flex flex-wrap gap-2">
+                  {arc.milestones.map((item) => (
+                    <StatusPill key={`${arc.id}-${item.label}`} tone="healthy">
+                      {formatNarrativeMilestoneLabel(item.label, narrativePresentation)}
+                    </StatusPill>
+                  ))}
+                </div>
+              }
+            />
           ))}
         </div>
       )}
