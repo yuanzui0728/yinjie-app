@@ -684,9 +684,7 @@ export function ContactsPage() {
       onClick: handleOpenWorldCharacters,
     },
   ];
-  const mobileShortcutItems = shortcutItems.filter(
-    (item) => item.key !== "starred-friends",
-  );
+  const mobileShortcutItems = shortcutItems;
 
   if (isDesktopLayout) {
     return (
