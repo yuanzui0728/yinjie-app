@@ -26,6 +26,7 @@ type DesktopMomentsWorkspaceProps = {
   ownerAvatar?: string | null;
   ownerId?: string | null;
   ownerUsername?: string | null;
+  routeSelectedMomentId?: string | null;
   showCompose: boolean;
   successNotice?: string;
   text: string;
@@ -54,6 +55,7 @@ export function DesktopMomentsWorkspace({
   ownerAvatar,
   ownerId,
   ownerUsername,
+  routeSelectedMomentId = null,
   showCompose,
   successNotice,
   text,
@@ -73,6 +75,12 @@ export function DesktopMomentsWorkspace({
   const [activeAuthorId, setActiveAuthorId] = useState<string | null>(null);
   const [selectedMomentId, setSelectedMomentId] = useState<string | null>(null);
   const scrollViewportRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setSelectedMomentId((current) =>
+      current === routeSelectedMomentId ? current : routeSelectedMomentId,
+    );
+  }, [routeSelectedMomentId]);
 
   const authorSummaries = useMemo(() => {
     const map = new Map<string, Omit<DesktopMomentAuthorSummary, "authorId">>();

@@ -28,6 +28,7 @@ type DesktopFeedWorkspaceProps = {
   ownerAvatar?: string | null;
   ownerUsername?: string | null;
   posts: FeedPostListItem[];
+  routeSelectedPostId?: string | null;
   showCompose: boolean;
   successNotice?: string;
   text: string;
@@ -56,6 +57,7 @@ export function DesktopFeedWorkspace({
   ownerAvatar,
   ownerUsername,
   posts,
+  routeSelectedPostId = null,
   showCompose,
   successNotice,
   text,
@@ -75,6 +77,12 @@ export function DesktopFeedWorkspace({
   const [activeAuthorId, setActiveAuthorId] = useState<string | null>(null);
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const scrollViewportRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setSelectedPostId((current) =>
+      current === routeSelectedPostId ? current : routeSelectedPostId,
+    );
+  }, [routeSelectedPostId]);
 
   const selectedPostQuery = useQuery({
     queryKey: ["app-feed-post", baseUrl, selectedPostId],

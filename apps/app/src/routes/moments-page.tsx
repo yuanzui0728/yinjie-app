@@ -40,6 +40,9 @@ export function MomentsPage() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
+  const hash = useRouterState({
+    select: (state) => state.location.hash,
+  });
   const queryClient = useQueryClient();
   const ownerId = useWorldOwnerStore((state) => state.id);
   const ownerAvatar = useWorldOwnerStore((state) => state.avatar);
@@ -53,6 +56,7 @@ export function MomentsPage() {
   const [showCompose, setShowCompose] = useState(false);
   const [successNotice, setSuccessNotice] = useState("");
   const [favoriteSourceIds, setFavoriteSourceIds] = useState<string[]>([]);
+  const routeSelectedMomentId = parseMomentsRouteHash(hash);
 
   const momentsQuery = useQuery({
     queryKey: ["app-moments", baseUrl],
@@ -189,6 +193,7 @@ export function MomentsPage() {
         ownerAvatar={ownerAvatar}
         ownerId={ownerId}
         ownerUsername={ownerUsername}
+        routeSelectedMomentId={routeSelectedMomentId}
         showCompose={showCompose}
         successNotice={successNotice}
         text={text}
@@ -222,7 +227,7 @@ export function MomentsPage() {
                 title: moment.authorName,
                 description: moment.text,
                 meta: `朋友圈 · ${formatTimestamp(moment.postedAt)}`,
-                to: "/tabs/moments",
+                to: `/tabs/moments${buildMomentsRouteHash(moment.id) ? `#${buildMomentsRouteHash(moment.id)}` : ""}`,
                 badge: "朋友圈",
                 avatarName: moment.authorName,
                 avatarSrc: moment.authorAvatar,
@@ -443,4 +448,24 @@ export function MomentsPage() {
       </AppSection>
     </AppPage>
   );
+}
+
+function parseMomentsRouteHash(hash: string) {
+  const normalizedHash = hash.startsWith("#") ? hash.slice(1) : hash;
+  if (!normalizedHash) {
+    return null;
+  }
+
+  const params = new URLSearchParams(normalizedHash);
+  return params.get("moment")?.trim() || null;
+}
+
+function buildMomentsRouteHash(momentId?: string | null) {
+  if (!momentId) {
+    return undefined;
+  }
+
+  const params = new URLSearchParams();
+  params.set("moment", momentId);
+  return params.toString();
 }

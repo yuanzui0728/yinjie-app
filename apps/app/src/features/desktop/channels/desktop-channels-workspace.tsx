@@ -35,6 +35,7 @@ type DesktopChannelsWorkspaceProps = {
   isLoading: boolean;
   likePendingPostId: string | null;
   posts: FeedPostListItem[];
+  routeSelectedPostId?: string | null;
   successNotice?: string;
   isPostFavorite: (postId: string) => boolean;
   onCommentChange: (postId: string, value: string) => void;
@@ -51,6 +52,7 @@ export function DesktopChannelsWorkspace({
   isLoading,
   likePendingPostId,
   posts,
+  routeSelectedPostId = null,
   successNotice,
   isPostFavorite,
   onCommentChange,
@@ -65,6 +67,12 @@ export function DesktopChannelsWorkspace({
   const [liveHistory, setLiveHistory] = useState<LiveSessionRecord[]>(() =>
     readLiveHistory(),
   );
+
+  useEffect(() => {
+    setSelectedPostId((current) =>
+      current === routeSelectedPostId ? current : routeSelectedPostId,
+    );
+  }, [routeSelectedPostId]);
 
   useEffect(() => {
     if (!posts.length) {

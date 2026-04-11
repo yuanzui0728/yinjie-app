@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import {
   addFeedComment,
@@ -37,6 +37,9 @@ import { useWorldOwnerStore } from "../store/world-owner-store";
 export function DiscoverFeedPage() {
   const navigate = useNavigate();
   const isDesktopLayout = useDesktopLayout();
+  const hash = useRouterState({
+    select: (state) => state.location.hash,
+  });
   const queryClient = useQueryClient();
   const ownerId = useWorldOwnerStore((state) => state.id);
   const ownerAvatar = useWorldOwnerStore((state) => state.avatar);
@@ -50,6 +53,7 @@ export function DiscoverFeedPage() {
   const [showCompose, setShowCompose] = useState(false);
   const [successNotice, setSuccessNotice] = useState("");
   const [favoriteSourceIds, setFavoriteSourceIds] = useState<string[]>([]);
+  const routeSelectedPostId = parseDesktopFeedRouteHash(hash);
 
   const feedQuery = useQuery({
     queryKey: ["app-feed", baseUrl],
@@ -189,6 +193,7 @@ export function DiscoverFeedPage() {
         ownerAvatar={ownerAvatar}
         ownerUsername={ownerUsername}
         posts={visiblePosts}
+        routeSelectedPostId={routeSelectedPostId}
         showCompose={showCompose}
         successNotice={successNotice}
         text={text}
@@ -229,7 +234,7 @@ export function DiscoverFeedPage() {
                 title: post.authorName,
                 description: post.text,
                 meta: `广场动态 · ${formatTimestamp(post.createdAt)}`,
-                to: "/tabs/feed",
+                to: `/tabs/feed${buildDesktopFeedRouteHash(post.id) ? `#${buildDesktopFeedRouteHash(post.id)}` : ""}`,
                 badge: "广场动态",
                 avatarName: post.authorName,
                 avatarSrc: post.authorAvatar,
@@ -434,4 +439,24 @@ export function DiscoverFeedPage() {
       </AppSection>
     </AppPage>
   );
+}
+
+function parseDesktopFeedRouteHash(hash: string) {
+  const normalizedHash = hash.startsWith("#") ? hash.slice(1) : hash;
+  if (!normalizedHash) {
+    return null;
+  }
+
+  const params = new URLSearchParams(normalizedHash);
+  return params.get("post")?.trim() || null;
+}
+
+function buildDesktopFeedRouteHash(postId?: string | null) {
+  if (!postId) {
+    return undefined;
+  }
+
+  const params = new URLSearchParams();
+  params.set("post", postId);
+  return params.toString();
 }
