@@ -3030,6 +3030,7 @@ function DesktopScreenshotEditor({
   selectedTextValue: string;
 }) {
   const previewViewportRef = useRef<HTMLDivElement | null>(null);
+  const selectedTextInputRef = useRef<HTMLInputElement | null>(null);
   const [previewViewportSize, setPreviewViewportSize] = useState<{
     width: number;
     height: number;
@@ -3093,6 +3094,15 @@ function DesktopScreenshotEditor({
             annotation.kind === "text",
         ) ?? null
       : null;
+
+  useEffect(() => {
+    if (!selectedTextAnnotationActive) {
+      return;
+    }
+
+    selectedTextInputRef.current?.focus();
+    selectedTextInputRef.current?.select();
+  }, [selectedAnnotationId, selectedTextAnnotationActive]);
 
   useEffect(() => {
     setPreviewZoom(1);
@@ -3395,6 +3405,7 @@ function DesktopScreenshotEditor({
                 ) : null}
                 {selectedTextAnnotationActive ? (
                   <input
+                    ref={selectedTextInputRef}
                     type="text"
                     value={selectedTextValue}
                     onChange={(event) => onSelectedTextChange(event.target.value)}
@@ -3805,6 +3816,10 @@ function DesktopScreenshotEditor({
                             strokeWidth="0.03"
                             className="cursor-pointer"
                             onPointerDown={(event) => {
+                              event.stopPropagation();
+                              onSelectAnnotation(annotation.id);
+                            }}
+                            onDoubleClick={(event) => {
                               event.stopPropagation();
                               onSelectAnnotation(annotation.id);
                             }}
