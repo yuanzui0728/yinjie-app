@@ -16,6 +16,7 @@ import {
 } from "../features/desktop/favorites/desktop-favorites-storage";
 import { DesktopOfficialAccountsWorkspace } from "../features/desktop/official-accounts/desktop-official-accounts-workspace";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
+import { navigateBackOrFallback } from "../lib/history-back";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export function OfficialAccountArticlePage() {
@@ -110,15 +111,17 @@ function MobileOfficialAccountArticlePage({
       <div className="flex items-center justify-between">
         <Button
           onClick={() => {
-            if (article?.account.id) {
-              void navigate({
-                to: "/official-accounts/$accountId",
-                params: { accountId: article.account.id },
-              });
-              return;
-            }
+            navigateBackOrFallback(() => {
+              if (article?.account.id) {
+                void navigate({
+                  to: "/official-accounts/$accountId",
+                  params: { accountId: article.account.id },
+                });
+                return;
+              }
 
-            void navigate({ to: "/contacts/official-accounts" });
+              void navigate({ to: "/contacts/official-accounts" });
+            });
           }}
           variant="ghost"
           size="icon"
