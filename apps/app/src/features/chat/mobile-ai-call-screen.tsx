@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import {
@@ -59,6 +66,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
   const [leavingScreen, setLeavingScreen] = useState(false);
   const [playbackSettling, setPlaybackSettling] = useState(false);
   const [diagnosticsExpanded, setDiagnosticsExpanded] = useState(false);
+  const recordButtonPointerIdRef = useRef<number | null>(null);
   const waitingNoticeSentRef = useRef(false);
   const connectedNoticeSentRef = useRef(false);
   const endedNoticeSentRef = useRef(false);
@@ -216,6 +224,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
       return;
     }
 
+    recordButtonPointerIdRef.current = null;
     setRecordButtonHolding(false);
   }, [speech.status]);
 
@@ -441,11 +450,34 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
     speech.status,
   ]);
 
-  const handlePressStart = async () => {
+  const releaseRecordButtonPointer = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
+    if (recordButtonPointerIdRef.current !== event.pointerId) {
+      return false;
+    }
+
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    recordButtonPointerIdRef.current = null;
+    return true;
+  };
+
+  const handlePressStart = async (
+    event: ReactPointerEvent<HTMLButtonElement>,
+  ) => {
     if (busy || isDesktopLayout || leavingScreen || playbackSettling) {
       return;
     }
 
+    if (!event.isPrimary || recordButtonPointerIdRef.current !== null) {
+      return;
+    }
+
+    recordButtonPointerIdRef.current = event.pointerId;
+    event.currentTarget.setPointerCapture?.(event.pointerId);
     setCallTipsDismissed(true);
     setRecordButtonHolding(true);
     activeCall.turnMutation.reset();
@@ -455,9 +487,22 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
     await activeCall.startRecordingTurn();
   };
 
-  const handlePressEnd = () => {
+  const handlePressEnd = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!releaseRecordButtonPointer(event)) {
+      return;
+    }
+
     setRecordButtonHolding(false);
     activeCall.stopRecordingTurn();
+  };
+
+  const handlePressCancel = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!releaseRecordButtonPointer(event)) {
+      return;
+    }
+
+    setRecordButtonHolding(false);
+    activeCall.cancelRecordingTurn();
   };
 
   const handleBack = async () => {
@@ -465,7 +510,10 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
       return;
     }
 
+    recordButtonPointerIdRef.current = null;
     setLeavingScreen(true);
+    setRecordButtonHolding(false);
+    activeCall.cancelRecordingTurn();
     activeCall.stopReplyPlayback();
     try {
       if (isVideoMode) {
@@ -498,7 +546,10 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
       return;
     }
 
+    recordButtonPointerIdRef.current = null;
     setLeavingScreen(true);
+    setRecordButtonHolding(false);
+    activeCall.cancelRecordingTurn();
     activeCall.stopReplyPlayback();
     try {
       await digitalHumanCall.endSession();
@@ -1274,18 +1325,13 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
               type="button"
               onPointerDown={(event) => {
                 event.preventDefault();
-                void handlePressStart();
+                void handlePressStart(event);
               }}
               onPointerUp={(event) => {
                 event.preventDefault();
-                handlePressEnd();
+                handlePressEnd(event);
               }}
-              onPointerCancel={handlePressEnd}
-              onPointerLeave={() => {
-                if (recordButtonHolding) {
-                  handlePressEnd();
-                }
-              }}
+              onPointerCancel={handlePressCancel}
               disabled={
                 busy ||
                 leavingScreen ||
@@ -1293,7 +1339,7 @@ export function MobileAiCallScreen({ mode }: MobileAiCallScreenProps) {
                 (isVideoMode && digitalHumanCall.sessionState !== "ready")
               }
               className={cn(
-                "flex items-center justify-center rounded-full border transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55",
+                "flex touch-none items-center justify-center rounded-full border transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-55",
                 isVideoMode
                   ? "h-[156px] w-[156px]"
                   : "h-[172px] w-[172px]",
