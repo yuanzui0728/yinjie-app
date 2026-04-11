@@ -21,6 +21,9 @@ export function MobileChatThreadHeader({
   moreLabel = "更多操作",
   actions = [],
 }: MobileChatThreadHeaderProps) {
+  const titleLeftInset = 46;
+  const titleRightInset = 46 + actions.length * 46;
+
   return (
     <header className="border-b border-black/5 bg-[#f7f7f7] px-1.5 py-2">
       <div className="relative flex min-h-11 items-center gap-1.5">
@@ -37,7 +40,13 @@ export function MobileChatThreadHeader({
           <div className="h-10 w-10 shrink-0" aria-hidden="true" />
         )}
 
-        <div className="pointer-events-none absolute inset-x-12 text-center">
+        <div
+          className="pointer-events-none absolute text-center"
+          style={{
+            left: `${titleLeftInset}px`,
+            right: `${titleRightInset}px`,
+          }}
+        >
           <div className="truncate text-[17px] font-medium text-[#111827]">
             {title}
           </div>
