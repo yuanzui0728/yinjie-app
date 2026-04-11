@@ -1634,9 +1634,7 @@ export function EvalsPage() {
                   </div>
                 ) : null}
                 {report.topCaseDeltas.length > 0 ? (
-                  <div className="mt-3 rounded-xl border border-[color:var(--border-faint)] bg-[color:var(--surface-soft)] p-3">
-                    <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">重点用例差异</div>
-                    <div className="mt-2 space-y-2">
+                  <AdminMiniPanel title="重点用例差异" tone="soft" className="mt-3" contentClassName="space-y-2">
                       {report.topCaseDeltas.slice(0, 3).map((item) => (
                         <div key={`${report.id}-${item.caseId}`} className="flex items-center justify-between gap-3">
                           <div className="text-[color:var(--text-primary)]">{item.caseId}</div>
@@ -1645,8 +1643,7 @@ export function EvalsPage() {
                           </div>
                         </div>
                       ))}
-                    </div>
-                  </div>
+                  </AdminMiniPanel>
                 ) : null}
                 {report.failureTagDeltas.length > 0 ? (
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -2162,17 +2159,14 @@ export function EvalsPage() {
                           </div>
                         ) : null}
                         {comparison.baselineScores.length > 0 ? (
-                          <div className="mt-3 rounded-xl border border-[color:var(--border-faint)] bg-[color:var(--surface-soft)] p-3">
-                            <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">基线评分</div>
-                            <div className="mt-2 space-y-2">
+                          <AdminMiniPanel title="基线评分" tone="soft" className="mt-3" contentClassName="space-y-2">
                               {comparison.baselineScores.map((score) => (
                                 <div key={`baseline-score-${comparison.caseId}-${score.key}`} className="flex items-center justify-between gap-3">
                                   <div className="text-[color:var(--text-primary)]">{score.label}</div>
                                   <div className="text-[color:var(--text-secondary)]">{score.value.toFixed(2)}</div>
                                 </div>
                               ))}
-                            </div>
-                          </div>
+                          </AdminMiniPanel>
                         ) : null}
                         {comparison.baselineFailureTags.length > 0 ? (
                           <div className="mt-3 flex flex-wrap gap-2">
@@ -2215,17 +2209,14 @@ export function EvalsPage() {
                           </div>
                         ) : null}
                         {comparison.candidateScores.length > 0 ? (
-                          <div className="mt-3 rounded-xl border border-[color:var(--border-faint)] bg-[color:var(--surface-soft)] p-3">
-                            <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">候选评分</div>
-                            <div className="mt-2 space-y-2">
+                          <AdminMiniPanel title="候选评分" tone="soft" className="mt-3" contentClassName="space-y-2">
                               {comparison.candidateScores.map((score) => (
                                 <div key={`candidate-score-${comparison.caseId}-${score.key}`} className="flex items-center justify-between gap-3">
                                   <div className="text-[color:var(--text-primary)]">{score.label}</div>
                                   <div className="text-[color:var(--text-secondary)]">{score.value.toFixed(2)}</div>
                                 </div>
                               ))}
-                            </div>
-                          </div>
+                          </AdminMiniPanel>
                         ) : null}
                         {comparison.candidateFailureTags.length > 0 ? (
                           <div className="mt-3 flex flex-wrap gap-2">
