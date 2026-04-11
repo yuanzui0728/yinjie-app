@@ -208,6 +208,17 @@ export function DesktopMobilePage() {
         .slice(0, 4),
     [conversationsQuery.data],
   );
+  const conversationPathSet = useMemo(
+    () =>
+      new Set(
+        (conversationsQuery.data ?? []).map((conversation) =>
+          isPersistedGroupConversation(conversation)
+            ? `/group/${conversation.id}`
+            : `/chat/${conversation.id}`,
+        ),
+      ),
+    [conversationsQuery.data],
+  );
 
   const recentArticles = useMemo(
     () =>
@@ -306,6 +317,18 @@ export function DesktopMobilePage() {
   const currentGroupInviteId = currentGroupInviteHandoff
     ? resolveGroupIdFromHandoffPath(currentGroupInviteHandoff.path)
     : null;
+  const activeGroupInviteDelivery =
+    currentGroupInviteDelivery &&
+    conversationPathSet.has(currentGroupInviteDelivery.conversationPath)
+      ? currentGroupInviteDelivery
+      : null;
+  const activeGroupInviteReopens = useMemo(
+    () =>
+      currentGroupInviteReopens.filter((record) =>
+        conversationPathSet.has(record.conversationPath),
+      ),
+    [conversationPathSet, currentGroupInviteReopens],
+  );
 
   useEffect(() => {
     if (
@@ -1069,23 +1092,21 @@ export function DesktopMobilePage() {
 
                     <div className="mt-4 space-y-3">
                       <div className="rounded-[12px] border border-black/6 bg-white px-4 py-3">
-                        {currentGroupInviteDelivery ? (
+                        {activeGroupInviteDelivery ? (
                           <div className="flex flex-wrap items-center justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <div className="text-xs font-medium text-[color:var(--text-primary)]">
                                 最近投递到{" "}
-                                {currentGroupInviteDelivery.conversationTitle}
+                                {activeGroupInviteDelivery.conversationTitle}
                               </div>
                               <div className="mt-1 text-[11px] text-[color:var(--text-muted)]">
                                 {formatConversationTimestamp(
-                                  currentGroupInviteDelivery.deliveredAt,
+                                  activeGroupInviteDelivery.deliveredAt,
                                 )}
                               </div>
                             </div>
                             <Link
-                              to={
-                                currentGroupInviteDelivery.conversationPath as never
-                              }
+                              to={activeGroupInviteDelivery.conversationPath as never}
                               className="inline-flex h-8 items-center justify-center rounded-[8px] border border-black/8 bg-[#f7f7f7] px-3 text-[11px] font-medium text-[color:var(--text-secondary)] transition hover:bg-[#efefef] hover:text-[color:var(--text-primary)]"
                             >
                               回到会话
@@ -1098,13 +1119,13 @@ export function DesktopMobilePage() {
                         )}
                       </div>
 
-                      {currentGroupInviteReopens.length ? (
+                      {activeGroupInviteReopens.length ? (
                         <div className="rounded-[12px] border border-black/6 bg-white px-4 py-3">
                           <div className="text-xs font-medium text-[color:var(--text-primary)]">
                             最近从这些会话回到邀请页
                           </div>
                           <div className="mt-3 space-y-2">
-                            {currentGroupInviteReopens
+                            {activeGroupInviteReopens
                               .slice(0, 2)
                               .map((record) => (
                                 <div
