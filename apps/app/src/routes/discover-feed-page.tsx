@@ -30,6 +30,7 @@ import { DesktopFeedWorkspace } from "../features/desktop/feed/desktop-feed-work
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { formatTimestamp } from "../lib/format";
+import { navigateBackOrFallback } from "../lib/history-back";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../store/world-owner-store";
 
@@ -250,7 +251,11 @@ export function DiscoverFeedPage() {
         titleAlign="center"
         leftActions={
           <Button
-            onClick={() => navigate({ to: "/tabs/discover" })}
+            onClick={() =>
+              navigateBackOrFallback(() => {
+                void navigate({ to: "/tabs/discover" });
+              })
+            }
             variant="ghost"
             size="icon"
             className="border border-white/70 bg-white/82 text-[color:var(--text-primary)] shadow-[var(--shadow-soft)] hover:bg-white"

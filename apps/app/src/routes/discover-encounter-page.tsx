@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { sendFriendRequest, shake } from "@yinjie/contracts";
 import { AppPage, AppSection, Button, ErrorBlock, InlineNotice } from "@yinjie/ui";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
+import { navigateBackOrFallback } from "../lib/history-back";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export function DiscoverEncounterPage() {
@@ -53,7 +54,11 @@ export function DiscoverEncounterPage() {
         titleAlign="center"
         leftActions={
           <Button
-            onClick={() => navigate({ to: "/tabs/discover" })}
+            onClick={() =>
+              navigateBackOrFallback(() => {
+                void navigate({ to: "/tabs/discover" });
+              })
+            }
             variant="ghost"
             size="icon"
             className="border border-white/70 bg-white/82 text-[color:var(--text-primary)] shadow-[var(--shadow-soft)] hover:bg-white"
