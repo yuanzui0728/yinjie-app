@@ -31,6 +31,18 @@ type UpdateWorldOwnerInput = {
   onboardingCompleted?: boolean;
 };
 
+type WorldOwnerProfile = {
+  id: string;
+  username: string;
+  onboardingCompleted: boolean;
+  avatar?: string;
+  signature?: string;
+  hasCustomApiKey: boolean;
+  customApiBase?: string | null;
+  defaultChatBackground?: ChatBackgroundAsset | null;
+  createdAt: string;
+};
+
 @Injectable()
 export class WorldOwnerService {
   constructor(
@@ -40,7 +52,7 @@ export class WorldOwnerService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async ensureSingleOwnerMigration() {
+  async ensureSingleOwnerMigration(): Promise<UserEntity> {
     const users = await this.userRepo.find({
       order: { createdAt: 'ASC' },
     });
@@ -172,7 +184,7 @@ export class WorldOwnerService {
     return this.getOwnerOrThrow();
   }
 
-  async getOwnerOrThrow() {
+  async getOwnerOrThrow(): Promise<UserEntity> {
     const owner = await this.userRepo.findOne({
       where: {},
       order: { createdAt: 'ASC' },
@@ -185,12 +197,12 @@ export class WorldOwnerService {
     return owner;
   }
 
-  async getOwnerProfile() {
+  async getOwnerProfile(): Promise<WorldOwnerProfile> {
     const owner = await this.getOwnerOrThrow();
     return this.serializeOwner(owner);
   }
 
-  async updateOwner(input: UpdateWorldOwnerInput) {
+  async updateOwner(input: UpdateWorldOwnerInput): Promise<WorldOwnerProfile> {
     const owner = await this.getOwnerOrThrow();
     const nextUsername = input.username?.trim();
     const nextAvatar = input.avatar?.trim();
@@ -207,7 +219,10 @@ export class WorldOwnerService {
     return this.serializeOwner(owner);
   }
 
-  async setOwnerApiKey(apiKey: string, apiBase?: string) {
+  async setOwnerApiKey(
+    apiKey: string,
+    apiBase?: string,
+  ): Promise<WorldOwnerProfile> {
     const owner = await this.getOwnerOrThrow();
     owner.customApiKey = encryptUserApiKey(apiKey.trim());
     owner.customApiBase = apiBase?.trim() ? apiBase.trim() : null;
@@ -215,7 +230,9 @@ export class WorldOwnerService {
     return this.serializeOwner(owner);
   }
 
-  async setDefaultChatBackground(background: ChatBackgroundAsset) {
+  async setDefaultChatBackground(
+    background: ChatBackgroundAsset,
+  ): Promise<WorldOwnerProfile> {
     const owner = await this.getOwnerOrThrow();
     owner.defaultChatBackgroundPayload = JSON.stringify(
       normalizeChatBackgroundAsset(background),
@@ -224,19 +241,19 @@ export class WorldOwnerService {
     return this.serializeOwner(owner);
   }
 
-  async clearDefaultChatBackground() {
+  async clearDefaultChatBackground(): Promise<WorldOwnerProfile> {
     const owner = await this.getOwnerOrThrow();
     owner.defaultChatBackgroundPayload = null;
     await this.userRepo.save(owner);
     return this.serializeOwner(owner);
   }
 
-  async getDefaultChatBackground() {
+  async getDefaultChatBackground(): Promise<ChatBackgroundAsset | null> {
     const owner = await this.getOwnerOrThrow();
     return parseChatBackgroundAsset(owner.defaultChatBackgroundPayload);
   }
 
-  async clearOwnerApiKey() {
+  async clearOwnerApiKey(): Promise<WorldOwnerProfile> {
     const owner = await this.getOwnerOrThrow();
     owner.customApiKey = null;
     owner.customApiBase = null;
@@ -257,7 +274,7 @@ export class WorldOwnerService {
     };
   }
 
-  private serializeOwner(owner: UserEntity) {
+  private serializeOwner(owner: UserEntity): WorldOwnerProfile {
     return {
       id: owner.id,
       username: owner.username,
@@ -272,7 +289,7 @@ export class WorldOwnerService {
     };
   }
 
-  private generatePlaceholderPasswordHash() {
+  private generatePlaceholderPasswordHash(): string {
     return `world_owner_${Date.now()}`;
   }
 }
