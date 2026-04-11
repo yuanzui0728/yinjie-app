@@ -64,6 +64,7 @@ import {
   ChatReminderSummaryText,
   ChatReminderToggleButton,
 } from "../features/chat/chat-reminder-summary-text";
+import { buildSearchRouteHash } from "../features/search/search-route-state";
 import { useMessageReminders } from "../features/chat/use-message-reminders";
 import { useChatReminderActions } from "../features/chat/use-chat-reminder-actions";
 import { useChatReminderEntries } from "../features/chat/use-chat-reminder-entries";
@@ -529,7 +530,14 @@ function MobileChatListPage() {
         <button
           type="button"
           onClick={() => {
-            void navigate({ to: "/tabs/search" });
+            void navigate({
+              to: "/tabs/search",
+              hash: buildSearchRouteHash({
+                category: "all",
+                keyword: "",
+                source: "chat",
+              }),
+            });
           }}
           className="relative block w-full text-left"
           aria-label="打开搜一搜"
