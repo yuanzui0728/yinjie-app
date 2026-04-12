@@ -4,12 +4,22 @@ import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
-
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        cacheLaunchTarget(from: launchOptions?[.remoteNotification] as? [AnyHashable: Any], defaultSource: "push")
         return true
+    }
+
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        UserDefaults.standard.set(token, forKey: "YinjiePushToken")
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        UserDefaults.standard.removeObject(forKey: "YinjiePushToken")
+        print("Yinjie push registration failed: \(error.localizedDescription)")
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
@@ -53,13 +63,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         defer { completionHandler() }
+        cacheLaunchTarget(from: response.notification.request.content.userInfo, defaultSource: "local_reminder")
+    }
 
-        let userInfo = response.notification.request.content.userInfo
-        let kind = normalize(userInfo["kind"] as? String)
-        let route = normalize(userInfo["route"] as? String)
-        let conversationId = normalize(userInfo["conversationId"] as? String)
-        let groupId = normalize(userInfo["groupId"] as? String)
-        let source = normalize(userInfo["source"] as? String)
+    private func cacheLaunchTarget(from userInfo: [AnyHashable: Any]?, defaultSource: String) {
+        guard let userInfo else {
+            return
+        }
+
+        let kind = normalize(userInfo["kind"])
+        let route = normalize(userInfo["route"])
+        let conversationId = normalize(userInfo["conversationId"])
+        let groupId = normalize(userInfo["groupId"])
+        let source = normalize(userInfo["source"])
 
         let resolvedKind: String?
         if let kind {
@@ -80,7 +96,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
 
         var payload: [String: String] = [
             "kind": resolvedKind,
-            "source": source ?? "local_reminder"
+            "source": source ?? defaultSource
         ]
 
         if let route {
@@ -100,13 +116,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         UserDefaults.standard.set(payload, forKey: "YinjiePendingLaunchTarget")
     }
 
-    private func normalize(_ value: String?) -> String? {
-        guard let value else {
+    private func normalize(_ value: Any?) -> String? {
+        guard let stringValue = value as? String else {
             return nil
         }
 
-        let normalized = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         return normalized.isEmpty ? nil : normalized
     }
-
 }
