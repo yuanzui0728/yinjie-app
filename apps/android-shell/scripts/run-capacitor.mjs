@@ -17,6 +17,11 @@ const androidBuildGradlePath = resolve(androidProjectDir, "app/build.gradle");
 const androidManifestPath = resolve(androidProjectDir, "app/src/main/AndroidManifest.xml");
 const androidStringsPath = resolve(androidProjectDir, "app/src/main/res/values/strings.xml");
 const androidGradleWrapperPath = resolve(androidProjectDir, "gradlew");
+const requiredAndroidManifestPermissions = [
+  "android.permission.CAMERA",
+  "android.permission.RECORD_AUDIO",
+  "android.permission.MODIFY_AUDIO_SETTINGS",
+];
 
 const [command = "doctor", ...restArgs] = process.argv.slice(2);
 
@@ -121,6 +126,14 @@ function writeTextFile(filePath, nextContent) {
 
   writeFileSync(filePath, nextContent);
   return true;
+}
+
+function readTextFileIfExists(filePath) {
+  if (!existsSync(filePath)) {
+    return null;
+  }
+
+  return readFileSync(filePath, "utf8");
 }
 
 function escapeXml(value) {
@@ -364,6 +377,7 @@ if (command === "doctor") {
   let shellConfigError = null;
   let signingProperties = null;
   const javaMajorVersion = readJavaMajorVersion();
+  const androidManifest = readTextFileIfExists(androidManifestPath);
 
   try {
     shellConfig = loadShellConfig();
@@ -393,6 +407,15 @@ if (command === "doctor") {
   if (shellConfig?.runtime.environment === "production") {
     checks.push(["production apiBaseUrl", Boolean(shellConfig.runtime.apiBaseUrl)]);
     checks.push(["production cleartext traffic disabled", !shellConfig.allowCleartextTraffic]);
+  }
+
+  if (androidManifest) {
+    for (const permission of requiredAndroidManifestPermissions) {
+      checks.push([
+        `manifest ${permission}`,
+        androidManifest.includes(`android:name="${permission}"`),
+      ]);
+    }
   }
 
   if (signingProperties) {

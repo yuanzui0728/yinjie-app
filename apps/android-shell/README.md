@@ -34,6 +34,7 @@ This package hosts the Capacitor-based Android container for `apps/app`.
 - `pnpm android:doctor` now also checks whether the active Java runtime is at least 21.
 - Production defaults disable cleartext traffic; local debugging can override it in `android-shell.config.local.json`.
 - Android backup and device-transfer extraction are explicitly disabled in the generated manifest resources.
+- Chat voice/video capture in the WebView relies on Capacitor's built-in `BridgeWebChromeClient` permission flow, so the shell manifest must keep `CAMERA`, `RECORD_AUDIO`, and `MODIFY_AUDIO_SETTINGS`.
 
 ## Web-to-Shell Contract
 
