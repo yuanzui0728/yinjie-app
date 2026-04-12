@@ -2572,23 +2572,42 @@ export function ChatMessageList({
           onPrint={
             isDesktop
               ? () => {
-                  if (
-                    openPrintWindow({
-                      title:
-                        activeImage.fileName || activeImage.label || "图片",
-                      imageUrl: activeImage.url,
-                    })
-                  ) {
-                    setActionNotice({
-                      message: "已打开图片打印窗口。",
-                      tone: "success",
-                    });
-                    return;
-                  }
+                  void openDesktopChatImageViewerWindow({
+                    imageUrl: activeImage.url,
+                    title:
+                      activeImage.fileName || activeImage.label || "图片",
+                    meta: activeImage.meta,
+                    returnTo: activeImage.returnTo,
+                    items: standaloneViewerItems,
+                    activeId: activeImage.id,
+                    autoPrint: true,
+                  }).then((opened) => {
+                    if (opened) {
+                      setActionNotice({
+                        message: "已打开图片打印视图。",
+                        tone: "success",
+                      });
+                      return;
+                    }
 
-                  setActionNotice({
-                    message: "浏览器阻止了打印窗口，请检查弹窗权限。",
-                    tone: "danger",
+                    if (
+                      openPrintWindow({
+                        title:
+                          activeImage.fileName || activeImage.label || "图片",
+                        imageUrl: activeImage.url,
+                      })
+                    ) {
+                      setActionNotice({
+                        message: "已打开图片打印窗口。",
+                        tone: "success",
+                      });
+                      return;
+                    }
+
+                    setActionNotice({
+                      message: "浏览器阻止了打印窗口，请检查弹窗权限。",
+                      tone: "danger",
+                    });
                   });
                 }
               : undefined

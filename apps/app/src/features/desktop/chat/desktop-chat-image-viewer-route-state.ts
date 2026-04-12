@@ -23,6 +23,7 @@ export type DesktopChatImageViewerRouteState = {
   returnTo?: string;
   sessionId?: string;
   activeId?: string;
+  printToken?: string;
 };
 
 export function buildDesktopChatImageViewerRouteHash(
@@ -46,6 +47,10 @@ export function buildDesktopChatImageViewerRouteHash(
 
   if (input.activeId?.trim()) {
     params.set("active", input.activeId.trim());
+  }
+
+  if (input.printToken?.trim()) {
+    params.set("print", input.printToken.trim());
   }
 
   return params.toString();
@@ -77,6 +82,7 @@ export function parseDesktopChatImageViewerRouteHash(hash: string) {
   const returnTo = params.get("returnTo")?.trim();
   const sessionId = params.get("session")?.trim();
   const activeId = params.get("active")?.trim();
+  const printToken = params.get("print")?.trim();
 
   return {
     imageUrl,
@@ -85,6 +91,7 @@ export function parseDesktopChatImageViewerRouteHash(hash: string) {
     returnTo: returnTo || undefined,
     sessionId: sessionId || undefined,
     activeId: activeId || undefined,
+    printToken: printToken || undefined,
   } satisfies DesktopChatImageViewerRouteState;
 }
 
@@ -115,6 +122,7 @@ function buildDesktopChatImageViewerWindowLabel(
 export async function openDesktopChatImageViewerWindow(
   input: DesktopChatImageViewerRouteState & {
     items?: readonly DesktopChatImageViewerSessionItem[];
+    autoPrint?: boolean;
   },
 ) {
   if (typeof window === "undefined") {
@@ -122,6 +130,12 @@ export async function openDesktopChatImageViewerWindow(
   }
 
   const sessionId = saveDesktopChatImageViewerSession(input.items);
+  const printToken = input.autoPrint
+    ? typeof crypto !== "undefined" &&
+      typeof crypto.randomUUID === "function"
+      ? crypto.randomUUID()
+      : `${Date.now()}`
+    : undefined;
   const routeHash = buildDesktopChatImageViewerRouteHash({
     imageUrl: input.imageUrl,
     title: input.title,
@@ -129,6 +143,7 @@ export async function openDesktopChatImageViewerWindow(
     returnTo: input.returnTo,
     sessionId: sessionId ?? undefined,
     activeId: sessionId ? input.activeId?.trim() || undefined : undefined,
+    printToken,
   });
   const routePath = `${DESKTOP_CHAT_IMAGE_VIEWER_PATH}#${routeHash}`;
 
