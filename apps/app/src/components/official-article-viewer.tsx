@@ -12,6 +12,7 @@ import {
 export function OfficialArticleViewer({
   article,
   accountName,
+  mobile = false,
   favorite = false,
   onOpenAccount,
   onOpenArticle,
@@ -19,6 +20,7 @@ export function OfficialArticleViewer({
 }: {
   article: OfficialAccountArticleDetail;
   accountName?: string;
+  mobile?: boolean;
   favorite?: boolean;
   onOpenAccount?: (accountId: string) => void;
   onOpenArticle?: (articleId: string) => void;
@@ -129,36 +131,70 @@ export function OfficialArticleViewer({
   }
 
   return (
-    <article className="mx-auto w-full max-w-[760px] rounded-[28px] border border-[color:var(--border-faint)] bg-white px-5 py-6 shadow-[var(--shadow-section)] sm:px-8">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <article
+      className={
+        mobile
+          ? "w-full bg-white px-4 py-4"
+          : "mx-auto w-full max-w-[760px] rounded-[28px] border border-[color:var(--border-faint)] bg-white px-5 py-6 shadow-[var(--shadow-section)] sm:px-8"
+      }
+    >
+      <div
+        className={mobile
+          ? "flex flex-wrap items-start justify-between gap-2.5"
+          : "flex flex-wrap items-start justify-between gap-3"}
+      >
         <div>
           <button
             type="button"
             onClick={() => onOpenAccount?.(article.account.id)}
-            className="text-left text-xs font-medium tracking-[0.12em] text-[color:var(--text-muted)] transition hover:text-[color:var(--text-primary)]"
+            className={
+              mobile
+                ? "text-left text-[11px] font-medium tracking-[0.08em] text-[color:var(--text-muted)] transition hover:text-[color:var(--text-primary)]"
+                : "text-left text-xs font-medium tracking-[0.12em] text-[color:var(--text-muted)] transition hover:text-[color:var(--text-primary)]"
+            }
           >
             {accountName ?? article.account.name}
           </button>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-[color:var(--text-muted)]">
-            <span className="rounded-full border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] px-2.5 py-1 text-[color:var(--brand-primary)]">
+          <div
+            className={
+              mobile
+                ? "mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-[color:var(--text-muted)]"
+                : "mt-2 flex flex-wrap items-center gap-2 text-xs text-[color:var(--text-muted)]"
+            }
+          >
+            <span
+              className={
+                mobile
+                  ? "rounded-full border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] px-2 py-0.5 text-[color:var(--brand-primary)]"
+                  : "rounded-full border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] px-2.5 py-1 text-[color:var(--brand-primary)]"
+              }
+            >
               {article.account.accountType === "service" ? "服务号" : "订阅号"}
             </span>
             {article.account.isVerified ? (
-              <span className="rounded-full border border-[#d7e5fb] bg-[#f3f7ff] px-2.5 py-1 text-[#315b9a]">
+              <span
+                className={
+                  mobile
+                    ? "rounded-full border border-[#d7e5fb] bg-[#f3f7ff] px-2 py-0.5 text-[#315b9a]"
+                    : "rounded-full border border-[#d7e5fb] bg-[#f3f7ff] px-2.5 py-1 text-[#315b9a]"
+                }
+              >
                 已认证
               </span>
             ) : null}
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div
+          className={mobile ? "flex flex-wrap items-center gap-1.5" : "flex flex-wrap items-center gap-2"}
+        >
           {onToggleFavorite ? (
             <Button
               type="button"
               variant="secondary"
               size="sm"
               onClick={() => onToggleFavorite(article)}
-              className="rounded-xl"
+              className={mobile ? "rounded-[10px] px-3" : "rounded-xl"}
             >
               <Star size={14} className={favorite ? "fill-current" : ""} />
               {favorite ? "已收藏" : "收藏"}
@@ -169,75 +205,148 @@ export function OfficialArticleViewer({
             variant="secondary"
             size="sm"
             onClick={() => void handleShareArticle()}
-            className="rounded-xl"
+            className={mobile ? "rounded-[10px] px-3" : "rounded-xl"}
           >
             {nativeMobileShareSupported ? <Share2 size={14} /> : <Copy size={14} />}
             {nativeMobileShareSupported ? "系统分享" : "复制链接"}
           </Button>
         </div>
       </div>
-      <h1 className="mt-3 text-[28px] font-semibold leading-[1.35] text-[color:var(--text-primary)]">
+      <h1
+        className={
+          mobile
+            ? "mt-3 text-[24px] font-semibold leading-[1.4] text-[color:var(--text-primary)]"
+            : "mt-3 text-[28px] font-semibold leading-[1.35] text-[color:var(--text-primary)]"
+        }
+      >
         {article.title}
       </h1>
-      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[color:var(--text-muted)]">
+      <div
+        className={
+          mobile
+            ? "mt-2.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[12px] text-[color:var(--text-muted)]"
+            : "mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[color:var(--text-muted)]"
+        }
+      >
         <span>{article.authorName}</span>
         <span>{formatTimestamp(article.publishedAt)}</span>
         <span>{article.readCount} 阅读</span>
       </div>
       {shareNotice ? (
         <InlineNotice
-          className="mt-4 border-[color:var(--border-faint)] bg-[color:var(--surface-console)]"
+          className={
+            mobile
+              ? "mt-3 border-[color:var(--border-faint)] bg-[color:var(--surface-console)]"
+              : "mt-4 border-[color:var(--border-faint)] bg-[color:var(--surface-console)]"
+          }
           tone={shareNotice.tone}
         >
           {shareNotice.message}
         </InlineNotice>
       ) : null}
       {article.coverImage ? (
-        <div className="mt-6 overflow-hidden rounded-[24px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)]">
+        <div
+          className={
+            mobile
+              ? "mt-5 overflow-hidden rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)]"
+              : "mt-6 overflow-hidden rounded-[24px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)]"
+          }
+        >
           <img
             src={article.coverImage}
             alt={article.title}
-            className="h-auto max-h-[420px] w-full object-cover"
+            className={
+              mobile
+                ? "h-auto max-h-[320px] w-full object-cover"
+                : "h-auto max-h-[420px] w-full object-cover"
+            }
           />
         </div>
       ) : null}
-      <div className="mt-6 rounded-[22px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-3 text-sm leading-7 text-[color:var(--text-secondary)]">
+      <div
+        className={
+          mobile
+            ? "mt-4 rounded-[16px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-3.5 py-2.5 text-[13px] leading-6 text-[color:var(--text-secondary)]"
+            : "mt-6 rounded-[22px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-3 text-sm leading-7 text-[color:var(--text-secondary)]"
+        }
+      >
         {article.summary}
       </div>
       <div
-        className="official-article-content mt-7 space-y-4 text-[15px] leading-8 text-[color:var(--text-primary)] [&_blockquote]:rounded-[20px] [&_blockquote]:border-l-4 [&_blockquote]:border-[rgba(7,193,96,0.2)] [&_blockquote]:bg-[rgba(7,193,96,0.07)] [&_blockquote]:px-4 [&_blockquote]:py-3 [&_h3]:mt-8 [&_h3]:text-xl [&_h3]:font-semibold [&_img]:rounded-[20px] [&_p]:my-0"
+        className={
+          mobile
+            ? "official-article-content mt-6 space-y-3 text-[14px] leading-7 text-[color:var(--text-primary)] [&_blockquote]:rounded-[16px] [&_blockquote]:border-l-4 [&_blockquote]:border-[rgba(7,193,96,0.2)] [&_blockquote]:bg-[rgba(7,193,96,0.07)] [&_blockquote]:px-3.5 [&_blockquote]:py-2.5 [&_h3]:mt-7 [&_h3]:text-[19px] [&_h3]:font-semibold [&_img]:rounded-[16px] [&_p]:my-0"
+            : "official-article-content mt-7 space-y-4 text-[15px] leading-8 text-[color:var(--text-primary)] [&_blockquote]:rounded-[20px] [&_blockquote]:border-l-4 [&_blockquote]:border-[rgba(7,193,96,0.2)] [&_blockquote]:bg-[rgba(7,193,96,0.07)] [&_blockquote]:px-4 [&_blockquote]:py-3 [&_h3]:mt-8 [&_h3]:text-xl [&_h3]:font-semibold [&_img]:rounded-[20px] [&_p]:my-0"
+        }
         onClick={(event) => void handleContentLinkClick(event)}
         dangerouslySetInnerHTML={{ __html: article.contentHtml }}
       />
 
       {article.relatedArticles.length ? (
-        <section className="mt-10 rounded-[24px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-5">
-          <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
-            <Newspaper size={16} className="text-[color:var(--brand-primary)]" />
+        <section
+          className={
+            mobile
+              ? "mt-8 border-t border-[color:var(--border-faint)] pt-4"
+              : "mt-10 rounded-[24px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-5"
+          }
+        >
+          <div
+            className={
+              mobile
+                ? "flex items-center gap-2 text-[15px] font-medium text-[color:var(--text-primary)]"
+                : "flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]"
+            }
+          >
+            <Newspaper
+              size={mobile ? 15 : 16}
+              className="text-[color:var(--brand-primary)]"
+            />
             <span>该号更多内容</span>
           </div>
 
-          <div className="mt-4 space-y-3">
+          <div className={mobile ? "mt-3 space-y-2.5" : "mt-4 space-y-3"}>
             {article.relatedArticles.map((relatedArticle) => (
               <button
                 key={relatedArticle.id}
                 type="button"
                 onClick={() => onOpenArticle?.(relatedArticle.id)}
-                className="flex w-full items-start justify-between gap-3 rounded-[18px] border border-[color:var(--border-faint)] bg-white px-4 py-3 text-left transition hover:bg-[color:var(--surface-console)]"
+                className={
+                  mobile
+                    ? "flex w-full items-start justify-between gap-3 rounded-[14px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-3.5 py-3 text-left transition hover:bg-white"
+                    : "flex w-full items-start justify-between gap-3 rounded-[18px] border border-[color:var(--border-faint)] bg-white px-4 py-3 text-left transition hover:bg-[color:var(--surface-console)]"
+                }
               >
                 <div className="min-w-0 flex-1">
-                  <div className="text-sm font-medium leading-6 text-[color:var(--text-primary)]">
+                  <div
+                    className={
+                      mobile
+                        ? "text-[14px] font-medium leading-5 text-[color:var(--text-primary)]"
+                        : "text-sm font-medium leading-6 text-[color:var(--text-primary)]"
+                    }
+                  >
                     {relatedArticle.title}
                   </div>
-                  <div className="mt-1 line-clamp-2 text-xs leading-5 text-[color:var(--text-secondary)]">
+                  <div
+                    className={
+                      mobile
+                        ? "mt-1 line-clamp-2 text-[11px] leading-5 text-[color:var(--text-secondary)]"
+                        : "mt-1 line-clamp-2 text-xs leading-5 text-[color:var(--text-secondary)]"
+                    }
+                  >
                     {relatedArticle.summary}
                   </div>
-                  <div className="mt-2 text-[11px] text-[color:var(--text-muted)]">
+                  <div
+                    className={
+                      mobile
+                        ? "mt-1.5 text-[10px] text-[color:var(--text-muted)]"
+                        : "mt-2 text-[11px] text-[color:var(--text-muted)]"
+                    }
+                  >
                     {formatTimestamp(relatedArticle.publishedAt)}
                   </div>
                 </div>
                 <ArrowRight
-                  size={16}
+                  size={mobile ? 15 : 16}
                   className="mt-1 shrink-0 text-[color:var(--text-dim)]"
                 />
               </button>
