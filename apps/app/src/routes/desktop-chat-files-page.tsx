@@ -295,7 +295,7 @@ export function DesktopChatFilesPage() {
                     "rounded-[10px] border px-3 py-1.5 text-xs transition",
                     filter === item
                       ? "border-[rgba(7,193,96,0.16)] bg-white text-[color:var(--text-primary)] shadow-[0_6px_16px_rgba(15,23,42,0.04)]"
-                      : "border-transparent bg-[color:var(--surface-console)] text-[color:var(--text-secondary)] hover:border-[rgba(7,193,96,0.12)] hover:bg-white",
+                      : "border-transparent bg-[color:var(--surface-console)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-faint)] hover:bg-white",
                   )}
                 >
                   {item === "all" ? "全部" : item === "image" ? "图片" : "文件"}
@@ -320,7 +320,7 @@ export function DesktopChatFilesPage() {
                     "flex w-full items-center gap-3 rounded-[10px] border px-3 py-2.5 text-left transition",
                     !selectedConversationId
                       ? "border-[rgba(7,193,96,0.16)] bg-white shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
-                      : "border-transparent bg-transparent hover:border-[rgba(7,193,96,0.12)] hover:bg-white/86",
+                      : "border-transparent bg-transparent hover:border-[color:var(--border-faint)] hover:bg-[color:var(--surface-console)]",
                   )}
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white text-sm font-medium text-[color:var(--text-secondary)]">
@@ -342,10 +342,10 @@ export function DesktopChatFilesPage() {
                     type="button"
                     onClick={() => setSelectedConversationId(conversation.id)}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-[10px] border px-3 py-2.5 text-left transition",
-                      conversation.id === selectedConversationId
-                        ? "border-[rgba(7,193,96,0.16)] bg-white shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
-                        : "border-transparent bg-transparent hover:border-[rgba(7,193,96,0.12)] hover:bg-white/86",
+                    "flex w-full items-center gap-3 rounded-[10px] border px-3 py-2.5 text-left transition",
+                    conversation.id === selectedConversationId
+                      ? "border-[rgba(7,193,96,0.16)] bg-white shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
+                        : "border-transparent bg-transparent hover:border-[color:var(--border-faint)] hover:bg-[color:var(--surface-console)]",
                     )}
                   >
                     <AvatarChip name={conversation.title} size="wechat" />
@@ -414,7 +414,7 @@ export function DesktopChatFilesPage() {
                 return (
                   <div
                     key={item.id}
-                    className="rounded-[16px] border border-[color:var(--border-faint)] bg-white p-4 shadow-[var(--shadow-soft)] transition hover:border-[rgba(7,193,96,0.12)] hover:bg-white"
+                    className="rounded-[16px] border border-[color:var(--border-faint)] bg-white p-4 shadow-[var(--shadow-soft)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[color:var(--surface-console)]"
                   >
                     <div className="flex items-start gap-4">
                       {isImage ? (
