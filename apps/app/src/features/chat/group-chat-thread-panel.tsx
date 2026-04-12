@@ -360,6 +360,13 @@ export function GroupChatThreadPanel({
     sendMutation.error instanceof Error ? sendMutation.error.message : null;
   const effectiveBackground = backgroundQuery.data?.effectiveBackground ?? null;
   const announcement = groupQuery.data?.announcement?.trim() ?? "";
+  const mobileSubtitle = membersQuery.data
+    ? `${membersQuery.data.length} 人群聊${
+        groupQuery.data?.isMuted ? " · 免打扰" : ""
+      }`
+    : groupQuery.data?.isMuted
+      ? "群聊 · 免打扰"
+      : undefined;
 
   useEffect(() => {
     const loadedCount = messagesQuery.data?.length ?? 0;
@@ -723,6 +730,7 @@ export function GroupChatThreadPanel({
       ) : (
         <MobileChatThreadHeader
           title={groupQuery.data?.name ?? "群聊"}
+          subtitle={mobileSubtitle}
           onBack={onBack}
           actions={[
             {
@@ -788,49 +796,79 @@ export function GroupChatThreadPanel({
       ) : null}
 
       {!isDesktop && announcement ? (
-        <button
-          type="button"
-          onClick={() => {
-            void navigate({
-              to: "/group/$groupId/details",
-              params: { groupId },
-            });
-          }}
-          className="flex items-center gap-2.5 border-b border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-2.5 text-left"
-        >
-          <span className="shrink-0 rounded-[8px] bg-white px-2 py-0.5 text-[10px] font-medium text-[color:var(--text-muted)]">
-            群公告
-          </span>
-          <span className="min-w-0 flex-1 truncate text-[13px] text-[color:var(--text-secondary)]">
-            {announcement}
-          </span>
-        </button>
+        <div className="border-b border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] px-3 py-2">
+          <button
+            type="button"
+            onClick={() => {
+              void navigate({
+                to: "/group/$groupId/details",
+                params: { groupId },
+              });
+            }}
+            className="flex w-full items-center gap-2.5 rounded-[14px] border border-[rgba(7,193,96,0.12)] bg-[rgba(247,251,248,0.96)] px-3 py-2.5 text-left active:bg-white"
+          >
+            <span className="shrink-0 rounded-full bg-[rgba(7,193,96,0.1)] px-2.5 py-1 text-[10px] font-medium text-[#15803d]">
+              群公告
+            </span>
+            <span className="min-w-0 flex-1 truncate text-[13px] text-[color:var(--text-primary)]">
+              {announcement}
+            </span>
+            <span className="shrink-0 text-[11px] text-[color:var(--text-muted)]">
+              详情
+            </span>
+          </button>
+        </div>
       ) : null}
 
       {routeContextNotice ? (
-        <div
-          className={
-            isDesktop
-              ? "border-b border-[color:var(--border-faint)] bg-[rgba(249,251,250,0.92)] px-6 py-3"
-              : "border-b border-[color:var(--border-faint)] bg-[rgba(249,251,250,0.92)] px-3 py-2.5"
-          }
-        >
-          <InlineNotice
-            tone="info"
-            className="border-[color:var(--border-faint)] bg-white"
-          >
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <span className="min-w-0 flex-1 text-xs leading-6 text-[color:var(--text-secondary)]">
+        isDesktop ? (
+          <div className="border-b border-[color:var(--border-faint)] bg-[rgba(249,251,250,0.92)] px-6 py-3">
+            <InlineNotice
+              tone="info"
+              className="border-[color:var(--border-faint)] bg-white"
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <span className="min-w-0 flex-1 text-xs leading-6 text-[color:var(--text-secondary)]">
+                  {routeContextNotice.description}
+                </span>
+                <div className="flex items-center justify-end gap-1.5">
+                  {routeContextNotice.secondaryActionLabel &&
+                  routeContextNotice.onSecondaryAction ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={routeContextNotice.onSecondaryAction}
+                      className="shrink-0 rounded-full"
+                    >
+                      {routeContextNotice.secondaryActionLabel}
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={routeContextNotice.onAction}
+                    className="shrink-0 rounded-full"
+                  >
+                    {routeContextNotice.actionLabel}
+                  </Button>
+                </div>
+              </div>
+            </InlineNotice>
+          </div>
+        ) : (
+          <div className="border-b border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] px-3 pb-2">
+            <div className="rounded-[14px] border border-[color:var(--border-subtle)] bg-white px-3 py-3">
+              <div className="text-xs leading-6 text-[color:var(--text-secondary)]">
                 {routeContextNotice.description}
-              </span>
-              <div className="flex items-center justify-end gap-1.5">
+              </div>
+              <div className="mt-2 flex items-center justify-end gap-2">
                 {routeContextNotice.secondaryActionLabel &&
                 routeContextNotice.onSecondaryAction ? (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={routeContextNotice.onSecondaryAction}
-                    className="shrink-0 rounded-full"
+                    className="h-8 shrink-0 rounded-full px-3 text-[12px]"
                   >
                     {routeContextNotice.secondaryActionLabel}
                   </Button>
@@ -839,14 +877,14 @@ export function GroupChatThreadPanel({
                   variant="secondary"
                   size="sm"
                   onClick={routeContextNotice.onAction}
-                  className="shrink-0 rounded-full"
+                  className="h-8 shrink-0 rounded-full px-3 text-[12px]"
                 >
                   {routeContextNotice.actionLabel}
                 </Button>
               </div>
             </div>
-          </InlineNotice>
-        </div>
+          </div>
+        )
       ) : null}
 
       <div className="relative flex-1 overflow-hidden">
