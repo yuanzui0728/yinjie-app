@@ -13,6 +13,7 @@ import {
 import { Button, ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
+import { GroupAvatarChip } from "../components/group-avatar-chip";
 import {
   filterSearchableChatMessages,
   useLocalChatMessageActionState,
@@ -21,7 +22,11 @@ import { useMessageReminders } from "../features/chat/use-message-reminders";
 import { DesktopUtilityShell } from "../features/desktop/desktop-utility-shell";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { sanitizeDisplayedChatText } from "../lib/chat-text";
-import { isPersistedGroupConversation } from "../lib/conversation-route";
+import {
+  getConversationThreadLabel,
+  getConversationThreadType,
+  isPersistedGroupConversation,
+} from "../lib/conversation-route";
 import {
   formatConversationTimestamp,
   formatMessageTimestamp,
@@ -79,7 +84,9 @@ export function DesktopChatHistoryPage() {
       "desktop-chat-history",
       baseUrl,
       selectedConversation?.id,
-      selectedConversation?.type,
+      selectedConversation
+        ? getConversationThreadType(selectedConversation)
+        : undefined,
       historyLimit,
     ],
     queryFn: async () => {
@@ -120,7 +127,7 @@ export function DesktopChatHistoryPage() {
             "desktop-chat-history",
             baseUrl,
             conversation.id,
-            conversation.type,
+            getConversationThreadType(conversation),
           ],
         }),
       ]);
@@ -249,13 +256,21 @@ export function DesktopChatHistoryPage() {
                       : "border-transparent bg-transparent hover:border-[color:var(--border-faint)] hover:bg-white/80",
                   )}
                 >
-                  <AvatarChip name={conversation.title} size="wechat" />
+                  {isPersistedGroupConversation(conversation) ? (
+                    <GroupAvatarChip
+                      name={conversation.title}
+                      members={conversation.participants}
+                      size="wechat"
+                    />
+                  ) : (
+                    <AvatarChip name={conversation.title} size="wechat" />
+                  )}
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">
                       {conversation.title}
                     </div>
                     <div className="mt-1 text-xs text-[color:var(--text-muted)]">
-                      {conversation.type === "group" ? "群聊" : "单聊"} ·{" "}
+                      {getConversationThreadLabel(conversation)} ·{" "}
                       {formatConversationTimestamp(conversation.lastActivityAt)}
                     </div>
                   </div>
@@ -281,9 +296,7 @@ export function DesktopChatHistoryPage() {
               <div className="space-y-3">
                 <InfoCard
                   label="会话类型"
-                  value={
-                    selectedConversation.type === "group" ? "群聊" : "单聊"
-                  }
+                  value={getConversationThreadLabel(selectedConversation)}
                 />
                 <InfoCard
                   label="最近活跃"

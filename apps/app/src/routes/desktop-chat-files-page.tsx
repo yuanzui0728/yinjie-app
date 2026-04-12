@@ -20,6 +20,7 @@ import {
 import { Button, ErrorBlock, LoadingBlock, TextField, cn } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
+import { GroupAvatarChip } from "../components/group-avatar-chip";
 import {
   buildDesktopChatFilesRouteHash,
   parseDesktopChatFilesRouteState,
@@ -40,7 +41,12 @@ import {
 } from "../features/chat/local-chat-message-actions";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { formatMessageTimestamp, parseTimestamp } from "../lib/format";
-import { isPersistedGroupConversation } from "../lib/conversation-route";
+import {
+  getConversationThreadLabel,
+  getConversationThreadPath,
+  getConversationThreadType,
+  isPersistedGroupConversation,
+} from "../lib/conversation-route";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 type FileFilter = "all" | "image" | "file";
@@ -50,6 +56,7 @@ type AttachmentRow = {
   conversationId: string;
   conversationTitle: string;
   conversationType: "direct" | "group";
+  conversationSource?: "conversation" | "group";
   attachment: Extract<MessageAttachment, { kind: "image" | "file" }>;
   createdAt: string;
   senderName: string;
@@ -151,7 +158,9 @@ export function DesktopChatFilesPage() {
     queryKey: [
       "desktop-chat-files",
       baseUrl,
-      conversations.map((item) => `${item.id}:${item.type}`),
+      conversations.map(
+        (item) => `${item.id}:${item.source ?? getConversationThreadType(item)}`,
+      ),
     ],
     queryFn: async () => {
       if (!baseUrl) {
@@ -342,19 +351,27 @@ export function DesktopChatFilesPage() {
                     type="button"
                     onClick={() => setSelectedConversationId(conversation.id)}
                     className={cn(
-                    "flex w-full items-center gap-3 rounded-[10px] border px-3 py-2.5 text-left transition",
-                    conversation.id === selectedConversationId
-                      ? "border-[rgba(7,193,96,0.16)] bg-white shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
+                      "flex w-full items-center gap-3 rounded-[10px] border px-3 py-2.5 text-left transition",
+                      conversation.id === selectedConversationId
+                        ? "border-[rgba(7,193,96,0.16)] bg-white shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
                         : "border-transparent bg-transparent hover:border-[color:var(--border-faint)] hover:bg-[color:var(--surface-console)]",
                     )}
                   >
-                    <AvatarChip name={conversation.title} size="wechat" />
+                    {isPersistedGroupConversation(conversation) ? (
+                      <GroupAvatarChip
+                        name={conversation.title}
+                        members={conversation.participants}
+                        size="wechat"
+                      />
+                    ) : (
+                      <AvatarChip name={conversation.title} size="wechat" />
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">
                         {conversation.title}
                       </div>
                       <div className="mt-1 text-xs text-[color:var(--text-muted)]">
-                        {conversation.type === "group" ? "群聊" : "单聊"} ·{" "}
+                        {getConversationThreadLabel(conversation)} ·{" "}
                         {attachmentCounts[conversation.id] ?? 0} 项附件
                       </div>
                     </div>
@@ -379,9 +396,7 @@ export function DesktopChatFilesPage() {
               label="会话类型"
               value={
                 selectedConversation
-                  ? selectedConversation.type === "group"
-                    ? "群聊"
-                    : "单聊"
+                  ? getConversationThreadLabel(selectedConversation)
                   : "全部会话"
               }
             />
@@ -490,11 +505,20 @@ export function DesktopChatFilesPage() {
                             variant="secondary"
                             size="sm"
                             onClick={() => {
-                              if (item.conversationType === "group") {
+                              const threadPath = buildAttachmentMessagePath(
+                                item,
+                              );
+                              const hash = threadPath.split("#")[1];
+                              if (
+                                getConversationThreadType({
+                                  type: item.conversationType,
+                                  source: item.conversationSource,
+                                }) === "group"
+                              ) {
                                 void navigate({
                                   to: "/group/$groupId",
                                   params: { groupId: item.conversationId },
-                                  hash: `chat-message-${item.id}`,
+                                  hash,
                                 });
                                 return;
                               }
@@ -504,7 +528,7 @@ export function DesktopChatFilesPage() {
                                 params: {
                                   conversationId: item.conversationId,
                                 },
-                                hash: `chat-message-${item.id}`,
+                                hash,
                               });
                             }}
                             className="h-8 rounded-[10px] border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-3 text-[12px] shadow-none hover:bg-white"
@@ -616,6 +640,7 @@ function normalizeAttachmentRows(
     id: string;
     title: string;
     type: "direct" | "group";
+    source?: "conversation" | "group";
   },
   messages: Message[] | GroupMessage[],
 ): AttachmentRow[] {
@@ -634,7 +659,8 @@ function normalizeAttachmentRows(
         id: item.id,
         conversationId: conversation.id,
         conversationTitle: conversation.title,
-        conversationType: conversation.type,
+        conversationType: getConversationThreadType(conversation),
+        conversationSource: conversation.source,
         attachment,
         createdAt: item.createdAt,
         senderName: item.senderName,
@@ -649,6 +675,7 @@ async function fetchConversationAttachmentRows(
     id: string;
     title: string;
     type: "direct" | "group";
+    source?: "conversation" | "group";
   },
   baseUrl: string,
 ) {
@@ -750,9 +777,11 @@ function InfoCard({ label, value }: { label: string; value: string }) {
 }
 
 function buildAttachmentMessagePath(item: AttachmentRow) {
-  return item.conversationType === "group"
-    ? `/group/${item.conversationId}#chat-message-${item.id}`
-    : `/chat/${item.conversationId}#chat-message-${item.id}`;
+  return `${getConversationThreadPath({
+    id: item.conversationId,
+    type: item.conversationType,
+    source: item.conversationSource,
+  })}#chat-message-${item.id}`;
 }
 
 function resolveFileFilterLabel(filter: FileFilter) {
