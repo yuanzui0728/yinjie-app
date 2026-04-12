@@ -173,3 +173,5 @@ docker compose up -d
 
 默认数据库位于 `./data/database.sqlite`，升级不会自动清空数据。
 如果旧环境曾把数据库写到 `api/database.sqlite` 或 `api/data/database.sqlite`，新版本启动时会自动迁移到 `./data/database.sqlite`。
+
+Web 客户端升级时不要额外删除旧的 `apps/app/dist/assets`。前端懒加载 chunk 带内容哈希，保留旧文件可以避免已打开的旧标签页在切页面时请求到不存在的历史 chunk 并出现 404。
