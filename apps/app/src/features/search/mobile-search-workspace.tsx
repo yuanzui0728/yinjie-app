@@ -158,7 +158,7 @@ export function MobileSearchWorkspace({
               className={cn(
                 "shrink-0 rounded-full px-4 py-2 text-xs font-medium transition",
                 activeCategory === item.id
-                  ? "bg-[color:var(--brand-primary)] text-white"
+                  ? "bg-[#07c160] text-white"
                   : "border border-black/5 bg-white text-[color:var(--text-secondary)]",
               )}
             >
@@ -260,10 +260,7 @@ export function MobileSearchWorkspace({
 
             <section className="rounded-[22px] border border-black/5 bg-white p-4 shadow-none">
               <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
-                <Sparkles
-                  size={16}
-                  className="text-[color:var(--brand-primary)]"
-                />
+                <Sparkles size={16} className="text-[#15803d]" />
                 <span>当前可搜索范围</span>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-[color:var(--text-secondary)]">
@@ -322,7 +319,7 @@ export function MobileSearchWorkspace({
                               [section.category]: !current[section.category],
                             }))
                           }
-                          className="text-xs text-[color:var(--brand-primary)]"
+                          className="text-xs text-[#15803d]"
                         >
                           {expanded
                             ? "收起"
