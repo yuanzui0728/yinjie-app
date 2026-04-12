@@ -10,6 +10,58 @@ import { configureContractsRuntime } from "./lib/runtime-config";
 import { router } from "./router";
 import { hydrateNativeRuntimeConfig } from "./runtime/runtime-config-store";
 
+const VITE_PRELOAD_RECOVERY_KEY = "yinjie-app-vite-preload-recovery";
+
+function shouldRecoverFromStaleAssets() {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    if (window.sessionStorage.getItem(VITE_PRELOAD_RECOVERY_KEY) === "1") {
+      return false;
+    }
+
+    window.sessionStorage.setItem(VITE_PRELOAD_RECOVERY_KEY, "1");
+    return true;
+  } catch {
+    return true;
+  }
+}
+
+function installStaleAssetRecovery() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.addEventListener("vite:preloadError", (event) => {
+    event.preventDefault();
+    if (!shouldRecoverFromStaleAssets()) {
+      return;
+    }
+
+    window.location.reload();
+  });
+
+  window.addEventListener("error", (event) => {
+    const message = event.message?.trim() ?? "";
+    if (
+      !message.includes("Failed to fetch dynamically imported module") &&
+      !message.includes("Importing a module script failed")
+    ) {
+      return;
+    }
+
+    if (!shouldRecoverFromStaleAssets()) {
+      return;
+    }
+
+    window.location.reload();
+  });
+}
+
+installStaleAssetRecovery();
+
 async function bootstrap() {
   await hydrateNativeRuntimeConfig();
   configureContractsRuntime();
