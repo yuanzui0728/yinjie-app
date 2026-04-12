@@ -44,6 +44,7 @@ import {
   formatConversationTimestamp,
   parseTimestamp,
 } from "../lib/format";
+import { saveGeneratedFile } from "../runtime/save-generated-file";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { emitChatMessage, joinConversationRoom } from "../lib/socket";
 
@@ -516,23 +517,20 @@ export function GroupQrPage() {
     }
   }
 
-  function downloadInviteCard() {
-    if (typeof document === "undefined") {
+  async function downloadInviteCard() {
+    const result = await saveGeneratedFile({
+      contents: qrSvgMarkup,
+      fileName: `${groupQuery.data?.name ?? "group"}-invite-card.svg`,
+      mimeType: "image/svg+xml;charset=utf-8",
+      dialogTitle: "保存群邀请卡",
+      kindLabel: "群邀请卡",
+    });
+
+    if (result.status === "cancelled") {
       return;
     }
 
-    const blob = new Blob([qrSvgMarkup], {
-      type: "image/svg+xml;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${groupQuery.data?.name ?? "group"}-invite-card.svg`;
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-    setNotice("群邀请卡已开始保存。");
+    setNotice(result.message);
   }
 
   async function sendToMobile() {
