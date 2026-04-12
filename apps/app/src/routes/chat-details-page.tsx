@@ -113,6 +113,18 @@ export function ChatDetailsPage() {
     navigate,
   ]);
 
+  useEffect(() => {
+    if (conversation?.type !== "group") {
+      return;
+    }
+
+    void navigate({
+      to: "/group/$groupId/details",
+      params: { groupId: conversation.id },
+      replace: true,
+    });
+  }, [conversation, navigate]);
+
   const targetCharacter = characterQuery.data;
   const isPinned = conversation?.isPinned ?? false;
   const strongReminderActive = isConversationStrongReminderActive(

@@ -38,9 +38,6 @@ export function useConversationThread(conversationId: string) {
   );
   const [socketError, setSocketError] = useState<string | null>(null);
   const [conversationTitle, setConversationTitle] = useState("Conversation");
-  const [conversationType, setConversationType] = useState<"direct" | "group">(
-    "direct",
-  );
   const [participants, setParticipants] = useState<string[]>([]);
   const [initialUnreadCount, setInitialUnreadCount] = useState(0);
   const [initialUnreadCutoff, setInitialUnreadCutoff] = useState<string | null>(
@@ -92,8 +89,7 @@ export function useConversationThread(conversationId: string) {
     }
 
     setConversationTitle(conversation.title);
-    setConversationType(conversation.type);
-    setParticipants(conversation.participants);
+    setParticipants(conversation.participants.slice(0, 1));
   }, [activeConversation]);
 
   useEffect(() => {
@@ -171,8 +167,7 @@ export function useConversationThread(conversationId: string) {
       }
 
       setConversationTitle(payload.title);
-      setConversationType(payload.type);
-      setParticipants(payload.participants);
+      setParticipants(payload.participants.slice(0, 1));
       void queryClient.invalidateQueries({
         queryKey: ["app-conversations", baseUrl],
       });
@@ -447,7 +442,7 @@ export function useConversationThread(conversationId: string) {
   return {
     baseUrl,
     conversationTitle,
-    conversationType,
+    conversationType: "direct" as "direct" | "group",
     initialUnreadCount,
     initialUnreadCutoff,
     hasOlderMessages,
