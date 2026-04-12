@@ -35,7 +35,7 @@ export function SplashPage() {
         if (!cancelled) {
           hydrateOwner(owner);
           const restoredRoute =
-            runtimeConfig.appPlatform === "web"
+            runtimeConfig.appPlatform !== "desktop"
               ? readPersistedMobileWebRoute()
               : null;
           void navigate({
