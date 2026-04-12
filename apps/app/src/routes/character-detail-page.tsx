@@ -627,7 +627,7 @@ export function CharacterDetailPage() {
               />
             ) : null}
             {isFriend && isEditingProfile ? (
-              <div className="border-t border-black/5 bg-[#fafafa] px-4 py-4">
+              <div className="border-t border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-4">
                 <div className="space-y-3">
                   <DetailInputField
                     label="备注"
@@ -737,7 +737,7 @@ export function CharacterDetailPage() {
             <ProfileRow label="当前状态" value={activitySummary} />
             <ProfileRow label="擅长领域" value={expertiseSummary} multiline />
             <ProfileRow label="语气风格" value={toneSummary} />
-            <div className="border-t border-black/5 px-4 py-4">
+            <div className="border-t border-[color:var(--border-faint)] px-4 py-4">
               <div className="text-xs uppercase tracking-[0.16em] text-[#8c8c8c]">
                 角色简介
               </div>
@@ -834,7 +834,7 @@ function ActionPanelButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex min-h-[78px] flex-col items-center justify-center gap-2 bg-white text-[#111827] transition active:bg-[#f5f5f5] disabled:opacity-45"
+      className="flex min-h-[78px] flex-col items-center justify-center gap-2 bg-white text-[#111827] transition active:bg-[color:var(--surface-console)] disabled:opacity-45"
     >
       <span className="text-[#606266]">{icon}</span>
       <span className="text-sm">{label}</span>
@@ -857,7 +857,7 @@ function ProfileSection({
         "overflow-hidden bg-white",
         flatOnMobile
           ? "-mx-3 rounded-none border-y border-[color:var(--border-faint)]"
-          : "rounded-[18px] border border-black/5",
+          : "rounded-[18px] border border-[color:var(--border-faint)]",
       )}
     >
       <div
@@ -869,7 +869,7 @@ function ProfileSection({
       >
         {title}
       </div>
-      <div className="border-t border-black/5">{children}</div>
+      <div className="border-t border-[color:var(--border-faint)]">{children}</div>
     </section>
   );
 }
@@ -895,7 +895,7 @@ function ProfileRow({
         type="button"
         onClick={onClick}
         disabled={disabled}
-        className="flex w-full items-center gap-4 px-4 py-4 text-left text-sm transition active:bg-[#f5f5f5] disabled:opacity-60"
+        className="flex w-full items-center gap-4 px-4 py-4 text-left text-sm transition active:bg-[color:var(--surface-console)] disabled:opacity-60"
       >
         <div
           className={cn(
@@ -1002,7 +1002,7 @@ function DetailInputField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-[12px] border border-black/6 bg-white px-3 py-3 text-sm text-[#111827] outline-none placeholder:text-[#a3a3a3]"
+        className="w-full rounded-[12px] border border-[color:var(--border-faint)] bg-white px-3 py-3 text-sm text-[#111827] outline-none transition focus:border-[rgba(7,193,96,0.18)] focus:bg-white placeholder:text-[#a3a3a3]"
       />
     </label>
   );
