@@ -667,6 +667,48 @@ export function GroupQrPage() {
     }
   }
 
+  async function shareInviteLink() {
+    if (!nativeMobileShareSupported) {
+      await copyText(inviteLink, "群链接已复制。");
+      return;
+    }
+
+    const groupName = groupQuery.data?.name ?? "隐界群聊";
+    const shared = await shareWithNativeShell({
+      title: `${groupName} 群链接`,
+      text: `${groupName}\n${inviteLink}`,
+      url: inviteLink,
+    });
+
+    if (shared) {
+      showNotice("已打开系统分享面板。");
+      return;
+    }
+
+    await copyText(inviteLink, "系统分享暂时不可用，已复制群链接。");
+  }
+
+  async function shareInviteTextOnly() {
+    if (!nativeMobileShareSupported) {
+      await copyText(inviteText, "群邀请文案已复制。");
+      return;
+    }
+
+    const groupName = groupQuery.data?.name ?? "隐界群聊";
+    const shared = await shareWithNativeShell({
+      title: `${groupName} 邀请文案`,
+      text: inviteText,
+      url: inviteLink,
+    });
+
+    if (shared) {
+      showNotice("已打开系统分享面板。");
+      return;
+    }
+
+    await copyText(inviteText, "系统分享暂时不可用，已复制群邀请文案。");
+  }
+
   async function sendToConversation(conversation: ConversationListItem) {
     const conversationPath = isPersistedGroupConversation(conversation)
       ? `/group/${conversation.id}`
@@ -851,20 +893,30 @@ export function GroupQrPage() {
           >
             <ActionCard
               compact={!isDesktopLayout}
-              icon={<Link2 size={16} />}
-              title="复制群链接"
-              description="把当前群聊入口发给别的设备继续打开。"
+              icon={
+                nativeMobileShareSupported ? <Share2 size={16} /> : <Link2 size={16} />
+              }
+              title={nativeMobileShareSupported ? "分享群链接" : "复制群链接"}
+              description={
+                nativeMobileShareSupported
+                  ? "直接通过系统分享发送群入口链接。"
+                  : "把当前群聊入口发给别的设备继续打开。"
+              }
               onClick={() => {
-                void copyText(inviteLink, "群链接已复制。");
+                void shareInviteLink();
               }}
             />
             <ActionCard
               compact={!isDesktopLayout}
               icon={<Share2 size={16} />}
-              title="复制邀请文案"
-              description="带上群链接和邀请码，一次性发给对方。"
+              title={nativeMobileShareSupported ? "分享邀请文案" : "复制邀请文案"}
+              description={
+                nativeMobileShareSupported
+                  ? "直接通过系统分享发送完整邀请文案。"
+                  : "带上群链接和邀请码，一次性发给对方。"
+              }
               onClick={() => {
-                void copyText(inviteText, "群邀请文案已复制。");
+                void shareInviteTextOnly();
               }}
             />
             <ActionCard
