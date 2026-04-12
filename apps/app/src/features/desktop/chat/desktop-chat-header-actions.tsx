@@ -117,7 +117,7 @@ function DesktopChatHeaderButton({
         "flex h-[36px] w-[36px] items-center justify-center rounded-[10px] border border-transparent bg-transparent text-[color:var(--text-secondary)] transition-[background-color,border-color,box-shadow,color]",
         active
           ? "border-[rgba(7,193,96,0.16)] bg-white text-[color:var(--text-primary)] shadow-[0_8px_18px_rgba(15,23,42,0.05)]"
-          : "hover:border-[color:var(--border-faint)] hover:bg-white/86 hover:text-[color:var(--text-primary)]",
+          : "hover:border-[color:var(--border-faint)] hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]",
       )}
     >
       {children}
@@ -138,7 +138,7 @@ function CallMenuButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-[12px] px-2 py-2 text-left text-sm text-[color:var(--text-primary)] transition hover:bg-[rgba(7,193,96,0.08)]"
+      className="flex w-full items-center gap-3 rounded-[12px] px-2 py-2 text-left text-sm text-[color:var(--text-primary)] transition hover:bg-[color:var(--surface-console)]"
     >
       <span className="shrink-0 text-[color:var(--text-secondary)]">{icon}</span>
       <span>{label}</span>
