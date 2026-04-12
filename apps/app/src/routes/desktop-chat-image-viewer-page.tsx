@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import {
@@ -121,6 +127,17 @@ export function DesktopChatImageViewerPage() {
     activeItemIndex >= 0 ? viewerItems[activeItemIndex] : undefined;
   const activeItemReturnTo = activeItem?.returnTo;
   const fallbackPath = activeItem?.returnTo ?? routeReturnTo ?? "/tabs/chat";
+  const imageElementRef = useRef<HTMLImageElement | null>(null);
+  const autoPrintTokenRef = useRef<string | null>(null);
+
+  const requestCurrentWindowPrint = useCallback(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    window.print();
+    return true;
+  }, []);
 
   const navigateToItem = useCallback(
     (item: DesktopChatImageViewerSessionItem) => {
@@ -167,10 +184,7 @@ export function DesktopChatImageViewerPage() {
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "p") {
         event.preventDefault();
-        openPrintWindow({
-          title: activeItem.title,
-          imageUrl: activeItem.imageUrl,
-        });
+        requestCurrentWindowPrint();
         return;
       }
 
@@ -197,7 +211,47 @@ export function DesktopChatImageViewerPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [activeItem, activeItemIndex, fallbackPath, navigateToItem, viewerItems]);
+  }, [
+    activeItem,
+    activeItemIndex,
+    fallbackPath,
+    navigateToItem,
+    requestCurrentWindowPrint,
+    viewerItems,
+  ]);
+
+  useEffect(() => {
+    if (
+      !routeState?.printToken ||
+      !activeItem ||
+      typeof window === "undefined"
+    ) {
+      return;
+    }
+
+    if (autoPrintTokenRef.current === routeState.printToken) {
+      return;
+    }
+
+    const currentImageElement = imageElementRef.current;
+    const triggerPrint = () => {
+      autoPrintTokenRef.current = routeState.printToken ?? null;
+      window.setTimeout(() => {
+        requestCurrentWindowPrint();
+      }, 80);
+    };
+
+    if (currentImageElement && !currentImageElement.complete) {
+      currentImageElement.addEventListener("load", triggerPrint, {
+        once: true,
+      });
+      return () => {
+        currentImageElement.removeEventListener("load", triggerPrint);
+      };
+    }
+
+    triggerPrint();
+  }, [activeItem, requestCurrentWindowPrint, routeState?.printToken]);
 
   useEffect(() => {
     if (!nativeDesktopShell) {
@@ -273,8 +327,37 @@ export function DesktopChatImageViewerPage() {
   }
 
   return (
-    <div className="relative flex h-full min-h-0 flex-col bg-[#1f1f1f] text-white">
-      <header className="flex items-start justify-between gap-4 border-b border-white/8 bg-[#242424] px-5 py-4">
+    <div className="yj-desktop-image-print-root relative flex h-full min-h-0 flex-col bg-[#1f1f1f] text-white">
+      <style>{`
+        @media print {
+          .yj-desktop-image-print-root {
+            background: #ffffff !important;
+            color: #111111 !important;
+            min-height: auto !important;
+          }
+
+          .yj-desktop-image-print-hidden {
+            display: none !important;
+          }
+
+          .yj-desktop-image-print-stage {
+            display: flex !important;
+            min-height: auto !important;
+            padding: 0 !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: #ffffff !important;
+          }
+
+          .yj-desktop-image-print-stage img {
+            max-width: 100% !important;
+            max-height: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+          }
+        }
+      `}</style>
+      <header className="yj-desktop-image-print-hidden flex items-start justify-between gap-4 border-b border-white/8 bg-[#242424] px-5 py-4">
         <div className="min-w-0">
           <div className="truncate text-[16px] font-medium">
             {activeItem.title}
@@ -305,12 +388,7 @@ export function DesktopChatImageViewerPage() {
           </StandaloneActionButton>
           <StandaloneActionButton
             label="打印图片"
-            onClick={() =>
-              openPrintWindow({
-                title: activeItem.title,
-                imageUrl: activeItem.imageUrl,
-              })
-            }
+            onClick={() => requestCurrentWindowPrint()}
           >
             <Printer size={16} />
           </StandaloneActionButton>
@@ -336,6 +414,7 @@ export function DesktopChatImageViewerPage() {
           label="上一张图片"
           side="left"
           onClick={() => navigateToItem(viewerItems[activeItemIndex - 1]!)}
+          className="yj-desktop-image-print-hidden"
         >
           <ChevronLeft size={22} />
         </ViewerNavButton>
@@ -345,13 +424,15 @@ export function DesktopChatImageViewerPage() {
           label="下一张图片"
           side="right"
           onClick={() => navigateToItem(viewerItems[activeItemIndex + 1]!)}
+          className="yj-desktop-image-print-hidden"
         >
           <ChevronRight size={22} />
         </ViewerNavButton>
       ) : null}
 
-      <div className="flex min-h-0 flex-1 items-center justify-center px-16 py-8">
+      <div className="yj-desktop-image-print-stage flex min-h-0 flex-1 items-center justify-center px-16 py-8">
         <img
+          ref={imageElementRef}
           src={activeItem.imageUrl}
           alt={activeItem.title}
           className="max-h-full max-w-full rounded-[14px] object-contain shadow-[0_20px_64px_rgba(0,0,0,0.34)]"
@@ -363,11 +444,13 @@ export function DesktopChatImageViewerPage() {
 
 function ViewerNavButton({
   children,
+  className,
   label,
   onClick,
   side,
 }: {
   children: ReactNode;
+  className?: string;
   label: string;
   onClick: () => void;
   side: "left" | "right";
@@ -379,7 +462,7 @@ function ViewerNavButton({
       onClick={onClick}
       className={`absolute top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-[12px] border border-white/12 bg-[#2b2b2b] text-white transition hover:bg-[#343434] ${
         side === "left" ? "left-6" : "right-6"
-      }`}
+      } ${className ?? ""}`}
     >
       {children}
     </button>
@@ -490,73 +573,4 @@ function closeCurrentWindow(onBlocked?: () => void) {
       onBlocked();
     }
   }, 120);
-}
-
-function openPrintWindow(input: { title: string; imageUrl: string }) {
-  if (typeof window === "undefined") {
-    return false;
-  }
-
-  const printWindow = window.open("", "_blank", "noopener,noreferrer");
-  if (!printWindow) {
-    return false;
-  }
-
-  const escapedTitle = escapeHtml(input.title);
-  const escapedImageUrl = escapeHtml(input.imageUrl);
-  printWindow.document.write(`<!doctype html>
-<html lang="zh-CN">
-  <head>
-    <meta charset="utf-8" />
-    <title>${escapedTitle}</title>
-    <style>
-      html, body {
-        margin: 0;
-        min-height: 100%;
-        background: #1f1f1f;
-      }
-
-      body {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 24px;
-      }
-
-      img {
-        max-width: 100%;
-        max-height: calc(100vh - 48px);
-        object-fit: contain;
-        box-shadow: 0 20px 52px rgba(0, 0, 0, 0.26);
-      }
-    </style>
-  </head>
-  <body>
-    <img src="${escapedImageUrl}" alt="${escapedTitle}" />
-  </body>
-</html>`);
-  printWindow.document.close();
-
-  const printedImage = printWindow.document.querySelector(
-    "img",
-  ) as HTMLImageElement | null;
-  if (printedImage) {
-    printedImage.onload = () => {
-      printWindow.focus();
-      printWindow.print();
-    };
-  } else {
-    printWindow.focus();
-    printWindow.print();
-  }
-
-  return true;
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
 }
