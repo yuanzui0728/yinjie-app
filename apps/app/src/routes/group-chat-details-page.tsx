@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
+import { Copy, Share2 } from "lucide-react";
 import {
   clearGroupMessages,
   getGroup,
@@ -10,7 +11,7 @@ import {
   setGroupPinned,
   updateGroupPreferences,
 } from "@yinjie/contracts";
-import { ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
+import { Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
 import { getChatBackgroundLabel } from "../features/chat/backgrounds/chat-background-helpers";
 import { useDefaultChatBackground } from "../features/chat/backgrounds/use-conversation-background";
@@ -21,6 +22,10 @@ import { ChatMemberGrid } from "../features/chat-details/chat-member-grid";
 import { ChatSettingRow } from "../features/chat-details/chat-setting-row";
 import { MobileDetailsActionSheet } from "../features/chat-details/mobile-details-action-sheet";
 import { isMissingGroupError } from "../lib/group-route-fallback";
+import {
+  isNativeMobileBridgeAvailable,
+  shareWithNativeShell,
+} from "../runtime/mobile-bridge";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export function GroupChatDetailsPage() {
@@ -29,6 +34,7 @@ export function GroupChatDetailsPage() {
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
+  const nativeMobileShareSupported = isNativeMobileBridgeAvailable();
   const [notice, setNotice] = useState<string | null>(null);
   const [memberGridExpanded, setMemberGridExpanded] = useState(false);
   const [managementSheetOpen, setManagementSheetOpen] = useState(false);
@@ -193,6 +199,67 @@ export function GroupChatDetailsPage() {
   );
   const totalMemberCount = membersQuery.data?.length ?? 0;
   const ownerDisplayName = ownerMember?.memberName?.trim() || "我";
+  const groupSummary = useMemo(() => {
+    const group = groupQuery.data;
+    if (!group) {
+      return null;
+    }
+
+    const groupPath = `/group/${groupId}`;
+    const groupUrl =
+      typeof window === "undefined"
+        ? groupPath
+        : `${window.location.origin}${groupPath}`;
+
+    return {
+      title: `${group.name} 群聊`,
+      text: [`${group.name} 群聊`, `${totalMemberCount} 人群聊`, groupUrl].join("\n"),
+      url: groupUrl,
+    };
+  }, [groupId, groupQuery.data, totalMemberCount]);
+
+  async function handleShareGroup() {
+    if (!groupSummary) {
+      return;
+    }
+
+    if (nativeMobileShareSupported) {
+      const shared = await shareWithNativeShell(groupSummary);
+
+      if (shared) {
+        setNotice("已打开系统分享面板。");
+        return;
+      }
+    }
+
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.clipboard ||
+      typeof navigator.clipboard.writeText !== "function"
+    ) {
+      setNotice(
+        nativeMobileShareSupported
+          ? "当前设备暂时无法打开系统分享，请稍后重试。"
+          : "当前环境暂不支持复制群聊摘要。",
+      );
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(groupSummary.text);
+      setNotice(
+        nativeMobileShareSupported
+          ? "系统分享暂时不可用，已复制群聊摘要。"
+          : "群聊摘要已复制。",
+      );
+    } catch {
+      setNotice(
+        nativeMobileShareSupported
+          ? "系统分享失败，请稍后重试。"
+          : "复制群聊摘要失败，请稍后重试。",
+      );
+    }
+  }
 
   const memberItems = useMemo(() => {
     const members = (membersQuery.data ?? []).slice(0, visibleMemberCount);
@@ -276,6 +343,20 @@ export function GroupChatDetailsPage() {
       onBack={() => {
         void navigate({ to: "/group/$groupId", params: { groupId } });
       }}
+      rightActions={
+        groupSummary ? (
+          <Button
+            type="button"
+            onClick={() => void handleShareGroup()}
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full border-0 bg-transparent text-[color:var(--text-primary)] active:bg-[color:var(--surface-card-hover)]"
+            aria-label={nativeMobileShareSupported ? "分享群聊" : "复制群聊摘要"}
+          >
+            {nativeMobileShareSupported ? <Share2 size={18} /> : <Copy size={18} />}
+          </Button>
+        ) : undefined
+      }
     >
       {groupQuery.isLoading || membersQuery.isLoading ? (
         <LoadingBlock label="正在读取群聊信息..." />
