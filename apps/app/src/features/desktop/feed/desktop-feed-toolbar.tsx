@@ -53,6 +53,9 @@ export function DesktopFeedToolbar({
   onSearchChange,
   onSortChange,
 }: DesktopFeedToolbarProps) {
+  const activeChipClassName =
+    "border-[rgba(7,193,96,0.12)] bg-white text-[color:var(--text-primary)] shadow-[inset_0_-2px_0_0_var(--brand-primary)]";
+
   return (
     <div className="border-b border-[color:var(--border-faint)] bg-white/74 px-6 py-4 backdrop-blur-xl">
       <div className="mx-auto w-full max-w-[720px]">
@@ -94,7 +97,7 @@ export function DesktopFeedToolbar({
               className={cn(
                 "rounded-xl border px-4 py-2 text-[12px] font-medium transition-[border-color,background-color,color]",
                 activeFilter === option.key
-                  ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] text-[color:var(--brand-primary)]"
+                  ? activeChipClassName
                   : "border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]",
               )}
             >
@@ -106,7 +109,10 @@ export function DesktopFeedToolbar({
             <button
               type="button"
               onClick={onClearAuthor}
-              className="inline-flex items-center gap-2 rounded-xl border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] px-4 py-2 text-[12px] font-medium text-[color:var(--brand-primary)]"
+              className={cn(
+                "inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-[12px] font-medium",
+                activeChipClassName,
+              )}
             >
               只看 {selectedAuthorName} 的公开动态
               <X size={13} />
@@ -126,7 +132,7 @@ export function DesktopFeedToolbar({
               className={cn(
                 "rounded-xl border px-3.5 py-1.5 text-[12px] font-medium transition-[border-color,background-color,color]",
                 activeSort === option.key
-                  ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] text-[color:var(--brand-primary)]"
+                  ? activeChipClassName
                   : "border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]",
               )}
             >

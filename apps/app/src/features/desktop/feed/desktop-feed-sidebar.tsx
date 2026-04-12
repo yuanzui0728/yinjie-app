@@ -91,6 +91,8 @@ export function DesktopFeedSidebar({
   onToggleFavorite,
 }: DesktopFeedSidebarProps) {
   const authorScrollViewportRef = useRef<HTMLDivElement | null>(null);
+  const selectedSidebarItemClassName =
+    "border-[rgba(7,193,96,0.12)] bg-white shadow-[inset_3px_0_0_0_var(--brand-primary),0_8px_18px_rgba(15,23,42,0.04)]";
   const residentSummaries = authorSummaries.filter(
     (author) => author.authorType === "character",
   );
@@ -211,7 +213,12 @@ export function DesktopFeedSidebar({
                     key={post.id}
                     type="button"
                     onClick={() => onSelectPost(post.id)}
-                    className="w-full rounded-[14px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-3.5 py-3 text-left transition-[background-color] hover:bg-white"
+                    className={cn(
+                      "w-full rounded-[14px] border px-3.5 py-3 text-left transition-[background-color,border-color]",
+                      selectedPostId === post.id
+                        ? selectedSidebarItemClassName
+                        : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] hover:bg-white",
+                    )}
                   >
                     <div className="line-clamp-2 text-[13px] leading-6 text-[color:var(--text-primary)]">
                       {post.text}
@@ -296,7 +303,12 @@ export function DesktopFeedSidebar({
               <button
                 type="button"
                 onClick={() => onSelectAuthor(activeResidentSummary.authorId)}
-                className="mt-4 flex w-full items-center gap-3 rounded-[16px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-3 text-left transition-[background-color] hover:bg-white"
+                className={cn(
+                  "mt-4 flex w-full items-center gap-3 rounded-[16px] border px-4 py-3 text-left transition-[background-color,border-color]",
+                  activeAuthorId === activeResidentSummary.authorId
+                    ? selectedSidebarItemClassName
+                    : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] hover:bg-white",
+                )}
               >
                 <AvatarChip
                   name={activeResidentSummary.authorName}
@@ -343,7 +355,7 @@ export function DesktopFeedSidebar({
                     className={cn(
                       "flex w-full items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition-[border-color,background-color]",
                       activeAuthorId === author.authorId
-                        ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
+                        ? selectedSidebarItemClassName
                         : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] hover:bg-white",
                     )}
                   >
