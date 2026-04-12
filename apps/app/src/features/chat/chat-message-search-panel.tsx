@@ -330,8 +330,8 @@ export function ChatMessageSearchPanel({
 
   return (
     <ChatDetailsShell title="查找聊天记录" subtitle={subtitle} onBack={onBack}>
-      <ChatDetailsSection title="搜索">
-        <div className="px-3 py-3">
+      <ChatDetailsSection title="搜索" variant="wechat">
+        <div className="px-4 py-3">
           <label className="flex items-center gap-2 rounded-[10px] border border-[color:var(--border-faint)] bg-white px-3 py-2.5">
             <Search
               size={16}
@@ -481,7 +481,7 @@ export function ChatMessageSearchPanel({
             </div>
           ) : null}
 
-          <ChatDetailsSection title="分类浏览">
+          <ChatDetailsSection title="分类浏览" variant="wechat">
             <div className="divide-y divide-[color:var(--border-faint)]">
               {SEARCH_CATEGORIES.map((category) => {
                 const Icon = category.icon;
@@ -495,36 +495,36 @@ export function ChatMessageSearchPanel({
                       "flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors",
                       active
                         ? "bg-[rgba(247,251,248,0.96)]"
-                        : "bg-white hover:bg-[color:var(--surface-console)]",
+                        : "bg-[color:var(--bg-canvas-elevated)] active:bg-[color:var(--surface-card-hover)]",
                     )}
                   >
                     <div className="flex min-w-0 items-center gap-3">
                       <div
                         className={cn(
-                          "flex h-9 w-9 items-center justify-center rounded-[10px]",
+                          "flex h-8.5 w-8.5 items-center justify-center rounded-[9px]",
                           active
                             ? "bg-[rgba(7,193,96,0.12)] text-[#15803d]"
-                            : "bg-[color:var(--surface-console)] text-[color:var(--text-secondary)]",
+                            : "bg-[color:var(--surface-panel)] text-[color:var(--text-secondary)]",
                         )}
                       >
-                        <Icon size={18} />
+                        <Icon size={17} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="truncate text-[15px] font-medium text-[color:var(--text-primary)]">
+                        <div className="truncate text-[14px] font-medium text-[color:var(--text-primary)]">
                           {category.label}
                         </div>
-                        <div className="mt-0.5 text-[12px] text-[color:var(--text-muted)]">
+                        <div className="mt-0.5 text-[11px] leading-[18px] text-[color:var(--text-muted)]">
                           {category.description}
                         </div>
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
-                      <div className="text-[17px] font-semibold leading-none text-[color:var(--text-primary)]">
+                      <div className="text-[16px] font-semibold leading-none text-[color:var(--text-primary)]">
                         {categoryCounts[category.id]}
                       </div>
                       <div
                         className={cn(
-                          "mt-1 text-[11px]",
+                          "mt-1 text-[10px]",
                           active
                             ? "text-[#15803d]"
                             : "text-[color:var(--text-muted)]",
@@ -611,11 +611,12 @@ export function ChatMessageSearchPanel({
                 trimmedKeyword,
                 results.length,
               )}
+              variant="wechat"
             >
               <div>
                 {resultSections.map((section) => (
                   <section key={section.key}>
-                    <div className="sticky top-0 z-[1] border-y border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-2 text-[11px] font-medium tracking-[0.08em] text-[color:var(--text-muted)]">
+                    <div className="sticky top-0 z-[1] border-y border-[color:var(--border-faint)] bg-[rgba(247,247,247,0.96)] px-4 py-1.5 text-[10px] font-medium tracking-[0.08em] text-[color:var(--text-muted)] backdrop-blur-xl">
                       {section.label}
                     </div>
                     <div className="divide-y divide-[color:var(--border-faint)]">
@@ -624,10 +625,10 @@ export function ChatMessageSearchPanel({
                           key={item.message.id}
                           type="button"
                           onClick={() => onOpenMessage(item.message.id)}
-                          className="block w-full px-4 py-3 text-left transition hover:bg-[color:var(--surface-console)]"
+                          className="block w-full px-4 py-2.5 text-left transition active:bg-[color:var(--surface-card-hover)]"
                         >
                           <div className="flex items-center justify-between gap-3">
-                            <div className="truncate text-[14px] font-medium text-[color:var(--text-primary)]">
+                            <div className="truncate text-[13px] font-medium text-[color:var(--text-primary)]">
                               {trimmedKeyword
                                 ? renderHighlightedText(
                                     item.message.senderName || "消息",
@@ -635,13 +636,13 @@ export function ChatMessageSearchPanel({
                                   )
                                 : item.message.senderName || "消息"}
                             </div>
-                            <div className="shrink-0 text-[12px] text-[color:var(--text-muted)]">
+                            <div className="shrink-0 text-[11px] text-[color:var(--text-muted)]">
                               {formatDetailedMessageTimestamp(
                                 item.message.createdAt,
                               )}
                             </div>
                           </div>
-                          <div className="mt-1 text-[14px] leading-6 text-[color:var(--text-secondary)]">
+                          <div className="mt-0.5 text-[13px] leading-5 text-[color:var(--text-secondary)]">
                             {trimmedKeyword
                               ? renderHighlightedText(
                                   buildSearchPreview(
@@ -652,12 +653,12 @@ export function ChatMessageSearchPanel({
                                 )
                               : item.previewText}
                           </div>
-                          <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[color:var(--text-muted)]">
-                            <span className="rounded-[7px] bg-[#f1f3f5] px-2 py-0.5 text-[11px] text-[color:var(--text-secondary)]">
+                          <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-[color:var(--text-muted)]">
+                            <span className="rounded-full bg-[color:var(--surface-panel)] px-2 py-0.5 text-[10px] text-[color:var(--text-secondary)]">
                               {item.typeLabel}
                             </span>
                             {item.reminderAt ? (
-                              <span className="rounded-[7px] bg-[rgba(59,130,246,0.10)] px-2 py-0.5 text-[11px] text-[#2563eb]">
+                              <span className="rounded-full bg-[rgba(59,130,246,0.08)] px-2 py-0.5 text-[10px] text-[#2563eb]">
                                 提醒 · {formatMessageTimestamp(item.reminderAt)}
                               </span>
                             ) : null}
@@ -680,7 +681,7 @@ export function ChatMessageSearchPanel({
                   </section>
                 ))}
                 {isPartialResult ? (
-                  <div className="border-t border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-3 text-[12px] text-[color:var(--text-muted)]">
+                  <div className="border-t border-[color:var(--border-faint)] bg-[rgba(247,247,247,0.96)] px-4 py-2.5 text-[11px] text-[color:var(--text-muted)]">
                     当前仅展示前 {MAX_VISIBLE_RESULTS}{" "}
                     条结果，请继续缩小范围查找。
                   </div>
