@@ -216,7 +216,12 @@ export function ProfileSettingsPage() {
               onClick={() => saveProfileMutation.mutate()}
               disabled={!canSaveProfile || saveProfileMutation.isPending}
               variant="primary"
-              className="h-10 w-full rounded-[10px] bg-[#07c160] text-white shadow-none hover:bg-[#06ad56]"
+              className={cn(
+                "h-10 w-full rounded-[10px] text-white shadow-none",
+                desktopMode
+                  ? "bg-[color:var(--brand-primary)] hover:opacity-95"
+                  : "bg-[#07c160] hover:bg-[#06ad56]",
+              )}
             >
               {saveProfileMutation.isPending ? "保存中..." : "保存资料"}
             </Button>
@@ -261,7 +266,9 @@ export function ProfileSettingsPage() {
                     "flex w-full items-center gap-3 px-4 py-3 text-left transition",
                     index > 0 && "border-t border-[color:var(--border-faint)]",
                     selected
-                      ? "bg-[rgba(7,193,96,0.08)]"
+                      ? desktopMode
+                        ? "bg-[rgba(7,193,96,0.07)]"
+                        : "bg-[rgba(7,193,96,0.08)]"
                       : "hover:bg-[color:var(--surface-card-hover)]",
                   )}
                 >
@@ -350,7 +357,12 @@ export function ProfileSettingsPage() {
               onClick={() => saveApiKeyMutation.mutate()}
               disabled={aiSettingsBusy || !apiKeyDraft.trim()}
               variant="primary"
-              className="h-10 w-full rounded-[10px] bg-[#07c160] text-white shadow-none hover:bg-[#06ad56]"
+              className={cn(
+                "h-10 w-full rounded-[10px] text-white shadow-none",
+                desktopMode
+                  ? "bg-[color:var(--brand-primary)] hover:opacity-95"
+                  : "bg-[#07c160] hover:bg-[#06ad56]",
+              )}
             >
               {saveApiKeyMutation.isPending ? "保存中..." : "保存专属 API Key"}
             </Button>
