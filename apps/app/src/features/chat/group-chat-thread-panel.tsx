@@ -50,6 +50,7 @@ import { MobileChatThreadHeader } from "./mobile-chat-thread-header";
 import { useGroupBackground } from "./backgrounds/use-conversation-background";
 import { useScrollAnchor } from "../../hooks/use-scroll-anchor";
 import { formatTimestamp, parseTimestamp } from "../../lib/format";
+import { isPersistedGroupConversation } from "../../lib/conversation-route";
 import {
   joinConversationRoom,
   onChatMessage,
@@ -183,7 +184,7 @@ export function GroupChatThreadPanel({
   }, [isDesktop, onRouteMobileShortcutHandled, routeMobileShortcutAction]);
 
   const activeConversation = conversationsQuery.data?.find(
-    (item) => item.id === groupId && item.type === "group",
+    (item) => item.id === groupId && isPersistedGroupConversation(item),
   );
 
   useEffect(() => {
