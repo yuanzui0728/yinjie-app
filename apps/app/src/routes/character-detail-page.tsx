@@ -212,17 +212,32 @@ export function CharacterDetailPage() {
         {
           characterId,
           greeting: `${ownerName} 想把你加到通讯录里。`,
+          autoAccept: true,
         },
         baseUrl,
       ),
     onSuccess: async () => {
       setNotice({
         tone: "success",
-        message: "已发送好友申请。",
+        message: "已添加到通讯录。",
       });
-      await queryClient.invalidateQueries({
-        queryKey: ["app-friend-requests", baseUrl],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["app-friend-requests", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["app-friends", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["app-friends-quick-start", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["app-group-friends", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["app-conversations", baseUrl],
+        }),
+      ]);
     },
   });
   const setStarredMutation = useMutation({
@@ -599,16 +614,13 @@ export function CharacterDetailPage() {
                   icon={<ChevronRight size={18} />}
                   label={
                     hasPendingFriendRequest
-                      ? "已发送申请"
+                      ? "通过好友申请"
                       : sendFriendRequestMutation.isPending
                         ? "发送中..."
                         : "添加到通讯录"
                   }
                   onClick={() => sendFriendRequestMutation.mutate()}
-                  disabled={
-                    hasPendingFriendRequest ||
-                    sendFriendRequestMutation.isPending
-                  }
+                  disabled={sendFriendRequestMutation.isPending}
                 />
               )}
             </div>
