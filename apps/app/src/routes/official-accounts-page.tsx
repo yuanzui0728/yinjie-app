@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Search } from "lucide-react";
 import { listOfficialAccounts } from "@yinjie/contracts";
-import { AppPage, Button, ErrorBlock, LoadingBlock } from "@yinjie/ui";
+import { AppPage, Button, ErrorBlock, LoadingBlock, cn } from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
 import { OfficialAccountListItem } from "../components/official-account-list-item";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
@@ -57,9 +57,10 @@ function MobileOfficialAccountsPage() {
     () => filteredAccounts.filter((account) => !account.isFollowing),
     [filteredAccounts],
   );
+  const browseAccounts = followedAccounts.length ? otherAccounts : filteredAccounts;
 
   return (
-    <AppPage className="space-y-0 bg-[#f5f5f5] px-0 py-0">
+    <AppPage className="space-y-0 bg-[color:var(--bg-canvas)] px-0 py-0">
       <TabPageTopBar
         title="公众号"
         titleAlign="center"
@@ -88,34 +89,33 @@ function MobileOfficialAccountsPage() {
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
             placeholder="搜索公众号"
-            className="h-10 w-full rounded-[12px] border border-transparent bg-[#f2f2f2] pl-10 pr-4 text-sm text-[color:var(--text-primary)] outline-none transition-[background-color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] placeholder:text-[color:var(--text-dim)] focus:border-black/5 focus:bg-white"
+            className="h-10 w-full rounded-[12px] border border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)] pl-10 pr-4 text-sm text-[color:var(--text-primary)] outline-none transition-[background-color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] placeholder:text-[color:var(--text-dim)] focus:border-[color:var(--border-faint)] focus:bg-white"
           />
         </label>
       </TabPageTopBar>
 
       <div className="pb-8">
-        {accountsQuery.isLoading ? <LoadingBlock label="正在读取公众号..." /> : null}
+        {accountsQuery.isLoading ? (
+          <div className="px-4 pt-4">
+            <LoadingBlock label="正在读取公众号..." />
+          </div>
+        ) : null}
         {accountsQuery.isError && accountsQuery.error instanceof Error ? (
-          <div className="px-3 pt-3">
+          <div className="px-4 pt-4">
             <ErrorBlock message={accountsQuery.error.message} />
           </div>
         ) : null}
 
         {followedAccounts.length ? (
-          <section className="mt-2 overflow-hidden border-y border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)]">
-            <div className="border-b border-[color:var(--border-faint)] px-4 py-3">
-              <div className="text-[15px] font-medium text-[color:var(--text-primary)]">
-                最近关注
-              </div>
-              <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
-                已关注的 {followedAccounts.length} 个公众号会优先显示在这里。
-              </div>
-            </div>
-
+          <MobileOfficialAccountSection
+            title="最近关注"
+            count={followedAccounts.length}
+          >
             {followedAccounts.map((account) => (
               <OfficialAccountListItem
                 key={account.id}
                 account={account}
+                dense
                 onClick={() => {
                   void navigate({
                     to: "/official-accounts/$accountId",
@@ -124,26 +124,19 @@ function MobileOfficialAccountsPage() {
                 }}
               />
             ))}
-          </section>
+          </MobileOfficialAccountSection>
         ) : null}
 
-        {filteredAccounts.length ? (
-          <section className="mt-2 overflow-hidden border-y border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)]">
-            <div className="border-b border-[color:var(--border-faint)] px-4 py-3">
-              <div className="text-[15px] font-medium text-[color:var(--text-primary)]">
-                {followedAccounts.length ? "更多公众号" : "全部公众号"}
-              </div>
-              <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
-                {followedAccounts.length
-                  ? `还有 ${otherAccounts.length} 个公众号可继续浏览。`
-                  : `当前共有 ${filteredAccounts.length} 个内容账号与服务账号。`}
-              </div>
-            </div>
-
-            {(otherAccounts.length ? otherAccounts : followedAccounts).map((account) => (
+        {browseAccounts.length ? (
+          <MobileOfficialAccountSection
+            title={followedAccounts.length ? "更多公众号" : "全部公众号"}
+            count={browseAccounts.length}
+          >
+            {browseAccounts.map((account) => (
               <OfficialAccountListItem
                 key={`all-${account.id}`}
                 account={account}
+                dense
                 onClick={() => {
                   void navigate({
                     to: "/official-accounts/$accountId",
@@ -152,13 +145,13 @@ function MobileOfficialAccountsPage() {
                 }}
               />
             ))}
-          </section>
+          </MobileOfficialAccountSection>
         ) : null}
 
         {!accountsQuery.isLoading &&
         !accountsQuery.isError &&
         !filteredAccounts.length ? (
-          <div className="px-3 pt-6">
+          <div className="px-4 pt-6">
             <EmptyState
               title="没有找到匹配的公众号"
               description="换个名字、简称或关键词试试。"
@@ -167,5 +160,31 @@ function MobileOfficialAccountsPage() {
         ) : null}
       </div>
     </AppPage>
+  );
+}
+
+function MobileOfficialAccountSection({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mt-2">
+      <div className="flex items-center justify-between px-4 py-1.5 text-[12px] text-[color:var(--text-muted)]">
+        <div className="font-medium tracking-[0.04em]">{title}</div>
+        <div>{count}</div>
+      </div>
+      <div
+        className={cn(
+          "overflow-hidden border-y border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)]",
+        )}
+      >
+        {children}
+      </div>
+    </section>
   );
 }
