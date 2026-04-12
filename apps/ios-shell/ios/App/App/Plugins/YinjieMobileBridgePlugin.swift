@@ -6,10 +6,11 @@ import UIKit
 import UserNotifications
 
 @objc(YinjieMobileBridgePlugin)
-public class YinjieMobileBridgePlugin: CAPPlugin, PHPickerViewControllerDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIDocumentPickerDelegate {
+public class YinjieMobileBridgePlugin: CAPPlugin, PHPickerViewControllerDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIDocumentPickerDelegate, UIDocumentInteractionControllerDelegate {
     private var pendingImagePickerCall: CAPPluginCall?
     private var pendingFilePickerCall: CAPPluginCall?
     private var pendingCameraCaptureCall: CAPPluginCall?
+    private var activeDocumentInteractionController: UIDocumentInteractionController?
 
     @objc func openExternalUrl(_ call: CAPPluginCall) {
         guard let rawUrl = call.getString("url"),
@@ -104,6 +105,52 @@ public class YinjieMobileBridgePlugin: CAPPlugin, PHPickerViewControllerDelegate
             presenter.present(controller, animated: true) {
                 call.resolve()
             }
+        }
+    }
+
+    @objc func openFile(_ call: CAPPluginCall) {
+        guard let base64Data = normalize(call.getString("base64Data")),
+              let fileName = normalize(call.getString("fileName")),
+              let fileData = Data(base64Encoded: base64Data, options: [.ignoreUnknownCharacters]),
+              let presenter = bridge?.viewController else {
+            call.reject("base64Data and fileName are required")
+            return
+        }
+
+        let title = normalize(call.getString("title"))
+
+        guard let fileUrl = writeSharedFile(data: fileData, fileName: fileName) else {
+            call.reject("failed to prepare preview file")
+            return
+        }
+
+        DispatchQueue.main.async {
+            let controller = UIDocumentInteractionController(url: fileUrl)
+            controller.delegate = self
+            if let fileType = UTType(filenameExtension: fileUrl.pathExtension)?.identifier {
+                controller.uti = fileType
+            }
+
+            self.activeDocumentInteractionController = controller
+
+            if controller.presentPreview(animated: true) {
+                call.resolve()
+                return
+            }
+
+            let presented =
+                controller.presentOptionsMenu(
+                    from: presenter.view.bounds,
+                    in: presenter.view,
+                    animated: true
+                )
+            if presented {
+                call.resolve()
+                return
+            }
+
+            self.activeDocumentInteractionController = nil
+            call.reject(title != nil ? "failed to open \(title!)" : "failed to open file preview")
         }
     }
 
@@ -355,6 +402,28 @@ public class YinjieMobileBridgePlugin: CAPPlugin, PHPickerViewControllerDelegate
                     "asset": NSNull()
                 ])
             }
+        }
+    }
+
+    public func documentInteractionControllerViewControllerForPreview(_ controller: UIDocumentInteractionController) -> UIViewController {
+        bridge?.viewController ?? UIViewController()
+    }
+
+    public func documentInteractionControllerDidEndPreview(_ controller: UIDocumentInteractionController) {
+        if activeDocumentInteractionController === controller {
+            activeDocumentInteractionController = nil
+        }
+    }
+
+    public func documentInteractionControllerDidDismissOptionsMenu(_ controller: UIDocumentInteractionController) {
+        if activeDocumentInteractionController === controller {
+            activeDocumentInteractionController = nil
+        }
+    }
+
+    public func documentInteractionControllerDidDismissOpenInMenu(_ controller: UIDocumentInteractionController) {
+        if activeDocumentInteractionController === controller {
+            activeDocumentInteractionController = nil
         }
     }
 
