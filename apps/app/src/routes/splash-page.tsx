@@ -13,7 +13,9 @@ export function SplashPage() {
   const hydrateOwner = useWorldOwnerStore((state) => state.hydrateOwner);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
+    let cancelled = false;
+
+    async function continueBoot() {
       const runtimeContext = resolveAppRuntimeContext(
         runtimeConfig.appPlatform,
       );
@@ -21,24 +23,33 @@ export function SplashPage() {
         runtimeContext.hostRole === "host" ||
         requiresRemoteServiceConfiguration()
       ) {
-        void navigate({ to: "/welcome", replace: true });
+        if (!cancelled) {
+          void navigate({ to: "/welcome", replace: true });
+        }
         return;
       }
 
-      void getWorldOwner(runtimeConfig.apiBaseUrl)
-        .then((owner) => {
+      try {
+        const owner = await getWorldOwner(runtimeConfig.apiBaseUrl);
+        if (!cancelled) {
           hydrateOwner(owner);
           void navigate({
             to: owner.onboardingCompleted ? "/tabs/chat" : "/welcome",
             replace: true,
           });
-        })
-        .catch(() => {
+        }
+      } catch {
+        if (!cancelled) {
           void navigate({ to: "/welcome", replace: true });
-        });
-    }, 900);
+        }
+      }
+    }
 
-    return () => window.clearTimeout(timer);
+    void continueBoot();
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     hydrateOwner,
     navigate,
