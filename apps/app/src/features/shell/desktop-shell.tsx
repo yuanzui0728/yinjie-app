@@ -15,6 +15,7 @@ import {
 } from "../../runtime/desktop-windowing";
 import { useWorldOwnerStore } from "../../store/world-owner-store";
 import { formatTimestamp } from "../../lib/format";
+import { hydrateDesktopFavoritesFromNative } from "../desktop/favorites/desktop-favorites-storage";
 import {
   desktopBottomNavItems,
   desktopMoreMenuItems,
@@ -124,6 +125,9 @@ export function DesktopShell({ children }: PropsWithChildren) {
   const [lockedAt, setLockedAt] = useState<string | null>(
     () => readDesktopLockSnapshot().lockedAt,
   );
+  const [favoritesStoreReady, setFavoritesStoreReady] = useState(
+    !nativeDesktopShell,
+  );
   const [lockPasscodeLength, setLockPasscodeLength] = useState<number | null>(
     () => readDesktopLockSnapshot().passcodeLength,
   );
@@ -150,6 +154,7 @@ export function DesktopShell({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!nativeDesktopShell) {
+      setFavoritesStoreReady(true);
       setLockStoreReady(true);
       setDesktopWindow(null);
       setIsMaximized(false);
@@ -237,6 +242,29 @@ export function DesktopShell({ children }: PropsWithChildren) {
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("storage", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [nativeDesktopShell]);
+
+  useEffect(() => {
+    if (!nativeDesktopShell) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncDesktopFavorites = async () => {
+      await hydrateDesktopFavoritesFromNative();
+      if (cancelled) {
+        return;
+      }
+
+      setFavoritesStoreReady(true);
+    };
+
+    void syncDesktopFavorites();
+
+    return () => {
+      cancelled = true;
     };
   }, [nativeDesktopShell]);
 
@@ -444,7 +472,7 @@ export function DesktopShell({ children }: PropsWithChildren) {
     setLockNotice("桌面锁定口令已设置，请输入口令解锁。");
   };
 
-  if (nativeDesktopShell && !lockStoreReady) {
+  if (nativeDesktopShell && (!lockStoreReady || !favoritesStoreReady)) {
     return null;
   }
 
