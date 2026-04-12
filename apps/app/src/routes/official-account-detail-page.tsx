@@ -192,11 +192,11 @@ function MobileOfficialAccountDetailPage({ accountId }: { accountId: string }) {
   }
 
   return (
-    <AppPage className="space-y-0 bg-[#f5f5f5] px-0 py-0">
+    <AppPage className="space-y-0 bg-[color:var(--bg-canvas)] px-0 py-0">
       <TabPageTopBar
         title={account?.name ?? "公众号主页"}
         titleAlign="center"
-        className="mx-0 mt-0 mb-0 border-b border-[color:var(--border-faint)] bg-[rgba(247,247,247,0.94)] px-4 py-3 text-[color:var(--text-primary)] shadow-none"
+        className="mx-0 mt-0 mb-0 border-b border-[color:var(--border-faint)] bg-[rgba(247,247,247,0.94)] px-4 pt-2.5 pb-2 text-[color:var(--text-primary)] shadow-none"
         leftActions={
           <Button
             onClick={() =>
@@ -229,39 +229,39 @@ function MobileOfficialAccountDetailPage({ accountId }: { accountId: string }) {
 
       <div className="pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
         {accountQuery.isLoading ? (
-          <div className="px-3 pt-3">
+          <div className="px-3 pt-2.5">
             <LoadingBlock label="正在读取公众号..." />
           </div>
         ) : null}
         {accountQuery.isError && accountQuery.error instanceof Error ? (
-          <div className="px-3 pt-3">
+          <div className="px-3 pt-2.5">
             <ErrorBlock message={accountQuery.error.message} />
           </div>
         ) : null}
         {actionNotice ? (
-          <div className="px-3 pt-3">
+          <div className="px-3 pt-2.5">
             <InlineNotice tone={actionNotice.tone}>{actionNotice.message}</InlineNotice>
           </div>
         ) : null}
 
         {account ? (
           <>
-          <section className="mt-2 overflow-hidden border-y border-[color:var(--border-faint)] bg-white">
-            <div className="flex items-center gap-4 px-4 py-4">
+          <section className="mt-1.5 overflow-hidden border-y border-[color:var(--border-faint)] bg-white">
+            <div className="flex items-center gap-3.5 px-4 py-3.5">
               <AvatarChip name={account.name} src={account.avatar} size="lg" />
-              <div className="min-w-0">
-                <div className="text-xl font-semibold text-[color:var(--text-primary)]">
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[18px] font-semibold text-[color:var(--text-primary)]">
                   {account.name}
                 </div>
-                <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
+                <div className="mt-0.5 text-[13px] text-[color:var(--text-secondary)]">
                   @{account.handle}
                 </div>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full bg-[rgba(47,122,63,0.12)] px-3 py-1 text-[#2f7a3f]">
+                <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+                  <span className="rounded-full bg-[rgba(47,122,63,0.12)] px-2.5 py-1 text-[#2f7a3f]">
                     {account.accountType === "service" ? "服务号" : "订阅号"}
                   </span>
                   {account.isVerified ? (
-                    <span className="rounded-full bg-[rgba(37,99,235,0.12)] px-3 py-1 text-[#2563eb]">
+                    <span className="rounded-full bg-[rgba(37,99,235,0.12)] px-2.5 py-1 text-[#2563eb]">
                       已认证
                     </span>
                   ) : null}
@@ -269,13 +269,13 @@ function MobileOfficialAccountDetailPage({ accountId }: { accountId: string }) {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 border-t border-[color:var(--border-faint)] px-4 py-3">
+            <div className="grid grid-cols-2 gap-2.5 border-t border-[color:var(--border-faint)] px-4 py-2.5">
               <Button
                 type="button"
                 onClick={() => followMutation.mutate()}
                 disabled={followMutation.isPending}
                 variant={account.isFollowing ? "secondary" : "primary"}
-                className="w-full rounded-[10px]"
+                className="h-9 w-full rounded-[10px]"
               >
                 {followMutation.isPending
                   ? "处理中..."
@@ -287,7 +287,7 @@ function MobileOfficialAccountDetailPage({ accountId }: { accountId: string }) {
                 type="button"
                 variant="secondary"
                 onClick={toggleAccountFavorite}
-                className="w-full rounded-[10px]"
+                className="h-9 w-full rounded-[10px]"
               >
                 {accountFavoriteSourceId &&
                 favoriteSourceIds.includes(accountFavoriteSourceId)
@@ -297,13 +297,13 @@ function MobileOfficialAccountDetailPage({ accountId }: { accountId: string }) {
             </div>
 
             {followMutation.isError && followMutation.error instanceof Error ? (
-              <div className="border-t border-[color:var(--border-faint)] px-4 py-3">
+              <div className="border-t border-[color:var(--border-faint)] px-4 py-2.5">
                 <ErrorBlock message={followMutation.error.message} />
               </div>
             ) : null}
           </section>
 
-          <section className="mt-2 overflow-hidden border-y border-[color:var(--border-faint)] bg-white">
+          <section className="mt-1.5 overflow-hidden border-y border-[color:var(--border-faint)] bg-white">
             <button
               type="button"
               disabled={!account.isFollowing}
@@ -324,7 +324,7 @@ function MobileOfficialAccountDetailPage({ accountId }: { accountId: string }) {
                 <div className="text-[15px] font-medium text-[color:var(--text-primary)]">
                   {account.accountType === "service" ? "服务消息" : "订阅号消息"}
                 </div>
-                <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
+                <div className="mt-0.5 text-[11px] leading-5 text-[color:var(--text-muted)]">
                   {account.isFollowing
                     ? account.accountType === "service"
                       ? "已关注，可直接进入服务消息线程。"
@@ -334,19 +334,19 @@ function MobileOfficialAccountDetailPage({ accountId }: { accountId: string }) {
               </div>
               {account.isFollowing ? (
                 <ChevronRight
-                  size={16}
-                  className="shrink-0 text-[color:var(--text-dim)]"
+                  size={15}
+                  className="shrink-0 text-[color:var(--text-muted)]"
                 />
               ) : null}
             </button>
           </section>
 
-          <section className="mt-2 overflow-hidden border-y border-[color:var(--border-faint)] bg-white">
-            <div className="border-b border-[color:var(--border-faint)] px-5 py-4">
-              <div className="text-sm font-medium text-[color:var(--text-primary)]">
+          <section className="mt-1.5 overflow-hidden border-y border-[color:var(--border-faint)] bg-white">
+            <div className="border-b border-[color:var(--border-faint)] px-4 py-3">
+              <div className="text-[15px] font-medium text-[color:var(--text-primary)]">
                 最近文章
               </div>
-              <div className="mt-1 text-xs leading-6 text-[color:var(--text-muted)]">
+              <div className="mt-0.5 text-[11px] leading-5 text-[color:var(--text-muted)]">
                 {account.articles.length
                   ? `${account.articles.length} 篇最近推送`
                   : "这个公众号还没有公开文章。"}
@@ -360,6 +360,7 @@ function MobileOfficialAccountDetailPage({ accountId }: { accountId: string }) {
                 favorite={favoriteSourceIds.includes(
                   `official-article-${article.id}`,
                 )}
+                dense
                 onClick={() => {
                   void navigate({
                     to: "/official-accounts/articles/$articleId",
