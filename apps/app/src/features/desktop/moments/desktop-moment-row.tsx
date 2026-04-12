@@ -67,8 +67,8 @@ export function DesktopMomentRow({
       className={cn(
         "cursor-pointer rounded-[16px] border px-4 py-4 transition-[border-color,background-color,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
         active
-          ? "border-[rgba(7,193,96,0.18)] bg-[rgba(7,193,96,0.08)] shadow-[var(--shadow-section)]"
-          : "border-[color:var(--border-faint)] bg-white hover:border-[rgba(7,193,96,0.16)] hover:bg-white hover:shadow-[var(--shadow-section)]",
+          ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] shadow-[var(--shadow-section)]"
+          : "border-[color:var(--border-faint)] bg-white hover:shadow-[var(--shadow-section)]",
       )}
     >
       <div className="flex items-start gap-3">
@@ -105,7 +105,7 @@ export function DesktopMomentRow({
                 className={cn(
                   "inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] font-medium tracking-[0.12em]",
                   moment.authorType === "character"
-                    ? "border-[rgba(7,193,96,0.16)] bg-[rgba(7,193,96,0.08)] text-[#15803d]"
+                    ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] text-[color:var(--brand-primary)]"
                     : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] text-[color:var(--text-secondary)]",
                 )}
               >
@@ -149,8 +149,8 @@ export function DesktopMomentRow({
                 className={cn(
                   "inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[12px] transition-[background-color,border-color,color] disabled:opacity-55",
                   likedByOwner
-                    ? "border-[rgba(7,193,96,0.18)] bg-[rgba(7,193,96,0.08)] text-[#15803d]"
-                    : "border-[color:var(--border-faint)] text-[color:var(--text-secondary)] hover:border-[rgba(7,193,96,0.16)] hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]",
+                    ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] text-[color:var(--brand-primary)]"
+                    : "border-[color:var(--border-faint)] text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]",
                 )}
               >
                 <Heart
@@ -165,7 +165,7 @@ export function DesktopMomentRow({
                   event.stopPropagation();
                   setShowComposer((current) => !current);
                 }}
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[color:var(--border-faint)] px-2.5 text-[12px] text-[color:var(--text-secondary)] transition-[background-color,border-color,color] hover:border-[rgba(7,193,96,0.16)] hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]"
+                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[color:var(--border-faint)] px-2.5 text-[12px] text-[color:var(--text-secondary)] transition-[background-color,color] hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]"
               >
                 <MessageCircle size={14} />
                 评论
@@ -235,7 +235,7 @@ export function DesktopMomentRow({
                     event.stopPropagation();
                     onOpenDetail();
                   }}
-                  className="mt-3 text-[12px] font-medium text-[#15803d]"
+                  className="mt-3 text-[12px] font-medium text-[color:var(--brand-primary)]"
                 >
                   查看全部 {moment.commentCount} 条评论
                 </button>
@@ -252,7 +252,7 @@ export function DesktopMomentRow({
                 value={commentDraft}
                 onChange={(event) => onCommentChange(event.target.value)}
                 placeholder="写评论..."
-                className="min-w-0 flex-1 rounded-xl border-[color:var(--border-faint)] bg-white px-4 py-2 text-[13px] shadow-none hover:bg-white focus:border-[rgba(7,193,96,0.18)] focus:shadow-none"
+                className="min-w-0 flex-1 rounded-xl border-[color:var(--border-faint)] bg-white px-4 py-2 text-[13px] shadow-none hover:bg-[color:var(--surface-console)] focus:border-[rgba(7,193,96,0.14)] focus:shadow-none"
               />
               <Button
                 variant="primary"
@@ -262,7 +262,7 @@ export function DesktopMomentRow({
                   event.stopPropagation();
                   onCommentSubmit();
                 }}
-                className="bg-[#07c160] text-white shadow-none hover:bg-[#06ad56]"
+                className="bg-[color:var(--brand-primary)] text-white shadow-none hover:opacity-95"
               >
                 {commentLoading ? "发送中..." : "发送"}
               </Button>
