@@ -22,6 +22,7 @@ import { EmptyState } from "../components/empty-state";
 import { InlineNoticeActionButton } from "../components/inline-notice-action-button";
 import {
   buildDesktopChatImageViewerRouteHash,
+  hydrateDesktopChatImageViewerSessionsFromNative,
   parseDesktopChatImageViewerRouteHash,
   readDesktopChatImageViewerSession,
   type DesktopChatImageViewerSessionItem,
@@ -65,12 +66,13 @@ export function DesktopChatImageViewerPage() {
       ),
     [conversationsQuery.data],
   );
-  const sessionItems = useMemo(
+  const [sessionItems, setSessionItems] = useState<
+    DesktopChatImageViewerSessionItem[]
+  >(
     () =>
       routeState?.sessionId
         ? readDesktopChatImageViewerSession(routeState.sessionId)
         : [],
-    [routeState?.sessionId],
   );
   const routeReturnTo = useMemo(
     () =>
@@ -138,6 +140,33 @@ export function DesktopChatImageViewerPage() {
     actionLabel?: string;
     onAction?: () => void;
   } | null>(null);
+
+  useEffect(() => {
+    const sessionId = routeState?.sessionId;
+    if (!sessionId) {
+      setSessionItems([]);
+      return;
+    }
+
+    setSessionItems(readDesktopChatImageViewerSession(sessionId));
+    if (!nativeDesktopShell) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void hydrateDesktopChatImageViewerSessionsFromNative().then(() => {
+      if (cancelled) {
+        return;
+      }
+
+      setSessionItems(readDesktopChatImageViewerSession(sessionId));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nativeDesktopShell, routeState?.sessionId]);
 
   const requestCurrentWindowPrint = useCallback(() => {
     if (typeof window === "undefined") {
