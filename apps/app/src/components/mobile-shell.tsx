@@ -18,6 +18,7 @@ import { cn } from "@yinjie/ui";
 import { useMessageReminders } from "../features/chat/use-message-reminders";
 import { useChatReminderEntries } from "../features/chat/use-chat-reminder-entries";
 import { MobileReminderToastHost } from "../features/chat/mobile-reminder-toast-host";
+import { persistMobileWebRoute } from "../features/shell/mobile-web-route-persistence";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 const EMPTY_CONVERSATIONS = Object.freeze([]);
@@ -33,6 +34,12 @@ const KEEP_ALIVE_TAB_PATHS = new Set(tabs.map((tab) => tab.to));
 export function MobileShell({ children }: PropsWithChildren) {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
+  });
+  const search = useRouterState({
+    select: (state) => state.location.searchStr,
+  });
+  const hash = useRouterState({
+    select: (state) => state.location.hash,
   });
   const showTabs = pathname.startsWith("/tabs/") && pathname !== "/tabs/search";
   const activeKeepAlivePath = KEEP_ALIVE_TAB_PATHS.has(pathname)
@@ -65,6 +72,14 @@ export function MobileShell({ children }: PropsWithChildren) {
     reminders,
     conversations: conversationList,
   });
+
+  useEffect(() => {
+    if (runtimeConfig.appPlatform !== "web") {
+      return;
+    }
+
+    persistMobileWebRoute(`${pathname}${search}${hash}`);
+  }, [hash, pathname, runtimeConfig.appPlatform, search]);
 
   useEffect(() => {
     document.documentElement.classList.add("yj-mobile");

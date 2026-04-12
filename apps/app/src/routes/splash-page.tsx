@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { getWorldOwner } from "@yinjie/contracts";
 import { AppPage, AppSection, InlineNotice } from "@yinjie/ui";
+import { readPersistedMobileWebRoute } from "../features/shell/mobile-web-route-persistence";
 import { requiresRemoteServiceConfiguration } from "../lib/runtime-config";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { resolveAppRuntimeContext } from "../runtime/platform";
@@ -33,8 +34,15 @@ export function SplashPage() {
         const owner = await getWorldOwner(runtimeConfig.apiBaseUrl);
         if (!cancelled) {
           hydrateOwner(owner);
+          const restoredRoute =
+            runtimeConfig.appPlatform === "web"
+              ? readPersistedMobileWebRoute()
+              : null;
           void navigate({
-            to: owner.onboardingCompleted ? "/tabs/chat" : "/welcome",
+            to:
+              owner.onboardingCompleted
+                ? restoredRoute ?? "/tabs/chat"
+                : "/welcome",
             replace: true,
           });
         }
