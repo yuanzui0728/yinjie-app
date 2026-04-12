@@ -1,3 +1,4 @@
+import { isDesktopRuntimeAvailable } from "@yinjie/ui";
 import {
   buildDesktopStandaloneWindowLabel,
   openDesktopStandaloneWindow,
@@ -164,6 +165,10 @@ export async function openDesktopChatImageViewerWindow(
     `left=${left}`,
     `top=${top}`,
   ].join(",");
+
+  if (!isDesktopRuntimeAvailable()) {
+    return Boolean(window.open(routePath, "_blank", features));
+  }
 
   if (
     await openDesktopStandaloneWindow({
