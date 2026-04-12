@@ -168,7 +168,7 @@ function GroupChatEditPage({
             variant="wechat"
           >
             <div className="px-4 py-4">
-              <div className="rounded-[10px] border border-black/6 bg-[#f7f7f7] px-4 py-3 text-[14px] leading-7 text-[color:var(--text-primary)]">
+              <div className="rounded-[10px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-3 text-[14px] leading-7 text-[color:var(--text-primary)]">
                 {initialValue.trim() || "暂未设置"}
               </div>
             </div>
@@ -185,7 +185,7 @@ function GroupChatEditPage({
                 placeholder={
                   mode === "name" ? "请输入群聊名称" : "请输入我在本群的昵称"
                 }
-                className="h-11 w-full rounded-[10px] border border-black/8 bg-white px-3 text-[16px] text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-dim)]"
+                className="h-11 w-full rounded-[10px] border border-[color:var(--border-faint)] bg-white px-3 text-[16px] text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-dim)] focus:border-[rgba(7,193,96,0.18)]"
               />
               <div className="mt-3 flex items-center justify-between gap-3 text-[12px] leading-5 text-[color:var(--text-muted)]">
                 <span>
@@ -212,7 +212,7 @@ function GroupChatEditPage({
 
                 saveNicknameMutation.mutate(trimmedDraft);
               }}
-              className="h-10 w-full rounded-[10px] bg-[#07c160] text-white hover:bg-[#06ad56]"
+              className="h-10 w-full rounded-[10px] bg-[color:var(--brand-primary)] text-white hover:opacity-95"
             >
               {saveMutation.isPending ? "正在保存..." : "保存"}
             </Button>
