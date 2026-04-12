@@ -7,11 +7,13 @@ export function OfficialAccountListItem({
   account,
   active = false,
   compact = false,
+  dense = false,
   onClick,
 }: {
   account: OfficialAccountSummary;
   active?: boolean;
   compact?: boolean;
+  dense?: boolean;
   onClick?: () => void;
 }) {
   return (
@@ -22,7 +24,7 @@ export function OfficialAccountListItem({
         "flex w-full items-center gap-3 text-left transition-[border-color,background-color,box-shadow] duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
         compact
           ? "rounded-[18px] border border-[color:var(--border-faint)] bg-white px-4 py-3 shadow-[var(--shadow-section)] hover:border-[rgba(7,193,96,0.16)] hover:bg-white"
-          : "border-b border-[color:var(--border-faint)] bg-white px-4 py-3 hover:bg-[color:var(--surface-console)]",
+          : "border-b border-[color:var(--border-faint)] bg-white px-4 py-3.5 hover:bg-[color:var(--surface-console)]",
         active
           ? compact
             ? "border-[rgba(7,193,96,0.18)] bg-[rgba(7,193,96,0.08)]"
@@ -50,9 +52,11 @@ export function OfficialAccountListItem({
             </span>
           ) : null}
         </div>
-        <div className="mt-1 line-clamp-2 text-xs leading-5 text-[color:var(--text-secondary)]">
-          {account.description}
-        </div>
+        {dense ? null : (
+          <div className="mt-1 line-clamp-2 text-xs leading-5 text-[color:var(--text-secondary)]">
+            {account.description}
+          </div>
+        )}
       </div>
 
       <ChevronRight size={16} className="shrink-0 text-[color:var(--text-dim)]" />
