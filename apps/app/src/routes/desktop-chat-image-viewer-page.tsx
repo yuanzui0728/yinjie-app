@@ -19,6 +19,10 @@ import {
   type DesktopChatImageViewerSessionItem,
 } from "../features/desktop/chat/desktop-chat-image-viewer-route-state";
 import { isPersistedGroupConversation } from "../lib/conversation-route";
+import {
+  closeCurrentDesktopWindow,
+  focusMainDesktopWindow,
+} from "../runtime/desktop-windowing";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export function DesktopChatImageViewerPage() {
@@ -141,7 +145,7 @@ export function DesktopChatImageViewerPage() {
       if (!activeItem) {
         if (event.key === "Escape") {
           event.preventDefault();
-          window.location.assign(fallbackPath);
+          closeStandaloneWindow(fallbackPath);
         }
         return;
       }
@@ -370,8 +374,14 @@ function closeStandaloneWindow(fallbackPath: string) {
     return;
   }
 
-  closeCurrentWindow(() => {
-    focusMainWindow(fallbackPath);
+  void closeCurrentDesktopWindow().then((closed) => {
+    if (closed) {
+      return;
+    }
+
+    closeCurrentWindow(() => {
+      focusMainWindow(fallbackPath);
+    });
   });
 }
 
@@ -380,18 +390,25 @@ function focusMainWindow(targetPath: string) {
     return;
   }
 
-  try {
-    if (window.opener && !window.opener.closed) {
-      window.opener.location.assign(targetPath);
-      window.opener.focus?.();
-      closeCurrentWindow();
+  void focusMainDesktopWindow(targetPath).then((focused) => {
+    if (focused) {
+      void closeCurrentDesktopWindow();
       return;
     }
-  } catch {
-    // Ignore opener access failures and fall back to local navigation.
-  }
 
-  window.location.assign(targetPath);
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.location.assign(targetPath);
+        window.opener.focus?.();
+        closeCurrentWindow();
+        return;
+      }
+    } catch {
+      // Ignore opener access failures and fall back to local navigation.
+    }
+
+    window.location.assign(targetPath);
+  });
 }
 
 function closeCurrentWindow(onBlocked?: () => void) {

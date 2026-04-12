@@ -616,7 +616,7 @@ export function DesktopChatFilesPage() {
               : undefined
           }
           onOpenInWindow={() => {
-            openDesktopChatImageViewerWindow({
+            void openDesktopChatImageViewerWindow({
               imageUrl: activeImage.attachment.url,
               title: activeImage.attachment.fileName,
               meta: `${activeImage.conversationTitle} · ${activeImage.senderName} · ${formatMessageTimestamp(activeImage.createdAt)}`,
