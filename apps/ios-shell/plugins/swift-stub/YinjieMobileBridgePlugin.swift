@@ -1,12 +1,14 @@
 import Foundation
 import Capacitor
 import PhotosUI
+import UniformTypeIdentifiers
 import UIKit
 import UserNotifications
 
 @objc(YinjieMobileBridgePlugin)
-public class YinjieMobileBridgePlugin: CAPPlugin, PHPickerViewControllerDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+public class YinjieMobileBridgePlugin: CAPPlugin, PHPickerViewControllerDelegate, UIImagePickerControllerDelegate, UINavigationControllerDelegate, UIDocumentPickerDelegate {
     private var pendingImagePickerCall: CAPPluginCall?
+    private var pendingFilePickerCall: CAPPluginCall?
     private var pendingCameraCaptureCall: CAPPluginCall?
 
     @objc func openExternalUrl(_ call: CAPPluginCall) {
@@ -116,6 +118,26 @@ public class YinjieMobileBridgePlugin: CAPPlugin, PHPickerViewControllerDelegate
             picker.cameraDevice = .rear
             picker.modalPresentationStyle = .fullScreen
             picker.delegate = self
+            presenter.present(picker, animated: true)
+        }
+    }
+
+    @objc func pickFile(_ call: CAPPluginCall) {
+        guard let presenter = bridge?.viewController else {
+            call.reject("missing presenter for document picker")
+            return
+        }
+
+        pendingFilePickerCall = call
+
+        DispatchQueue.main.async {
+            let picker = UIDocumentPickerViewController(
+                forOpeningContentTypes: [UTType.item],
+                asCopy: true
+            )
+            picker.allowsMultipleSelection = false
+            picker.delegate = self
+            picker.modalPresentationStyle = .formSheet
             presenter.present(picker, animated: true)
         }
     }
@@ -295,6 +317,44 @@ public class YinjieMobileBridgePlugin: CAPPlugin, PHPickerViewControllerDelegate
         }
     }
 
+    public func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        let call = pendingFilePickerCall
+        pendingFilePickerCall = nil
+
+        DispatchQueue.main.async {
+            controller.dismiss(animated: true) {
+                call?.resolve([
+                    "asset": NSNull()
+                ])
+            }
+        }
+    }
+
+    public func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        let call = pendingFilePickerCall
+        pendingFilePickerCall = nil
+
+        DispatchQueue.main.async {
+            controller.dismiss(animated: true) {
+                guard let call else {
+                    return
+                }
+
+                guard let sourceUrl = urls.first,
+                      let asset = self.copyFileAsset(from: sourceUrl) else {
+                    call.resolve([
+                        "asset": NSNull()
+                    ])
+                    return
+                }
+
+                call.resolve([
+                    "asset": asset
+                ])
+            }
+        }
+    }
+
     private func loadImageAsset(from result: PHPickerResult, completion: @escaping ([String: Any]?) -> Void) {
         let provider = result.itemProvider
         guard provider.hasItemConformingToTypeIdentifier("public.image") else {
@@ -412,6 +472,45 @@ public class YinjieMobileBridgePlugin: CAPPlugin, PHPickerViewControllerDelegate
         }
     }
 
+    private func copyFileAsset(from sourceUrl: URL) -> [String: Any]? {
+        let securityScoped = sourceUrl.startAccessingSecurityScopedResource()
+        defer {
+            if securityScoped {
+                sourceUrl.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        let fileManager = FileManager.default
+        let tempDir = fileManager.temporaryDirectory.appendingPathComponent("yinjie-documents", isDirectory: true)
+
+        do {
+            try fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
+            let ext = sourceUrl.pathExtension
+            let destinationFileName = ext.isEmpty
+                ? UUID().uuidString
+                : "\(UUID().uuidString).\(ext)"
+            let destination = tempDir.appendingPathComponent(destinationFileName)
+
+            if fileManager.fileExists(atPath: destination.path) {
+                try fileManager.removeItem(at: destination)
+            }
+
+            try fileManager.copyItem(at: sourceUrl, to: destination)
+
+            let displayName = sourceUrl.lastPathComponent.isEmpty
+                ? destinationFileName
+                : sourceUrl.lastPathComponent
+            let mimeType = mimeType(forFileExtension: ext)
+            return buildFileAsset(
+                destination: destination,
+                fileName: displayName,
+                mimeType: mimeType
+            )
+        } catch {
+            return nil
+        }
+    }
+
     private func writeCapturedCameraImage(data: Data) -> [String: Any]? {
         let fileManager = FileManager.default
         let tempDir = fileManager.temporaryDirectory.appendingPathComponent("yinjie-camera", isDirectory: true)
@@ -433,13 +532,21 @@ public class YinjieMobileBridgePlugin: CAPPlugin, PHPickerViewControllerDelegate
     }
 
     private func buildImageAsset(destination: URL, fileName: String, ext: String) -> [String: Any] {
+        return buildFileAsset(
+            destination: destination,
+            fileName: fileName,
+            mimeType: mimeType(forExtension: ext)
+        )
+    }
+
+    private func buildFileAsset(destination: URL, fileName: String, mimeType: String?) -> [String: Any] {
         var asset: [String: Any] = [
             "path": destination.path,
             "webPath": destination.absoluteString,
             "fileName": fileName
         ]
 
-        if let mimeType = mimeType(forExtension: ext) {
+        if let mimeType, !mimeType.isEmpty {
             asset["mimeType"] = mimeType
         }
 
@@ -461,5 +568,14 @@ public class YinjieMobileBridgePlugin: CAPPlugin, PHPickerViewControllerDelegate
         default:
             return nil
         }
+    }
+
+    private func mimeType(forFileExtension ext: String) -> String? {
+        let normalizedExt = ext.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if normalizedExt.isEmpty {
+            return nil
+        }
+
+        return UTType(filenameExtension: normalizedExt)?.preferredMIMEType
     }
 }
