@@ -272,7 +272,7 @@ export function DesktopChatFilesPage() {
             : "按会话聚合最近发送的图片和文件。"
         }
         toolbar={
-          <div className="rounded-full border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.08)] px-3 py-1 text-[11px] font-medium text-[#15803d]">
+          <div className="rounded-full border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] px-3 py-1 text-[11px] font-medium text-[color:var(--brand-primary)]">
             {resolveFileFilterLabel(filter)} · {attachmentRows.length} 项
           </div>
         }
@@ -303,7 +303,7 @@ export function DesktopChatFilesPage() {
                   className={cn(
                     "rounded-[10px] border px-3 py-1.5 text-xs transition",
                     filter === item
-                      ? "border-[rgba(7,193,96,0.16)] bg-white text-[color:var(--text-primary)] shadow-[0_6px_16px_rgba(15,23,42,0.04)]"
+                      ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] text-[color:var(--text-primary)] shadow-[0_6px_16px_rgba(15,23,42,0.04)]"
                       : "border-transparent bg-[color:var(--surface-console)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-faint)] hover:bg-white",
                   )}
                 >
@@ -328,7 +328,7 @@ export function DesktopChatFilesPage() {
                   className={cn(
                     "flex w-full items-center gap-3 rounded-[10px] border px-3 py-2.5 text-left transition",
                     !selectedConversationId
-                      ? "border-[rgba(7,193,96,0.16)] bg-white shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
+                      ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
                       : "border-transparent bg-transparent hover:border-[color:var(--border-faint)] hover:bg-[color:var(--surface-console)]",
                   )}
                 >
@@ -353,7 +353,7 @@ export function DesktopChatFilesPage() {
                     className={cn(
                       "flex w-full items-center gap-3 rounded-[10px] border px-3 py-2.5 text-left transition",
                       conversation.id === selectedConversationId
-                        ? "border-[rgba(7,193,96,0.16)] bg-white shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
+                        ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
                         : "border-transparent bg-transparent hover:border-[color:var(--border-faint)] hover:bg-[color:var(--surface-console)]",
                     )}
                   >
@@ -429,7 +429,7 @@ export function DesktopChatFilesPage() {
                 return (
                   <div
                     key={item.id}
-                    className="rounded-[16px] border border-[color:var(--border-faint)] bg-white p-4 shadow-[var(--shadow-soft)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[color:var(--surface-console)]"
+                    className="rounded-[16px] border border-[color:var(--border-faint)] bg-white p-4 shadow-[var(--shadow-soft)] transition hover:bg-[color:var(--surface-console)]"
                   >
                     <div className="flex items-start gap-4">
                       {isImage ? (
@@ -484,7 +484,7 @@ export function DesktopChatFilesPage() {
                             href={item.attachment.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex h-8 items-center justify-center rounded-[10px] bg-[#07c160] px-3 text-[12px] font-medium text-white transition hover:bg-[#06ad56]"
+                            className="inline-flex h-8 items-center justify-center rounded-[10px] bg-[color:var(--brand-primary)] px-3 text-[12px] font-medium text-white transition hover:opacity-95"
                           >
                             打开附件
                           </a>
