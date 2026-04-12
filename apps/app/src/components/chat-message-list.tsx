@@ -72,6 +72,7 @@ import {
   type DesktopChatImageViewerSessionItem,
 } from "../features/desktop/chat/desktop-chat-image-viewer-route-state";
 import {
+  hydrateDesktopFavoritesFromNative,
   mergeDesktopFavoriteRecords,
   readDesktopFavorites,
   removeDesktopFavorite,
@@ -242,6 +243,7 @@ export function ChatMessageList({
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl ?? "";
+  const nativeDesktopFavorites = runtimeConfig.appPlatform === "desktop";
   const { entryNotice, clearEntryNotice, guardVideoEntry, resetEntryGuard } =
     useDigitalHumanEntryGuard({
       baseUrl,
@@ -480,6 +482,48 @@ export function ChatMessageList({
   useEffect(() => {
     syncFavoriteSourceIds(favoritesQuery.data ?? []);
   }, [favoritesQuery.data, syncFavoriteSourceIds]);
+
+  useEffect(() => {
+    if (!isDesktop) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncDesktopFavorites = async () => {
+      if (nativeDesktopFavorites) {
+        await hydrateDesktopFavoritesFromNative();
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      syncFavoriteSourceIds(favoritesQuery.data ?? []);
+    };
+
+    const handleFocus = () => {
+      void syncDesktopFavorites();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      void syncDesktopFavorites();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("storage", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("storage", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [favoritesQuery.data, isDesktop, nativeDesktopFavorites, syncFavoriteSourceIds]);
 
   const forwardMutation = useMutation({
     mutationFn: async (input: {
