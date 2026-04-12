@@ -318,10 +318,7 @@ export function GroupChatDetailsPage() {
                 {memberGridExpanded ? "收起群成员" : "查看更多群成员"}
               </button>
             ) : null}
-          </ChatDetailsSection>
-
-          <ChatDetailsSection title="群管理" variant="wechat">
-            <div className="divide-y divide-black/5">
+            <div className="divide-y divide-black/5 border-t border-black/5">
               <ChatSettingRow
                 label="群主"
                 value={ownerDisplayName}
@@ -384,11 +381,6 @@ export function GroupChatDetailsPage() {
                   });
                 }}
               />
-            </div>
-          </ChatDetailsSection>
-
-          <ChatDetailsSection title="聊天记录" variant="wechat">
-            <div className="divide-y divide-black/5">
               <ChatSettingRow
                 label="查找聊天记录"
                 variant="wechat"
@@ -399,10 +391,23 @@ export function GroupChatDetailsPage() {
                   });
                 }}
               />
+              <ChatSettingRow
+                label="聊天背景"
+                value={getChatBackgroundLabel(
+                  ownerQuery.data?.defaultChatBackground,
+                )}
+                variant="wechat"
+                onClick={() => {
+                  void navigate({
+                    to: "/group/$groupId/background",
+                    params: { groupId },
+                  });
+                }}
+              />
             </div>
           </ChatDetailsSection>
 
-          <ChatDetailsSection title="消息设置" variant="wechat">
+          <ChatDetailsSection title="聊天设置" variant="wechat">
             <div className="divide-y divide-black/5">
               <ChatSettingRow
                 label="消息免打扰"
@@ -456,26 +461,6 @@ export function GroupChatDetailsPage() {
                   preferencesMutation.mutate({ savedToContacts: checked });
                 }}
               />
-            </div>
-          </ChatDetailsSection>
-
-          <ChatCallFallbackSection
-            variant="wechat"
-            voiceValue="群语音"
-            videoValue="群视频"
-            onSelectKind={(kind) => {
-              void navigate({
-                to:
-                  kind === "voice"
-                    ? "/group/$groupId/voice-call"
-                    : "/group/$groupId/video-call",
-                params: { groupId },
-              });
-            }}
-          />
-
-          <ChatDetailsSection title="群内资料" variant="wechat">
-            <div className="divide-y divide-black/5">
               <ChatSettingRow
                 label="我在本群的昵称"
                 value={ownerMember?.memberName ?? "未设置"}
@@ -500,23 +485,20 @@ export function GroupChatDetailsPage() {
             </div>
           </ChatDetailsSection>
 
-          <ChatDetailsSection title="聊天背景" variant="wechat">
-            <div className="divide-y divide-black/5">
-              <ChatSettingRow
-                label="聊天背景"
-                value={getChatBackgroundLabel(
-                  ownerQuery.data?.defaultChatBackground,
-                )}
-                variant="wechat"
-                onClick={() => {
-                  void navigate({
-                    to: "/group/$groupId/background",
-                    params: { groupId },
-                  });
-                }}
-              />
-            </div>
-          </ChatDetailsSection>
+          <ChatCallFallbackSection
+            variant="wechat"
+            voiceValue="群语音"
+            videoValue="群视频"
+            onSelectKind={(kind) => {
+              void navigate({
+                to:
+                  kind === "voice"
+                    ? "/group/$groupId/voice-call"
+                    : "/group/$groupId/video-call",
+                params: { groupId },
+              });
+            }}
+          />
 
           <ChatDetailsSection title="危险操作" variant="wechat">
             <div className="divide-y divide-black/5">
