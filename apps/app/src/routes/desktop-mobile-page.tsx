@@ -406,7 +406,7 @@ export function DesktopMobilePage() {
       title="手机接力"
       subtitle="把桌面内容带到移动端继续处理。"
       toolbar={
-        <div className="rounded-full border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.08)] px-3 py-1 text-[11px] font-medium text-[#15803d]">
+        <div className="rounded-full border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] px-3 py-1 text-[11px] font-medium text-[color:var(--brand-primary)]">
           {activeHandoffHistory.length} 条最近接力
         </div>
       }
@@ -489,13 +489,13 @@ export function DesktopMobilePage() {
         ) : null}
 
         {callHandoffState && callHandoffPath && callHandoffConversationExists ? (
-          <section className="rounded-[18px] border border-[rgba(7,193,96,0.16)] bg-white p-5 shadow-[var(--shadow-section)]">
+          <section className="rounded-[18px] border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] p-5 shadow-[var(--shadow-section)]">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
                     <RadioTower
                       size={16}
-                      className="text-[#1f8f4f]"
+                      className="text-[color:var(--brand-primary)]"
                     />
                     <span>{callHandoffKindLabel}接力</span>
                   </div>
@@ -516,7 +516,7 @@ export function DesktopMobilePage() {
                       replace: true,
                     })
                   }
-                  className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)]"
+                  className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:bg-white"
                 >
                   收起
                 </button>
@@ -534,14 +534,14 @@ export function DesktopMobilePage() {
                       setNotice,
                     })
                   }
-                  className="rounded-[10px] bg-[#07c160] text-white hover:bg-[#06ad56]"
+                  className="rounded-[10px] bg-[color:var(--brand-primary)] text-white hover:opacity-95"
                 >
                   <Copy size={14} />
                   复制到手机
                 </Button>
                 <Link
                   to={callHandoffPath as never}
-                  className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)] hover:text-[color:var(--text-primary)]"
+                  className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]"
                 >
                   桌面打开聊天
                 </Link>
@@ -599,14 +599,14 @@ export function DesktopMobilePage() {
                             setNotice,
                           })
                         }
-                        className="rounded-[10px] bg-[#07c160] text-white hover:bg-[#06ad56]"
+                        className="rounded-[10px] bg-[color:var(--brand-primary)] text-white hover:opacity-95"
                       >
                         <Copy size={14} />
                         复制到手机
                       </Button>
                       <Link
                         to={item.to as never}
-                        className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)] hover:text-[color:var(--text-primary)]"
+                        className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]"
                       >
                         桌面打开
                       </Link>
@@ -690,7 +690,7 @@ export function DesktopMobilePage() {
                   variant="secondary"
                   size="sm"
                   onClick={() => void conversationsQuery.refetch()}
-                  className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)]"
+                  className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:bg-[color:var(--surface-console)]"
                 >
                   <RefreshCw size={14} />
                   刷新
@@ -750,7 +750,7 @@ export function DesktopMobilePage() {
                   variant="secondary"
                   size="sm"
                   onClick={() => void officialAccountsQuery.refetch()}
-                  className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)]"
+                  className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:bg-[color:var(--surface-console)]"
                 >
                   <RefreshCw size={14} />
                   刷新
@@ -814,7 +814,7 @@ export function DesktopMobilePage() {
               <div className="flex flex-wrap gap-2">
                 <Link
                   to="/tabs/mini-programs"
-                  className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)] hover:text-[color:var(--text-primary)]"
+                  className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]"
                 >
                   打开小程序面板
                 </Link>
@@ -830,7 +830,7 @@ export function DesktopMobilePage() {
                         : "小程序面板里还没有可同步到手机的最近使用。",
                     );
                   }}
-                  className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)]"
+                  className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:bg-[color:var(--surface-console)]"
                 >
                   <RefreshCw size={14} />
                   刷新
@@ -971,7 +971,7 @@ export function DesktopMobilePage() {
               </div>
               <Link
                 to="/desktop/channels/live-companion"
-                className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)] hover:text-[color:var(--text-primary)]"
+                className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]"
               >
                 打开直播伴侣
               </Link>
@@ -1006,7 +1006,7 @@ export function DesktopMobilePage() {
                         setNotice,
                       })
                     }
-                    className="rounded-[10px] bg-[#07c160] text-white hover:bg-[#06ad56]"
+                    className="rounded-[10px] bg-[color:var(--brand-primary)] text-white hover:opacity-95"
                   >
                     <Copy size={14} />
                     发准备到手机
@@ -1025,7 +1025,7 @@ export function DesktopMobilePage() {
                           : "直播伴侣还没有可同步到手机的内容。",
                       );
                     }}
-                    className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)]"
+                    className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:bg-[color:var(--surface-console)]"
                   >
                     <RefreshCw size={14} />
                     刷新直播状态
@@ -1070,7 +1070,7 @@ export function DesktopMobilePage() {
                         setNotice,
                       })
                     }
-                    className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)]"
+                    className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:bg-[color:var(--surface-console)]"
                   >
                     <ArrowUpRight size={14} />
                     发直播状态到手机
@@ -1094,7 +1094,7 @@ export function DesktopMobilePage() {
                   从群二维码页发到手机的邀请，会先集中展示在这里，方便继续发手机或回桌面群页。
                 </div>
               </div>
-              <div className="rounded-full bg-[rgba(7,193,96,0.10)] px-3 py-1 text-[11px] font-medium text-[#1f8f4f]">
+              <div className="rounded-full bg-[rgba(7,193,96,0.07)] px-3 py-1 text-[11px] font-medium text-[color:var(--brand-primary)]">
                 {recentGroupInviteHandoffs.length} 条最近邀请
               </div>
             </div>
@@ -1105,7 +1105,7 @@ export function DesktopMobilePage() {
                   <div className="rounded-[14px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] p-5">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
-                        <div className="text-xs font-medium tracking-[0.14em] text-[#1f8f4f]">
+                        <div className="text-xs font-medium tracking-[0.14em] text-[color:var(--brand-primary)]">
                           当前群邀请
                         </div>
                         <div className="mt-2 text-base font-medium text-[color:var(--text-primary)]">
@@ -1122,7 +1122,7 @@ export function DesktopMobilePage() {
                           <span>已纳入手机接力固定入口</span>
                         </div>
                       </div>
-                      <div className="rounded-full bg-[rgba(7,193,96,0.10)] px-3 py-1 text-[11px] font-medium text-[#1f8f4f]">
+                      <div className="rounded-full bg-[rgba(7,193,96,0.07)] px-3 py-1 text-[11px] font-medium text-[color:var(--brand-primary)]">
                         群邀请入口
                       </div>
                     </div>
@@ -1139,14 +1139,14 @@ export function DesktopMobilePage() {
                             setNotice,
                           })
                         }
-                        className="rounded-[10px] bg-[#07c160] text-white hover:bg-[#06ad56]"
+                        className="rounded-[10px] bg-[color:var(--brand-primary)] text-white hover:opacity-95"
                       >
                         <Copy size={14} />
                         再发一次
                       </Button>
                       <Link
                         to={currentGroupInviteHandoff.path as never}
-                        className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)] hover:text-[color:var(--text-primary)]"
+                        className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]"
                       >
                         桌面打开
                       </Link>
@@ -1169,7 +1169,7 @@ export function DesktopMobilePage() {
                             </div>
                             <Link
                               to={activeGroupInviteDelivery.conversationPath as never}
-                              className="inline-flex h-8 items-center justify-center rounded-[8px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-3 text-[11px] font-medium text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)] hover:text-[color:var(--text-primary)]"
+                              className="inline-flex h-8 items-center justify-center rounded-[8px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-3 text-[11px] font-medium text-[color:var(--text-secondary)] transition hover:bg-white hover:text-[color:var(--text-primary)]"
                             >
                               回到会话
                             </Link>
@@ -1207,7 +1207,7 @@ export function DesktopMobilePage() {
                                   </div>
                                   <Link
                                     to={record.conversationPath as never}
-                                    className="inline-flex h-7 items-center justify-center rounded-[8px] border border-[color:var(--border-faint)] bg-white px-3 text-[10px] font-medium text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)] hover:text-[color:var(--text-primary)]"
+                                    className="inline-flex h-7 items-center justify-center rounded-[8px] border border-[color:var(--border-faint)] bg-white px-3 text-[10px] font-medium text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]"
                                   >
                                     回到会话
                                   </Link>
@@ -1253,14 +1253,14 @@ export function DesktopMobilePage() {
                                   setNotice,
                                 })
                               }
-                              className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)]"
+                              className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:bg-[color:var(--surface-console)]"
                             >
                               <Copy size={14} />
                               再发一次
                             </Button>
                             <Link
                               to={item.path as never}
-                              className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)] hover:text-[color:var(--text-primary)]"
+                              className="inline-flex h-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white px-4 text-xs font-medium text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]"
                             >
                               桌面打开
                             </Link>
@@ -1304,7 +1304,7 @@ export function DesktopMobilePage() {
                           {group.description}
                         </div>
                       </div>
-                      <div className="rounded-full bg-[rgba(7,193,96,0.10)] px-3 py-1 text-[11px] font-medium text-[#1f8f4f]">
+                      <div className="rounded-full bg-[rgba(7,193,96,0.07)] px-3 py-1 text-[11px] font-medium text-[color:var(--brand-primary)]">
                         {group.items.length} 条
                       </div>
                     </div>
@@ -1337,7 +1337,7 @@ export function DesktopMobilePage() {
                               setNotice,
                             })
                           }
-                          className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)]"
+                          className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:bg-[color:var(--surface-console)]"
                         >
                           再发一次
                         </Button>
@@ -1386,7 +1386,7 @@ function RecentConversationRow({
             <Button
               size="sm"
               onClick={onCopy}
-              className="rounded-[10px] bg-[#07c160] text-white hover:bg-[#06ad56]"
+              className="rounded-[10px] bg-[color:var(--brand-primary)] text-white hover:opacity-95"
             >
               <Copy size={14} />
               发到手机继续
@@ -1430,7 +1430,7 @@ function RecentArticleRow({
             <Button
               size="sm"
               onClick={onCopyArticle}
-              className="rounded-[10px] bg-[#07c160] text-white hover:bg-[#06ad56]"
+              className="rounded-[10px] bg-[color:var(--brand-primary)] text-white hover:opacity-95"
             >
               <Copy size={14} />
               发文章到手机
@@ -1439,7 +1439,7 @@ function RecentArticleRow({
               variant="secondary"
               size="sm"
               onClick={onCopyAccount}
-              className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)]"
+              className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:bg-[color:var(--surface-console)]"
             >
               <ArrowUpRight size={14} />
               发主页到手机
@@ -1482,7 +1482,7 @@ function MiniProgramHandoffCard({
             {pinned ? " · 已加入我的小程序" : ""}
           </div>
         </div>
-        <div className="rounded-full bg-[rgba(7,193,96,0.10)] px-2.5 py-1 text-[10px] text-[#1f8f4f]">
+        <div className="rounded-full bg-[rgba(7,193,96,0.07)] px-2.5 py-1 text-[10px] text-[color:var(--brand-primary)]">
           {launchCount} 次
         </div>
       </div>
@@ -1506,7 +1506,7 @@ function MiniProgramHandoffCard({
         <Button
           size="sm"
           onClick={onCopy}
-          className="rounded-[10px] bg-[#07c160] text-white hover:bg-[#06ad56]"
+          className="rounded-[10px] bg-[color:var(--brand-primary)] text-white hover:opacity-95"
         >
           <Copy size={14} />
           {buttonLabel}
