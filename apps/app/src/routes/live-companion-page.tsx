@@ -48,6 +48,17 @@ import { formatTimestamp } from "../lib/format";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../store/world-owner-store";
 
+function areLiveDraftsEqual(left: LiveDraft, right: LiveDraft) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function areLiveHistoriesEqual(
+  left: LiveSessionRecord[],
+  right: LiveSessionRecord[],
+) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
 export function LiveCompanionPage() {
   const isDesktopLayout = useDesktopLayout();
   const runtimeConfig = useAppRuntimeConfig();
@@ -96,6 +107,50 @@ export function LiveCompanionPage() {
 
     return () => {
       cancelled = true;
+    };
+  }, [nativeDesktopLiveCompanion]);
+
+  useEffect(() => {
+    if (!nativeDesktopLiveCompanion) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function syncLiveCompanionStore() {
+      const store = await hydrateLiveCompanionFromNative();
+      if (cancelled) {
+        return;
+      }
+
+      setDraft((current) =>
+        areLiveDraftsEqual(current, store.draft) ? current : store.draft,
+      );
+      setLiveHistory((current) =>
+        areLiveHistoriesEqual(current, store.history)
+          ? current
+          : store.history,
+      );
+    }
+
+    const handleFocus = () => {
+      void syncLiveCompanionStore();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      void syncLiveCompanionStore();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [nativeDesktopLiveCompanion]);
 
