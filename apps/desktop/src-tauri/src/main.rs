@@ -70,9 +70,17 @@ struct DesktopSaveRemoteFileInput {
     dialog_title: Option<String>,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct DesktopSaveTextFileInput {
+    contents: String,
+    file_name: String,
+    dialog_title: Option<String>,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct DesktopRemoteFileSaveResult {
+struct DesktopFileSaveResult {
     success: bool,
     cancelled: bool,
     saved_path: Option<String>,
@@ -140,6 +148,7 @@ fn main() {
             desktop_window_is_maximized,
             desktop_window_minimize,
             desktop_save_remote_file,
+            desktop_save_text_file,
             desktop_window_toggle_maximize,
             probe_core_api_health,
             start_core_api,
@@ -381,41 +390,19 @@ fn desktop_window_minimize(window: Window) -> Result<(), String> {
 async fn desktop_save_remote_file(
     app: tauri::AppHandle,
     input: DesktopSaveRemoteFileInput,
-) -> Result<DesktopRemoteFileSaveResult, String> {
+) -> Result<DesktopFileSaveResult, String> {
     tauri::async_runtime::spawn_blocking(move || {
         let url = input.url.trim().to_string();
         if url.is_empty() {
             return Err("Missing file URL.".to_string());
         }
 
-        let file_name = sanitize_download_file_name(&input.file_name);
-        let dialog_title = input
-            .dialog_title
-            .as_deref()
-            .map(str::trim)
-            .filter(|value| !value.is_empty())
-            .unwrap_or("保存附件");
-        let Some(target_file_path) = app
-            .dialog()
-            .file()
-            .set_title(dialog_title)
-            .set_file_name(file_name)
-            .blocking_save_file()
+        let Some(target_file_path) =
+            prompt_save_file_path(&app, &input.file_name, input.dialog_title.as_deref())?
         else {
-            return Ok(DesktopRemoteFileSaveResult {
-                success: false,
-                cancelled: true,
-                saved_path: None,
-                message: "已取消保存。".to_string(),
-            });
+            return Ok(cancelled_file_save_result());
         };
-        let target_file_path = target_file_path
-            .into_path()
-            .map_err(|error| error.to_string())?;
-
-        if let Some(parent_dir) = target_file_path.parent() {
-            std::fs::create_dir_all(parent_dir).map_err(|error| error.to_string())?;
-        }
+        ensure_parent_dir_exists(&target_file_path)?;
 
         let mut response = reqwest::blocking::Client::builder()
             .timeout(Duration::from_secs(120))
@@ -432,12 +419,26 @@ async fn desktop_save_remote_file(
             .map_err(|error| error.to_string())?;
         output.flush().map_err(|error| error.to_string())?;
 
-        Ok(DesktopRemoteFileSaveResult {
-            success: true,
-            cancelled: false,
-            saved_path: Some(target_file_path.display().to_string()),
-            message: format!("已保存到 {}", target_file_path.display()),
-        })
+        Ok(saved_file_result(&target_file_path))
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+async fn desktop_save_text_file(
+    app: tauri::AppHandle,
+    input: DesktopSaveTextFileInput,
+) -> Result<DesktopFileSaveResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        let Some(target_file_path) =
+            prompt_save_file_path(&app, &input.file_name, input.dialog_title.as_deref())?
+        else {
+            return Ok(cancelled_file_save_result());
+        };
+        ensure_parent_dir_exists(&target_file_path)?;
+        std::fs::write(&target_file_path, input.contents).map_err(|error| error.to_string())?;
+        Ok(saved_file_result(&target_file_path))
     })
     .await
     .map_err(|error| error.to_string())?
@@ -508,6 +509,58 @@ fn probe_remote_health(base_url: &str) -> bool {
         .send()
         .map(|response| response.status().is_success())
         .unwrap_or(false)
+}
+
+fn prompt_save_file_path(
+    app: &tauri::AppHandle,
+    file_name: &str,
+    dialog_title: Option<&str>,
+) -> Result<Option<PathBuf>, String> {
+    let normalized_file_name = sanitize_download_file_name(file_name);
+    let normalized_dialog_title = dialog_title
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or("保存附件");
+    let Some(target_file_path) = app
+        .dialog()
+        .file()
+        .set_title(normalized_dialog_title)
+        .set_file_name(normalized_file_name)
+        .blocking_save_file()
+    else {
+        return Ok(None);
+    };
+
+    target_file_path
+        .into_path()
+        .map(Some)
+        .map_err(|error| error.to_string())
+}
+
+fn ensure_parent_dir_exists(target_file_path: &PathBuf) -> Result<(), String> {
+    if let Some(parent_dir) = target_file_path.parent() {
+        std::fs::create_dir_all(parent_dir).map_err(|error| error.to_string())?;
+    }
+
+    Ok(())
+}
+
+fn cancelled_file_save_result() -> DesktopFileSaveResult {
+    DesktopFileSaveResult {
+        success: false,
+        cancelled: true,
+        saved_path: None,
+        message: "已取消保存。".to_string(),
+    }
+}
+
+fn saved_file_result(target_file_path: &PathBuf) -> DesktopFileSaveResult {
+    DesktopFileSaveResult {
+        success: true,
+        cancelled: false,
+        saved_path: Some(target_file_path.display().to_string()),
+        message: format!("已保存到 {}", target_file_path.display()),
+    }
 }
 
 fn sanitize_download_file_name(value: &str) -> String {
