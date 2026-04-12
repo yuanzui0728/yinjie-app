@@ -62,21 +62,22 @@ export function MobileMessageActionSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-[rgba(0,0,0,0.18)]">
+    <div className="fixed inset-0 z-50 bg-[rgba(15,23,42,0.14)]">
       <button
         type="button"
         className="absolute inset-0"
         aria-label="关闭消息操作菜单"
         onClick={onClose}
       />
-      <div className="absolute inset-x-0 bottom-0 rounded-t-[18px] bg-[#f2f2f2] px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] pt-3 shadow-[0_-16px_36px_rgba(15,23,42,0.14)]">
-        <div className="pb-3 text-center text-[13px] text-[#8c8c8c]">
-          {title}
+      <div className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t-[20px] border-t border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.5rem)] pt-2 shadow-[0_-14px_28px_rgba(15,23,42,0.10)]">
+        <div className="flex justify-center pb-1.5">
+          <div className="h-1 w-10 rounded-full bg-[rgba(148,163,184,0.45)]" />
         </div>
+        <div className="pb-2.5 text-center text-[12px] text-[#8c8c8c]">{title}</div>
         {preview ? (
-          <div className="mb-3 overflow-hidden rounded-[14px] bg-white px-3 py-3">
+          <div className="mb-2.5 overflow-hidden rounded-[14px] border border-[color:var(--border-subtle)] bg-white px-3 py-2.5">
             {preview.senderName ? (
-              <div className="pb-1 text-[11px] text-[#8c8c8c]">
+              <div className="pb-1 text-[10px] text-[#8c8c8c]">
                 {preview.senderName}
               </div>
             ) : null}
@@ -84,10 +85,10 @@ export function MobileMessageActionSheet({
               className={`flex ${preview.own ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[88%] rounded-[16px] px-3 py-2 text-[14px] leading-6 ${
+                className={`max-w-[88%] rounded-[15px] px-3 py-2 text-[13px] leading-5 ${
                   preview.own
-                    ? "bg-[#95ec69] text-[#111827]"
-                    : "border border-black/5 bg-[#f8f8f8] text-[#111827]"
+                    ? "bg-[rgba(7,193,96,0.16)] text-[#111827]"
+                    : "border border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] text-[#111827]"
                 }`}
               >
                 <div className="line-clamp-3 whitespace-pre-wrap break-words">
@@ -97,7 +98,7 @@ export function MobileMessageActionSheet({
             </div>
           </div>
         ) : null}
-        <div className="overflow-hidden rounded-[14px] bg-white">
+        <div className="overflow-hidden rounded-[14px] border border-[color:var(--border-subtle)] bg-white">
           {onReply ? <ActionButton label="回复" onClick={onReply} /> : null}
           {onQuoteSelection ? (
             <ActionButton
@@ -147,7 +148,7 @@ export function MobileMessageActionSheet({
         <button
           type="button"
           onClick={onClose}
-          className="mt-3 flex h-12 w-full items-center justify-center rounded-[14px] bg-white text-[17px] font-medium text-[#111827]"
+          className="mt-2.5 flex h-11 w-full items-center justify-center rounded-[14px] border border-[color:var(--border-subtle)] bg-white text-[15px] font-medium text-[#111827] transition active:bg-[color:var(--surface-card-hover)]"
         >
           取消
         </button>
@@ -169,7 +170,7 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-12 w-full items-center justify-center border-b border-black/6 text-[17px] last:border-b-0 ${
+      className={`flex min-h-[52px] w-full items-center justify-center border-b border-[color:var(--border-subtle)] px-4 py-2.5 text-[16px] transition active:bg-[color:var(--surface-card-hover)] last:border-b-0 ${
         danger ? "text-[#d74b45]" : "text-[#111827]"
       }`}
     >
