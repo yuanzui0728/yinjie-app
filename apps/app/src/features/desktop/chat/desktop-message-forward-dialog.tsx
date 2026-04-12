@@ -129,7 +129,7 @@ export function DesktopMessageForwardDialog({
           "relative flex min-w-0 flex-col overflow-hidden",
           isMobile
             ? "h-full bg-[#ededed]"
-            : "h-[min(820px,92vh)] w-full max-w-[1080px] rounded-[18px] border border-black/8 bg-white shadow-[0_24px_64px_rgba(15,23,42,0.18)] lg:h-[min(760px,80vh)] lg:flex-row",
+            : "h-[min(820px,92vh)] w-full max-w-[1080px] rounded-[22px] border border-[color:var(--border-faint)] bg-white/96 shadow-[var(--shadow-overlay)] lg:h-[min(760px,80vh)] lg:flex-row",
         )}
       >
         {isMobile ? (
@@ -145,11 +145,11 @@ export function DesktopMessageForwardDialog({
             "flex shrink-0 flex-col",
             isMobile
               ? "border-b border-black/5 bg-[#f6f6f6]"
-              : "max-h-[38vh] w-full border-b border-black/6 bg-[#f7f7f7] lg:max-h-none lg:w-[360px] lg:border-b-0 lg:border-r",
+              : "max-h-[38vh] w-full border-b border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.88)] lg:max-h-none lg:w-[360px] lg:border-b-0 lg:border-r",
           )}
         >
           {!isMobile ? (
-            <div className="border-b border-black/6 px-4 py-4 lg:px-5 lg:py-5">
+            <div className="border-b border-[color:var(--border-faint)] bg-white/78 px-4 py-4 backdrop-blur-xl lg:px-5 lg:py-5">
               <div className="text-[18px] font-medium text-[color:var(--text-primary)]">
                 转发消息
               </div>
@@ -170,7 +170,7 @@ export function DesktopMessageForwardDialog({
               "min-h-0 overflow-auto",
               isMobile
                 ? "flex gap-2.5 px-3 pb-3"
-                : "flex-1 space-y-3 px-3 py-3 lg:px-4 lg:py-4",
+                : "flex-1 space-y-3 bg-[rgba(242,246,245,0.76)] px-3 py-3 lg:px-4 lg:py-4",
             )}
           >
             {messages.map((message) => (
@@ -188,11 +188,11 @@ export function DesktopMessageForwardDialog({
             "flex min-w-0 flex-1 flex-col",
             isMobile
               ? "bg-[#ededed]"
-              : "bg-[#fafafa]",
+              : "bg-[rgba(255,255,255,0.62)]",
           )}
         >
           {!isMobile ? (
-            <div className="flex items-start justify-between gap-4 border-b border-black/6 bg-[#f7f7f7] px-4 py-4 lg:px-6 lg:py-4">
+            <div className="flex items-start justify-between gap-4 border-b border-[color:var(--border-faint)] bg-white/78 px-4 py-4 backdrop-blur-xl lg:px-6 lg:py-4">
               <div className="min-w-0">
                 <div className="text-[11px] tracking-[0.12em] text-[color:var(--text-dim)]">
                   最近会话
@@ -205,7 +205,7 @@ export function DesktopMessageForwardDialog({
                 type="button"
                 onClick={onClose}
                 disabled={pending}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-black/6 bg-white text-[color:var(--text-secondary)] transition hover:bg-[#f5f5f5] hover:text-[color:var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label="关闭"
               >
                 <X size={16} />
@@ -219,8 +219,8 @@ export function DesktopMessageForwardDialog({
 
           <div
             className={cn(
-              "border-b border-black/6",
-              isMobile ? "border-black/5 px-3 py-2.5" : "px-4 py-3 lg:px-6",
+              "border-b border-[color:var(--border-faint)]",
+              isMobile ? "border-black/5 px-3 py-2.5" : "bg-white/72 px-4 py-3 lg:px-6",
             )}
           >
             <div className="flex items-center gap-2">
@@ -247,8 +247,8 @@ export function DesktopMessageForwardDialog({
 
           <div
             className={cn(
-              "border-b border-black/6",
-              isMobile ? "border-black/5 px-3 py-2" : "px-4 py-4 lg:px-6",
+              "border-b border-[color:var(--border-faint)]",
+              isMobile ? "border-black/5 px-3 py-2" : "bg-white/72 px-4 py-4 lg:px-6",
             )}
           >
             <label className="relative block">
@@ -265,7 +265,7 @@ export function DesktopMessageForwardDialog({
                   "pl-10",
                   isMobile
                     ? "h-10 rounded-[12px] border-none bg-white shadow-none"
-                    : "h-10 rounded-[10px] border-black/8 bg-white shadow-none",
+                    : "h-10 rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none",
                 )}
               />
             </label>
@@ -294,7 +294,7 @@ export function DesktopMessageForwardDialog({
                   "text-sm text-[color:var(--text-secondary)]",
                   isMobile
                     ? "rounded-[16px] border border-black/5 bg-white px-4 py-5"
-                    : "rounded-[12px] border border-dashed border-black/8 bg-white px-4 py-5",
+                    : "rounded-[12px] border border-dashed border-[color:var(--border-faint)] bg-white/84 px-4 py-5",
                 )}
               >
                 没有匹配的最近会话。
@@ -320,7 +320,7 @@ export function DesktopMessageForwardDialog({
                       "flex w-full items-center justify-between gap-3 text-left disabled:cursor-not-allowed disabled:opacity-60",
                       isMobile
                         ? `px-4 py-3 ${index > 0 ? "border-t border-black/5" : ""}`
-                        : "rounded-[12px] border border-black/6 bg-white px-4 py-3 transition hover:bg-[#fcfcfc]",
+                        : "rounded-[14px] border border-[color:var(--border-faint)] bg-white px-4 py-3 transition hover:border-[rgba(7,193,96,0.16)] hover:bg-white hover:shadow-[var(--shadow-soft)]",
                     )}
                   >
                     <div className="flex min-w-0 items-center gap-3">
@@ -348,7 +348,7 @@ export function DesktopMessageForwardDialog({
                         "shrink-0 text-xs",
                         isMobile
                           ? "rounded-full bg-[rgba(7,193,96,0.12)] px-2.5 py-1 text-[#07c160]"
-                          : "rounded-[8px] bg-[#f1f3f5] px-3 py-1 text-[color:var(--text-secondary)]",
+                          : "rounded-[8px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-3 py-1 text-[color:var(--text-secondary)]",
                       )}
                     >
                       {pending
@@ -372,7 +372,7 @@ export function DesktopMessageForwardDialog({
               "border-t text-[12px] text-[color:var(--text-muted)]",
               isMobile
                 ? "border-black/5 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+0.85rem)] pt-3"
-                : "flex flex-col items-stretch gap-3 border-black/6 bg-[#f7f7f7] px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:px-6",
+                : "flex flex-col items-stretch gap-3 border-[color:var(--border-faint)] bg-white/78 px-4 py-4 backdrop-blur-xl lg:flex-row lg:items-center lg:justify-between lg:gap-4 lg:px-6",
             )}
           >
             <div>
@@ -386,7 +386,7 @@ export function DesktopMessageForwardDialog({
                 variant="secondary"
                 onClick={onClose}
                 disabled={pending}
-                className="rounded-[10px] border-black/8 bg-white px-6 shadow-none hover:bg-[#efefef]"
+                className="rounded-[10px] border-[color:var(--border-faint)] bg-white px-6 shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-[color:var(--surface-console)]"
               >
                 取消
               </Button>
@@ -419,8 +419,8 @@ function ForwardModeButton({
       className={cn(
         "flex min-w-0 flex-1 flex-col items-start rounded-[14px] border px-3 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-60",
         active
-          ? "border-[#d6d6d6] bg-white"
-          : "border-black/6 bg-white hover:bg-[#fafafa]",
+          ? "border-[rgba(7,193,96,0.16)] bg-[rgba(7,193,96,0.08)]"
+          : "border-[color:var(--border-faint)] bg-white hover:border-[rgba(7,193,96,0.16)] hover:bg-[color:var(--surface-console)]",
       )}
     >
       <span
@@ -482,10 +482,10 @@ function ForwardPreviewCard({
   return (
     <div
       className={cn(
-        "border border-black/6 bg-white",
+        "border border-[color:var(--border-faint)] bg-white",
         mobile
           ? "w-[188px] shrink-0 rounded-[16px] px-3 py-3 shadow-none"
-          : "rounded-[12px] px-4 py-3 shadow-none",
+          : "rounded-[14px] px-4 py-3 shadow-[var(--shadow-soft)]",
       )}
     >
       <div className="flex items-center justify-between gap-3">
@@ -493,13 +493,13 @@ function ForwardPreviewCard({
           {message.senderName}
         </div>
         <span
-          className={cn(
-            "shrink-0 rounded-full px-2.5 py-1 text-[11px]",
-            mobile
-              ? "bg-[rgba(7,193,96,0.1)] text-[#07c160]"
-              : "rounded-[8px] bg-[#f1f3f5] text-[color:var(--text-secondary)]",
-          )}
-        >
+        className={cn(
+          "shrink-0 rounded-full px-2.5 py-1 text-[11px]",
+          mobile
+            ? "bg-[rgba(7,193,96,0.1)] text-[#07c160]"
+            : "rounded-[8px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] text-[color:var(--text-secondary)]",
+        )}
+      >
           {message.typeLabel}
         </span>
       </div>
