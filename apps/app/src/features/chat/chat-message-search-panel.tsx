@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   FileText,
   Image as ImageIcon,
@@ -293,6 +293,36 @@ export function ChatMessageSearchPanel({
     (messageTypeFilter !== "all" ? 1 : 0) +
     (dateFilter !== "all" ? 1 : 0) +
     (specificDate ? 1 : 0);
+  const activeFilterLabels = useMemo(() => {
+    const labels: string[] = [];
+
+    if (senderFilter !== "all") {
+      labels.push(`成员 · ${senderFilter}`);
+    }
+
+    if (messageTypeFilter !== "all") {
+      labels.push(
+        `类型 · ${
+          SEARCH_MESSAGE_TYPE_FILTERS.find(
+            (item) => item.id === messageTypeFilter,
+          )?.label ?? "消息"
+        }`,
+      );
+    }
+
+    if (specificDate) {
+      labels.push(`日期 · ${specificDate}`);
+    } else if (dateFilter !== "all") {
+      labels.push(
+        `时间 · ${
+          SEARCH_DATE_FILTERS.find((item) => item.id === dateFilter)?.label ??
+          "时间筛选"
+        }`,
+      );
+    }
+
+    return labels;
+  }, [dateFilter, messageTypeFilter, senderFilter, specificDate]);
 
   const activeCategoryMeta =
     SEARCH_CATEGORIES.find((item) => item.id === activeCategory) ??
@@ -328,67 +358,82 @@ export function ChatMessageSearchPanel({
             {reminderCount ? (
               <SearchStatPill label={`提醒 ${reminderCount} 条`} tone="blue" />
             ) : null}
-            {senderFilter !== "all" ? (
-              <SearchStatPill label={`成员 ${senderFilter}`} />
-            ) : null}
-            {messageTypeFilter !== "all" ? (
-              <SearchStatPill
-                label={`类型 ${
-                  SEARCH_MESSAGE_TYPE_FILTERS.find(
-                    (item) => item.id === messageTypeFilter,
-                  )?.label ?? "消息"
-                }`}
-              />
-            ) : null}
-            {specificDate ? (
-              <SearchStatPill label={`日期 ${specificDate}`} />
-            ) : dateFilter !== "all" ? (
-              <SearchStatPill
-                label={
-                  SEARCH_DATE_FILTERS.find((item) => item.id === dateFilter)
-                    ?.label ?? "时间筛选"
-                }
-              />
-            ) : null}
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {SEARCH_DATE_FILTERS.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  setDateFilter(item.id);
-                  setSpecificDate("");
-                }}
-                className={cn(
-                  "rounded-[8px] border px-3 py-1.5 text-[12px] transition",
-                  dateFilter === item.id && !specificDate
-                    ? "border-[color:var(--border-faint)] bg-white text-[color:var(--text-primary)]"
-                    : "border-transparent bg-[color:var(--surface-console)] text-[color:var(--text-muted)] hover:border-[color:var(--border-faint)] hover:bg-white",
-                )}
-              >
-                {item.label}
-              </button>
-            ))}
+          {activeFilterLabels.length ? (
+            <div className="mt-3 rounded-[12px] border border-[color:var(--border-subtle)] bg-[color:var(--bg-canvas)] px-3 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[12px] font-medium text-[color:var(--text-primary)]">
+                  已筛选 {activeFilterLabels.length} 项
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setKeyword("");
+                    setSenderFilter("all");
+                    setMessageTypeFilter("all");
+                    setDateFilter("all");
+                    setSpecificDate("");
+                  }}
+                  className="h-7 rounded-full px-2.5 text-[11px] text-[color:var(--text-secondary)]"
+                >
+                  清空
+                </Button>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {activeFilterLabels.map((label) => (
+                  <SearchStatPill key={label} label={label} tone="active" />
+                ))}
+              </div>
+            </div>
+          ) : null}
+          <div className="mt-3 space-y-3 rounded-[12px] border border-[color:var(--border-subtle)] bg-[color:var(--bg-canvas)] px-3 py-3">
+            <div>
+              <div className="text-[11px] font-medium tracking-[0.08em] text-[color:var(--text-muted)]">
+                时间
+              </div>
+              <div className="-mx-3 mt-2 overflow-x-auto px-3">
+                <div className="flex min-w-max gap-2">
+                  {SEARCH_DATE_FILTERS.map((item) => (
+                    <SearchFilterChip
+                      key={item.id}
+                      active={dateFilter === item.id && !specificDate}
+                      onClick={() => {
+                        setDateFilter(item.id);
+                        setSpecificDate("");
+                      }}
+                    >
+                      {item.label}
+                    </SearchFilterChip>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] font-medium tracking-[0.08em] text-[color:var(--text-muted)]">
+                类型
+              </div>
+              <div className="-mx-3 mt-2 overflow-x-auto px-3">
+                <div className="flex min-w-max gap-2">
+                  {availableMessageTypeFilters.map((item) => (
+                    <SearchFilterChip
+                      key={item.id}
+                      active={messageTypeFilter === item.id}
+                      onClick={() => setMessageTypeFilter(item.id)}
+                    >
+                      {item.label}
+                    </SearchFilterChip>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {availableMessageTypeFilters.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setMessageTypeFilter(item.id)}
-                className={cn(
-                  "rounded-[8px] border px-3 py-1.5 text-[12px] transition",
-                  messageTypeFilter === item.id
-                    ? "border-[color:var(--border-faint)] bg-white text-[color:var(--text-primary)]"
-                    : "border-transparent bg-[color:var(--surface-console)] text-[color:var(--text-muted)] hover:border-[color:var(--border-faint)] hover:bg-white",
-                )}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-          <div className="mt-3 flex items-center gap-2">
+          <div
+            className={`mt-3 grid gap-2 ${
+              enableSenderFilter ? "grid-cols-2" : "grid-cols-1"
+            }`}
+          >
             <input
               type="date"
               value={specificDate}
@@ -415,25 +460,6 @@ export function ChatMessageSearchPanel({
               </select>
             ) : null}
           </div>
-          {activeFilterCount ? (
-            <div className="mt-3">
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  setKeyword("");
-                  setSenderFilter("all");
-                  setMessageTypeFilter("all");
-                  setDateFilter("all");
-                  setSpecificDate("");
-                }}
-                className="h-8 rounded-[8px] border-[color:var(--border-faint)] bg-white px-3 text-[12px] shadow-none hover:bg-[color:var(--surface-console)]"
-              >
-                清空筛选
-              </Button>
-            </div>
-          ) : null}
         </div>
       </ChatDetailsSection>
 
@@ -1031,7 +1057,7 @@ function SearchStatPill({
   tone = "neutral",
 }: {
   label: string;
-  tone?: "neutral" | "brand" | "blue";
+  tone?: "neutral" | "brand" | "blue" | "active";
 }) {
   return (
     <span
@@ -1039,10 +1065,36 @@ function SearchStatPill({
         "rounded-[7px] px-2.5 py-1 text-[11px]",
         tone === "brand" && "bg-[#ededed] text-[color:var(--text-primary)]",
         tone === "blue" && "bg-[rgba(59,130,246,0.10)] text-[#2563eb]",
+        tone === "active" && "bg-[rgba(7,193,96,0.1)] text-[#15803d]",
         tone === "neutral" && "bg-[#ededed] text-[color:var(--text-muted)]",
       )}
     >
       {label}
     </span>
+  );
+}
+
+function SearchFilterChip({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "rounded-full border px-3 py-1.5 text-[12px] transition",
+        active
+          ? "border-[rgba(7,193,96,0.16)] bg-[rgba(247,251,248,0.96)] text-[#15803d]"
+          : "border-[color:var(--border-subtle)] bg-white text-[color:var(--text-secondary)] active:bg-[color:var(--surface-card-hover)]",
+      )}
+    >
+      {children}
+    </button>
   );
 }
