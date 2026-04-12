@@ -196,11 +196,13 @@ function SelectionModeActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-[14px] border border-black/6 bg-white text-[12px] transition active:bg-[#f5f5f5] disabled:bg-[#f8f8f8] disabled:text-[#b8b8b8] ${
+      className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-[12px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] px-1 text-[11px] font-medium transition active:bg-[color:var(--surface-card-hover)] disabled:bg-[color:var(--bg-canvas)] disabled:text-[#b8b8b8] ${
         danger ? "text-[#d74b45]" : "text-[#111827]"
       }`}
     >
-      <span>{icon}</span>
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/92 text-current shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        {icon}
+      </span>
       <span>{label}</span>
     </button>
   );
@@ -1705,15 +1707,15 @@ export function ChatMessageList({
             </div>
           </div>
         ) : (
-          <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[color:var(--border-subtle)] bg-[rgba(247,247,247,0.96)] px-1 py-2.5 backdrop-blur-xl">
+          <div className="sticky top-0 z-20 flex items-center justify-between border-b border-[color:var(--border-subtle)] bg-[rgba(247,247,247,0.94)] px-2 py-2 backdrop-blur-xl">
             <button
               type="button"
               onClick={resetSelectionMode}
-              className="flex h-10 min-w-12 items-center justify-start rounded-[10px] px-2 text-[16px] text-[#111827]"
+              className="flex h-9 min-w-14 items-center justify-start rounded-[10px] px-2.5 text-[15px] text-[color:var(--text-secondary)] transition active:bg-white/80"
             >
               取消
             </button>
-            <div className="text-[16px] font-medium text-[#111827]">
+            <div className="text-[15px] font-medium text-[#111827]">
               已选 {selectedMessageIds.length} 条
             </div>
             <button
@@ -1722,7 +1724,7 @@ export function ChatMessageList({
                 !visibleMessages.length || selectionActionPending !== null
               }
               onClick={handleToggleSelectAllMessages}
-              className="flex h-10 min-w-16 items-center justify-end rounded-[10px] px-2 text-[16px] font-medium text-[#07c160] disabled:text-[#b8b8b8]"
+              className="flex h-9 min-w-16 items-center justify-end rounded-[10px] px-2.5 text-[15px] font-medium text-[#07c160] transition active:bg-white/80 disabled:text-[#b8b8b8]"
             >
               {allVisibleSelected ? "全不选" : "全选"}
             </button>
@@ -2105,8 +2107,8 @@ export function ChatMessageList({
         );
       })}
       {selectionMode && !isDesktop ? (
-        <div className="sticky bottom-0 z-20 border-t border-[color:var(--border-subtle)] bg-[rgba(247,247,247,0.98)] px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.35rem)] pt-2.5 backdrop-blur-xl">
-          <div className="grid grid-cols-4 gap-2">
+        <div className="sticky bottom-0 z-20 border-t border-[color:var(--border-subtle)] bg-[rgba(247,247,247,0.96)] px-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.35rem)] pt-2 backdrop-blur-xl">
+          <div className="grid grid-cols-4 gap-1.5">
             <SelectionModeActionButton
               icon={<Star size={17} />}
               label={selectionActionPending === "favorite" ? "收藏中" : "收藏"}
