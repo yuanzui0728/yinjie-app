@@ -646,7 +646,9 @@ export function GroupChatThreadPanel({
   return (
     <div
       className={`flex h-full min-h-0 flex-col ${
-        isDesktop ? "bg-[rgba(245,247,247,0.96)]" : "bg-[#ededed]"
+        isDesktop
+          ? "bg-[rgba(245,247,247,0.96)]"
+          : "bg-[color:var(--bg-canvas)]"
       }`}
     >
       {isDesktop ? (
@@ -815,18 +817,18 @@ export function GroupChatThreadPanel({
           </div>
         ) : (
           <div className="border-b border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] px-3 pb-2">
-            <div className="rounded-[14px] border border-[color:var(--border-subtle)] bg-white px-3 py-3">
-              <div className="text-xs leading-6 text-[color:var(--text-secondary)]">
+            <div className="rounded-[14px] border border-[rgba(7,193,96,0.14)] bg-[rgba(247,251,248,0.98)] px-3 py-2.5 shadow-none">
+              <div className="text-[11px] leading-[18px] text-[#166534]">
                 {routeContextNotice.description}
               </div>
-              <div className="mt-2 flex items-center justify-end gap-2">
+              <div className="mt-2 flex items-center justify-end gap-1.5">
                 {routeContextNotice.secondaryActionLabel &&
                 routeContextNotice.onSecondaryAction ? (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={routeContextNotice.onSecondaryAction}
-                    className="h-8 shrink-0 rounded-full px-3 text-[12px]"
+                    className="h-8 shrink-0 rounded-full px-3 text-[11px]"
                   >
                     {routeContextNotice.secondaryActionLabel}
                   </Button>
@@ -835,7 +837,7 @@ export function GroupChatThreadPanel({
                   variant="secondary"
                   size="sm"
                   onClick={routeContextNotice.onAction}
-                  className="h-8 shrink-0 rounded-full px-3 text-[12px]"
+                  className="h-8 shrink-0 rounded-full px-3 text-[11px]"
                 >
                   {routeContextNotice.actionLabel}
                 </Button>
@@ -848,7 +850,7 @@ export function GroupChatThreadPanel({
       <div className="relative flex-1 overflow-hidden">
         <div
           className={`absolute inset-0 ${
-            isDesktop ? "bg-[#e9e9e9]" : "bg-[#ededed]"
+            isDesktop ? "bg-[#e9e9e9]" : "bg-[color:var(--bg-canvas)]"
           }`}
           style={buildChatBackgroundStyle(effectiveBackground)}
         />
@@ -856,7 +858,7 @@ export function GroupChatThreadPanel({
           className={`absolute inset-0 ${
             isDesktop
               ? "bg-[rgba(245,245,245,0.64)]"
-              : "bg-[rgba(237,237,237,0.72)]"
+              : "bg-[rgba(239,243,244,0.72)]"
           }`}
         />
 
