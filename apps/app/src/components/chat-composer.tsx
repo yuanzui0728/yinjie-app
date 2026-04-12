@@ -2,6 +2,7 @@ import { Capacitor } from "@capacitor/core";
 import { useQuery } from "@tanstack/react-query";
 import {
   ChevronLeft,
+  Download,
   FileText,
   History,
   ImageIcon,
@@ -62,6 +63,7 @@ import {
   type MobileBridgeImageAsset,
   openAppSettings,
 } from "../runtime/mobile-bridge";
+import { saveLocalFile } from "../runtime/save-local-file";
 import { useChatPreferencesStore } from "../store/chat-preferences-store";
 
 type ChatComposerProps = {
@@ -2037,6 +2039,50 @@ export function ChatComposer({
     }
   };
 
+  const handleSaveDesktopScreenshot = async (mode: "original" | "cropped") => {
+    if (!desktopScreenshotDraft || attachmentBusy) {
+      return;
+    }
+
+    setAttachmentBusy(true);
+    setAttachmentError(null);
+
+    try {
+      const imagePayload = await buildDesktopScreenshotResult(mode);
+      if (!imagePayload) {
+        return;
+      }
+
+      const result = await saveLocalFile({
+        blob: imagePayload.file,
+        fileName: imagePayload.fileName,
+        dialogTitle: mode === "cropped" ? "保存裁剪截图" : "保存截图",
+        kindLabel: mode === "cropped" ? "裁剪截图" : "截图",
+      });
+
+      if (result.status === "cancelled") {
+        return;
+      }
+
+      if (result.status === "failed") {
+        setDesktopScreenshotNotice(null);
+        setAttachmentError(result.message);
+        return;
+      }
+
+      setDesktopScreenshotNotice(result.message);
+    } catch (saveError) {
+      setDesktopScreenshotNotice(null);
+      setAttachmentError(
+        saveError instanceof Error
+          ? saveError.message
+          : "截图保存失败，请稍后再试。",
+      );
+    } finally {
+      setAttachmentBusy(false);
+    }
+  };
+
   const handleClearScreenshotAnnotations = () => {
     if (!desktopScreenshotAnnotations.length) {
       return;
@@ -2422,6 +2468,12 @@ export function ChatComposer({
               setDesktopScreenshotCropMove(null);
             }}
             onClearAnnotations={handleClearScreenshotAnnotations}
+            onSaveCropped={() => {
+              void handleSaveDesktopScreenshot("cropped");
+            }}
+            onSaveOriginal={() => {
+              void handleSaveDesktopScreenshot("original");
+            }}
             onDeleteSelectedAnnotation={handleDeleteSelectedScreenshotAnnotation}
             onRedoAnnotation={handleRedoScreenshotAnnotation}
             onSelectAnnotation={handleSelectScreenshotAnnotation}
@@ -3235,6 +3287,8 @@ function DesktopScreenshotEditor({
   onPointerDown,
   onPointerMove,
   onPointerUp,
+  onSaveCropped,
+  onSaveOriginal,
   onSendCropped,
   onSendOriginal,
   onAnnotationColorChange,
@@ -3284,6 +3338,8 @@ function DesktopScreenshotEditor({
   onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerMove: (event: ReactPointerEvent<HTMLDivElement>) => void;
   onPointerUp: (event: ReactPointerEvent<HTMLDivElement>) => void;
+  onSaveCropped: () => void;
+  onSaveOriginal: () => void;
   onSendCropped: () => void;
   onSendOriginal: () => void;
   onAnnotationColorChange: (color: ScreenshotAnnotationColor) => void;
@@ -4576,6 +4632,28 @@ function DesktopScreenshotEditor({
                 className="rounded-[9px] border-white/12 bg-white/6 text-white hover:bg-white/10"
               >
                 还原
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={onSaveOriginal}
+              disabled={pending}
+              className="rounded-[9px] border-white/12 bg-white/6 text-white hover:bg-white/10"
+            >
+              <Download size={14} />
+              保存原图
+            </Button>
+            {crop ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onSaveCropped}
+                disabled={pending}
+                className="rounded-[9px] border-white/12 bg-white/6 text-white hover:bg-white/10"
+              >
+                <Download size={14} />
+                保存裁剪图
               </Button>
             ) : null}
             <Button
