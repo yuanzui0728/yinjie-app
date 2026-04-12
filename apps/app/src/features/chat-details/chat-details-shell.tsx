@@ -7,6 +7,7 @@ type ChatDetailsShellProps = {
   title: string;
   subtitle?: string;
   onBack: () => void;
+  rightActions?: ReactNode;
   children: ReactNode;
   className?: string;
 };
@@ -15,6 +16,7 @@ export function ChatDetailsShell({
   title,
   subtitle,
   onBack,
+  rightActions,
   children,
   className,
 }: ChatDetailsShellProps) {
@@ -41,6 +43,7 @@ export function ChatDetailsShell({
             <ArrowLeft size={18} />
           </Button>
         }
+        rightActions={rightActions}
       />
 
       <div className="space-y-2.5 px-0 pb-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] pt-2">
