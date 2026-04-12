@@ -74,7 +74,7 @@ export function MobileShell({ children }: PropsWithChildren) {
   });
 
   useEffect(() => {
-    if (runtimeConfig.appPlatform !== "web") {
+    if (runtimeConfig.appPlatform === "desktop") {
       return;
     }
 
