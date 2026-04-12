@@ -160,7 +160,7 @@ export function ProfileSettingsPage() {
       {activeTab === "profile" ? (
         <MobileSettingsSection
           desktop={desktopMode}
-          title="个人资料"
+          title={desktopMode ? "个人资料" : undefined}
           description={desktopMode ? "这里的名称和签名会用于移动端资料页和世界主人展示。" : undefined}
         >
           <div className="space-y-3">
@@ -205,7 +205,7 @@ export function ProfileSettingsPage() {
       {activeTab === "ai" ? (
         <MobileSettingsSection
           desktop={desktopMode}
-          title="AI 设置"
+          title={desktopMode ? "AI 设置" : undefined}
           description={
             desktopMode
               ? "你可以为当前世界主人单独配置专属 API Key 和兼容 Base URL。"
@@ -519,7 +519,7 @@ function MobileSettingsSection({
   children,
 }: {
   desktop?: boolean;
-  title: string;
+  title?: string;
   description?: string;
   children: React.ReactNode;
 }) {
@@ -532,16 +532,20 @@ function MobileSettingsSection({
           : "mt-2 border-y border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)] px-4 py-3",
       )}
     >
-      <div>
-        <div className="text-[15px] font-medium text-[color:var(--text-primary)]">
-          {title}
+      {title || description ? (
+        <div>
+          {title ? (
+            <div className="text-[15px] font-medium text-[color:var(--text-primary)]">
+              {title}
+            </div>
+          ) : null}
+          {description ? (
+            <div className="mt-1 text-[12px] leading-5 text-[color:var(--text-muted)]">
+              {description}
+            </div>
+          ) : null}
         </div>
-        {description ? (
-          <div className="mt-1 text-[12px] leading-5 text-[color:var(--text-muted)]">
-            {description}
-          </div>
-        ) : null}
-      </div>
+      ) : null}
       {children}
     </section>
   );
