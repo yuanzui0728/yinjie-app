@@ -122,6 +122,8 @@ export function DesktopChannelsWorkspace({
     () => posts.filter((post) => post.id !== selectedPost?.id),
     [posts, selectedPost?.id],
   );
+  const selectedSidebarItemClassName =
+    "border-[rgba(7,193,96,0.12)] bg-white shadow-[inset_3px_0_0_0_var(--brand-primary),0_8px_18px_rgba(15,23,42,0.04)]";
   const authorSummaries = useMemo(() => {
     const map = new Map<
       string,
@@ -286,7 +288,7 @@ export function DesktopChannelsWorkspace({
                   className={cn(
                     "flex w-full items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition",
                     selectedPost?.authorId === author.authorId
-                      ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
+                      ? selectedSidebarItemClassName
                       : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] hover:bg-white",
                   )}
                 >
@@ -323,7 +325,7 @@ export function DesktopChannelsWorkspace({
                   className={cn(
                     "w-full rounded-[18px] border px-3 py-3 text-left transition",
                     selectedPost?.id === post.id
-                      ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
+                      ? selectedSidebarItemClassName
                       : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] hover:bg-white",
                   )}
                 >
@@ -337,7 +339,7 @@ export function DesktopChannelsWorkspace({
                     {post.id === liveCompanionReferencePostId ? (
                       <>
                         <span>·</span>
-                        <span className="rounded-md bg-[rgba(7,193,96,0.07)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--brand-primary)]">
+                        <span className="rounded-md border border-[rgba(7,193,96,0.12)] bg-[rgba(7,193,96,0.06)] px-2 py-0.5 text-[10px] font-medium text-[color:var(--brand-primary)]">
                           直播参考
                         </span>
                       </>
