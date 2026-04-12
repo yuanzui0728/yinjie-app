@@ -1,11 +1,11 @@
 import { useEffect, useRef } from "react";
-import { useLocation, useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { clearPendingNativeLaunchTarget, getPendingNativeLaunchTarget, isNativeMobileBridgeAvailable } from "../../runtime/mobile-bridge";
 import { useWorldOwnerStore } from "../../store/world-owner-store";
 
 type ResolvedNavigationTarget =
   | {
-      pathname: string;
+      locationKey: string;
       navigate: () => Promise<void>;
     }
   | null;
@@ -21,7 +21,7 @@ function resolveNavigationTarget(
   if (target.kind === "conversation" && target.conversationId) {
     const conversationId = target.conversationId;
     return {
-      pathname: `/chat/${conversationId}`,
+      locationKey: `/chat/${conversationId}`,
       navigate: () =>
         navigate({
           to: "/chat/$conversationId",
@@ -33,7 +33,7 @@ function resolveNavigationTarget(
   if (target.kind === "group" && target.groupId) {
     const groupId = target.groupId;
     return {
-      pathname: `/group/${groupId}`,
+      locationKey: `/group/${groupId}`,
       navigate: () =>
         navigate({
           to: "/group/$groupId",
@@ -44,7 +44,7 @@ function resolveNavigationTarget(
 
   if (target.kind === "route" && target.route?.startsWith("/")) {
     return {
-      pathname: target.route,
+      locationKey: target.route,
       navigate: () =>
         navigate({
           to: target.route,
@@ -57,7 +57,15 @@ function resolveNavigationTarget(
 
 export function MobileNotificationLaunchBridge() {
   const navigate = useNavigate();
-  const location = useLocation();
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  const search = useRouterState({
+    select: (state) => state.location.searchStr,
+  });
+  const hash = useRouterState({
+    select: (state) => state.location.hash,
+  });
   const onboardingCompleted = useWorldOwnerStore((state) => state.onboardingCompleted);
   const pollingRef = useRef(false);
 
@@ -82,13 +90,17 @@ export function MobileNotificationLaunchBridge() {
           return;
         }
 
-        if (location.pathname === resolved.pathname) {
+        const currentLocationKey = `${pathname}${search}${hash}`;
+        if (
+          currentLocationKey === resolved.locationKey ||
+          pathname === resolved.locationKey
+        ) {
           await clearPendingNativeLaunchTarget();
           return;
         }
 
-        await clearPendingNativeLaunchTarget();
         await resolved.navigate();
+        await clearPendingNativeLaunchTarget();
       } finally {
         pollingRef.current = false;
       }
@@ -100,16 +112,22 @@ export function MobileNotificationLaunchBridge() {
       }
     }
 
+    function onPageShow() {
+      void syncPendingLaunchTarget();
+    }
+
     window.addEventListener("focus", syncPendingLaunchTarget);
+    window.addEventListener("pageshow", onPageShow);
     document.addEventListener("visibilitychange", onVisibilityChange);
     void syncPendingLaunchTarget();
 
     return () => {
       active = false;
       window.removeEventListener("focus", syncPendingLaunchTarget);
+      window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [location.pathname, navigate, onboardingCompleted]);
+  }, [hash, navigate, onboardingCompleted, pathname, search]);
 
   return null;
 }
