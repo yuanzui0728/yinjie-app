@@ -8,6 +8,11 @@ const shellRoot = path.resolve(scriptDir, "..");
 const iosAppRoot = path.join(shellRoot, "ios", "App", "App");
 const infoPlistPath = path.join(iosAppRoot, "Info.plist");
 const appDelegatePath = path.join(iosAppRoot, "AppDelegate.swift");
+const runtimePluginPath = path.join(
+  iosAppRoot,
+  "Plugins",
+  "YinjieRuntimePlugin.swift",
+);
 
 function fileIncludes(filePath, pattern) {
   if (!fs.existsSync(filePath)) {
@@ -70,6 +75,17 @@ const checks = [
     detail: fs.existsSync(appDelegatePath)
       ? "AppDelegate caches push token and notification launch target"
       : "AppDelegate not found yet; run `pnpm ios:sync` first",
+  },
+  {
+    label: "runtime-plugin-sync",
+    ok:
+      !fs.existsSync(runtimePluginPath) ||
+      (fileIncludes(runtimePluginPath, "bundledConfig[\"apiBaseUrl\"]") &&
+        fileIncludes(runtimePluginPath, "worldAccessMode") &&
+        fileIncludes(runtimePluginPath, "configStatus")),
+    detail: fs.existsSync(runtimePluginPath)
+      ? "YinjieRuntime prefers bundled runtime-config.json and exposes sync status fields"
+      : "runtime plugin not found yet; run `pnpm ios:sync` first",
   },
   {
     label: "core-api-env",

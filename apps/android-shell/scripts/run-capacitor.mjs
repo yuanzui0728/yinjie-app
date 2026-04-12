@@ -364,6 +364,9 @@ if (command === "doctor") {
   let signingProperties = null;
   const javaMajorVersion = readJavaMajorVersion();
   const androidManifest = readTextFileIfExists(androidManifestPath);
+  const capacitorConfig = existsSync(capacitorConfigPath)
+    ? readJson(capacitorConfigPath)
+    : null;
 
   try {
     shellConfig = loadShellConfig();
@@ -385,6 +388,10 @@ if (command === "doctor") {
     ["apps/app/dist", existsSync(resolve(appDir, "dist"))],
     ["apps/app/dist/runtime-config.json", existsSync(appBundledRuntimeConfigPath)],
     ["android project", existsSync(androidProjectDir)],
+    [
+      "keyboard resizeOnFullScreen",
+      capacitorConfig?.plugins?.Keyboard?.resizeOnFullScreen === true,
+    ],
     ["java runtime", hasCommand("java", ["-version"])],
     ["java runtime >= 21", javaMajorVersion !== null && javaMajorVersion >= 21],
     ["ANDROID_HOME or ANDROID_SDK_ROOT", Boolean(process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT)],
