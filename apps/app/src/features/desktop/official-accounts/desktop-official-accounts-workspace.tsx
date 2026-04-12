@@ -309,7 +309,7 @@ export function DesktopOfficialAccountsWorkspace({
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
             placeholder="搜索公众号"
-            className="mt-4 rounded-[18px] border-[color:var(--border-faint)] bg-white px-4 py-2.5 shadow-none hover:bg-white focus:border-[rgba(7,193,96,0.18)] focus:shadow-none"
+            className="mt-4 rounded-[18px] border-[color:var(--border-faint)] bg-white px-4 py-2.5 shadow-none hover:bg-[color:var(--surface-console)] focus:border-[rgba(7,193,96,0.14)] focus:shadow-none"
           />
           <div className="mt-3 flex gap-2">
             <Button
@@ -319,7 +319,7 @@ export function DesktopOfficialAccountsWorkspace({
               onClick={() => setAccountFilter("all")}
               className={
                 accountFilter === "all"
-                  ? "rounded-full border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] text-[color:var(--brand-primary)] shadow-none hover:bg-[rgba(7,193,96,0.09)]"
+                  ? "rounded-full border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] text-[color:var(--brand-primary)] shadow-none hover:bg-[rgba(7,193,96,0.08)]"
                   : "rounded-full border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] shadow-none hover:bg-[color:var(--surface-console)]"
               }
             >
@@ -332,7 +332,7 @@ export function DesktopOfficialAccountsWorkspace({
               onClick={() => setAccountFilter("following")}
               className={
                 accountFilter === "following"
-                  ? "rounded-full border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] text-[color:var(--brand-primary)] shadow-none hover:bg-[rgba(7,193,96,0.09)]"
+                  ? "rounded-full border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] text-[color:var(--brand-primary)] shadow-none hover:bg-[rgba(7,193,96,0.08)]"
                   : "rounded-full border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] shadow-none hover:bg-[color:var(--surface-console)]"
               }
             >
