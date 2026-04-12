@@ -41,6 +41,11 @@ export type MobileBridgeFileShareResult = {
   error: string | null;
 };
 
+export type MobileBridgeFileOpenResult = {
+  opened: boolean;
+  error: string | null;
+};
+
 export type MobileBridgeLaunchTarget = MobilePushLaunchTarget;
 
 export type MobileBridgeLocalNotificationPayload = {
@@ -58,6 +63,12 @@ type MobileBridgePlugin = {
   openAppSettings(): Promise<void>;
   share(options: MobileBridgeSharePayload): Promise<void>;
   shareFile(options: {
+    base64Data: string;
+    fileName: string;
+    mimeType?: string;
+    title?: string;
+  }): Promise<void>;
+  openFile(options: {
     base64Data: string;
     fileName: string;
     mimeType?: string;
@@ -165,6 +176,44 @@ export async function shareFileWithNativeShell(
     return {
       shared: false,
       error: error instanceof Error ? error.message : "failed to share file",
+    };
+  }
+}
+
+export async function openFileWithNativeShell(
+  payload: MobileBridgeNativeFileSharePayload,
+): Promise<MobileBridgeFileOpenResult> {
+  if (!isNativeMobileBridgeAvailable()) {
+    return {
+      opened: false,
+      error: "native mobile bridge is unavailable",
+    };
+  }
+
+  const normalizedFileName = payload.fileName.trim();
+  if (!normalizedFileName) {
+    return {
+      opened: false,
+      error: "file name is required",
+    };
+  }
+
+  try {
+    const base64Data = await encodeBlobAsBase64(payload.blob);
+    await mobileBridge.openFile({
+      base64Data,
+      fileName: normalizedFileName,
+      mimeType: payload.mimeType?.trim() || undefined,
+      title: payload.title?.trim() || undefined,
+    });
+    return {
+      opened: true,
+      error: null,
+    };
+  } catch (error) {
+    return {
+      opened: false,
+      error: error instanceof Error ? error.message : "failed to open file",
     };
   }
 }
