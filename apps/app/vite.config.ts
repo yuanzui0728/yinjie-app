@@ -75,10 +75,21 @@ function resolveAppBase(command: "build" | "serve") {
   return process.env.YINJIE_APP_BUILD_BASE === "relative" ? "./" : "/";
 }
 
+function shouldEmptyOutDir(command: "build" | "serve") {
+  if (command !== "build") {
+    return true;
+  }
+
+  // Keep previous hashed web chunks so already-open tabs can still lazy-load
+  // after a deployment. Relative shell bundles should stay clean on each build.
+  return process.env.YINJIE_APP_BUILD_BASE === "relative";
+}
+
 export default defineConfig(({ command }) => ({
   base: resolveAppBase(command),
   plugins: [react(), tailwindcss()],
   build: {
+    emptyOutDir: shouldEmptyOutDir(command),
     rollupOptions: {
       output: {
         manualChunks: resolveManualChunk,
