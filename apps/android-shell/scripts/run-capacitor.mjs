@@ -16,6 +16,10 @@ const signingPropertiesPath = resolve(shellDir, "android-signing.local.propertie
 const androidBuildGradlePath = resolve(androidProjectDir, "app/build.gradle");
 const androidManifestPath = resolve(androidProjectDir, "app/src/main/AndroidManifest.xml");
 const androidStringsPath = resolve(androidProjectDir, "app/src/main/res/values/strings.xml");
+const androidRuntimePluginPath = resolve(
+  androidProjectDir,
+  "app/src/main/java/com/yinjie/mobile/YinjieRuntimePlugin.java",
+);
 const androidGradleWrapperPath = resolve(androidProjectDir, "gradlew");
 const requiredAndroidManifestPermissions = [
   "android.permission.CAMERA",
@@ -364,6 +368,7 @@ if (command === "doctor") {
   let signingProperties = null;
   const javaMajorVersion = readJavaMajorVersion();
   const androidManifest = readTextFileIfExists(androidManifestPath);
+  const androidRuntimePlugin = readTextFileIfExists(androidRuntimePluginPath);
   const capacitorConfig = existsSync(capacitorConfigPath)
     ? readJson(capacitorConfigPath)
     : null;
@@ -388,6 +393,13 @@ if (command === "doctor") {
     ["apps/app/dist", existsSync(resolve(appDir, "dist"))],
     ["apps/app/dist/runtime-config.json", existsSync(appBundledRuntimeConfigPath)],
     ["android project", existsSync(androidProjectDir)],
+    [
+      "runtime plugin sync",
+      Boolean(
+        androidRuntimePlugin?.includes("public/runtime-config.json") &&
+          androidRuntimePlugin.includes("readRuntimeValue"),
+      ),
+    ],
     [
       "keyboard resizeOnFullScreen",
       capacitorConfig?.plugins?.Keyboard?.resizeOnFullScreen === true,
