@@ -94,8 +94,8 @@ export function DesktopFeedToolbar({
               className={cn(
                 "rounded-xl border px-4 py-2 text-[12px] font-medium transition-[border-color,background-color,color]",
                 activeFilter === option.key
-                  ? "border-[rgba(7,193,96,0.18)] bg-[rgba(7,193,96,0.08)] text-[#15803d]"
-                  : "border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] hover:border-[rgba(7,193,96,0.16)] hover:text-[color:var(--text-primary)]",
+                  ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] text-[color:var(--brand-primary)]"
+                  : "border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]",
               )}
             >
               {option.label}
@@ -106,7 +106,7 @@ export function DesktopFeedToolbar({
             <button
               type="button"
               onClick={onClearAuthor}
-              className="inline-flex items-center gap-2 rounded-xl border border-[rgba(7,193,96,0.18)] bg-[rgba(7,193,96,0.08)] px-4 py-2 text-[12px] font-medium text-[#15803d]"
+              className="inline-flex items-center gap-2 rounded-xl border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] px-4 py-2 text-[12px] font-medium text-[color:var(--brand-primary)]"
             >
               只看 {selectedAuthorName} 的公开动态
               <X size={13} />
@@ -126,8 +126,8 @@ export function DesktopFeedToolbar({
               className={cn(
                 "rounded-xl border px-3.5 py-1.5 text-[12px] font-medium transition-[border-color,background-color,color]",
                 activeSort === option.key
-                  ? "border-[rgba(7,193,96,0.18)] bg-[rgba(7,193,96,0.08)] text-[#15803d]"
-                  : "border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] hover:border-[rgba(7,193,96,0.16)] hover:text-[color:var(--text-primary)]",
+                  ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] text-[color:var(--brand-primary)]"
+                  : "border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]",
               )}
             >
               {option.label}
