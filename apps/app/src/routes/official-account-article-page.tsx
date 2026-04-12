@@ -108,11 +108,11 @@ function MobileOfficialAccountArticlePage({
   }
 
   return (
-    <AppPage className="space-y-0 bg-[#f5f5f5] px-0 py-0">
+    <AppPage className="space-y-0 bg-[color:var(--bg-canvas)] px-0 py-0">
       <TabPageTopBar
         title={article?.account.name ?? "公众号文章"}
         titleAlign="center"
-        className="mx-0 mt-0 mb-0 border-b border-[color:var(--border-faint)] bg-[rgba(247,247,247,0.94)] px-4 py-3 text-[color:var(--text-primary)] shadow-none"
+        className="mx-0 mt-0 mb-0 border-b border-[color:var(--border-faint)] bg-[rgba(247,247,247,0.94)] px-4 pt-2.5 pb-2 text-[color:var(--text-primary)] shadow-none"
         leftActions={
           <Button
             onClick={() => {
@@ -130,27 +130,34 @@ function MobileOfficialAccountArticlePage({
             }}
             variant="ghost"
             size="icon"
-            className="text-[color:var(--text-secondary)]"
+            className="h-9 w-9 rounded-full text-[color:var(--text-primary)]"
           >
             <ArrowLeft size={18} />
           </Button>
         }
       />
 
-      <div className="space-y-3 px-3 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3">
+      <div className="pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
         {articleQuery.isLoading ? (
-          <LoadingBlock label="正在读取文章..." />
+          <div className="px-3 pt-2.5">
+            <LoadingBlock label="正在读取文章..." />
+          </div>
         ) : null}
         {articleQuery.isError && articleQuery.error instanceof Error ? (
-          <ErrorBlock message={articleQuery.error.message} />
+          <div className="px-3 pt-2.5">
+            <ErrorBlock message={articleQuery.error.message} />
+          </div>
         ) : null}
         {markReadMutation.isError && markReadMutation.error instanceof Error ? (
-          <ErrorBlock message={markReadMutation.error.message} />
+          <div className="px-3 pt-2.5">
+            <ErrorBlock message={markReadMutation.error.message} />
+          </div>
         ) : null}
 
         {article ? (
           <OfficialArticleViewer
             article={article}
+            mobile
             favorite={
               articleFavoriteSourceId
                 ? favoriteSourceIds.includes(articleFavoriteSourceId)
