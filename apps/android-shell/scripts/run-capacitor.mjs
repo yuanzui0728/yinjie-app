@@ -348,7 +348,7 @@ function configureAndroidShell() {
 }
 
 function ensureWebBuild() {
-  run("pnpm", ["--dir", appDir, "build"], {
+  run("node", [resolve(workspaceDir, "scripts/build-mobile-shell-web.mjs")], {
     cwd: workspaceDir,
   });
 }
