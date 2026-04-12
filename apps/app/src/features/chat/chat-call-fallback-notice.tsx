@@ -40,17 +40,19 @@ export function ChatCallFallbackNotice({
     return (
       <section
         className={cn(
-          "overflow-hidden rounded-[18px] border border-[rgba(7,193,96,0.16)] bg-white",
+          "overflow-hidden rounded-[18px] border border-[rgba(7,193,96,0.14)] bg-white shadow-[0_16px_32px_rgba(15,23,42,0.06)]",
           className,
         )}
       >
         <div className="flex items-start gap-3 px-4 py-4">
-          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-[rgba(7,193,96,0.12)] text-[#07a35a]">
+          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-[rgba(7,193,96,0.10)] text-[color:var(--brand-primary)]">
             <Icon size={18} />
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium text-[#111827]">{title}</div>
-            <div className="mt-1 text-[13px] leading-6 text-[#6b7280]">
+            <div className="text-sm font-medium text-[color:var(--text-primary)]">
+              {title}
+            </div>
+            <div className="mt-1 text-[13px] leading-6 text-[color:var(--text-secondary)]">
               {description}
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -80,7 +82,10 @@ export function ChatCallFallbackNotice({
   return (
     <InlineNotice
       tone="info"
-      className={cn("border-black/6 bg-white", className)}
+      className={cn(
+        "border-[color:var(--border-faint)] bg-white shadow-[0_10px_24px_rgba(15,23,42,0.04)]",
+        className,
+      )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
