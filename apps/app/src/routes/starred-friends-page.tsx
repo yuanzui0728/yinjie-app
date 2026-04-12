@@ -247,10 +247,10 @@ function DesktopStarredFriendsPage() {
   }, [filteredFriends, selectedFriend]);
 
   return (
-    <AppPage className="h-full min-h-0 space-y-0 bg-[linear-gradient(180deg,rgba(255,252,245,0.96),rgba(255,248,236,0.98))] px-0 py-0">
+    <AppPage className="h-full min-h-0 space-y-0 bg-[color:var(--bg-app)] px-0 py-0">
       <div className="flex h-full min-h-0">
-        <section className="flex w-[340px] shrink-0 flex-col border-r border-[color:var(--border-faint)] bg-[linear-gradient(180deg,rgba(255,253,248,0.98),rgba(255,248,238,0.96))]">
-          <div className="border-b border-[color:var(--border-faint)] px-4 py-4">
+        <section className="flex w-[340px] shrink-0 flex-col border-r border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.88)]">
+          <div className="border-b border-[color:var(--border-faint)] bg-white/78 px-4 py-4 backdrop-blur-xl">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-base font-medium text-[color:var(--text-primary)]">
@@ -264,7 +264,7 @@ function DesktopStarredFriendsPage() {
                 type="button"
                 variant="secondary"
                 size="sm"
-                className="rounded-full"
+                className="rounded-full border-[color:var(--border-faint)] bg-white shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-[color:var(--surface-console)]"
                 onClick={() => {
                   void navigate({ to: "/tabs/contacts" });
                 }}
@@ -273,7 +273,7 @@ function DesktopStarredFriendsPage() {
               </Button>
             </div>
 
-            <label className="mt-3 flex items-center gap-2 rounded-[16px] border border-[color:var(--border-faint)] bg-[rgba(255,249,238,0.85)] px-3 py-2.5 text-sm text-[color:var(--text-dim)] shadow-none">
+            <label className="mt-3 flex items-center gap-2 rounded-[16px] border border-[color:var(--border-faint)] bg-white px-3 py-2.5 text-sm text-[color:var(--text-dim)] shadow-none">
               <Search size={15} className="shrink-0" />
               <input
                 type="search"
@@ -285,7 +285,7 @@ function DesktopStarredFriendsPage() {
             </label>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto bg-[rgba(255,249,238,0.72)] pb-4">
+          <div className="min-h-0 flex-1 overflow-auto bg-[rgba(242,246,245,0.76)] pb-4">
             {notice ? (
               <div className="px-3 pt-3">
                 <InlineNotice tone="success">{notice}</InlineNotice>
@@ -331,7 +331,7 @@ function DesktopStarredFriendsPage() {
             ) : null}
 
             {filteredFriends.length ? (
-              <section className="mt-3 overflow-hidden border-y border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)]">
+              <section className="mx-3 mt-3 overflow-hidden rounded-[18px] border border-[color:var(--border-faint)] bg-white shadow-[var(--shadow-section)]">
                 {filteredFriends.map((item, index) => (
                   <button
                     key={item.character.id}
@@ -341,12 +341,12 @@ function DesktopStarredFriendsPage() {
                       startChatMutation.mutate(item.character.id)
                     }
                     className={cn(
-                      "flex w-full items-center gap-3 bg-[color:var(--bg-canvas-elevated)] px-4 py-3.5 text-left transition-colors hover:bg-[rgba(7,193,96,0.05)]",
+                      "flex w-full items-center gap-3 bg-white px-4 py-3.5 text-left transition-colors hover:bg-[color:var(--surface-console)]",
                       index > 0
                         ? "border-t border-[color:var(--border-faint)]"
                         : undefined,
                       selectedCharacterId === item.character.id
-                        ? "bg-[rgba(22,163,74,0.10)] shadow-[inset_3px_0_0_0_#16a34a]"
+                        ? "bg-[rgba(7,193,96,0.08)] shadow-[inset_3px_0_0_0_#07c160]"
                         : undefined,
                     )}
                   >
