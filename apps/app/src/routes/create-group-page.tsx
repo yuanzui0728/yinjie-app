@@ -200,15 +200,15 @@ export function CreateGroupPage() {
 
   if (isDesktopLayout) {
     return (
-      <div className="flex h-full min-h-0 flex-col bg-[#f3f3f3]">
-        <header className="flex items-center justify-between gap-4 border-b border-black/6 bg-[#f7f7f7] px-6 py-4">
+      <div className="flex h-full min-h-0 flex-col bg-[color:var(--bg-app)]">
+        <header className="flex items-center justify-between gap-4 border-b border-[color:var(--border-faint)] bg-white/78 px-6 py-4 backdrop-blur-xl">
           <div className="flex items-center gap-3">
             <Button
               type="button"
               onClick={handleBack}
               variant="ghost"
               size="icon"
-              className="h-10 w-10 rounded-[10px] border border-black/6 bg-white text-[color:var(--text-primary)]"
+              className="h-10 w-10 rounded-[10px] border border-[color:var(--border-faint)] bg-white text-[color:var(--text-primary)] shadow-none hover:bg-[color:var(--surface-console)]"
             >
               <ArrowLeft size={18} />
             </Button>
@@ -238,9 +238,9 @@ export function CreateGroupPage() {
         </header>
 
         <div className="min-h-0 flex-1 p-6">
-          <div className="mx-auto flex h-full min-h-0 max-w-[1200px] overflow-hidden rounded-[18px] border border-black/6 bg-white shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
-            <section className="flex w-[400px] shrink-0 flex-col border-r border-black/6 bg-[#f7f7f7]">
-              <div className="border-b border-black/6 px-5 py-4">
+          <div className="mx-auto flex h-full min-h-0 max-w-[1200px] overflow-hidden rounded-[22px] border border-[color:var(--border-faint)] bg-white/96 shadow-[var(--shadow-overlay)]">
+            <section className="flex w-[400px] shrink-0 flex-col border-r border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.88)]">
+              <div className="border-b border-[color:var(--border-faint)] bg-white/78 px-5 py-4 backdrop-blur-xl">
                 <div className="text-[15px] font-medium text-[color:var(--text-primary)]">
                   选择成员
                 </div>
@@ -258,7 +258,7 @@ export function CreateGroupPage() {
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}
                     placeholder="搜索联系人"
-                    className="h-10 w-full rounded-[10px] border border-black/8 bg-white pl-10 pr-4 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-dim)] focus:border-black/12"
+                    className="h-10 w-full rounded-[10px] border border-[color:var(--border-faint)] bg-white pl-10 pr-4 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-dim)] focus:border-[rgba(7,193,96,0.18)]"
                   />
                 </label>
 
@@ -317,8 +317,8 @@ export function CreateGroupPage() {
               </div>
             </section>
 
-            <section className="flex min-w-0 flex-1 flex-col bg-[#fafafa]">
-              <div className="border-b border-black/6 bg-[#f7f7f7] px-6 py-4">
+            <section className="flex min-w-0 flex-1 flex-col bg-[rgba(245,248,247,0.92)]">
+              <div className="border-b border-[color:var(--border-faint)] bg-white/78 px-6 py-4 backdrop-blur-xl">
                 <div className="text-[11px] tracking-[0.12em] text-[color:var(--text-dim)]">
                   群资料
                 </div>
@@ -330,7 +330,7 @@ export function CreateGroupPage() {
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     placeholder={defaultGroupName}
-                    className="mt-3 rounded-[10px] border-black/8 bg-white"
+                    className="mt-3 rounded-[10px] border-[color:var(--border-faint)] bg-white"
                   />
                   <div className="mt-3 text-[12px] text-[color:var(--text-muted)]">
                     不填写时会使用“{defaultGroupName}”。
@@ -348,7 +348,7 @@ export function CreateGroupPage() {
                       {selectedFriends.map((item) => (
                         <div
                           key={item.character.id}
-                          className="flex items-center gap-3 rounded-[12px] border border-black/6 bg-white px-4 py-4"
+                          className="flex items-center gap-3 rounded-[14px] border border-[color:var(--border-faint)] bg-white px-4 py-4 shadow-[var(--shadow-soft)]"
                         >
                           <AvatarChip
                             name={getFriendDisplayName(item)}
@@ -365,7 +365,7 @@ export function CreateGroupPage() {
                           <button
                             type="button"
                             onClick={() => toggleSelection(item.character.id)}
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-black/6 text-[color:var(--text-secondary)] transition hover:bg-[#f5f5f5] hover:text-[color:var(--text-primary)]"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]"
                             aria-label={`移除 ${getFriendDisplayName(item)}`}
                           >
                             <X size={14} />
@@ -388,7 +388,7 @@ export function CreateGroupPage() {
                 )}
               </div>
 
-              <div className="flex items-center justify-between gap-4 border-t border-black/6 bg-[#f7f7f7] px-6 py-4">
+              <div className="flex items-center justify-between gap-4 border-t border-[color:var(--border-faint)] bg-white/78 px-6 py-4 backdrop-blur-xl">
                 <div className="text-[12px] text-[color:var(--text-muted)]">
                   已选择 {selectedIds.length} 位成员，创建后会直接进入新群聊。
                 </div>
@@ -397,7 +397,7 @@ export function CreateGroupPage() {
                     type="button"
                     variant="secondary"
                     onClick={handleBack}
-                    className="rounded-[10px] border-black/8 bg-white shadow-none hover:bg-[#efefef]"
+                    className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:bg-[color:var(--surface-console)]"
                   >
                     取消
                   </Button>
@@ -630,8 +630,8 @@ function FriendSelectionRow({
         "flex w-full items-center gap-3 text-left disabled:opacity-60",
         isDesktop
           ? checked
-            ? "rounded-[10px] border border-[rgba(7,193,96,0.22)] bg-[rgba(7,193,96,0.08)] px-4 py-3"
-            : "rounded-[10px] border border-transparent bg-transparent px-4 py-3 transition hover:bg-white"
+            ? "rounded-[12px] border border-[rgba(7,193,96,0.18)] bg-[rgba(240,247,243,0.96)] px-4 py-3 shadow-[inset_0_0_0_1px_rgba(7,193,96,0.06)]"
+            : "rounded-[12px] border border-transparent bg-transparent px-4 py-3 transition hover:border-[color:var(--border-faint)] hover:bg-[color:var(--surface-console)]"
           : checked
             ? "bg-[#f3fff8] px-4 py-3"
             : "bg-white px-4 py-3",
@@ -654,7 +654,7 @@ function FriendSelectionRow({
           checked
             ? "border-[#07c160] bg-[#07c160] text-white"
             : isDesktop
-              ? "border-black/8 bg-[#f3f3f3] text-transparent"
+              ? "border-[color:var(--border-faint)] bg-white text-transparent"
               : "border-black/10 bg-[#f5f5f5] text-transparent",
         )}
       >
