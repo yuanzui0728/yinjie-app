@@ -9,6 +9,10 @@ import { Clock3, Copy, LockKeyhole, Minus, ShieldCheck, X } from "lucide-react";
 import { Button, TextField, cn } from "@yinjie/ui";
 import { AvatarChip } from "../../components/avatar-chip";
 import { useAppRuntimeConfig } from "../../runtime/runtime-config-store";
+import {
+  DESKTOP_MAIN_WINDOW_NAVIGATE_EVENT,
+  type DesktopMainWindowNavigatePayload,
+} from "../../runtime/desktop-windowing";
 import { useWorldOwnerStore } from "../../store/world-owner-store";
 import { formatTimestamp } from "../../lib/format";
 import {
@@ -186,6 +190,57 @@ export function DesktopShell({ children }: PropsWithChildren) {
       cancelled = true;
       setDesktopWindow(null);
       unlistenResize?.();
+    };
+  }, [nativeDesktopShell]);
+
+  useEffect(() => {
+    if (!nativeDesktopShell) {
+      return;
+    }
+
+    let cancelled = false;
+    let unlisten: (() => void) | null = null;
+
+    async function bindMainWindowNavigation() {
+      try {
+        const { getCurrentWindow } = await import("@tauri-apps/api/window");
+        const currentWindow = getCurrentWindow();
+
+        unlisten =
+          await currentWindow.listen<DesktopMainWindowNavigatePayload>(
+            DESKTOP_MAIN_WINDOW_NAVIGATE_EVENT,
+            ({ payload }) => {
+              const nextTarget = payload.targetPath?.trim();
+              if (
+                nextTarget &&
+                typeof window !== "undefined" &&
+                `${window.location.pathname}${window.location.hash}` !==
+                  nextTarget
+              ) {
+                window.location.assign(nextTarget);
+                return;
+              }
+
+              if (typeof window !== "undefined") {
+                window.focus();
+              }
+            },
+          );
+
+        if (cancelled) {
+          unlisten?.();
+          unlisten = null;
+        }
+      } catch {
+        // Ignore event binding failures outside the native Tauri shell.
+      }
+    }
+
+    void bindMainWindowNavigation();
+
+    return () => {
+      cancelled = true;
+      unlisten?.();
     };
   }, [nativeDesktopShell]);
 

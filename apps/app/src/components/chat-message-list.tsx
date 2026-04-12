@@ -2528,27 +2528,27 @@ export function ChatMessageList({
           onOpenInWindow={
             isDesktop
               ? () => {
-                  if (
-                    openDesktopChatImageViewerWindow({
-                      imageUrl: activeImage.url,
-                      title:
-                        activeImage.fileName || activeImage.label || "图片",
-                      meta: activeImage.meta,
-                      returnTo: activeImage.returnTo,
-                      items: standaloneViewerItems,
-                      activeId: activeImage.id,
-                    })
-                  ) {
-                    setActionNotice({
-                      message: "已在独立窗口打开图片。",
-                      tone: "success",
-                    });
-                    return;
-                  }
+                  void openDesktopChatImageViewerWindow({
+                    imageUrl: activeImage.url,
+                    title:
+                      activeImage.fileName || activeImage.label || "图片",
+                    meta: activeImage.meta,
+                    returnTo: activeImage.returnTo,
+                    items: standaloneViewerItems,
+                    activeId: activeImage.id,
+                  }).then((opened) => {
+                    if (opened) {
+                      setActionNotice({
+                        message: "已在独立窗口打开图片。",
+                        tone: "success",
+                      });
+                      return;
+                    }
 
-                  setActionNotice({
-                    message: "浏览器阻止了新窗口，请检查弹窗权限。",
-                    tone: "danger",
+                    setActionNotice({
+                      message: "浏览器阻止了新窗口，请检查弹窗权限。",
+                      tone: "danger",
+                    });
                   });
                 }
               : undefined

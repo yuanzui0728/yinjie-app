@@ -1,3 +1,8 @@
+import {
+  buildDesktopStandaloneWindowLabel,
+  openDesktopStandaloneWindow,
+} from "../../../runtime/desktop-windowing";
+
 const DESKTOP_CHAT_WINDOW_PATH = "/desktop/chat-window";
 
 export type DesktopChatWindowRouteState = {
@@ -55,12 +60,19 @@ export function parseDesktopChatWindowRouteHash(hash: string) {
   } satisfies DesktopChatWindowRouteState;
 }
 
-export function openDesktopChatWindow(input: DesktopChatWindowRouteState) {
+function buildDesktopChatWindowLabel(input: DesktopChatWindowRouteState) {
+  return buildDesktopStandaloneWindowLabel(
+    "desktop-chat-window",
+    input.conversationId,
+  );
+}
+
+export async function openDesktopChatWindow(input: DesktopChatWindowRouteState) {
   if (typeof window === "undefined") {
     return false;
   }
 
-  const routeHash = buildDesktopChatWindowRouteHash(input);
+  const routePath = buildDesktopChatWindowPath(input);
   const width = Math.max(
     1040,
     Math.min(window.screen.availWidth - 96, 1220),
@@ -76,7 +88,21 @@ export function openDesktopChatWindow(input: DesktopChatWindowRouteState) {
     `top=${top}`,
   ].join(",");
 
+  if (
+    await openDesktopStandaloneWindow({
+      label: buildDesktopChatWindowLabel(input),
+      url: routePath,
+      title: input.title.trim() || "聊天",
+      width,
+      height,
+      minWidth: 1040,
+      minHeight: 760,
+    })
+  ) {
+    return true;
+  }
+
   return Boolean(
-    window.open(`${DESKTOP_CHAT_WINDOW_PATH}#${routeHash}`, "_blank", features),
+    window.open(routePath, "_blank", features),
   );
 }

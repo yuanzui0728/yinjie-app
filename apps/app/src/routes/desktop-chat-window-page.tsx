@@ -7,6 +7,10 @@ import { Button } from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
 import { DesktopChatWorkspace } from "../features/desktop/chat/desktop-chat-workspace";
 import { parseDesktopChatWindowRouteHash } from "../features/desktop/chat/desktop-chat-window-route-state";
+import {
+  closeCurrentDesktopWindow,
+  focusMainDesktopWindow,
+} from "../runtime/desktop-windowing";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export function DesktopChatWindowPage() {
@@ -173,18 +177,25 @@ function focusMainChatWindow(targetPath: string) {
     return;
   }
 
-  try {
-    if (window.opener && !window.opener.closed) {
-      window.opener.location.assign(targetPath);
-      window.opener.focus?.();
-      closeCurrentWindow();
+  void focusMainDesktopWindow(targetPath).then((focused) => {
+    if (focused) {
+      void closeCurrentDesktopWindow();
       return;
     }
-  } catch {
-    // Ignore opener access failures and fall back to local navigation.
-  }
 
-  window.location.assign(targetPath);
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.location.assign(targetPath);
+        window.opener.focus?.();
+        closeCurrentWindow();
+        return;
+      }
+    } catch {
+      // Ignore opener access failures and fall back to local navigation.
+    }
+
+    window.location.assign(targetPath);
+  });
 }
 
 function closeStandaloneWindow(fallbackPath: string) {
@@ -192,8 +203,14 @@ function closeStandaloneWindow(fallbackPath: string) {
     return;
   }
 
-  closeCurrentWindow(() => {
-    window.location.assign(fallbackPath);
+  void closeCurrentDesktopWindow().then((closed) => {
+    if (closed) {
+      return;
+    }
+
+    closeCurrentWindow(() => {
+      window.location.assign(fallbackPath);
+    });
   });
 }
 

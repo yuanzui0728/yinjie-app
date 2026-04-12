@@ -747,8 +747,8 @@ export function DesktopChatWorkspace({
     });
   }
 
-  function handleOpenConversationWindow(conversation: ConversationListItem) {
-    const opened = openDesktopChatWindow({
+  async function handleOpenConversationWindow(conversation: ConversationListItem) {
+    const opened = await openDesktopChatWindow({
       conversationId: conversation.id,
       conversationType: getConversationThreadType(conversation),
       title: conversation.title,
@@ -1206,7 +1206,9 @@ export function DesktopChatWorkspace({
             })
           }
           onOpenWindow={() =>
-            handleOpenConversationWindow(conversationContextMenu.conversation)
+            void handleOpenConversationWindow(
+              conversationContextMenu.conversation,
+            )
           }
           onMarkRead={() =>
             conversationActionMutation.mutate({

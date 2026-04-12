@@ -1,3 +1,8 @@
+import {
+  buildDesktopStandaloneWindowLabel,
+  openDesktopStandaloneWindow,
+} from "../../../runtime/desktop-windowing";
+
 const DESKTOP_CHAT_IMAGE_VIEWER_PATH = "/desktop/chat-image-viewer";
 const STORAGE_KEY = "yinjie-desktop-chat-image-viewer-sessions";
 const MAX_SESSION_COUNT = 12;
@@ -83,7 +88,31 @@ export function parseDesktopChatImageViewerRouteHash(hash: string) {
   } satisfies DesktopChatImageViewerRouteState;
 }
 
-export function openDesktopChatImageViewerWindow(
+function hashDesktopWindowLabel(value: string) {
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) | 0;
+  }
+
+  return Math.abs(hash).toString(36);
+}
+
+function buildDesktopChatImageViewerWindowLabel(
+  input: DesktopChatImageViewerRouteState,
+) {
+  const identifier =
+    input.activeId?.trim() ||
+    input.sessionId?.trim() ||
+    hashDesktopWindowLabel(input.imageUrl);
+
+  return buildDesktopStandaloneWindowLabel(
+    "desktop-chat-image-viewer",
+    identifier,
+  );
+}
+
+export async function openDesktopChatImageViewerWindow(
   input: DesktopChatImageViewerRouteState & {
     items?: readonly DesktopChatImageViewerSessionItem[];
   },
@@ -101,6 +130,7 @@ export function openDesktopChatImageViewerWindow(
     sessionId: sessionId ?? undefined,
     activeId: sessionId ? input.activeId?.trim() || undefined : undefined,
   });
+  const routePath = `${DESKTOP_CHAT_IMAGE_VIEWER_PATH}#${routeHash}`;
 
   const width = Math.max(
     1120,
@@ -120,12 +150,29 @@ export function openDesktopChatImageViewerWindow(
     `top=${top}`,
   ].join(",");
 
+  if (
+    await openDesktopStandaloneWindow({
+      label: buildDesktopChatImageViewerWindowLabel({
+        imageUrl: input.imageUrl,
+        title: input.title,
+        meta: input.meta,
+        returnTo: input.returnTo,
+        sessionId: sessionId ?? undefined,
+        activeId: sessionId ? input.activeId?.trim() || undefined : undefined,
+      }),
+      url: routePath,
+      title: input.title.trim() || "图片",
+      width,
+      height,
+      minWidth: 1120,
+      minHeight: 760,
+    })
+  ) {
+    return true;
+  }
+
   return Boolean(
-    window.open(
-      `${DESKTOP_CHAT_IMAGE_VIEWER_PATH}#${routeHash}`,
-      "_blank",
-      features,
-    ),
+    window.open(routePath, "_blank", features),
   );
 }
 
