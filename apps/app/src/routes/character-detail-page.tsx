@@ -554,7 +554,10 @@ export function CharacterDetailPage() {
             </div>
           </section>
 
-          <ProfileSection title={isFriend ? "资料设置" : "基本资料"}>
+          <ProfileSection
+            title={isFriend ? "资料设置" : "基本资料"}
+            flatOnMobile={!isDesktopLayout}
+          >
             {isFriend ? (
               <ProfileRow
                 label="设置备注和标签"
@@ -672,7 +675,7 @@ export function CharacterDetailPage() {
             <ProfileRow label="朋友圈" value="后续接入" />
           </ProfileSection>
 
-          <ProfileSection title="更多信息">
+          <ProfileSection title="更多信息" flatOnMobile={!isDesktopLayout}>
             <ProfileRow label="当前状态" value={activitySummary} />
             <ProfileRow label="擅长领域" value={expertiseSummary} multiline />
             <ProfileRow label="语气风格" value={toneSummary} />
@@ -686,7 +689,7 @@ export function CharacterDetailPage() {
             </div>
           </ProfileSection>
 
-          <ProfileSection title="关系管理">
+          <ProfileSection title="关系管理" flatOnMobile={!isDesktopLayout}>
             {isFriend ? (
               <ProfileSwitchRow
                 label="设为星标朋友"
@@ -774,13 +777,28 @@ function ActionPanelButton({
 function ProfileSection({
   title,
   children,
+  flatOnMobile = false,
 }: {
   title: string;
   children: ReactNode;
+  flatOnMobile?: boolean;
 }) {
   return (
-    <section className="overflow-hidden rounded-[18px] border border-black/5 bg-white">
-      <div className="px-4 py-3 text-xs uppercase tracking-[0.16em] text-[#8c8c8c]">
+    <section
+      className={cn(
+        "overflow-hidden bg-white",
+        flatOnMobile
+          ? "-mx-3 rounded-none border-y border-[color:var(--border-faint)]"
+          : "rounded-[18px] border border-black/5",
+      )}
+    >
+      <div
+        className={cn(
+          flatOnMobile
+            ? "px-4 py-2.5 text-[12px] text-[#8c8c8c]"
+            : "px-4 py-3 text-xs uppercase tracking-[0.16em] text-[#8c8c8c]",
+        )}
+      >
         {title}
       </div>
       <div className="border-t border-black/5">{children}</div>
