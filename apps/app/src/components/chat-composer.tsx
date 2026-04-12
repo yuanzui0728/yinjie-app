@@ -2682,12 +2682,18 @@ export function ChatComposer({
           />
         ) : null}
         {mobilePlusNotice && !isDesktop && !plusPanelOpen ? (
-          <InlineNotice className="mt-2 text-xs" tone="info">
+          <InlineNotice
+            className="mt-1.5 rounded-[12px] border-[rgba(96,165,250,0.18)] px-3 py-2 text-[11px] leading-[18px] shadow-none"
+            tone="info"
+          >
             {mobilePlusNotice}
           </InlineNotice>
         ) : null}
         {speechDisabledReason ? (
-          <InlineNotice className="mt-2 text-xs" tone="muted">
+          <InlineNotice
+            className="mt-1.5 rounded-[12px] px-3 py-2 text-[11px] leading-[18px] shadow-none"
+            tone="muted"
+          >
             {speechDisabledReason}
           </InlineNotice>
         ) : null}
@@ -2696,14 +2702,14 @@ export function ChatComposer({
         speech.status === "ready" &&
         speechDisplayText ? (
           <InlineNotice
-            className="mt-2 flex items-center justify-between gap-3 text-xs"
+            className="mt-1.5 flex items-center justify-between gap-2.5 rounded-[12px] border-[rgba(7,193,96,0.14)] bg-[rgba(247,251,248,0.98)] px-3 py-2 text-[11px] leading-[18px] text-[#166534] shadow-none"
             tone="info"
           >
             <span className="truncate">识别完成：{speechDisplayText}</span>
             <button
               type="button"
               onClick={commitSpeechInput}
-              className="shrink-0 text-[#15803d]"
+              className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-medium text-[#15803d]"
             >
               插入输入框
             </button>
@@ -2757,13 +2763,16 @@ export function ChatComposer({
           </InlineNotice>
         ) : null}
         {composerError && !isDesktop ? (
-          <InlineNotice className="mt-2 text-xs" tone="danger">
+          <InlineNotice
+            className="mt-1.5 rounded-[12px] px-3 py-2 text-[11px] leading-[18px] shadow-none"
+            tone="danger"
+          >
             {composerError}
           </InlineNotice>
         ) : null}
         {composerPending ? (
-          <div className="mt-2 flex items-center gap-1.5 text-[12px] text-[color:var(--text-muted)]">
-            <SendHorizontal size={12} />
+          <div className="mt-1.5 flex items-center gap-1.5 px-1 text-[11px] text-[color:var(--text-muted)]">
+            <SendHorizontal size={11} />
             <span>正在发送...</span>
           </div>
         ) : null}
