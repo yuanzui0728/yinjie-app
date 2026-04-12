@@ -39,6 +39,7 @@ data/database.sqlite
 data/database.sqlite-journal
 data/database.sqlite-wal
 data/database.sqlite-shm
+runtime-data/app-web-nginx/
 cloud-platform.sqlite
 cloud-platform.sqlite-journal
 
