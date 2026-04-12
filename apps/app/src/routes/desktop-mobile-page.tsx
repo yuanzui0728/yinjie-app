@@ -50,7 +50,10 @@ import {
   formatTimestamp,
   parseTimestamp,
 } from "../lib/format";
-import { isPersistedGroupConversation } from "../lib/conversation-route";
+import {
+  getConversationThreadLabel,
+  isPersistedGroupConversation,
+} from "../lib/conversation-route";
 import {
   readGroupInviteDeliveryRecord,
   readGroupInviteReopenRecords,
@@ -1373,7 +1376,7 @@ function RecentConversationRow({
             {item.title}
           </div>
           <div className="mt-1 text-xs text-[color:var(--text-muted)]">
-            {item.type === "group" ? "群聊" : "单聊"} ·{" "}
+            {getConversationThreadLabel(item)} ·{" "}
             {formatConversationTimestamp(item.lastActivityAt)}
           </div>
           <div className="mt-2 line-clamp-2 text-sm leading-6 text-[color:var(--text-secondary)]">

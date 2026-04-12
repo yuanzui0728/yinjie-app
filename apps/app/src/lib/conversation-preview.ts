@@ -2,7 +2,10 @@ import type { ConversationListItem } from "@yinjie/contracts";
 import type { LocalChatMessageActionState } from "../features/chat/local-chat-message-actions";
 import { shouldHideSearchableChatMessage } from "../features/chat/local-chat-message-actions";
 import { sanitizeDisplayedChatText } from "./chat-text";
-import { isPersistedGroupConversation } from "./conversation-route";
+import {
+  getConversationThreadLabel,
+  isPersistedGroupConversation,
+} from "./conversation-route";
 
 type ConversationPreviewOptions = {
   emptyText?: string;
@@ -104,11 +107,11 @@ export function getConversationPreviewParts(
 }
 
 export function getConversationOpenFallback(
-  conversation: Pick<ConversationListItem, "id" | "type">,
+  conversation: Pick<ConversationListItem, "id" | "type" | "source">,
 ) {
   return isPersistedGroupConversation(conversation)
     ? "打开群聊查看最近消息。"
-    : "打开这个会话查看最近聊天记录。";
+    : `打开这个${getConversationThreadLabel(conversation)}查看最近聊天记录。`;
 }
 
 function getConversationRecalledPreviewText(

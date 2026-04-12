@@ -17,7 +17,13 @@ import {
   formatTimestamp,
   parseTimestamp,
 } from "../../lib/format";
-import { isPersistedGroupConversation } from "../../lib/conversation-route";
+import { getConversationOpenFallback } from "../../lib/conversation-preview";
+import {
+  getConversationThreadLabel,
+  getConversationThreadPath,
+  getConversationThreadType,
+  isPersistedGroupConversation,
+} from "../../lib/conversation-route";
 import { useAppRuntimeConfig } from "../../runtime/runtime-config-store";
 import {
   shouldHideSearchableChatMessage,
@@ -40,6 +46,7 @@ type SearchMessageRow = {
   conversationId: string;
   conversationTitle: string;
   conversationType: "direct" | "group";
+  conversationSource?: "conversation" | "group";
   messageId: string;
   senderName: string;
   text: string;
@@ -89,7 +96,10 @@ export function useSearchIndex(
   const conversationsSearchKey = useMemo(
     () =>
       conversations
-        .map((item) => `${item.type}:${item.id}:${item.lastActivityAt}`)
+        .map(
+          (item) =>
+            `${item.source ?? item.type}:${item.id}:${item.lastActivityAt}`,
+        )
         .join("|"),
     [conversations],
   );
@@ -108,7 +118,8 @@ export function useSearchIndex(
           return messages.map((message) => ({
             conversationId: conversation.id,
             conversationTitle: conversation.title,
-            conversationType: conversation.type,
+            conversationType: getConversationThreadType(conversation),
+            conversationSource: conversation.source,
             messageId: message.id,
             senderName: message.senderName,
             text:
@@ -133,6 +144,7 @@ export function useSearchIndex(
 
     const conversationResults: SearchResultItem[] = conversations.map(
       (conversation) => {
+        const conversationLabel = getConversationThreadLabel(conversation);
         const lastMessageVisible =
           !conversation.lastMessage ||
           !shouldHideSearchableChatMessage(
@@ -147,10 +159,9 @@ export function useSearchIndex(
           id: `conversation-${conversation.id}`,
           category: "messages",
           title: conversation.title,
-          description: lastMessageText || "打开这个会话查看最近聊天记录。",
-          meta: `${
-            conversation.type === "group" ? "群聊" : "会话"
-          } · ${formatConversationTimestamp(conversation.lastActivityAt)}`,
+          description:
+            lastMessageText || getConversationOpenFallback(conversation),
+          meta: `${conversationLabel} · ${formatConversationTimestamp(conversation.lastActivityAt)}`,
           keywords: [
             conversation.title,
             lastMessageVisible ? conversation.lastMessage?.text : "",
@@ -159,10 +170,8 @@ export function useSearchIndex(
             .filter(Boolean)
             .join(" ")
             .toLowerCase(),
-          to: isPersistedGroupConversation(conversation)
-            ? `/group/${conversation.id}`
-            : `/chat/${conversation.id}`,
-          badge: conversation.type === "group" ? "群聊" : "会话",
+          to: getConversationThreadPath(conversation),
+          badge: conversationLabel,
           avatarName: conversation.title,
           sortTime: parseTimestamp(conversation.lastActivityAt) ?? 0,
         };
@@ -203,14 +212,19 @@ export function useSearchIndex(
           .filter(Boolean)
           .join(" ")
           .toLowerCase(),
-        to: isPersistedGroupConversation({
+        to: getConversationThreadPath({
           id: message.conversationId,
           type: message.conversationType,
-        })
-          ? `/group/${message.conversationId}`
-          : `/chat/${message.conversationId}`,
+          source: message.conversationSource,
+        }),
         hash: `chat-message-${message.messageId}`,
-        badge: message.conversationType === "group" ? "群聊记录" : "聊天记录",
+        badge:
+          getConversationThreadType({
+            type: message.conversationType,
+            source: message.conversationSource,
+          }) === "group"
+            ? "群聊记录"
+            : "单聊记录",
         avatarName: message.conversationTitle,
         sortTime: parseTimestamp(message.createdAt) ?? 0,
       }));
