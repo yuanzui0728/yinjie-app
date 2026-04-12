@@ -25,6 +25,9 @@ export function useSelfCameraPreview({
     Boolean(navigator.mediaDevices?.getUserMedia);
 
   useEffect(() => {
+    let shouldResumeAfterVisibilityHidden = false;
+    let connectRequestId = 0;
+
     const stopCurrentStream = () => {
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
@@ -50,6 +53,8 @@ export function useSelfCameraPreview({
     let disposed = false;
 
     const connect = async () => {
+      const requestId = connectRequestId + 1;
+      connectRequestId = requestId;
       setStatus("requesting-permission");
       setError(null);
 
@@ -63,7 +68,12 @@ export function useSelfCameraPreview({
           audio: false,
         });
 
-        if (disposed) {
+        if (
+          disposed ||
+          connectRequestId !== requestId ||
+          (typeof document !== "undefined" &&
+            document.visibilityState === "hidden")
+        ) {
           stream.getTracks().forEach((track) => track.stop());
           return;
         }
@@ -81,7 +91,7 @@ export function useSelfCameraPreview({
 
         setStatus("ready");
       } catch (cameraError) {
-        if (disposed) {
+        if (disposed || connectRequestId !== requestId) {
           return;
         }
 
@@ -95,8 +105,36 @@ export function useSelfCameraPreview({
 
     void connect();
 
+    const handleVisibilityChange = () => {
+      if (typeof document === "undefined") {
+        return;
+      }
+
+      if (document.visibilityState === "hidden") {
+        shouldResumeAfterVisibilityHidden = Boolean(streamRef.current);
+        connectRequestId += 1;
+        stopCurrentStream();
+        if (shouldResumeAfterVisibilityHidden) {
+          setStatus("idle");
+          setError(null);
+        }
+        return;
+      }
+
+      if (!enabled || !shouldResumeAfterVisibilityHidden) {
+        return;
+      }
+
+      shouldResumeAfterVisibilityHidden = false;
+      void connect();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       disposed = true;
+      connectRequestId += 1;
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       stopCurrentStream();
     };
   }, [enabled, restartKey, supported]);
