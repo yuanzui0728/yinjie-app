@@ -8,6 +8,8 @@ const DESKTOP_CHAT_IMAGE_VIEWER_PATH = "/desktop/chat-image-viewer";
 const STORAGE_KEY = "yinjie-desktop-chat-image-viewer-sessions";
 const MAX_SESSION_COUNT = 12;
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
+let desktopChatImageViewerSessionsNativeWriteQueue: Promise<void> =
+  Promise.resolve();
 
 export type DesktopChatImageViewerSessionItem = {
   id: string;
@@ -170,6 +172,10 @@ export async function openDesktopChatImageViewerWindow(
     return Boolean(window.open(routePath, "_blank", features));
   }
 
+  if (sessionId) {
+    await desktopChatImageViewerSessionsNativeWriteQueue.catch(() => undefined);
+  }
+
   if (
     await openDesktopStandaloneWindow({
       label: buildDesktopChatImageViewerWindowLabel({
@@ -201,9 +207,49 @@ export function readDesktopChatImageViewerSession(sessionId: string) {
     return [] as DesktopChatImageViewerSessionItem[];
   }
 
-  return readSessionStore()
+  return readLocalSessionStore()
     .find((session) => session.id === sessionId)
     ?.items.map((item) => ({ ...item })) ?? [];
+}
+
+export async function hydrateDesktopChatImageViewerSessionsFromNative() {
+  const localSessions = readLocalSessionStore();
+  if (!isDesktopRuntimeAvailable()) {
+    return localSessions;
+  }
+
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const result = await invoke<{
+      exists: boolean;
+      contents?: string | null;
+    }>("desktop_read_chat_image_viewer_sessions_store");
+
+    if (!result.exists) {
+      if (localSessions.length) {
+        queueNativeDesktopChatImageViewerSessionsWrite(localSessions);
+      }
+      return localSessions;
+    }
+
+    const nativeSessions = parseStoredSessions(result.contents ?? null);
+    if (
+      getLatestSessionUpdateTime(localSessions) >
+      getLatestSessionUpdateTime(nativeSessions)
+    ) {
+      if (localSessions.length) {
+        queueNativeDesktopChatImageViewerSessionsWrite(localSessions);
+      }
+      return localSessions;
+    }
+
+    writeLocalSessionStore(nativeSessions, {
+      syncNative: false,
+    });
+    return nativeSessions;
+  } catch {
+    return localSessions;
+  }
 }
 
 type DesktopChatImageViewerStoredSession = {
@@ -224,7 +270,7 @@ function saveDesktopChatImageViewerSession(
     return null;
   }
 
-  const sessions = readSessionStore();
+  const sessions = readLocalSessionStore();
   const sessionId =
     typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
       ? crypto.randomUUID()
@@ -236,16 +282,63 @@ function saveDesktopChatImageViewerSession(
   };
   const nextSessions = [nextSession, ...sessions].slice(0, MAX_SESSION_COUNT);
 
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextSessions));
+  writeLocalSessionStore(nextSessions);
   return sessionId;
 }
 
-function readSessionStore() {
+function readLocalSessionStore() {
   if (typeof window === "undefined") {
     return [] as DesktopChatImageViewerStoredSession[];
   }
 
   const raw = window.localStorage.getItem(STORAGE_KEY);
+  return parseStoredSessions(raw);
+}
+
+function writeLocalSessionStore(
+  sessions: DesktopChatImageViewerStoredSession[],
+  options?: {
+    syncNative?: boolean;
+  },
+) {
+  if (typeof window === "undefined") {
+    return sessions;
+  }
+
+  if (sessions.length) {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+  } else {
+    window.localStorage.removeItem(STORAGE_KEY);
+  }
+
+  if (options?.syncNative !== false) {
+    queueNativeDesktopChatImageViewerSessionsWrite(sessions);
+  }
+
+  return sessions;
+}
+
+function queueNativeDesktopChatImageViewerSessionsWrite(
+  sessions: DesktopChatImageViewerStoredSession[],
+) {
+  if (!isDesktopRuntimeAvailable()) {
+    return;
+  }
+
+  const contents = JSON.stringify(sessions);
+  desktopChatImageViewerSessionsNativeWriteQueue =
+    desktopChatImageViewerSessionsNativeWriteQueue
+      .catch(() => undefined)
+      .then(async () => {
+        const { invoke } = await import("@tauri-apps/api/core");
+        await invoke("desktop_write_chat_image_viewer_sessions_store", {
+          contents,
+        });
+      })
+      .catch(() => undefined);
+}
+
+function parseStoredSessions(raw: string | null | undefined) {
   if (!raw) {
     return [] as DesktopChatImageViewerStoredSession[];
   }
@@ -260,13 +353,24 @@ function readSessionStore() {
     });
 
     if (freshSessions.length !== sessions.length) {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(freshSessions));
+        writeLocalSessionStore(freshSessions, {
+          syncNative: false,
+        });
     }
 
     return freshSessions;
   } catch {
     return [] as DesktopChatImageViewerStoredSession[];
   }
+}
+
+function getLatestSessionUpdateTime(
+  sessions: DesktopChatImageViewerStoredSession[],
+) {
+  return sessions.reduce((latest, session) => {
+    const updatedAt = Date.parse(session.updatedAt);
+    return Number.isFinite(updatedAt) && updatedAt > latest ? updatedAt : latest;
+  }, 0);
 }
 
 function normalizeStoredSessions(input: unknown) {
