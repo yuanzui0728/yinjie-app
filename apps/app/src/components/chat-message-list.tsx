@@ -1743,6 +1743,15 @@ export function ChatMessageList({
           message.type === "system" || message.senderType === "system";
         const isHighlighted = message.id === resolvedHighlightedMessageId;
         const isSelected = selectedMessageIdSet.has(message.id);
+        const showSenderName =
+          !isUser &&
+          groupMode &&
+          showGroupMemberNicknames &&
+          (isDesktop ||
+            showTimestamp ||
+            previousMessage?.senderType !== message.senderType ||
+            (previousMessage?.senderName ?? "") !==
+              (message.senderName ?? ""));
         const isSharedHistoryMessage = importedSharedMessageIdSet.has(
           message.id,
         );
@@ -1851,7 +1860,9 @@ export function ChatMessageList({
               onPointerUp={clearLongPressTimer}
               onPointerCancel={clearLongPressTimer}
               onPointerMove={handleMobileMessagePointerMove}
-              className={`space-y-1.5 rounded-[16px] px-2 py-1.5 transition-[background-color,box-shadow] duration-300 ${
+              className={`rounded-[16px] transition-[background-color,box-shadow] duration-300 ${
+                isDesktop ? "space-y-1.5 px-2 py-1.5" : "space-y-1 px-1.5 py-1"
+              } ${
                 isHighlighted
                   ? "bg-[rgba(255,224,120,0.15)] shadow-[0_0_0_1px_rgba(255,191,0,0.16)]"
                   : isSelected
@@ -1860,7 +1871,7 @@ export function ChatMessageList({
               }`}
             >
               <div
-                className={`flex items-start gap-2.5 ${isUser ? "justify-end" : "justify-start"}`}
+                className={`flex items-start ${isDesktop ? "gap-2.5" : "gap-2"} ${isUser ? "justify-end" : "justify-start"}`}
               >
                 {!isUser && selectionMode ? (
                   <SelectionToggle
@@ -1869,10 +1880,13 @@ export function ChatMessageList({
                   />
                 ) : null}
                 {!isUser ? (
-                  <AvatarChip name={message.senderName} size="wechat" />
+                  <AvatarChip
+                    name={message.senderName}
+                    size={isDesktop ? "wechat" : "sm"}
+                  />
                 ) : null}
                 <div
-                  className={`flex max-w-[78%] flex-col ${isUser ? "items-end" : "items-start"}`}
+                  className={`flex ${isDesktop ? "max-w-[78%]" : "max-w-[79%]"} flex-col ${isUser ? "items-end" : "items-start"}`}
                 >
                   {isSharedHistoryMessage ? (
                     <div
@@ -1886,8 +1900,12 @@ export function ChatMessageList({
                       聊天记录
                     </div>
                   ) : null}
-                  {!isUser && groupMode && showGroupMemberNicknames ? (
-                    <div className="mb-1 px-1 text-[10px] text-[color:var(--text-muted)]">
+                  {showSenderName ? (
+                    <div
+                      className={`px-1 text-[color:var(--text-muted)] ${
+                        isDesktop ? "mb-1 text-[10px]" : "mb-0.5 text-[11px]"
+                      }`}
+                    >
                       {message.senderName}
                     </div>
                   ) : null}
@@ -2062,13 +2080,19 @@ export function ChatMessageList({
                     </div>
                   )}
                   {reminderRecord ? (
-                    <div className="mt-1 px-1 text-[11px] text-[#8c8c8c]">
+                    <div
+                      className={`px-1 text-[#8c8c8c] ${
+                        isDesktop ? "mt-1 text-[11px]" : "mt-0.5 text-[10px]"
+                      }`}
+                    >
                       已设提醒 ·{" "}
                       {formatReminderSummary(reminderRecord.remindAt)}
                     </div>
                   ) : null}
                 </div>
-                {isUser ? <AvatarChip name="我" size="wechat" /> : null}
+                {isUser ? (
+                  <AvatarChip name="我" size={isDesktop ? "wechat" : "sm"} />
+                ) : null}
                 {isUser && selectionMode ? (
                   <SelectionToggle
                     checked={isSelected}
