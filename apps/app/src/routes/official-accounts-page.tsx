@@ -64,6 +64,7 @@ function MobileOfficialAccountsPage() {
       <TabPageTopBar
         title="公众号"
         titleAlign="center"
+        className="mx-0 mt-0 mb-0 border-b border-[color:var(--border-faint)] bg-[rgba(247,247,247,0.94)] px-4 pt-2.5 pb-2 text-[color:var(--text-primary)] shadow-none"
         leftActions={
           <Button
             onClick={() =>
@@ -79,29 +80,29 @@ function MobileOfficialAccountsPage() {
           </Button>
         }
       >
-        <label className="relative block pt-3">
+        <label className="relative block pt-2">
           <Search
             aria-hidden="true"
-            className="pointer-events-none absolute left-3.5 top-[calc(50%+0.375rem)] size-4 -translate-y-1/2 text-[color:var(--text-dim)]"
+            className="pointer-events-none absolute left-3 top-[calc(50%+0.25rem)] size-[15px] -translate-y-1/2 text-[color:var(--text-dim)]"
           />
           <input
             type="search"
             value={searchText}
             onChange={(event) => setSearchText(event.target.value)}
             placeholder="搜索公众号"
-            className="h-10 w-full rounded-[12px] border border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)] pl-10 pr-4 text-sm text-[color:var(--text-primary)] outline-none transition-[background-color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] placeholder:text-[color:var(--text-dim)] focus:border-[color:var(--border-faint)] focus:bg-white"
+            className="h-9 w-full rounded-[10px] bg-[color:var(--surface-console)] pl-9 pr-4 text-[13px] text-[color:var(--text-primary)] outline-none transition-[background-color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] placeholder:text-[color:var(--text-dim)] focus:bg-white"
           />
         </label>
       </TabPageTopBar>
 
       <div className="pb-8">
         {accountsQuery.isLoading ? (
-          <div className="px-4 pt-4">
+          <div className="px-4 pt-3">
             <LoadingBlock label="正在读取公众号..." />
           </div>
         ) : null}
         {accountsQuery.isError && accountsQuery.error instanceof Error ? (
-          <div className="px-4 pt-4">
+          <div className="px-4 pt-3">
             <ErrorBlock message={accountsQuery.error.message} />
           </div>
         ) : null}
@@ -151,7 +152,7 @@ function MobileOfficialAccountsPage() {
         {!accountsQuery.isLoading &&
         !accountsQuery.isError &&
         !filteredAccounts.length ? (
-          <div className="px-4 pt-6">
+          <div className="px-4 pt-5">
             <EmptyState
               title="没有找到匹配的公众号"
               description="换个名字、简称或关键词试试。"
@@ -173,9 +174,9 @@ function MobileOfficialAccountSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mt-2">
-      <div className="flex items-center justify-between px-4 py-1.5 text-[12px] text-[color:var(--text-muted)]">
-        <div className="font-medium tracking-[0.04em]">{title}</div>
+    <section className="mt-1.5">
+      <div className="flex items-center justify-between px-4 py-1 text-[11px] text-[color:var(--text-muted)]">
+        <div className="font-medium tracking-[0.02em]">{title}</div>
         <div>{count}</div>
       </div>
       <div
