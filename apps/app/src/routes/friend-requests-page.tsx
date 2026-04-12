@@ -25,12 +25,13 @@ export function FriendRequestsPage() {
   const acceptMutation = useMutation({
     mutationFn: (requestId: string) => acceptFriendRequest(requestId, baseUrl),
     onSuccess: async () => {
-      setSuccessNotice("好友请求已处理。");
+      setSuccessNotice("已通过好友申请。");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["app-friend-requests", baseUrl] }),
         queryClient.invalidateQueries({ queryKey: ["app-friends", baseUrl] }),
         queryClient.invalidateQueries({ queryKey: ["app-friends-quick-start", baseUrl] }),
         queryClient.invalidateQueries({ queryKey: ["app-group-friends", baseUrl] }),
+        queryClient.invalidateQueries({ queryKey: ["app-conversations", baseUrl] }),
       ]);
     },
   });

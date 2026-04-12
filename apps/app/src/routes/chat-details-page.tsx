@@ -222,6 +222,7 @@ export function ChatDetailsPage() {
         {
           characterId: targetCharacterId,
           greeting: `${ownerName} 想把你加到通讯录里。`,
+          autoAccept: true,
         },
         baseUrl,
       );
@@ -229,11 +230,28 @@ export function ChatDetailsPage() {
     onSuccess: async () => {
       setNotice({
         tone: "success",
-        message: "已发起保存到通讯录请求。",
+        message: "已添加到通讯录。",
       });
-      await queryClient.invalidateQueries({
-        queryKey: ["app-friend-requests", baseUrl],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["app-friend-requests", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["app-friends", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["app-friends-quick-start", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["app-group-friends", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["app-conversations", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["app-conversation-messages", baseUrl, conversationId],
+        }),
+      ]);
     },
   });
 
