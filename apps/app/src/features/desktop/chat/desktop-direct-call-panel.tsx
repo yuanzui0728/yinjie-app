@@ -714,7 +714,7 @@ function RecordButton({
         }
       }}
       disabled={disabled}
-      className="flex h-[184px] w-[184px] items-center justify-center rounded-full border border-[rgba(7,193,96,0.20)] bg-[radial-gradient(circle_at_top,rgba(46,213,115,0.92),rgba(7,193,96,1))] text-white shadow-[0_20px_56px_rgba(7,193,96,0.22)] transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-50"
+      className="flex h-[184px] w-[184px] items-center justify-center rounded-full border border-[rgba(7,193,96,0.14)] bg-[radial-gradient(circle_at_top,rgba(166,242,197,0.5),rgba(7,193,96,0.96))] text-white shadow-[0_18px_44px_rgba(7,193,96,0.16)] transition active:scale-[0.985] active:shadow-[0_12px_28px_rgba(7,193,96,0.14)] disabled:cursor-not-allowed disabled:opacity-50"
     >
       <span className="flex flex-col items-center gap-3">
         {turnPending ? (
