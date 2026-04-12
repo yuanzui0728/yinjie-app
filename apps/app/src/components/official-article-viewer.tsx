@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import type { OfficialAccountArticleDetail } from "@yinjie/contracts";
 import { ArrowRight, Copy, Newspaper, Share2, Star } from "lucide-react";
 import { Button, InlineNotice } from "@yinjie/ui";
 import { formatTimestamp } from "../lib/format";
+import { openExternalUrl } from "../runtime/external-url";
 import {
   isNativeMobileBridgeAvailable,
   shareWithNativeShell,
@@ -91,6 +92,42 @@ export function OfficialArticleViewer({
     await handleCopyLink();
   }
 
+  async function handleContentLinkClick(event: MouseEvent<HTMLDivElement>) {
+    if (!nativeMobileShareSupported) {
+      return;
+    }
+
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const anchor = target.closest("a[href]");
+    if (!(anchor instanceof HTMLAnchorElement)) {
+      return;
+    }
+
+    const rawHref = anchor.getAttribute("href")?.trim();
+    if (!rawHref || rawHref.startsWith("#")) {
+      return;
+    }
+
+    if (!/^(https?:|mailto:|tel:)/i.test(rawHref)) {
+      return;
+    }
+
+    event.preventDefault();
+    const opened = await openExternalUrl(anchor.href || rawHref);
+    if (opened) {
+      return;
+    }
+
+    setShareNotice({
+      message: "打开链接失败，请稍后重试。",
+      tone: "info",
+    });
+  }
+
   return (
     <article className="mx-auto w-full max-w-[760px] rounded-[28px] border border-[color:var(--border-faint)] bg-white px-5 py-6 shadow-[var(--shadow-section)] sm:px-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -169,6 +206,7 @@ export function OfficialArticleViewer({
       </div>
       <div
         className="official-article-content mt-7 space-y-4 text-[15px] leading-8 text-[color:var(--text-primary)] [&_blockquote]:rounded-[20px] [&_blockquote]:border-l-4 [&_blockquote]:border-[rgba(7,193,96,0.2)] [&_blockquote]:bg-[rgba(7,193,96,0.07)] [&_blockquote]:px-4 [&_blockquote]:py-3 [&_h3]:mt-8 [&_h3]:text-xl [&_h3]:font-semibold [&_img]:rounded-[20px] [&_p]:my-0"
+        onClick={(event) => void handleContentLinkClick(event)}
         dangerouslySetInnerHTML={{ __html: article.contentHtml }}
       />
 
