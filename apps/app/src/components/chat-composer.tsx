@@ -260,6 +260,12 @@ type AttachmentDraft =
       size: number;
     };
 
+type MobilePlusNoticeState = {
+  message: string;
+  actionLabel?: string;
+  onAction?: () => void;
+};
+
 export function ChatComposer({
   value,
   placeholder,
@@ -333,7 +339,8 @@ export function ChatComposer({
     useState(false);
   const [attachmentBusy, setAttachmentBusy] = useState(false);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
-  const [mobilePlusNotice, setMobilePlusNotice] = useState<string | null>(null);
+  const [mobilePlusNotice, setMobilePlusNotice] =
+    useState<MobilePlusNoticeState | null>(null);
   const [activeStickerPackId, setActiveStickerPackId] =
     useState("yinjie-mochi");
   const [recentStickers, setRecentStickers] = useState(() =>
@@ -1059,7 +1066,14 @@ export function ChatComposer({
     const result = await captureImageWithNativeShell();
     if (!result.asset) {
       if (result.error) {
-        setMobilePlusNotice(resolveNativeCameraCaptureNotice(result.error));
+        setMobilePlusNotice(
+          resolveNativeCameraCaptureNotice(result.error, {
+            nativeBridgeAvailable: isNativeMobileBridgeAvailable(),
+            onOpenSettings: () => {
+              void openAppSettings();
+            },
+          }),
+        );
       }
       return;
     }
@@ -2778,17 +2792,24 @@ export function ChatComposer({
             }
             onUnavailableAction={(message) => {
               setAttachmentError(null);
-              setMobilePlusNotice(message);
+              setMobilePlusNotice({ message });
             }}
             onUnavailableFallback={handleUnavailableFallback}
           />
         ) : null}
         {mobilePlusNotice && !isDesktop && !plusPanelOpen ? (
           <InlineNotice
-            className="mt-1.5 rounded-[12px] border-[rgba(96,165,250,0.18)] px-3 py-2 text-[11px] leading-[18px] shadow-none"
+            className="mt-1.5 flex items-center justify-between gap-2.5 rounded-[12px] border-[rgba(96,165,250,0.18)] px-3 py-2 text-[11px] leading-[18px] shadow-none"
             tone="info"
           >
-            {mobilePlusNotice}
+            <span className="min-w-0 flex-1">{mobilePlusNotice.message}</span>
+            {mobilePlusNotice.onAction ? (
+              <InlineNoticeActionButton
+                label={mobilePlusNotice.actionLabel}
+                onClick={mobilePlusNotice.onAction}
+                className="border-[#60a5fa]/22 bg-white text-[#1d4ed8]"
+              />
+            ) : null}
           </InlineNotice>
         ) : null}
         {speechDisabledReason ? (
@@ -4898,18 +4919,40 @@ function normalizeAssetValue(value: string | undefined | null) {
   return normalized ? normalized : null;
 }
 
-function resolveNativeCameraCaptureNotice(errorMessage: string) {
+function resolveNativeCameraCaptureNotice(
+  errorMessage: string,
+  options?: {
+    nativeBridgeAvailable?: boolean;
+    onOpenSettings?: () => void;
+  },
+): MobilePlusNoticeState {
   const normalizedMessage = errorMessage.toLowerCase();
 
   if (normalizedMessage.includes("permission")) {
-    return "相机权限未开启，请到系统设置里允许隐界访问相机后再试。";
+    return {
+      message: options?.nativeBridgeAvailable
+        ? "相机权限未开启，请到系统设置里允许隐界访问相机后再试。"
+        : "相机权限未开启，请检查当前设备的相机权限后再试。",
+      actionLabel:
+        options?.nativeBridgeAvailable && options.onOpenSettings
+          ? "去设置"
+          : undefined,
+      onAction:
+        options?.nativeBridgeAvailable && options.onOpenSettings
+          ? options.onOpenSettings
+          : undefined,
+    };
   }
 
   if (normalizedMessage.includes("unavailable")) {
-    return "当前设备暂时无法打开相机，请先改用相册选图。";
+    return {
+      message: "当前设备暂时无法打开相机，请先改用相册选图。",
+    };
   }
 
-  return "打开相机失败，请稍后再试。";
+  return {
+    message: "打开相机失败，请稍后再试。",
+  };
 }
 
 function waitForCaptureVideo(video: HTMLVideoElement) {
