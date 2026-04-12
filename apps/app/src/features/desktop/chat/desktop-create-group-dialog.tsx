@@ -718,7 +718,7 @@ export function DesktopCreateGroupDialog({
             ? "border-[rgba(7,193,96,0.16)] bg-[rgba(7,193,96,0.08)]"
             : isSourceFriend
               ? "border-[rgba(7,193,96,0.10)] bg-[rgba(7,193,96,0.04)] hover:border-[rgba(7,193,96,0.16)] hover:bg-[rgba(7,193,96,0.08)]"
-              : "hover:border-black/6 hover:bg-white",
+              : "hover:border-[color:var(--border-faint)] hover:bg-white",
           focused ? "ring-1 ring-[rgba(7,193,96,0.24)]" : "",
         )}
       >
@@ -738,7 +738,7 @@ export function DesktopCreateGroupDialog({
               </span>
             ) : null}
             {aliasName ? (
-              <span className="shrink-0 rounded-full bg-[#f3f4f6] px-1.5 py-0.5 text-[10px] text-[color:var(--text-dim)]">
+              <span className="shrink-0 rounded-full border border-[color:var(--border-faint)] bg-white px-1.5 py-0.5 text-[10px] text-[color:var(--text-dim)]">
                 {aliasName}
               </span>
             ) : null}
@@ -752,7 +752,7 @@ export function DesktopCreateGroupDialog({
             "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors",
             checked
               ? "border-[#07c160] bg-[#07c160] text-white"
-              : "border-black/10 bg-[#f5f5f5] text-transparent",
+              : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] text-transparent",
           )}
         >
           <Check size={12} strokeWidth={2.8} />
@@ -792,10 +792,10 @@ export function DesktopCreateGroupDialog({
       />
 
       <div
-        className="relative flex h-[min(720px,82vh)] w-full max-w-[640px] flex-col overflow-hidden rounded-[18px] border border-black/8 bg-white shadow-[0_24px_64px_rgba(15,23,42,0.18)]"
+        className="relative flex h-[min(720px,82vh)] w-full max-w-[640px] flex-col overflow-hidden rounded-[22px] border border-[color:var(--border-faint)] bg-white/96 shadow-[var(--shadow-overlay)]"
         onKeyDown={handleDialogKeyDown}
       >
-        <div className="flex items-center justify-between gap-4 border-b border-black/6 bg-[linear-gradient(180deg,#fbfbfb_0%,#f4f4f4_100%)] px-6 py-4">
+        <div className="flex items-center justify-between gap-4 border-b border-[color:var(--border-faint)] bg-white/78 px-6 py-4 backdrop-blur-xl">
           <div className="min-w-0">
             <div className="text-[18px] font-medium tracking-[0.01em] text-[color:var(--text-primary)]">
               发起群聊
@@ -814,13 +814,13 @@ export function DesktopCreateGroupDialog({
             }}
             disabled={createMutation.isPending}
             aria-label="关闭"
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-black/6 bg-white/85 text-[color:var(--text-secondary)] transition hover:border-black/10 hover:bg-white hover:text-[color:var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             <X size={16} />
           </button>
         </div>
 
-        <div className="border-b border-black/6 px-6 py-4">
+        <div className="border-b border-[color:var(--border-faint)] bg-white/72 px-6 py-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <div className="text-[12px] font-medium tracking-[0.08em] text-[color:var(--text-primary)]">
@@ -830,7 +830,7 @@ export function DesktopCreateGroupDialog({
                 先补齐要拉进群的人，再决定要不要带上聊天上下文。
               </div>
             </div>
-            <div className="shrink-0 rounded-full bg-[#f3f4f6] px-2.5 py-1 text-[11px] text-[color:var(--text-muted)]">
+            <div className="shrink-0 rounded-full border border-[color:var(--border-faint)] bg-white px-2.5 py-1 text-[11px] text-[color:var(--text-muted)]">
               已选 {selectedIds.length}
             </div>
           </div>
@@ -855,21 +855,21 @@ export function DesktopCreateGroupDialog({
               onChange={(event) => setSearchTerm(event.target.value)}
               onKeyDown={handleSearchKeyDown}
               placeholder="搜索联系人"
-              className="h-10 w-full rounded-[10px] border border-black/8 bg-white pl-10 pr-10 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-dim)] focus:border-black/12"
+              className="h-10 w-full rounded-[10px] border border-[color:var(--border-faint)] bg-white pl-10 pr-10 text-sm text-[color:var(--text-primary)] outline-none transition placeholder:text-[color:var(--text-dim)] focus:border-[color:var(--border-brand)]"
             />
             {searchTerm.trim() ? (
               <button
                 type="button"
                 onClick={clearSearch}
                 aria-label="清空联系人搜索"
-                className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-[color:var(--text-dim)] transition hover:bg-[#f2f2f2] hover:text-[color:var(--text-primary)]"
+                className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-[color:var(--text-dim)] transition hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]"
               >
                 <X size={14} />
               </button>
             ) : null}
           </label>
 
-          <div className="mt-3 min-h-9 rounded-[10px] bg-[#fafafa] px-3 py-2.5">
+          <div className="mt-3 min-h-9 rounded-[12px] border border-[color:var(--border-faint)] bg-[rgba(255,255,255,0.72)] px-3 py-2.5">
             {selectedFriends.length ? (
               <div className="flex flex-wrap gap-2">
                 {selectedFriends.map((item) => {
@@ -884,7 +884,7 @@ export function DesktopCreateGroupDialog({
                         "flex items-center gap-2 rounded-[8px] border px-3 py-1.5 text-left text-[12px] text-[color:var(--text-primary)] transition",
                         isSourceFriend
                           ? "border-[rgba(7,193,96,0.18)] bg-[rgba(7,193,96,0.08)] hover:bg-[rgba(7,193,96,0.12)]"
-                          : "border-black/6 bg-[#f5f5f5] hover:bg-[#ededed]",
+                          : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] hover:border-[rgba(7,193,96,0.16)] hover:bg-white",
                       )}
                     >
                       <AvatarChip
@@ -911,7 +911,7 @@ export function DesktopCreateGroupDialog({
           </div>
 
           {conversationId ? (
-            <div className="mt-4 border-t border-dashed border-black/8 pt-4">
+            <div className="mt-4 border-t border-dashed border-[color:var(--border-faint)] pt-4">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <div className="text-[12px] font-medium tracking-[0.08em] text-[color:var(--text-primary)]">
@@ -923,12 +923,12 @@ export function DesktopCreateGroupDialog({
                       : "从当前单聊里带几条最近消息进群，减少重新说明成本。"}
                   </div>
                 </div>
-                <div className="shrink-0 rounded-full bg-[#f3f4f6] px-2.5 py-1 text-[11px] text-[color:var(--text-muted)]">
+                <div className="shrink-0 rounded-full border border-[color:var(--border-faint)] bg-white px-2.5 py-1 text-[11px] text-[color:var(--text-muted)]">
                   {shareHistory ? `已选 ${selectedMessageIds.length}` : "可选"}
                 </div>
               </div>
 
-              <div className="rounded-[12px] border border-black/6 bg-[#fafafa] px-4 py-3">
+              <div className="rounded-[14px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-3">
                 <label className="flex items-start gap-3 text-left">
                   <input
                     type="checkbox"
@@ -1001,7 +1001,7 @@ export function DesktopCreateGroupDialog({
                                   "rounded-[8px] border px-2.5 py-1 transition",
                                   recentPresetSelectionState.get(count)
                                     ? "border-[rgba(7,193,96,0.28)] bg-[rgba(7,193,96,0.10)] text-[#17803d]"
-                                    : "border-black/8 bg-white text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]",
+                                    : "border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] hover:border-[rgba(7,193,96,0.16)] hover:text-[color:var(--text-primary)]",
                                 )}
                               >
                                 最近{count}条
@@ -1018,7 +1018,7 @@ export function DesktopCreateGroupDialog({
                                 "rounded-[8px] border px-2.5 py-1 transition",
                                 allShareableMessagesSelected
                                   ? "border-[rgba(7,193,96,0.28)] bg-[rgba(7,193,96,0.10)] text-[#17803d]"
-                                  : "border-black/8 bg-white text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]",
+                                  : "border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] hover:border-[rgba(7,193,96,0.16)] hover:text-[color:var(--text-primary)]",
                               )}
                             >
                               全选
@@ -1030,7 +1030,7 @@ export function DesktopCreateGroupDialog({
                                 "rounded-[8px] border px-2.5 py-1 transition",
                                 selectedMessageIds.length === 0
                                   ? "border-[rgba(7,193,96,0.28)] bg-[rgba(7,193,96,0.10)] text-[#17803d]"
-                                  : "border-black/8 bg-white text-[color:var(--text-secondary)] hover:text-[color:var(--text-primary)]",
+                                  : "border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] hover:border-[rgba(7,193,96,0.16)] hover:text-[color:var(--text-primary)]",
                               )}
                             >
                               清空
@@ -1040,7 +1040,7 @@ export function DesktopCreateGroupDialog({
                         <div
                           tabIndex={0}
                           onKeyDown={handleSharedMessagesKeyDown}
-                          className="max-h-56 overflow-auto rounded-[10px] border border-black/6 bg-white p-1.5 outline-none ring-offset-0 focus:ring-2 focus:ring-[rgba(7,193,96,0.18)]"
+                          className="max-h-56 overflow-auto rounded-[10px] border border-[color:var(--border-faint)] bg-white p-1.5 outline-none ring-offset-0 focus:ring-2 focus:ring-[rgba(7,193,96,0.18)]"
                           aria-label="可分享聊天记录列表"
                         >
                           <div className="space-y-3">
@@ -1238,7 +1238,7 @@ export function DesktopCreateGroupDialog({
               syncActiveFriendSectionFromScroll();
             }
           }}
-          className="min-h-0 flex-1 overflow-auto px-3 py-3"
+          className="min-h-0 flex-1 overflow-auto bg-[rgba(255,255,255,0.62)] px-3 py-3"
         >
           <div className="mb-3 flex items-center justify-between gap-3 px-3">
             <div>
@@ -1249,15 +1249,15 @@ export function DesktopCreateGroupDialog({
                 可用 `↑/↓`、`Alt+字母` 或右侧索引快速定位联系人。
               </div>
             </div>
-            <div className="shrink-0 rounded-full bg-[#f3f4f6] px-2.5 py-1 text-[11px] text-[color:var(--text-muted)]">
+            <div className="shrink-0 rounded-full border border-[color:var(--border-faint)] bg-white px-2.5 py-1 text-[11px] text-[color:var(--text-muted)]">
               {searchTerm.trim()
                 ? `${filteredFriends.length} 条结果`
                 : `${filteredFriends.length} 位可选`}
             </div>
           </div>
 
-          <div className="rounded-[14px] border border-black/6 bg-[#fcfcfc] p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
-          <div className="mb-2 flex items-center justify-between gap-3 rounded-[10px] bg-white/80 px-3 py-2 text-[11px] text-[color:var(--text-dim)]">
+          <div className="rounded-[16px] border border-[color:var(--border-faint)] bg-white p-2 shadow-[var(--shadow-soft)]">
+          <div className="mb-2 flex items-center justify-between gap-3 rounded-[10px] border border-[color:var(--border-faint)] bg-white px-3 py-2 text-[11px] text-[color:var(--text-dim)]">
             <span>{searchTerm.trim() ? `搜索：${searchTerm.trim()}` : "联系人目录"}</span>
             <span>{searchTerm.trim() ? "按名称 / 备注 / 关系筛选，Esc 清空" : "按首字母分组"}</span>
           </div>
@@ -1346,7 +1346,7 @@ export function DesktopCreateGroupDialog({
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4 border-t border-black/6 bg-[linear-gradient(180deg,#fbfbfb_0%,#f4f4f4_100%)] px-6 py-4">
+        <div className="flex items-center justify-between gap-4 border-t border-[color:var(--border-faint)] bg-white/78 px-6 py-4 backdrop-blur-xl">
           <div className="min-w-0">
             <div className="text-[13px] font-medium text-[color:var(--text-primary)]">
               已选择 {selectedIds.length} 位成员
@@ -1365,7 +1365,7 @@ export function DesktopCreateGroupDialog({
               variant="secondary"
               onClick={onClose}
               disabled={createMutation.isPending}
-              className="rounded-[10px] border-black/8 bg-white shadow-none hover:bg-[#efefef]"
+              className="rounded-[10px] border-[color:var(--border-faint)] bg-white shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-[color:var(--surface-console)]"
             >
               取消
             </Button>
