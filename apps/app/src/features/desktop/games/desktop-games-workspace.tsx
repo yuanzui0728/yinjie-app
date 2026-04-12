@@ -165,8 +165,8 @@ export function DesktopGamesWorkspace({
                   className={cn(
                     "w-full rounded-[18px] border px-3 py-3 text-left transition",
                     activeCategory === tab.id
-                      ? "border-[rgba(7,193,96,0.18)] bg-[rgba(7,193,96,0.08)]"
-                      : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] hover:border-[rgba(7,193,96,0.16)] hover:bg-white",
+                      ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)]"
+                      : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] hover:bg-white",
                   )}
                 >
                   <div className="text-sm font-medium text-[color:var(--text-primary)]">
@@ -182,7 +182,7 @@ export function DesktopGamesWorkspace({
 
           <div className="rounded-[18px] border border-[color:var(--border-faint)] bg-white p-4 shadow-[var(--shadow-section)]">
             <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
-              <Pin size={15} className="text-[#16a34a]" />
+              <Pin size={15} className="text-[color:var(--brand-primary)]" />
               固定常玩
             </div>
             <div className="mt-3 space-y-2">
@@ -198,7 +198,7 @@ export function DesktopGamesWorkspace({
                         "w-full rounded-[18px] border px-3 py-3 text-left transition",
                         selectedGame.id === game.id
                           ? tone.mutedPanelClassName
-                          : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] hover:border-[rgba(7,193,96,0.16)] hover:bg-white",
+                          : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] hover:bg-white",
                       )}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -234,7 +234,7 @@ export function DesktopGamesWorkspace({
             <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
               <Clock3
                 size={15}
-                className="text-[#16a34a]"
+                className="text-[color:var(--brand-primary)]"
               />
               最近玩过
             </div>
@@ -247,8 +247,8 @@ export function DesktopGamesWorkspace({
                   className={cn(
                     "w-full rounded-[18px] border border-[rgba(15,23,42,0.06)] px-3 py-3 text-left transition hover:bg-white",
                     selectedGame.id === game.id
-                      ? "border-[rgba(7,193,96,0.18)] bg-[rgba(7,193,96,0.08)]"
-                      : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] hover:border-[rgba(7,193,96,0.16)]",
+                      ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)]"
+                      : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)]",
                   )}
                 >
                   <div className="text-sm font-medium text-[color:var(--text-primary)]">
@@ -391,7 +391,7 @@ export function DesktopGamesWorkspace({
                         : "按当前频道继续筛选，让桌面端浏览更接近微信的游戏中心。"}
                     </div>
                   </div>
-                  <div className="rounded-full border border-[rgba(7,193,96,0.16)] bg-[rgba(7,193,96,0.08)] px-3 py-1 text-[11px] font-medium text-[#15803d]">
+                  <div className="rounded-full border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] px-3 py-1 text-[11px] font-medium text-[color:var(--brand-primary)]">
                     {browseGames.length} 个入口
                   </div>
                 </div>
@@ -454,7 +454,7 @@ export function DesktopGamesWorkspace({
                             </span>
                           ))}
                           {pinned ? (
-                            <span className="rounded-md bg-[#eaf8ef] px-2.5 py-1 text-[11px] text-[#15803d]">
+                            <span className="rounded-md bg-[rgba(7,193,96,0.07)] px-2.5 py-1 text-[11px] text-[color:var(--brand-primary)]">
                               已固定
                             </span>
                           ) : null}
@@ -510,7 +510,7 @@ export function DesktopGamesWorkspace({
                 <div className="flex items-center gap-2 text-sm font-medium text-[color:var(--text-primary)]">
                   <UsersRound
                     size={16}
-                    className="text-[#16a34a]"
+                    className="text-[color:var(--brand-primary)]"
                   />
                   好友在玩
                 </div>
@@ -524,7 +524,7 @@ export function DesktopGamesWorkspace({
                     return (
                       <div
                         key={activity.id}
-                        className="flex w-full items-start gap-3 rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-3 py-3 text-left transition hover:border-[rgba(7,193,96,0.16)] hover:bg-white"
+                        className="flex w-full items-start gap-3 rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-3 py-3 text-left transition hover:bg-white"
                       >
                         <button
                           type="button"
@@ -544,7 +544,7 @@ export function DesktopGamesWorkspace({
                                 正在玩 {game.name}
                               </span>
                               {friendInviteStatusByActivityId[activity.id] ? (
-                                <span className="rounded-full border border-[rgba(7,193,96,0.16)] bg-[rgba(7,193,96,0.08)] px-2 py-1 text-[10px] text-[#15803d]">
+                                <span className="rounded-full border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] px-2 py-1 text-[10px] text-[color:var(--brand-primary)]">
                                   已邀约
                                 </span>
                               ) : null}
@@ -775,7 +775,7 @@ function InviteConversationRow({
   );
 
   return (
-    <div className="flex w-full items-start justify-between gap-3 rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-4 text-left transition hover:border-[rgba(7,193,96,0.16)] hover:bg-white">
+    <div className="flex w-full items-start justify-between gap-3 rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-4 text-left transition hover:bg-white">
       <button
         type="button"
         onClick={() =>
@@ -855,7 +855,7 @@ function DesktopRankingPanel({
               key={`${title}-${entry.gameId}`}
               type="button"
               onClick={() => onSelectGame(entry.gameId)}
-              className="flex w-full items-start gap-3 rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-4 text-left transition hover:border-[rgba(7,193,96,0.16)] hover:bg-white"
+              className="flex w-full items-start gap-3 rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-4 text-left transition hover:bg-white"
             >
               <div
                 className={cn(
@@ -873,7 +873,7 @@ function DesktopRankingPanel({
                   {entry.rank === 1 ? (
                     <Trophy
                       size={14}
-                      className="text-[#16a34a]"
+                      className="text-[color:var(--brand-primary)]"
                     />
                   ) : null}
                 </div>
