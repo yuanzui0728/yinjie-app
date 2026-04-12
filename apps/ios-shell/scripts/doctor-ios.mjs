@@ -5,6 +5,17 @@ import { fileURLToPath } from "node:url";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const shellRoot = path.resolve(scriptDir, "..");
+const iosAppRoot = path.join(shellRoot, "ios", "App", "App");
+const infoPlistPath = path.join(iosAppRoot, "Info.plist");
+const appDelegatePath = path.join(iosAppRoot, "AppDelegate.swift");
+
+function fileIncludes(filePath, pattern) {
+  if (!fs.existsSync(filePath)) {
+    return false;
+  }
+
+  return fs.readFileSync(filePath, "utf8").includes(pattern);
+}
 
 const checks = [
   {
@@ -40,6 +51,27 @@ const checks = [
       : "no ios/ project yet, run `pnpm ios:sync` on macOS",
   },
   {
+    label: "info-plist-privacy",
+    ok:
+      !fs.existsSync(infoPlistPath) ||
+      (fileIncludes(infoPlistPath, "NSCameraUsageDescription") &&
+        fileIncludes(infoPlistPath, "NSMicrophoneUsageDescription")),
+    detail: fs.existsSync(infoPlistPath)
+      ? "Info.plist includes camera and microphone usage descriptions"
+      : "Info.plist not found yet; run `pnpm ios:sync` first",
+  },
+  {
+    label: "appdelegate-push-cache",
+    ok:
+      !fs.existsSync(appDelegatePath) ||
+      (fileIncludes(appDelegatePath, "didRegisterForRemoteNotificationsWithDeviceToken") &&
+        fileIncludes(appDelegatePath, "YinjiePushToken") &&
+        fileIncludes(appDelegatePath, "YinjiePendingLaunchTarget")),
+    detail: fs.existsSync(appDelegatePath)
+      ? "AppDelegate caches push token and notification launch target"
+      : "AppDelegate not found yet; run `pnpm ios:sync` first",
+  },
+  {
     label: "core-api-env",
     ok: Boolean(process.env.YINJIE_IOS_CORE_API_BASE_URL),
     detail: process.env.YINJIE_IOS_CORE_API_BASE_URL
@@ -59,5 +91,5 @@ console.log("");
 console.log("Next steps:");
 console.log("1. Run this command on macOS.");
 console.log("2. Set YINJIE_IOS_CORE_API_BASE_URL before `pnpm ios:sync`.");
-console.log("3. After sync, run `pnpm ios:configure` to copy Xcode templates and plugin stubs.");
+console.log("3. After sync, run `pnpm ios:configure` to copy Xcode templates and seed any missing plugin files.");
 console.log(`4. Hostname: ${os.hostname()}`);
