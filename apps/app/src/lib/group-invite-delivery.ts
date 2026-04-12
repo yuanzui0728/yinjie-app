@@ -1,3 +1,5 @@
+import { isDesktopRuntimeAvailable } from "@yinjie/ui";
+
 export type GroupInviteDeliveryRecord = {
   conversationId: string;
   conversationPath: string;
@@ -29,38 +31,353 @@ export type GroupInviteReopenRecord = {
   reopenedAt: string;
 };
 
+type GroupInviteDeliveryStore = {
+  deliveryRecords: Record<string, GroupInviteDeliveryRecord>;
+  deliveryTargets: Record<string, GroupInviteDeliveryTarget[]>;
+  reopenRecords: Record<string, GroupInviteReopenRecord[]>;
+};
+
 const GROUP_INVITE_DELIVERY_STORAGE_KEY = "yinjie-group-invite-delivery";
 const GROUP_INVITE_DELIVERY_TARGETS_STORAGE_KEY =
   "yinjie-group-invite-delivery-targets";
 const GROUP_INVITE_REOPEN_STORAGE_KEY = "yinjie-group-invite-reopen";
+let groupInviteNativeWriteQueue: Promise<void> = Promise.resolve();
 
-export function readGroupInviteDeliveryRecord(groupId: string) {
+function getStorage() {
   if (typeof window === "undefined") {
-    return null as GroupInviteDeliveryRecord | null;
+    return null;
   }
 
-  const raw = window.localStorage.getItem(GROUP_INVITE_DELIVERY_STORAGE_KEY);
+  return window.localStorage;
+}
+
+function isGroupInviteDeliveryRecord(
+  value: unknown,
+): value is GroupInviteDeliveryRecord {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      typeof (value as GroupInviteDeliveryRecord).conversationId === "string" &&
+      typeof (value as GroupInviteDeliveryRecord).conversationPath === "string" &&
+      typeof (value as GroupInviteDeliveryRecord).conversationTitle === "string" &&
+      typeof (value as GroupInviteDeliveryRecord).deliveredAt === "string" &&
+      ((value as GroupInviteDeliveryRecord).groupName === undefined ||
+        typeof (value as GroupInviteDeliveryRecord).groupName === "string"),
+  );
+}
+
+function isGroupInviteDeliveryTarget(
+  value: unknown,
+): value is GroupInviteDeliveryTarget {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      typeof (value as GroupInviteDeliveryTarget).conversationId === "string" &&
+      typeof (value as GroupInviteDeliveryTarget).conversationPath === "string" &&
+      typeof (value as GroupInviteDeliveryTarget).conversationTitle === "string" &&
+      typeof (value as GroupInviteDeliveryTarget).deliveredAt === "string" &&
+      typeof (value as GroupInviteDeliveryTarget).batchId === "string" &&
+      typeof (value as GroupInviteDeliveryTarget).batchStartedAt === "string",
+  );
+}
+
+function isGroupInviteReopenRecord(
+  value: unknown,
+): value is GroupInviteReopenRecord {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      typeof (value as GroupInviteReopenRecord).conversationPath === "string" &&
+      typeof (value as GroupInviteReopenRecord).conversationTitle === "string" &&
+      typeof (value as GroupInviteReopenRecord).reopenedAt === "string",
+  );
+}
+
+function normalizeGroupInviteDeliveryRecords(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return {} as Record<string, GroupInviteDeliveryRecord>;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).filter((entry): entry is [string, GroupInviteDeliveryRecord] => {
+      const [groupId, record] = entry;
+      return typeof groupId === "string" && isGroupInviteDeliveryRecord(record);
+    }),
+  );
+}
+
+function normalizeGroupInviteDeliveryTargets(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return {} as Record<string, GroupInviteDeliveryTarget[]>;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([groupId, records]) => [
+      groupId,
+      Array.isArray(records)
+        ? records.filter(isGroupInviteDeliveryTarget)
+        : ([] as GroupInviteDeliveryTarget[]),
+    ]),
+  ) as Record<string, GroupInviteDeliveryTarget[]>;
+}
+
+function normalizeGroupInviteReopenRecords(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return {} as Record<string, GroupInviteReopenRecord[]>;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([groupId, records]) => [
+      groupId,
+      Array.isArray(records)
+        ? records.filter(isGroupInviteReopenRecord)
+        : ([] as GroupInviteReopenRecord[]),
+    ]),
+  ) as Record<string, GroupInviteReopenRecord[]>;
+}
+
+function normalizeGroupInviteDeliveryStore(
+  value: unknown,
+): GroupInviteDeliveryStore {
+  if (!value || typeof value !== "object") {
+    return {
+      deliveryRecords: {} as Record<string, GroupInviteDeliveryRecord>,
+      deliveryTargets: {} as Record<string, GroupInviteDeliveryTarget[]>,
+      reopenRecords: {} as Record<string, GroupInviteReopenRecord[]>,
+    };
+  }
+
+  const parsed = value as {
+    deliveryRecords?: unknown;
+    deliveryTargets?: unknown;
+    reopenRecords?: unknown;
+  };
+
+  return {
+    deliveryRecords: normalizeGroupInviteDeliveryRecords(parsed.deliveryRecords),
+    deliveryTargets: normalizeGroupInviteDeliveryTargets(parsed.deliveryTargets),
+    reopenRecords: normalizeGroupInviteReopenRecords(parsed.reopenRecords),
+  };
+}
+
+function parseJsonMap<T>(
+  raw: string | null,
+  normalize: (value: unknown) => T,
+  fallback: T,
+) {
   if (!raw) {
-    return null as GroupInviteDeliveryRecord | null;
+    return fallback;
   }
 
   try {
-    const parsed = JSON.parse(raw) as Record<string, GroupInviteDeliveryRecord>;
-    const record = parsed[groupId];
-    if (
-      !record ||
-      typeof record.conversationId !== "string" ||
-      typeof record.conversationPath !== "string" ||
-      typeof record.conversationTitle !== "string" ||
-      typeof record.deliveredAt !== "string"
-    ) {
-      return null as GroupInviteDeliveryRecord | null;
+    return normalize(JSON.parse(raw));
+  } catch {
+    return fallback;
+  }
+}
+
+function parseGroupInviteDeliveryStore(raw: string | null | undefined) {
+  if (!raw) {
+    return {
+      deliveryRecords: {} as Record<string, GroupInviteDeliveryRecord>,
+      deliveryTargets: {} as Record<string, GroupInviteDeliveryTarget[]>,
+      reopenRecords: {} as Record<string, GroupInviteReopenRecord[]>,
+    } satisfies GroupInviteDeliveryStore;
+  }
+
+  try {
+    return normalizeGroupInviteDeliveryStore(JSON.parse(raw));
+  } catch {
+    return {
+      deliveryRecords: {} as Record<string, GroupInviteDeliveryRecord>,
+      deliveryTargets: {} as Record<string, GroupInviteDeliveryTarget[]>,
+      reopenRecords: {} as Record<string, GroupInviteReopenRecord[]>,
+    } satisfies GroupInviteDeliveryStore;
+  }
+}
+
+function readLocalGroupInviteDeliveryStore(): GroupInviteDeliveryStore {
+  const storage = getStorage();
+  if (!storage) {
+    return {
+      deliveryRecords: {} as Record<string, GroupInviteDeliveryRecord>,
+      deliveryTargets: {} as Record<string, GroupInviteDeliveryTarget[]>,
+      reopenRecords: {} as Record<string, GroupInviteReopenRecord[]>,
+    };
+  }
+
+  return {
+    deliveryRecords: parseJsonMap(
+      storage.getItem(GROUP_INVITE_DELIVERY_STORAGE_KEY),
+      normalizeGroupInviteDeliveryRecords,
+      {} as Record<string, GroupInviteDeliveryRecord>,
+    ),
+    deliveryTargets: parseJsonMap(
+      storage.getItem(GROUP_INVITE_DELIVERY_TARGETS_STORAGE_KEY),
+      normalizeGroupInviteDeliveryTargets,
+      {} as Record<string, GroupInviteDeliveryTarget[]>,
+    ),
+    reopenRecords: parseJsonMap(
+      storage.getItem(GROUP_INVITE_REOPEN_STORAGE_KEY),
+      normalizeGroupInviteReopenRecords,
+      {} as Record<string, GroupInviteReopenRecord[]>,
+    ),
+  };
+}
+
+function hasGroupInviteDeliveryStoreData(store: GroupInviteDeliveryStore) {
+  return (
+    Object.keys(store.deliveryRecords).length > 0 ||
+    Object.keys(store.deliveryTargets).length > 0 ||
+    Object.keys(store.reopenRecords).length > 0
+  );
+}
+
+function getLatestGroupInviteDeliveryStoreTimestamp(
+  store: GroupInviteDeliveryStore,
+) {
+  const timestamps = [
+    ...Object.values(store.deliveryRecords).map((record) =>
+      Date.parse(record.deliveredAt),
+    ),
+    ...Object.values(store.deliveryTargets).flatMap((records) =>
+      records.map((record) => Math.max(
+        Date.parse(record.deliveredAt),
+        Date.parse(record.batchStartedAt),
+      )),
+    ),
+    ...Object.values(store.reopenRecords).flatMap((records) =>
+      records.map((record) => Date.parse(record.reopenedAt)),
+    ),
+  ];
+
+  return timestamps.reduce(
+    (latest, current) =>
+      Number.isFinite(current) && current > latest ? current : latest,
+    0,
+  );
+}
+
+function queueNativeGroupInviteDeliveryStoreWrite(
+  store: GroupInviteDeliveryStore,
+) {
+  if (!isDesktopRuntimeAvailable()) {
+    return;
+  }
+
+  const contents = JSON.stringify(store);
+  groupInviteNativeWriteQueue = groupInviteNativeWriteQueue
+    .catch(() => undefined)
+    .then(async () => {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("desktop_write_group_invite_store", {
+        contents,
+      });
+    })
+    .catch(() => undefined);
+}
+
+function writeGroupInviteDeliveryStoreToLocal(
+  store: GroupInviteDeliveryStore,
+  options?: {
+    syncNative?: boolean;
+  },
+) {
+  const storage = getStorage();
+  if (!storage) {
+    return store;
+  }
+
+  if (Object.keys(store.deliveryRecords).length) {
+    storage.setItem(
+      GROUP_INVITE_DELIVERY_STORAGE_KEY,
+      JSON.stringify(store.deliveryRecords),
+    );
+  } else {
+    storage.removeItem(GROUP_INVITE_DELIVERY_STORAGE_KEY);
+  }
+
+  if (Object.keys(store.deliveryTargets).length) {
+    storage.setItem(
+      GROUP_INVITE_DELIVERY_TARGETS_STORAGE_KEY,
+      JSON.stringify(store.deliveryTargets),
+    );
+  } else {
+    storage.removeItem(GROUP_INVITE_DELIVERY_TARGETS_STORAGE_KEY);
+  }
+
+  if (Object.keys(store.reopenRecords).length) {
+    storage.setItem(
+      GROUP_INVITE_REOPEN_STORAGE_KEY,
+      JSON.stringify(store.reopenRecords),
+    );
+  } else {
+    storage.removeItem(GROUP_INVITE_REOPEN_STORAGE_KEY);
+  }
+
+  if (options?.syncNative !== false) {
+    queueNativeGroupInviteDeliveryStoreWrite(store);
+  }
+
+  return store;
+}
+
+function readAllGroupInviteDeliveryRecords() {
+  return readLocalGroupInviteDeliveryStore().deliveryRecords;
+}
+
+function readAllGroupInviteDeliveryTargets() {
+  return readLocalGroupInviteDeliveryStore().deliveryTargets;
+}
+
+function readAllGroupInviteReopenRecords() {
+  return readLocalGroupInviteDeliveryStore().reopenRecords;
+}
+
+export async function hydrateGroupInviteDeliveryFromNative() {
+  const localStore = readLocalGroupInviteDeliveryStore();
+  if (!isDesktopRuntimeAvailable()) {
+    return;
+  }
+
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const result = await invoke<{
+      exists: boolean;
+      contents?: string | null;
+    }>("desktop_read_group_invite_store");
+
+    if (!result.exists) {
+      if (hasGroupInviteDeliveryStoreData(localStore)) {
+        queueNativeGroupInviteDeliveryStoreWrite(localStore);
+      }
+      return;
     }
 
-    return record;
+    const nativeStore = parseGroupInviteDeliveryStore(result.contents ?? null);
+    const shouldPreferLocal =
+      (!hasGroupInviteDeliveryStoreData(nativeStore) &&
+        hasGroupInviteDeliveryStoreData(localStore)) ||
+      getLatestGroupInviteDeliveryStoreTimestamp(localStore) >
+        getLatestGroupInviteDeliveryStoreTimestamp(nativeStore);
+
+    if (shouldPreferLocal) {
+      if (hasGroupInviteDeliveryStoreData(localStore)) {
+        queueNativeGroupInviteDeliveryStoreWrite(localStore);
+      }
+      return;
+    }
+
+    writeGroupInviteDeliveryStoreToLocal(nativeStore, {
+      syncNative: false,
+    });
   } catch {
-    return null as GroupInviteDeliveryRecord | null;
+    return;
   }
+}
+
+export function readGroupInviteDeliveryRecord(groupId: string) {
+  return readAllGroupInviteDeliveryRecords()[groupId] ?? null;
 }
 
 export function writeGroupInviteDeliveryRecord(
@@ -74,53 +391,33 @@ export function writeGroupInviteDeliveryRecord(
     batchStartedAt?: string;
   },
 ) {
-  if (typeof window === "undefined") {
-    return null as GroupInviteDeliveryRecord | null;
-  }
-
+  const deliveredAt = new Date().toISOString();
   const nextRecord: GroupInviteDeliveryRecord = {
     conversationId: input.conversationId,
     conversationPath: input.conversationPath,
     conversationTitle: input.conversationTitle,
-    deliveredAt: new Date().toISOString(),
+    deliveredAt,
     groupName: input.groupName?.trim() || undefined,
   };
 
-  const nextState = readAllGroupInviteDeliveryRecords();
-  nextState[groupId] = nextRecord;
-  window.localStorage.setItem(
-    GROUP_INVITE_DELIVERY_STORAGE_KEY,
-    JSON.stringify(nextState),
-  );
-  writeGroupInviteDeliveryTarget(groupId, {
-    conversationId: input.conversationId,
-    conversationPath: input.conversationPath,
-    conversationTitle: input.conversationTitle,
-    batchId: input.batchId,
-    batchStartedAt: input.batchStartedAt,
-  });
+  const nextStore = readLocalGroupInviteDeliveryStore();
+  nextStore.deliveryRecords[groupId] = nextRecord;
+  nextStore.deliveryTargets[groupId] = [
+    {
+      conversationId: input.conversationId,
+      conversationPath: input.conversationPath,
+      conversationTitle: input.conversationTitle,
+      deliveredAt,
+      batchId: input.batchId?.trim() || createGroupInviteDeliveryBatchId(),
+      batchStartedAt: input.batchStartedAt?.trim() || new Date().toISOString(),
+    },
+    ...(nextStore.deliveryTargets[groupId] ?? []).filter(
+      (record) => record.conversationPath !== input.conversationPath,
+    ),
+  ].slice(0, 6);
 
+  writeGroupInviteDeliveryStoreToLocal(nextStore);
   return nextRecord;
-}
-
-function readAllGroupInviteDeliveryRecords() {
-  if (typeof window === "undefined") {
-    return {} as Record<string, GroupInviteDeliveryRecord>;
-  }
-
-  const raw = window.localStorage.getItem(GROUP_INVITE_DELIVERY_STORAGE_KEY);
-  if (!raw) {
-    return {} as Record<string, GroupInviteDeliveryRecord>;
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as Record<string, GroupInviteDeliveryRecord>;
-    return parsed && typeof parsed === "object"
-      ? parsed
-      : ({} as Record<string, GroupInviteDeliveryRecord>);
-  } catch {
-    return {} as Record<string, GroupInviteDeliveryRecord>;
-  }
 }
 
 export function resolveGroupInviteRouteContext(
@@ -153,72 +450,11 @@ export function resolveGroupInviteRouteContext(
 }
 
 export function readGroupInviteDeliveryTargets(groupId: string) {
-  if (typeof window === "undefined") {
-    return [] as GroupInviteDeliveryTarget[];
-  }
-
-  const raw = window.localStorage.getItem(
-    GROUP_INVITE_DELIVERY_TARGETS_STORAGE_KEY,
-  );
-  if (!raw) {
-    return [] as GroupInviteDeliveryTarget[];
-  }
-
-  try {
-    const parsed = JSON.parse(
-      raw,
-    ) as Record<string, GroupInviteDeliveryTarget[]>;
-    const records = parsed[groupId];
-    if (!Array.isArray(records)) {
-      return [] as GroupInviteDeliveryTarget[];
-    }
-
-    return records.filter(
-      (record): record is GroupInviteDeliveryTarget =>
-        Boolean(
-          record &&
-            typeof record.conversationId === "string" &&
-            typeof record.conversationPath === "string" &&
-            typeof record.conversationTitle === "string" &&
-            typeof record.deliveredAt === "string" &&
-            typeof record.batchId === "string" &&
-            typeof record.batchStartedAt === "string",
-        ),
-    );
-  } catch {
-    return [] as GroupInviteDeliveryTarget[];
-  }
+  return readAllGroupInviteDeliveryTargets()[groupId] ?? [];
 }
 
 export function readGroupInviteReopenRecords(groupId: string) {
-  if (typeof window === "undefined") {
-    return [] as GroupInviteReopenRecord[];
-  }
-
-  const raw = window.localStorage.getItem(GROUP_INVITE_REOPEN_STORAGE_KEY);
-  if (!raw) {
-    return [] as GroupInviteReopenRecord[];
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as Record<string, GroupInviteReopenRecord[]>;
-    const records = parsed[groupId];
-    if (!Array.isArray(records)) {
-      return [] as GroupInviteReopenRecord[];
-    }
-
-    return records.filter(
-      (record): record is GroupInviteReopenRecord =>
-        Boolean(
-          record &&
-            typeof record.conversationPath === "string" &&
-            typeof record.conversationTitle === "string" &&
-            typeof record.reopenedAt === "string",
-        ),
-    );
-  } catch {
-    return [] as GroupInviteReopenRecord[];
-  }
+  return readAllGroupInviteReopenRecords()[groupId] ?? [];
 }
 
 export function writeGroupInviteReopenRecord(
@@ -228,119 +464,26 @@ export function writeGroupInviteReopenRecord(
     conversationTitle: string;
   },
 ) {
-  if (typeof window === "undefined") {
-    return [] as GroupInviteReopenRecord[];
-  }
-
-  const nextRecord: GroupInviteReopenRecord = {
-    conversationPath: input.conversationPath,
-    conversationTitle: input.conversationTitle,
-    reopenedAt: new Date().toISOString(),
-  };
-  const nextState = readAllGroupInviteReopenRecords();
-  const currentRecords = nextState[groupId] ?? [];
-
-  nextState[groupId] = [
-    nextRecord,
-    ...currentRecords.filter(
-      (record) => record.conversationPath !== nextRecord.conversationPath,
+  const nextStore = readLocalGroupInviteDeliveryStore();
+  nextStore.reopenRecords[groupId] = [
+    {
+      conversationPath: input.conversationPath,
+      conversationTitle: input.conversationTitle,
+      reopenedAt: new Date().toISOString(),
+    },
+    ...(nextStore.reopenRecords[groupId] ?? []).filter(
+      (record) => record.conversationPath !== input.conversationPath,
     ),
   ].slice(0, 5);
-  window.localStorage.setItem(
-    GROUP_INVITE_REOPEN_STORAGE_KEY,
-    JSON.stringify(nextState),
-  );
 
-  return nextState[groupId];
-}
-
-function writeGroupInviteDeliveryTarget(
-  groupId: string,
-  input: {
-    conversationId: string;
-    conversationPath: string;
-    conversationTitle: string;
-    batchId?: string;
-    batchStartedAt?: string;
-  },
-) {
-  if (typeof window === "undefined") {
-    return [] as GroupInviteDeliveryTarget[];
-  }
-
-  const nextRecord: GroupInviteDeliveryTarget = {
-    conversationId: input.conversationId,
-    conversationPath: input.conversationPath,
-    conversationTitle: input.conversationTitle,
-    deliveredAt: new Date().toISOString(),
-    batchId: input.batchId?.trim() || createGroupInviteDeliveryBatchId(),
-    batchStartedAt: input.batchStartedAt?.trim() || new Date().toISOString(),
-  };
-  const nextState = readAllGroupInviteDeliveryTargets();
-  const currentRecords = nextState[groupId] ?? [];
-
-  nextState[groupId] = [
-    nextRecord,
-    ...currentRecords.filter(
-      (record) => record.conversationPath !== nextRecord.conversationPath,
-    ),
-  ].slice(0, 6);
-  window.localStorage.setItem(
-    GROUP_INVITE_DELIVERY_TARGETS_STORAGE_KEY,
-    JSON.stringify(nextState),
-  );
-
-  return nextState[groupId];
+  writeGroupInviteDeliveryStoreToLocal(nextStore);
+  return nextStore.reopenRecords[groupId];
 }
 
 export function createGroupInviteDeliveryBatchId() {
   return `group-invite-batch-${Date.now().toString(36)}-${Math.random()
     .toString(36)
     .slice(2, 8)}`;
-}
-
-function readAllGroupInviteReopenRecords() {
-  if (typeof window === "undefined") {
-    return {} as Record<string, GroupInviteReopenRecord[]>;
-  }
-
-  const raw = window.localStorage.getItem(GROUP_INVITE_REOPEN_STORAGE_KEY);
-  if (!raw) {
-    return {} as Record<string, GroupInviteReopenRecord[]>;
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as Record<string, GroupInviteReopenRecord[]>;
-    return parsed && typeof parsed === "object"
-      ? parsed
-      : ({} as Record<string, GroupInviteReopenRecord[]>);
-  } catch {
-    return {} as Record<string, GroupInviteReopenRecord[]>;
-  }
-}
-
-function readAllGroupInviteDeliveryTargets() {
-  if (typeof window === "undefined") {
-    return {} as Record<string, GroupInviteDeliveryTarget[]>;
-  }
-
-  const raw = window.localStorage.getItem(
-    GROUP_INVITE_DELIVERY_TARGETS_STORAGE_KEY,
-  );
-  if (!raw) {
-    return {} as Record<string, GroupInviteDeliveryTarget[]>;
-  }
-
-  try {
-    const parsed = JSON.parse(
-      raw,
-    ) as Record<string, GroupInviteDeliveryTarget[]>;
-    return parsed && typeof parsed === "object"
-      ? parsed
-      : ({} as Record<string, GroupInviteDeliveryTarget[]>);
-  } catch {
-    return {} as Record<string, GroupInviteDeliveryTarget[]>;
-  }
 }
 
 function buildGroupInviteReturnPath(
