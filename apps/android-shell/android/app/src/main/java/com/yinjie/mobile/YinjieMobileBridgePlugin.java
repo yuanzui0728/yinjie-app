@@ -187,6 +187,50 @@ public class YinjieMobileBridgePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void openFile(PluginCall call) {
+        String base64Data = normalize(call.getString("base64Data"));
+        String fileName = normalize(call.getString("fileName"));
+        String mimeType = normalize(call.getString("mimeType"));
+        String title = normalize(call.getString("title"));
+
+        if (base64Data == null || fileName == null) {
+            call.reject("base64Data and fileName are required");
+            return;
+        }
+
+        File sharedFile;
+        try {
+            sharedFile = writeSharedFile(base64Data, fileName);
+        } catch (IOException | IllegalArgumentException exception) {
+            call.reject("failed to prepare preview file", exception);
+            return;
+        }
+
+        Uri fileUri = FileProvider.getUriForFile(
+            getContext(),
+            getContext().getPackageName() + ".fileprovider",
+            sharedFile
+        );
+
+        Intent viewIntent = new Intent(Intent.ACTION_VIEW);
+        viewIntent.setDataAndType(fileUri, resolveMimeType(fileName, mimeType));
+        viewIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        viewIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        viewIntent.setClipData(ClipData.newRawUri(fileName, fileUri));
+
+        Intent chooser = Intent.createChooser(viewIntent, title != null ? title : "Open");
+        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+        try {
+            getContext().startActivity(chooser);
+            call.resolve();
+        } catch (Exception exception) {
+            call.reject("failed to open file preview", exception);
+        }
+    }
+
+    @PluginMethod
     public void pickImages(PluginCall call) {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
