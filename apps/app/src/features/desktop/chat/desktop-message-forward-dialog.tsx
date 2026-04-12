@@ -208,7 +208,7 @@ export function DesktopMessageForwardDialog({
                 type="button"
                 onClick={onClose}
                 disabled={pending}
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] transition hover:border-[rgba(7,193,96,0.16)] hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                 aria-label="关闭"
               >
                 <X size={16} />
@@ -323,7 +323,7 @@ export function DesktopMessageForwardDialog({
                       "flex w-full items-center justify-between gap-3 text-left disabled:cursor-not-allowed disabled:opacity-60",
                       isMobile
                         ? `px-4 py-3 ${index > 0 ? "border-t border-black/5" : ""}`
-                        : "rounded-[14px] border border-[color:var(--border-faint)] bg-white px-4 py-3 transition hover:border-[rgba(7,193,96,0.16)] hover:bg-white hover:shadow-[var(--shadow-soft)]",
+                        : "rounded-[14px] border border-[color:var(--border-faint)] bg-white px-4 py-3 transition hover:bg-[color:var(--surface-console)] hover:shadow-[var(--shadow-soft)]",
                     )}
                   >
                     <div className="flex min-w-0 items-center gap-3">
@@ -350,7 +350,7 @@ export function DesktopMessageForwardDialog({
                       className={cn(
                         "shrink-0 text-xs",
                         isMobile
-                          ? "rounded-full bg-[rgba(7,193,96,0.12)] px-2.5 py-1 text-[#07c160]"
+                          ? "rounded-full bg-[rgba(7,193,96,0.07)] px-2.5 py-1 text-[color:var(--brand-primary)]"
                           : "rounded-[8px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-3 py-1 text-[color:var(--text-secondary)]",
                       )}
                     >
@@ -389,7 +389,7 @@ export function DesktopMessageForwardDialog({
                 variant="secondary"
                 onClick={onClose}
                 disabled={pending}
-                className="rounded-[10px] border-[color:var(--border-faint)] bg-white px-6 shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-[color:var(--surface-console)]"
+                className="rounded-[10px] border-[color:var(--border-faint)] bg-white px-6 shadow-none hover:bg-[color:var(--surface-console)]"
               >
                 取消
               </Button>
@@ -422,8 +422,8 @@ function ForwardModeButton({
       className={cn(
         "flex min-w-0 flex-1 flex-col items-start rounded-[14px] border px-3 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-60",
         active
-          ? "border-[rgba(7,193,96,0.16)] bg-[rgba(7,193,96,0.08)]"
-          : "border-[color:var(--border-faint)] bg-white hover:border-[rgba(7,193,96,0.16)] hover:bg-[color:var(--surface-console)]",
+          ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)]"
+          : "border-[color:var(--border-faint)] bg-white hover:bg-[color:var(--surface-console)]",
       )}
     >
       <span
@@ -499,7 +499,7 @@ function ForwardPreviewCard({
         className={cn(
           "shrink-0 rounded-full px-2.5 py-1 text-[11px]",
           mobile
-            ? "bg-[rgba(7,193,96,0.1)] text-[#07c160]"
+            ? "bg-[rgba(7,193,96,0.07)] text-[color:var(--brand-primary)]"
             : "rounded-[8px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] text-[color:var(--text-secondary)]",
         )}
       >
