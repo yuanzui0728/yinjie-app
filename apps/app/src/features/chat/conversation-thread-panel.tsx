@@ -369,15 +369,25 @@ export function ConversationThreadPanel({
           className={
             isDesktop
               ? "border-b border-[color:var(--border-faint)] bg-[rgba(249,251,250,0.92)] px-6 py-3"
-              : "border-b border-[color:var(--border-faint)] bg-[rgba(249,251,250,0.92)] px-3 py-2.5"
+              : "border-b border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] px-3 pb-2"
           }
         >
           <InlineNotice
             tone="info"
-            className="border-[color:var(--border-faint)] bg-white"
+            className={
+              isDesktop
+                ? "border-[color:var(--border-faint)] bg-white"
+                : "rounded-[14px] border-[rgba(7,193,96,0.14)] bg-[rgba(247,251,248,0.98)] px-3 py-2.5 text-[#166534] shadow-none"
+            }
           >
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <span className="min-w-0 flex-1 text-xs leading-6 text-[color:var(--text-secondary)]">
+              <span
+                className={`min-w-0 flex-1 ${
+                  isDesktop
+                    ? "text-xs leading-6 text-[color:var(--text-secondary)]"
+                    : "text-[11px] leading-[18px] text-[#166534]"
+                }`}
+              >
                 {routeContextNotice.description}
               </span>
               <div className="flex items-center justify-end gap-1.5">
@@ -387,7 +397,11 @@ export function ConversationThreadPanel({
                     variant="ghost"
                     size="sm"
                     onClick={routeContextNotice.onSecondaryAction}
-                    className="shrink-0 rounded-full"
+                    className={
+                      isDesktop
+                        ? "shrink-0 rounded-full"
+                        : "h-8 shrink-0 rounded-full px-3 text-[11px]"
+                    }
                   >
                     {routeContextNotice.secondaryActionLabel}
                   </Button>
@@ -396,7 +410,11 @@ export function ConversationThreadPanel({
                   variant="secondary"
                   size="sm"
                   onClick={routeContextNotice.onAction}
-                  className="shrink-0 rounded-full"
+                  className={
+                    isDesktop
+                      ? "shrink-0 rounded-full"
+                      : "h-8 shrink-0 rounded-full px-3 text-[11px]"
+                  }
                 >
                   {routeContextNotice.actionLabel}
                 </Button>
@@ -410,7 +428,7 @@ export function ConversationThreadPanel({
           className={
             isDesktop
               ? "border-b border-[color:var(--border-faint)] bg-[rgba(249,251,250,0.92)] px-6 py-3"
-              : "border-b border-[color:var(--border-faint)] bg-[rgba(249,251,250,0.92)] px-3 py-2.5"
+              : "border-b border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] px-3 pb-2"
           }
         >
           <DigitalHumanEntryNotice
@@ -429,18 +447,19 @@ export function ConversationThreadPanel({
               resetEntryGuard();
               startDirectCall("voice");
             }}
+            compact={!isDesktop}
           />
         </div>
       ) : null}
 
       <div
         className={`relative flex-1 overflow-hidden ${
-          isDesktop ? "bg-[#e9e9e9]" : ""
+          isDesktop ? "bg-[#e9e9e9]" : "bg-[color:var(--bg-canvas)]"
         }`}
       >
         <div
           className={`absolute inset-0 ${
-            isDesktop ? "bg-[#e9e9e9]" : "bg-[#ededed]"
+            isDesktop ? "bg-[#e9e9e9]" : "bg-[color:var(--bg-canvas)]"
           }`}
           style={buildChatBackgroundStyle(effectiveBackground)}
         />
@@ -448,7 +467,7 @@ export function ConversationThreadPanel({
           className={`absolute inset-0 ${
             isDesktop
               ? "bg-[rgba(245,245,245,0.64)]"
-              : "bg-[rgba(237,237,237,0.74)]"
+              : "bg-[rgba(239,243,244,0.74)]"
           }`}
         />
 
