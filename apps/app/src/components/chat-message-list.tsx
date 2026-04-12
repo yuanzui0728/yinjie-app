@@ -88,12 +88,12 @@ import {
   parseTimestamp,
 } from "../lib/format";
 import { emitChatMessage, joinConversationRoom } from "../lib/socket";
-import { openExternalUrl } from "../runtime/external-url";
 import {
   isNativeMobileBridgeAvailable,
   openAppSettings,
   requestNotificationPermission,
 } from "../runtime/mobile-bridge";
+import { openRemoteFile } from "../runtime/open-remote-file";
 import { saveRemoteFile } from "../runtime/save-remote-file";
 import { revealSavedFile } from "../runtime/reveal-saved-file";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
@@ -1073,10 +1073,15 @@ export function ChatMessageList({
     }
 
     if (attachment.kind === "file") {
-      void openExternalUrl(attachment.url).then((opened) => {
+      void openRemoteFile({
+        url: attachment.url,
+        fileName: attachment.fileName,
+        mimeType: attachment.mimeType,
+        dialogTitle: "打开文件",
+      }).then((result) => {
         setActionNotice({
-          message: opened ? "已打开文件。" : "文件打开失败，请稍后再试。",
-          tone: opened ? "success" : "danger",
+          message: result.message,
+          tone: result.opened ? "success" : "danger",
         });
       });
     }
