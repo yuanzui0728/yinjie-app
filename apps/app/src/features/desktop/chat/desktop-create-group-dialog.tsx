@@ -1119,6 +1119,12 @@ function getMessagePreviewText(message: Message) {
       : "[位置]";
   }
 
+  if (message.type === "note_card") {
+    return message.attachment?.kind === "note_card"
+      ? `[笔记] ${message.attachment.title}`
+      : "[笔记]";
+  }
+
   if (message.type === "sticker") {
     return message.attachment?.kind === "sticker"
       ? `[表情] ${message.attachment.label ?? message.attachment.stickerId}`
@@ -1159,6 +1165,10 @@ function formatMessageTypeLabel(message: Message) {
 
   if (message.type === "contact_card") {
     return "名片";
+  }
+
+  if (message.type === "note_card") {
+    return "笔记";
   }
 
   return "位置";

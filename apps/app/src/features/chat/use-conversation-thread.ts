@@ -581,6 +581,10 @@ function attachmentsEqual(
     return left.sceneId === right.sceneId && left.title === right.title;
   }
 
+  if (left.kind === "note_card" && right.kind === "note_card") {
+    return left.noteId === right.noteId && left.updatedAt === right.updatedAt;
+  }
+
   return false;
 }
 
@@ -623,7 +627,8 @@ function buildOptimisticMessage(
     payload.type === "file" ||
     payload.type === "voice" ||
     payload.type === "contact_card" ||
-    payload.type === "location_card"
+    payload.type === "location_card" ||
+    payload.type === "note_card"
   ) {
     return {
       id: `local_${createdAt}`,
@@ -638,11 +643,13 @@ function buildOptimisticMessage(
           ? `[名片] ${payload.attachment.name}`
           : payload.type === "location_card"
             ? `[位置] ${payload.attachment.title}`
-            : payload.type === "voice"
-              ? "[语音]"
-              : payload.type === "file"
-                ? `[文件] ${payload.attachment.fileName}`
-                : `[图片] ${payload.attachment.fileName}`),
+            : payload.type === "note_card"
+              ? `[笔记] ${payload.attachment.title}`
+              : payload.type === "voice"
+                ? "[语音]"
+                : payload.type === "file"
+                  ? `[文件] ${payload.attachment.fileName}`
+                  : `[图片] ${payload.attachment.fileName}`),
       attachment: payload.attachment,
       createdAt,
     };

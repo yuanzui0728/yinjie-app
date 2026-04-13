@@ -704,6 +704,10 @@ function describeReplyPreview(message: ChatRenderableMessage) {
     return "[位置]";
   }
 
+  if (message.type === "note_card") {
+    return "[笔记]";
+  }
+
   if (message.type === "sticker") {
     return "[表情]";
   }
