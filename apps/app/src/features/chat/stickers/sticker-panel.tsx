@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   deleteCustomSticker,
@@ -47,6 +47,7 @@ export function StickerPanel({
 }: StickerPanelProps) {
   const isMobile = variant === "mobile";
   const [keyword, setKeyword] = useState("");
+  const [customManageMode, setCustomManageMode] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
   const stickerCatalogQuery = useQuery({
@@ -197,11 +198,19 @@ export function StickerPanel({
   const activeTab = tabs.find((tab) => tab.id === activeSectionId) ?? tabs[0];
   const panelSubtitle = searching
     ? `搜索“${keyword.trim()}”`
-    : activeSectionId === "custom"
+    : activeSectionId === "custom" && customManageMode
+      ? `管理自定义表情 · 已保存 ${catalog.customStickerCount} / ${catalog.maxCustomStickerCount}`
+      : activeSectionId === "custom"
       ? `已保存 ${catalog.customStickerCount} / ${catalog.maxCustomStickerCount}，支持图片和 GIF`
       : activeSectionId === "recent"
         ? "最近发送和使用过的表情"
         : `${activeTab?.label ?? "表情"} · 桌面端连续发送`;
+
+  useEffect(() => {
+    if (activeSectionId !== "custom" || searching) {
+      setCustomManageMode(false);
+    }
+  }, [activeSectionId, searching]);
 
   return (
     <div
@@ -236,6 +245,19 @@ export function StickerPanel({
             ) : null}
           </div>
           <div className="flex items-center gap-2">
+            {!isMobile && activeSectionId === "custom" && !searching ? (
+              <button
+                type="button"
+                onClick={() => setCustomManageMode((current) => !current)}
+                className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                  customManageMode
+                    ? "bg-[rgba(15,23,42,0.08)] text-[color:var(--text-primary)]"
+                    : "text-[color:var(--text-secondary)] hover:bg-white/80"
+                }`}
+              >
+                {customManageMode ? "完成" : "管理"}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => uploadInputRef.current?.click()}
@@ -298,7 +320,9 @@ export function StickerPanel({
                   key={`${sticker.sourceType ?? "builtin"}:${sticker.packId ?? "custom"}:${sticker.stickerId}`}
                   compact={isMobile}
                   sticker={sticker}
-                  showDelete={Boolean(canDelete)}
+                  showDelete={Boolean(canDelete) && (!isMobile ? customManageMode : true)}
+                  deleteAlwaysVisible={!isMobile && customManageMode}
+                  selectionDisabled={!isMobile && customManageMode && Boolean(canDelete)}
                   deleting={
                     deleteMutation.isPending &&
                     deleteMutation.variables === sticker.stickerId
@@ -410,6 +434,8 @@ function StickerButton({
   sticker,
   deleting = false,
   showDelete = false,
+  deleteAlwaysVisible = false,
+  selectionDisabled = false,
   onDelete,
   onSelect,
 }: {
@@ -417,6 +443,8 @@ function StickerButton({
   sticker: StickerAttachment;
   deleting?: boolean;
   showDelete?: boolean;
+  deleteAlwaysVisible?: boolean;
+  selectionDisabled?: boolean;
   onDelete?: () => void;
   onSelect: (sticker: StickerAttachment) => void;
 }) {
@@ -437,7 +465,9 @@ function StickerButton({
               event.stopPropagation();
               onDelete();
             }}
-            className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[rgba(15,23,42,0.72)] text-white opacity-0 transition group-hover:opacity-100"
+            className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-[rgba(15,23,42,0.72)] text-white transition ${
+              deleteAlwaysVisible ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}
             aria-label="删除自定义表情"
             disabled={deleting}
           >
@@ -447,9 +477,16 @@ function StickerButton({
       ) : null}
       <button
         type="button"
-        onClick={() => onSelect(sticker)}
+        onClick={() => {
+          if (!selectionDisabled) {
+            onSelect(sticker);
+          }
+        }}
         title={sticker.label ?? sticker.stickerId}
-        className="flex w-full flex-col items-center gap-1"
+        className={`flex w-full flex-col items-center gap-1 ${
+          selectionDisabled ? "cursor-default" : ""
+        }`}
+        disabled={selectionDisabled}
       >
         <img
           src={sticker.url}
