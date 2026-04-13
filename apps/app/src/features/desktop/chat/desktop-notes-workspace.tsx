@@ -336,6 +336,42 @@ export function DesktopNotesWorkspace({
   }, [isDirty, noteTitle]);
 
   useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const withCommand = event.metaKey || event.ctrlKey;
+      if (withCommand && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        void handleSave();
+        return;
+      }
+
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (tagEditorOpen) {
+        event.preventDefault();
+        setTagEditorOpen(false);
+        setTagInput("");
+        return;
+      }
+
+      if (standaloneWindow && !deleteDialogOpen && !closeDialogOpen) {
+        event.preventDefault();
+        requestClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    closeDialogOpen,
+    deleteDialogOpen,
+    requestClose,
+    standaloneWindow,
+    tagEditorOpen,
+  ]);
+
+  useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (!isDirty) {
         return;
