@@ -292,7 +292,7 @@ export function DesktopChatHistoryPanel({
 
         <label
           className={cn(
-            "flex items-center gap-2 rounded-[10px] bg-[#f0f0f0] px-3 py-2.5",
+            "flex items-center gap-2 rounded-[10px] border border-[rgba(0,0,0,0.04)] bg-[#f4f4f4] px-3 py-2.5 transition-[border-color,background-color] focus-within:border-[rgba(7,193,96,0.2)] focus-within:bg-white",
             showHeaderActionsRow ? "mt-3" : "",
           )}
         >
@@ -326,26 +326,26 @@ export function DesktopChatHistoryPanel({
           ) : null}
         </label>
 
-        <div className="mt-2.5 flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-[color:var(--text-muted)]">
-          <span className="shrink-0 rounded-full bg-[#f3f3f3] px-2 py-1 text-[10px] text-[color:var(--text-secondary)]">
+        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5 rounded-[10px] bg-[#f6f6f6] px-3 py-2 text-[11px] text-[color:var(--text-muted)]">
+          <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] text-[color:var(--text-secondary)] shadow-[inset_0_0_0_1px_rgba(0,0,0,0.04)]">
             {isGroupConversation ? "群聊" : "单聊"}
           </span>
           <span className="truncate text-[12px] text-[color:var(--text-primary)]">
             {conversation.title}
           </span>
           {openedFromDetails ? (
-            <span className="shrink-0 rounded-full bg-[rgba(7,193,96,0.1)] px-2 py-1 text-[10px] font-medium text-[color:var(--brand-primary)]">
+            <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] text-[color:var(--brand-primary)] shadow-[inset_0_0_0_1px_rgba(7,193,96,0.14)]">
               聊天信息入口
             </span>
           ) : null}
         </div>
 
         {activeFilterLabels.length ? (
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
             {activeFilterLabels.map((label) => (
               <span
                 key={label}
-                className="rounded-full bg-[rgba(0,0,0,0.05)] px-2 py-1 text-[11px] text-[color:var(--text-secondary)]"
+                className="rounded-full border border-[rgba(0,0,0,0.05)] bg-white px-2 py-1 text-[10px] text-[color:var(--text-secondary)]"
               >
                 {label}
               </span>
