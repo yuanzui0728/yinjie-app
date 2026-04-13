@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode, type Ref } from "react";
 import { MoreHorizontal, Phone, Search, Video } from "lucide-react";
 import { cn } from "@yinjie/ui";
 
@@ -10,6 +10,7 @@ type DesktopChatHeaderActionsProps = {
   onToggleHistory?: () => void;
   onToggleDetails?: () => void;
   onSelectCall: (kind: DesktopChatCallKind) => void;
+  containerRef?: Ref<HTMLDivElement>;
 };
 
 export function DesktopChatHeaderActions({
@@ -17,6 +18,7 @@ export function DesktopChatHeaderActions({
   onToggleHistory,
   onToggleDetails,
   onSelectCall,
+  containerRef,
 }: DesktopChatHeaderActionsProps) {
   const [callMenuOpen, setCallMenuOpen] = useState(false);
   const callMenuRef = useRef<HTMLDivElement | null>(null);
@@ -39,7 +41,10 @@ export function DesktopChatHeaderActions({
   }, [callMenuOpen]);
 
   return (
-    <div className="flex items-center gap-1 rounded-[12px] bg-[rgba(247,247,247,0.92)] p-1">
+    <div
+      ref={containerRef}
+      className="flex items-center gap-1 rounded-[12px] bg-[rgba(247,247,247,0.92)] p-1"
+    >
       <DesktopChatHeaderButton
         active={historyActive}
         tone="brand"
@@ -153,7 +158,9 @@ function CallMenuButton({
       onClick={onClick}
       className="flex w-full items-center gap-3 rounded-[12px] px-2 py-2 text-left text-sm text-[color:var(--text-primary)] transition hover:bg-[color:var(--surface-console)]"
     >
-      <span className="shrink-0 text-[color:var(--text-secondary)]">{icon}</span>
+      <span className="shrink-0 text-[color:var(--text-secondary)]">
+        {icon}
+      </span>
       <span>{label}</span>
     </button>
   );
