@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <rect width="160" height="160" rx="36" fill="#FCA5A5"/>
+  <circle cx="80" cy="72" r="38" fill="#FFF1F2"/>
+  <circle cx="66" cy="66" r="5" fill="#991B1B"/>
+  <circle cx="94" cy="66" r="5" fill="#991B1B"/>
+  <path d="M62 92l9-6 6 6 6-6 9 6" stroke="#991B1B" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M75 34c-8-7-20-5-26 4-6 10-2 22 11 30l20 13 20-13c13-8 17-20 11-30-6-9-18-11-26-4l-5 6-5-6Z" fill="#DC2626"/>
+  <path d="M80 33v20l-7 7 7 13" stroke="#FFF5F5" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="80" y="136" font-size="22" text-anchor="middle" fill="#991B1B" font-family="Arial, sans-serif">破防</text>
+</svg>

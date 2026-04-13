@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <rect width="160" height="160" rx="36" fill="#FDBA74"/>
+  <circle cx="80" cy="68" r="34" fill="#FFF7ED"/>
+  <circle cx="67" cy="64" r="5" fill="#9A3412"/>
+  <circle cx="93" cy="64" r="5" fill="#9A3412"/>
+  <path d="M64 84c7 8 25 8 32 0" stroke="#9A3412" stroke-width="6" stroke-linecap="round"/>
+  <path d="M42 112c8-9 18-10 26-4-1 12-9 18-23 18-5-4-6-9-3-14Z" fill="#FED7AA"/>
+  <path d="M118 112c-8-9-18-10-26-4 1 12 9 18 23 18 5-4 6-9 3-14Z" fill="#FED7AA"/>
+  <text x="80" y="136" font-size="22" text-anchor="middle" fill="#9A3412" font-family="Arial, sans-serif">鼓掌</text>
+</svg>
