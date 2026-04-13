@@ -12,6 +12,10 @@ import {
   type ReplyLogicCharacterSnapshot,
   type ReplyLogicConstantSummary,
   type ReplyLogicConversationSnapshot,
+  type ReplyLogicGroupReplyRuntimeSummary,
+  type ReplyLogicGroupReplySelectionDisposition,
+  type ReplyLogicGroupReplyTaskStatus,
+  type ReplyLogicGroupReplyTurnSummary,
   type ReplyLogicHistoryItem,
   type ReplyLogicNarrativeArcSummary,
   type ReplyLogicOverview,
@@ -1609,6 +1613,13 @@ function ConversationInspectorPanel({
         <HistoryList className="mt-4" items={query.data.visibleMessages} />
       </Card>
 
+      {query.data.groupReplyRuntime ? (
+        <GroupReplyRuntimeCard
+          runtime={query.data.groupReplyRuntime}
+          visibleMessages={query.data.visibleMessages}
+        />
+      ) : null}
+
       <div className="space-y-6">
         {query.data.actors.map((actor) => (
           <ActorSnapshotCard
@@ -1624,6 +1635,187 @@ function ConversationInspectorPanel({
         narrativePresentation={narrativePresentation}
       />
     </>
+  );
+}
+
+function GroupReplyRuntimeCard({
+  runtime,
+  visibleMessages,
+}: {
+  runtime: ReplyLogicGroupReplyRuntimeSummary;
+  visibleMessages: ReplyLogicHistoryItem[];
+}) {
+  const visibleMessageMap = new Map(visibleMessages.map((item) => [item.id, item]));
+
+  return (
+    <Card className="bg-[color:var(--surface-console)]">
+      <SectionHeading>群聊回复任务</SectionHeading>
+      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <MetricCard label="待执行" value={runtime.pendingTaskCount} />
+        <MetricCard label="处理中" value={runtime.processingTaskCount} />
+        <MetricCard label="失败" value={runtime.failedTaskCount} />
+        <MetricCard label="最近轮次" value={runtime.recentTurns.length} />
+      </div>
+
+      <AdminNoteList
+        className="mt-4"
+        items={runtime.notes.map((note) => formatReplyLogicText(note))}
+      />
+
+      {!runtime.recentTurns.length ? (
+        <AdminEmptyState
+          className="mt-4"
+          title="暂时没有群聊回复任务"
+          description="先让群聊实际跑几轮，再回来查看 planner 决策和任务状态。"
+        />
+      ) : (
+        <div className="mt-4 space-y-4">
+          {runtime.recentTurns.map((turn) => {
+            const triggerMessage = visibleMessageMap.get(turn.triggerMessageId);
+            return (
+              <AdminSubpanel
+                key={turn.turnId}
+                title={`轮次 ${turn.turnId.slice(0, 8)}`}
+                contentClassName="mt-4"
+              >
+                <AdminRecordCard
+                  title={
+                    triggerMessage
+                      ? `触发消息 · ${triggerMessage.senderName}`
+                      : `触发消息 ${turn.triggerMessageId.slice(0, 8)}`
+                  }
+                  meta={`触发时间：${formatDateTime(turn.triggerMessageCreatedAt)} · 最近更新：${formatDateTime(turn.updatedAt)}`}
+                  description={triggerMessage?.text || "这条触发消息已不在当前可见窗口内。"}
+                  badges={
+                    <>
+                      <StatusPill tone="warning">最多 {turn.maxSpeakers} 人</StatusPill>
+                      {turn.explicitInterest ? (
+                        <StatusPill tone="healthy">有明确指向</StatusPill>
+                      ) : (
+                        <StatusPill tone="muted">无明确指向</StatusPill>
+                      )}
+                      {turn.hasMentionAll ? (
+                        <StatusPill tone="warning">@所有人</StatusPill>
+                      ) : null}
+                    </>
+                  }
+                  details={
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap gap-2">
+                        <StatusPill tone={toneForGroupReplyTaskStatus("pending")}>
+                          待执行 {turn.statusCounts.pending}
+                        </StatusPill>
+                        <StatusPill tone={toneForGroupReplyTaskStatus("processing")}>
+                          处理中 {turn.statusCounts.processing}
+                        </StatusPill>
+                        <StatusPill tone={toneForGroupReplyTaskStatus("sent")}>
+                          已发送 {turn.statusCounts.sent}
+                        </StatusPill>
+                        <StatusPill tone={toneForGroupReplyTaskStatus("cancelled")}>
+                          已取消 {turn.statusCounts.cancelled}
+                        </StatusPill>
+                        <StatusPill tone={toneForGroupReplyTaskStatus("failed")}>
+                          失败 {turn.statusCounts.failed}
+                        </StatusPill>
+                      </div>
+                      {turn.mentionTargets.length || turn.replyTargetCharacterId ? (
+                        <div className="text-xs leading-6 text-[color:var(--text-muted)]">
+                          {turn.mentionTargets.length
+                            ? `提及：${turn.mentionTargets.join("、")}`
+                            : "未显式提及角色"}
+                          {turn.replyTargetCharacterId
+                            ? ` · 回复目标：${turn.replyTargetCharacterId}`
+                            : ""}
+                        </div>
+                      ) : null}
+                    </div>
+                  }
+                  className="bg-white/90"
+                />
+
+                <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                  <AdminSubpanel title="候选决策">
+                    {!turn.candidates.length ? (
+                      <AdminEmptyState
+                        title="没有候选快照"
+                        description="该轮次是在老数据写入前产生的，所以只保留了任务结果。"
+                      />
+                    ) : (
+                      <div className="space-y-3">
+                        {turn.candidates.map((candidate) => (
+                          <AdminRecordCard
+                            key={`${turn.turnId}-${candidate.characterId}`}
+                            title={candidate.characterName}
+                            meta={formatGroupReplyCandidateMeta(candidate.recentSpeakerIndex)}
+                            badges={
+                              <>
+                                <StatusPill tone={toneForGroupReplyDisposition(candidate.selectionDisposition)}>
+                                  {formatGroupReplyDisposition(candidate.selectionDisposition)}
+                                </StatusPill>
+                                <StatusPill tone="muted">分数 {candidate.score.toFixed(1)}</StatusPill>
+                                {candidate.isReplyTarget ? (
+                                  <StatusPill tone="healthy">回复目标</StatusPill>
+                                ) : null}
+                                {candidate.isExplicitTarget ? (
+                                  <StatusPill tone="warning">被提及</StatusPill>
+                                ) : null}
+                                <StatusPill tone={candidate.randomPassed ? "healthy" : "muted"}>
+                                  {candidate.randomPassed ? "概率通过" : "概率未过"}
+                                </StatusPill>
+                              </>
+                            }
+                            description={describeGroupReplyDisposition(candidate.selectionDisposition)}
+                            className="bg-white/90"
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </AdminSubpanel>
+
+                  <AdminSubpanel title="任务执行">
+                    <div className="space-y-3">
+                      {turn.tasks.map((task) => (
+                        <AdminRecordCard
+                          key={task.id}
+                          title={`${task.sequenceIndex + 1}. ${task.actorName}`}
+                          meta={`计划执行：${formatDateTime(task.executeAfter)}`}
+                          badges={
+                            <>
+                              <StatusPill tone={toneForGroupReplyTaskStatus(task.status)}>
+                                {formatGroupReplyTaskStatus(task.status)}
+                              </StatusPill>
+                              <StatusPill tone={toneForGroupReplyDisposition(task.selectionDisposition)}>
+                                {formatGroupReplyDisposition(task.selectionDisposition)}
+                              </StatusPill>
+                            </>
+                          }
+                          description={describeGroupReplyTask(task)}
+                          details={
+                            <div className="space-y-2 text-xs leading-6 text-[color:var(--text-muted)]">
+                              <div>分数：{task.score.toFixed(1)}</div>
+                              <div>
+                                概率门：{task.randomPassed ? "通过" : "未通过"} · 被提及：
+                                {task.isExplicitTarget ? "是" : "否"} · 回复目标：
+                                {task.isReplyTarget ? "是" : "否"}
+                              </div>
+                              {task.errorMessage ? <div>错误：{task.errorMessage}</div> : null}
+                              {task.cancelReason ? (
+                                <div>取消原因：{formatGroupReplyCancelReason(task.cancelReason)}</div>
+                              ) : null}
+                            </div>
+                          }
+                          className="bg-white/90"
+                        />
+                      ))}
+                    </div>
+                  </AdminSubpanel>
+                </div>
+              </AdminSubpanel>
+            );
+          })}
+        </div>
+      )}
+    </Card>
   );
 }
 
@@ -3995,6 +4187,129 @@ function formatConversationSource(source: ReplyLogicOverview["conversations"][nu
   }
 
   return "单聊";
+}
+
+function formatGroupReplyTaskStatus(status: ReplyLogicGroupReplyTaskStatus) {
+  switch (status) {
+    case "pending":
+      return "待执行";
+    case "processing":
+      return "处理中";
+    case "sent":
+      return "已发送";
+    case "cancelled":
+      return "已取消";
+    case "failed":
+      return "失败";
+    default:
+      return status;
+  }
+}
+
+function toneForGroupReplyTaskStatus(status: ReplyLogicGroupReplyTaskStatus) {
+  switch (status) {
+    case "pending":
+      return "warning" as const;
+    case "processing":
+      return "warning" as const;
+    case "sent":
+      return "healthy" as const;
+    case "cancelled":
+      return "muted" as const;
+    case "failed":
+      return "warning" as const;
+    default:
+      return "muted" as const;
+  }
+}
+
+function formatGroupReplyDisposition(disposition: ReplyLogicGroupReplySelectionDisposition) {
+  switch (disposition) {
+    case "selected_targeted":
+      return "选中：明确指向";
+    case "selected_fallback":
+      return "选中：兜底最高分";
+    case "selected_followup":
+      return "选中：补充回复";
+    case "skipped_not_targeted":
+      return "跳过：未命中";
+    case "skipped_random_gate":
+      return "跳过：概率未过";
+    case "skipped_without_explicit_interest":
+      return "跳过：无扩散资格";
+    case "skipped_max_speakers":
+      return "跳过：人数已满";
+    default:
+      return disposition;
+  }
+}
+
+function toneForGroupReplyDisposition(disposition: ReplyLogicGroupReplySelectionDisposition) {
+  if (disposition.startsWith("selected_")) {
+    return "healthy" as const;
+  }
+  if (disposition === "skipped_max_speakers") {
+    return "warning" as const;
+  }
+  return "muted" as const;
+}
+
+function describeGroupReplyDisposition(disposition: ReplyLogicGroupReplySelectionDisposition) {
+  switch (disposition) {
+    case "selected_targeted":
+      return "被回复目标或显式提及时，planner 会优先把他放进本轮发言名单。";
+    case "selected_fallback":
+      return "这轮没有明显命中对象时，planner 会让分数最高的角色兜底接话。";
+    case "selected_followup":
+      return "主答之外的补充位，需要同时满足扩散条件和概率门控。";
+    case "skipped_not_targeted":
+      return "这一轮没有明确指向到该角色，也没有进入补充回复条件。";
+    case "skipped_random_gate":
+      return "该角色进入候选池了，但活动频率概率门没有通过。";
+    case "skipped_without_explicit_interest":
+      return "当前消息没有明确提及，也不是 @所有人，所以不会额外扩散到其他角色。";
+    case "skipped_max_speakers":
+      return "这一轮允许发言的人数已满，即使命中条件也不再继续排入。";
+    default:
+      return disposition;
+  }
+}
+
+function formatGroupReplyCandidateMeta(recentSpeakerIndex: number) {
+  if (recentSpeakerIndex < 0) {
+    return "最近发言惩罚：未触发";
+  }
+
+  return `最近发言惩罚：窗口内第 ${recentSpeakerIndex + 1} 位`;
+}
+
+function describeGroupReplyTask(
+  task: ReplyLogicGroupReplyTurnSummary["tasks"][number],
+) {
+  if (task.status === "sent") {
+    return `已发出，发送时间 ${formatDateTime(task.sentAt)}。`;
+  }
+  if (task.status === "processing") {
+    return `任务已开始执行，上次尝试时间 ${formatDateTime(task.lastAttemptAt)}。`;
+  }
+  if (task.status === "pending") {
+    return "任务仍在排队，等待到达计划执行时间。";
+  }
+  if (task.status === "cancelled") {
+    return `任务已取消，原因：${formatGroupReplyCancelReason(task.cancelReason)}。`;
+  }
+  return `任务失败${task.errorMessage ? `：${task.errorMessage}` : "。"} `;
+}
+
+function formatGroupReplyCancelReason(reason?: string | null) {
+  switch (reason) {
+    case "superseded_by_new_user_message":
+      return "同群出现了更新的用户消息";
+    case "actor_missing":
+      return "角色已不存在或画像不可用";
+    default:
+      return reason || "未记录";
+  }
 }
 
 function formatRelationship(value?: string | null) {
