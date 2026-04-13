@@ -248,7 +248,7 @@ export function CharacterFactoryPage() {
       ) : null}
 
       <InlineNotice tone="muted">
-        工厂页改的是角色配方。只有点击“发布到运行时”后，配方才会映射到当前 `Character` 实体并影响真实对话与生活逻辑。
+        工厂页改的是角色配方。只有点击"发布到运行时"后，配方才会映射到当前 `Character` 实体并影响真实对话与生活逻辑。
       </InlineNotice>
 
       <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
