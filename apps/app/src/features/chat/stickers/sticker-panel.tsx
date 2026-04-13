@@ -630,24 +630,38 @@ export function StickerPanel({
     !isMobile && activeSectionId === "custom" && customManageMode && !searching;
   const desktopCustomHeaderContext =
     !isMobile && activeSectionId === "custom" && trimmedKeyword.length === 0;
+  const customUploadResumed = Boolean(customDeleteFeedback?.slotsRemaining);
   const headerUsesManageShortcut =
     desktopCustomHeaderContext &&
     customStickerLibraryFull &&
     !customManageMode &&
     !uploadMutation.isPending;
+  const headerUsesResumeUploadShortcut =
+    desktopCustomHeaderContext &&
+    customManageMode &&
+    customUploadResumed &&
+    !uploadMutation.isPending;
   const headerUploadButtonLabel = isMobile
     ? "添加"
+    : headerUsesResumeUploadShortcut
+      ? "继续添加"
+      : headerUsesManageShortcut
+        ? "去管理"
+        : desktopCustomHeaderContext && catalog.customStickerCount === 0
+          ? "添加第一张"
+          : "添加表情";
+  const headerUploadButtonTone = headerUsesResumeUploadShortcut
+    ? "resume"
     : headerUsesManageShortcut
-      ? "去管理"
-      : desktopCustomHeaderContext && catalog.customStickerCount === 0
-        ? "添加第一张"
-        : "添加表情";
+      ? "manage"
+      : "default";
   const headerUploadButtonTitle = headerUsesManageShortcut
     ? "自定义表情已满，先去管理里删掉几张再继续添加。"
-    : customStickerLibraryFull
-      ? "自定义表情已满，请先删除几个再继续添加"
-      : undefined;
-  const customUploadResumed = Boolean(customDeleteFeedback?.slotsRemaining);
+    : headerUsesResumeUploadShortcut
+      ? "已经腾出空位，退出管理后可继续添加图片或 GIF。"
+      : customStickerLibraryFull
+        ? "自定义表情已满，请先删除几个再继续添加"
+        : undefined;
   const openCustomManageMode = () => {
     setCustomSortMode("added");
     setCustomDeleteFeedback(null);
@@ -1302,6 +1316,11 @@ export function StickerPanel({
             <button
               type="button"
               onClick={() => {
+                if (headerUsesResumeUploadShortcut) {
+                  exitManageModeAndOpenUpload();
+                  return;
+                }
+
                 if (headerUsesManageShortcut) {
                   openCustomManageMode();
                   return;
@@ -1317,11 +1336,17 @@ export function StickerPanel({
               className={
                 isMobile
                   ? "rounded-full bg-white px-2.5 py-1 text-[11px] text-[#3f4b5f] transition active:bg-[#f5f5f5] disabled:opacity-45"
-                  : "inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-subtle)] bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--text-primary)] transition hover:bg-[color:var(--surface-console)] disabled:opacity-45"
+                  : `inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition disabled:opacity-45 ${
+                      headerUploadButtonTone === "resume"
+                        ? "border-[rgba(160,90,10,0.18)] bg-[rgba(160,90,10,0.12)] text-[#9a5a0a] hover:bg-[rgba(160,90,10,0.18)]"
+                        : "border-[color:var(--border-subtle)] bg-white text-[color:var(--text-primary)] hover:bg-[color:var(--surface-console)]"
+                    }`
               }
             >
               {uploadMutation.isPending ? (
                 <Loader2 size={13} className="animate-spin" />
+              ) : headerUsesResumeUploadShortcut ? (
+                <Plus size={13} />
               ) : headerUsesManageShortcut ? (
                 <Trash2 size={13} />
               ) : (
