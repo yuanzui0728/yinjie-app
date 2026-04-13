@@ -1870,6 +1870,79 @@ function GroupReplyRuntimeCard({
         )}
       </AdminSubpanel>
 
+      <AdminSubpanel title="历史归档" contentClassName="mt-4">
+        {!runtime.archiveSummary ? (
+          <AdminEmptyState
+            title="还没有归档统计"
+            description="终态任务尚未进入清理窗口，或者这组数据还没有被归档。"
+          />
+        ) : (
+          <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <MetricCard label="已归档任务" value={runtime.archiveSummary.archivedTaskCount} />
+              <MetricCard label="已归档轮次" value={runtime.archiveSummary.archivedTurnCount} />
+              <MetricCard
+                label="历史失败率"
+                value={`${(runtime.archiveSummary.failureRate * 100).toFixed(1)}%`}
+              />
+              <MetricCard
+                label="最近归档"
+                value={formatDateTime(runtime.archiveSummary.lastArchivedAt)}
+              />
+            </div>
+
+            <AdminRecordCard
+              title="归档状态分布"
+              badges={
+                <>
+                  <StatusPill tone="healthy">
+                    已发送 {runtime.archiveSummary.statusCounts.sent}
+                  </StatusPill>
+                  <StatusPill tone="muted">
+                    已取消 {runtime.archiveSummary.statusCounts.cancelled}
+                  </StatusPill>
+                  <StatusPill tone="warning">
+                    失败 {runtime.archiveSummary.statusCounts.failed}
+                  </StatusPill>
+                </>
+              }
+              meta={`归档截止：${formatDateTime(runtime.archiveSummary.lastCutoff)}`}
+              description="这些统计来自已经被清理出任务表的历史终态任务，用来保留长期运行趋势。"
+              className="bg-white/90"
+            />
+
+            {!runtime.archiveSummary.issueSummary.length ? (
+              <AdminEmptyState
+                title="归档里没有异常热点"
+                description="已归档的历史任务里，当前没有形成显著的失败/取消原因聚合。"
+              />
+            ) : (
+              <div className="space-y-3">
+                {runtime.archiveSummary.issueSummary.map((issue) => (
+                  <AdminRecordCard
+                    key={`archived-${issue.key}`}
+                    title={issue.label}
+                    badges={
+                      <>
+                        <StatusPill tone={issue.status === "failed" ? "warning" : "muted"}>
+                          {issue.status === "failed" ? "失败" : "取消"}
+                        </StatusPill>
+                        <StatusPill tone="muted">
+                          {issue.source === "error_message" ? "归档错误" : "归档取消原因"}
+                        </StatusPill>
+                        <StatusPill tone="warning">{issue.count} 次</StatusPill>
+                      </>
+                    }
+                    description={describeArchivedGroupReplyIssue(issue)}
+                    className="bg-white/90"
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </AdminSubpanel>
+
       {!filteredTurns.length ? (
         <AdminEmptyState
           className="mt-4"
@@ -4517,6 +4590,14 @@ function describeGroupReplyIssue(issue: ReplyLogicGroupReplyIssueSummary) {
   }
 
   return `最近群聊任务里，这类执行错误共出现 ${issue.count} 次。优先看失败任务明细里的原始错误，再决定是重新入队还是修运行环境。`;
+}
+
+function describeArchivedGroupReplyIssue(issue: ReplyLogicGroupReplyIssueSummary) {
+  if (issue.source === "cancel_reason") {
+    return `这是已经归档的历史取消热点，累计出现 ${issue.count} 次，适合用来判断长期是否存在过度取消或轮次过时问题。`;
+  }
+
+  return `这是已经归档的历史失败热点，累计出现 ${issue.count} 次，适合用来判断某类 provider 或上下文错误是否反复出现。`;
 }
 
 function formatGroupReplyCandidateMeta(recentSpeakerIndex: number) {
