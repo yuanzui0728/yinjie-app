@@ -1,6 +1,10 @@
-import type { ReactNode } from "react";
-import { ArrowLeft } from "lucide-react";
-import { AppPage, Button, cn } from "@yinjie/ui";
+import { useState, type ReactNode } from "react";
+import { ArrowLeft, Copy, Share2 } from "lucide-react";
+import { AppPage, Button, InlineNotice, cn } from "@yinjie/ui";
+import {
+  isNativeMobileBridgeAvailable,
+  shareWithNativeShell,
+} from "../runtime/mobile-bridge";
 import { TabPageTopBar } from "./tab-page-top-bar";
 
 type MobileDiscoverToolShellProps = {
@@ -15,6 +19,8 @@ type MobileDiscoverToolShellProps = {
   children?: ReactNode;
   onBack: () => void;
   className?: string;
+  shareTitle?: string;
+  shareSummary?: string;
 };
 
 export function MobileDiscoverToolShell({
@@ -29,7 +35,80 @@ export function MobileDiscoverToolShell({
   children,
   onBack,
   className,
+  shareTitle,
+  shareSummary,
 }: MobileDiscoverToolShellProps) {
+  const nativeMobileShareSupported = isNativeMobileBridgeAvailable();
+  const [shareNotice, setShareNotice] = useState<{
+    tone: "success" | "info";
+    message: string;
+  } | null>(null);
+
+  async function handleShare() {
+    if (!shareTitle || !shareSummary) {
+      return;
+    }
+
+    const toolPath =
+      typeof window === "undefined"
+        ? ""
+        : `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const toolUrl =
+      typeof window === "undefined" || !toolPath
+        ? undefined
+        : `${window.location.origin}${toolPath}`;
+    const shareText = toolUrl
+      ? [shareTitle, shareSummary, toolUrl].join("\n\n")
+      : [shareTitle, shareSummary].join("\n\n");
+
+    if (nativeMobileShareSupported) {
+      const shared = await shareWithNativeShell({
+        title: shareTitle,
+        text: shareText,
+        url: toolUrl,
+      });
+
+      if (shared) {
+        setShareNotice({
+          tone: "success",
+          message: "已打开系统分享面板。",
+        });
+        return;
+      }
+    }
+
+    if (
+      typeof navigator === "undefined" ||
+      !navigator.clipboard ||
+      typeof navigator.clipboard.writeText !== "function"
+    ) {
+      setShareNotice({
+        tone: "info",
+        message: nativeMobileShareSupported
+          ? "当前设备暂时无法打开系统分享，请稍后重试。"
+          : "当前环境暂不支持复制工具摘要。",
+      });
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setShareNotice({
+        tone: "success",
+        message: nativeMobileShareSupported
+          ? "系统分享暂时不可用，已复制工具摘要。"
+          : "工具摘要已复制。",
+      });
+    } catch {
+      setShareNotice({
+        tone: "info",
+        message: nativeMobileShareSupported
+          ? "系统分享失败，请稍后重试。"
+          : "复制工具摘要失败，请稍后重试。",
+      });
+    }
+  }
+
   return (
     <AppPage className={cn("space-y-0 px-0 pb-0 pt-0", className)}>
       <TabPageTopBar
@@ -47,9 +126,26 @@ export function MobileDiscoverToolShell({
             <ArrowLeft size={18} />
           </Button>
         }
+        rightActions={
+          shareTitle && shareSummary ? (
+            <Button
+              type="button"
+              onClick={() => void handleShare()}
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full border-0 bg-transparent text-[color:var(--text-primary)] hover:bg-black/5"
+              aria-label={nativeMobileShareSupported ? "分享工具" : "复制工具摘要"}
+            >
+              {nativeMobileShareSupported ? <Share2 size={18} /> : <Copy size={18} />}
+            </Button>
+          ) : undefined
+        }
       />
 
       <div className="space-y-3 px-3 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3">
+        {shareNotice ? (
+          <InlineNotice tone={shareNotice.tone}>{shareNotice.message}</InlineNotice>
+        ) : null}
         <section className="relative overflow-hidden rounded-[20px] border border-[rgba(7,193,96,0.12)] bg-[linear-gradient(180deg,rgba(248,255,250,0.98),rgba(255,255,255,0.98))] px-4 py-5">
           <div className="pointer-events-none absolute right-0 top-0 h-24 w-24 rounded-full bg-[rgba(7,193,96,0.08)] blur-3xl" />
           <div className="relative flex items-start gap-4">

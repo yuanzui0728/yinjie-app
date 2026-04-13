@@ -81,6 +81,8 @@ function MobileDiscoverEncounterPage() {
     <MobileDiscoverToolShell
       title="摇一摇"
       subtitle="随机遇见新的世界居民"
+      shareTitle="摇一摇"
+      shareSummary="随机遇见新的世界居民，点一下就会尝试安排一次新的相遇，并自动写入好友申请。"
       heroTitle="随机相遇"
       heroDescription="每次摇一摇都会尝试为你安排一次新的相遇，并自动写入一条好友申请。"
       heroVisual={<Compass size={28} />}

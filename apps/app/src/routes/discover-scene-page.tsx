@@ -109,6 +109,8 @@ function MobileDiscoverScenePage() {
     <MobileDiscoverToolShell
       title="场景相遇"
       subtitle="换一个地点，换一种相遇方式"
+      shareTitle="场景相遇"
+      shareSummary="选择一个地点，触发不同角色的靠近方式，并把结果直接写进新的好友申请。"
       heroTitle="选择一个地点"
       heroDescription="不同地点会触发不同角色的靠近方式，并把结果写进新的好友申请。"
       heroVisual={<MapPin size={28} />}
