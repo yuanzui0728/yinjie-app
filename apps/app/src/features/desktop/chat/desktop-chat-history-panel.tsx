@@ -515,7 +515,7 @@ export function DesktopChatHistoryPanel({
           onBack={() => setSelectorView(null)}
         >
           <div className="px-3 pb-4 pt-3">
-            <label className="flex items-center gap-2 rounded-[10px] bg-[#f0f0f0] px-3 py-2.5">
+            <label className="flex items-center gap-2 rounded-[10px] border border-[rgba(0,0,0,0.04)] bg-[#f4f4f4] px-3 py-2.5 transition-[border-color,background-color] focus-within:border-[rgba(7,193,96,0.2)] focus-within:bg-white">
               <Search
                 size={14}
                 className="shrink-0 text-[color:var(--text-muted)]"
@@ -835,19 +835,19 @@ function DesktopSearchPickerView({
 }) {
   return (
     <div className="min-h-0 flex-1 overflow-auto bg-[#f7f7f7]">
-      <div className="sticky top-0 z-[1] grid grid-cols-[auto,1fr,auto] items-center gap-2 border-b border-[rgba(0,0,0,0.06)] bg-white px-4 py-3">
+      <div className="sticky top-0 z-[1] grid grid-cols-[28px,1fr,28px] items-center gap-2 border-b border-[rgba(0,0,0,0.06)] bg-white px-4 py-3">
         <button
           type="button"
           onClick={onBack}
-          className="inline-flex items-center gap-1 text-[13px] text-[color:var(--text-secondary)] transition hover:text-[color:var(--text-primary)]"
+          className="flex h-7 w-7 items-center justify-center rounded-[8px] text-[color:var(--text-secondary)] transition hover:bg-[rgba(0,0,0,0.045)] hover:text-[color:var(--text-primary)]"
+          aria-label="返回上一层"
         >
           <ChevronLeft size={15} />
-          返回
         </button>
-        <div className="text-center text-[13px] font-medium text-[color:var(--text-primary)]">
+        <div className="text-center text-[14px] font-medium text-[color:var(--text-primary)]">
           {title}
         </div>
-        <div aria-hidden="true" className="h-5 w-12" />
+        <div aria-hidden="true" className="h-7 w-7" />
       </div>
       {children}
     </div>
