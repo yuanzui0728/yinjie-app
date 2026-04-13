@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -198,11 +199,20 @@ export function DesktopChatWorkspace({
     seedMemberIds: string[];
   } | null>(null);
   const quickMenuRef = useRef<HTMLDivElement | null>(null);
+  const sidePanelRef = useRef<HTMLElement | null>(null);
+  const desktopHeaderActionsRef = useRef<HTMLDivElement | null>(null);
   const desktopSearchLauncher = useDesktopSearchLauncher({
     keyword: searchTerm,
     onKeywordChange: setSearchTerm,
     source: "chat",
   });
+
+  const closeRightPanel = useCallback(() => {
+    setRightPanelMode(null);
+    setHistoryPanelCanReturnToDetails(false);
+    setDetailsAnnouncementRequest(null);
+    setDetailsMemberSearchRequest(null);
+  }, []);
 
   const conversationsQuery = useQuery({
     queryKey: ["app-conversations", baseUrl],
@@ -493,6 +503,29 @@ export function DesktopChatWorkspace({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isQuickMenuOpen]);
+
+  useEffect(() => {
+    if (!rightPanelMode) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node;
+
+      if (sidePanelRef.current?.contains(target)) {
+        return;
+      }
+
+      if (desktopHeaderActionsRef.current?.contains(target)) {
+        return;
+      }
+
+      closeRightPanel();
+    };
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    return () => window.removeEventListener("pointerdown", handlePointerDown);
+  }, [closeRightPanel, rightPanelMode]);
 
   useEffect(() => {
     const hasActiveThread = Boolean(activeConversation);
@@ -1226,6 +1259,7 @@ export function DesktopChatWorkspace({
               groupId={activeConversation.id}
               variant="desktop"
               desktopSidePanelMode={rightPanelMode}
+              desktopHeaderActionsRef={desktopHeaderActionsRef}
               onToggleDesktopHistory={() => handleToggleSidePanel("history")}
               onToggleDesktopDetails={() => handleToggleSidePanel("details")}
               onOpenDesktopAnnouncementDetails={
@@ -1250,6 +1284,7 @@ export function DesktopChatWorkspace({
               conversationId={activeConversation.id}
               variant="desktop"
               desktopSidePanelMode={rightPanelMode}
+              desktopHeaderActionsRef={desktopHeaderActionsRef}
               onToggleDesktopHistory={() => handleToggleSidePanel("history")}
               onToggleDesktopDetails={() => handleToggleSidePanel("details")}
               onDesktopCallAction={handleDesktopCallAction}
@@ -1288,6 +1323,7 @@ export function DesktopChatWorkspace({
 
       {activeConversation && rightPanelMode ? (
         <DesktopChatSidePanel
+          panelRef={sidePanelRef}
           mode={rightPanelMode}
           title={
             rightPanelMode === "history"
@@ -1308,10 +1344,7 @@ export function DesktopChatWorkspace({
               : undefined
           }
           onClose={() => {
-            setRightPanelMode(null);
-            setHistoryPanelCanReturnToDetails(false);
-            setDetailsAnnouncementRequest(null);
-            setDetailsMemberSearchRequest(null);
+            closeRightPanel();
           }}
         >
           {rightPanelMode === "history" ? (
@@ -1319,8 +1352,7 @@ export function DesktopChatWorkspace({
               conversation={activeConversation}
               focusRequestKey={historyPanelFocusKey}
               onClose={() => {
-                setRightPanelMode(null);
-                setHistoryPanelCanReturnToDetails(false);
+                closeRightPanel();
               }}
               onBackToDetails={
                 historyPanelCanReturnToDetails

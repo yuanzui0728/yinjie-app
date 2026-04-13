@@ -1,4 +1,11 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Phone, Users, Video } from "lucide-react";
 import { type StickerAttachment } from "@yinjie/contracts";
@@ -40,6 +47,7 @@ type ConversationThreadPanelProps = {
   variant?: "mobile" | "desktop";
   onBack?: () => void;
   desktopSidePanelMode?: DesktopChatSidePanelMode;
+  desktopHeaderActionsRef?: Ref<HTMLDivElement>;
   onToggleDesktopHistory?: () => void;
   onToggleDesktopDetails?: () => void;
   onDesktopCallAction?: (kind: DesktopChatCallKind) => void;
@@ -63,6 +71,7 @@ export function ConversationThreadPanel({
   variant = "mobile",
   onBack,
   desktopSidePanelMode = null,
+  desktopHeaderActionsRef,
   onToggleDesktopHistory,
   onToggleDesktopDetails,
   onDesktopCallAction,
@@ -337,6 +346,7 @@ export function ConversationThreadPanel({
           <div className="hidden items-center xl:flex">
             <DesktopChatHeaderActions
               activePanelMode={desktopSidePanelMode}
+              containerRef={desktopHeaderActionsRef}
               onToggleHistory={() => onToggleDesktopHistory?.()}
               onToggleDetails={() => onToggleDesktopDetails?.()}
               onSelectCall={handleDesktopCallAction}

@@ -1,4 +1,12 @@
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Phone, Video } from "lucide-react";
@@ -58,6 +66,7 @@ type GroupChatThreadPanelProps = {
   variant?: "mobile" | "desktop";
   onBack?: () => void;
   desktopSidePanelMode?: DesktopChatSidePanelMode;
+  desktopHeaderActionsRef?: Ref<HTMLDivElement>;
   onToggleDesktopHistory?: () => void;
   onToggleDesktopDetails?: () => void;
   onOpenDesktopAnnouncementDetails?: () => void;
@@ -74,6 +83,7 @@ export function GroupChatThreadPanel({
   variant = "mobile",
   onBack,
   desktopSidePanelMode = null,
+  desktopHeaderActionsRef,
   onToggleDesktopHistory,
   onToggleDesktopDetails,
   onOpenDesktopAnnouncementDetails,
@@ -721,6 +731,7 @@ export function GroupChatThreadPanel({
           <div className="hidden items-center xl:flex">
             <DesktopChatHeaderActions
               activePanelMode={desktopSidePanelMode}
+              containerRef={desktopHeaderActionsRef}
               onToggleHistory={() => onToggleDesktopHistory?.()}
               onToggleDetails={() => onToggleDesktopDetails?.()}
               onSelectCall={handleDesktopCallAction}
@@ -996,7 +1007,10 @@ export function GroupChatThreadPanel({
           >
             {groupQuery.isError && groupQuery.error instanceof Error ? (
               isDesktop ? (
-                <ErrorBlock className="mb-3" message={groupQuery.error.message} />
+                <ErrorBlock
+                  className="mb-3"
+                  message={groupQuery.error.message}
+                />
               ) : (
                 <MobileGroupThreadStatusCard
                   badge="群聊"

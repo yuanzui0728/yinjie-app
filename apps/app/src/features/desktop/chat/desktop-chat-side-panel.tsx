@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 import { ChevronLeft, X } from "lucide-react";
 import { cn } from "@yinjie/ui";
 import type { DesktopChatSidePanelMode } from "./desktop-chat-header-actions";
@@ -11,6 +11,7 @@ type DesktopChatSidePanelProps = {
   onClose: () => void;
   children: ReactNode;
   className?: string;
+  panelRef?: Ref<HTMLElement>;
 };
 
 export function DesktopChatSidePanel({
@@ -21,16 +22,16 @@ export function DesktopChatSidePanel({
   onClose,
   children,
   className,
+  panelRef,
 }: DesktopChatSidePanelProps) {
   const historyMode = mode === "history";
 
   return (
     <aside
+      ref={panelRef}
       className={cn(
         "absolute bottom-0 right-0 top-[64px] z-20 hidden w-[352px] border-l border-[rgba(0,0,0,0.06)] transition-[background-color] duration-150 xl:flex xl:flex-col",
-        historyMode
-          ? "bg-[#f7f7f7]"
-          : "bg-[#f5f5f5]",
+        historyMode ? "bg-[#f7f7f7]" : "bg-[#f5f5f5]",
         className,
       )}
       data-mode={mode}
