@@ -554,6 +554,10 @@ export function StickerPanel({
     catalog.customStickerCount > 1;
   const showSearchKeyboardHint =
     !isMobile && searching && !searchPending && activeItems.length > 0;
+  const firstSearchResultKey =
+    !isMobile && searching && !searchPending
+      ? (activeStickerKeys[0] ?? null)
+      : null;
   const showCustomManageHint =
     !isMobile &&
     activeSectionId === "custom" &&
@@ -978,6 +982,7 @@ export function StickerPanel({
             previewFlashing={
               !isMobile && searching && searchPreviewFlashKey === stickerKey
             }
+            searchRecommended={firstSearchResultKey === stickerKey}
             deleteButtonRef={(node) => {
               if (node) {
                 manageDeleteButtonRefs.current.set(stickerKey, node);
@@ -1232,6 +1237,11 @@ export function StickerPanel({
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    {highlightedSearchPosition === 1 ? (
+                      <span className="rounded-full bg-[rgba(160,90,10,0.14)] px-2 py-1 text-[10px] font-medium text-[#9a5a0a] shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+                        默认推荐
+                      </span>
+                    ) : null}
                     {highlightedSearchPosition ? (
                       <span className="rounded-full bg-white/88 px-2 py-1 text-[10px] text-[color:var(--text-secondary)] shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
                         {highlightedSearchPosition}/{activeItems.length}
@@ -1681,6 +1691,7 @@ function StickerButton({
   deleteFocused = false,
   deleteFocusFlashing = false,
   previewFlashing = false,
+  searchRecommended = false,
   showDelete = false,
   deleteAlwaysVisible = false,
   selectionDisabled = false,
@@ -1700,6 +1711,7 @@ function StickerButton({
   deleteFocused?: boolean;
   deleteFocusFlashing?: boolean;
   previewFlashing?: boolean;
+  searchRecommended?: boolean;
   showDelete?: boolean;
   deleteAlwaysVisible?: boolean;
   selectionDisabled?: boolean;
@@ -1744,6 +1756,11 @@ function StickerButton({
             }`
       }
     >
+      {searchRecommended && !compact ? (
+        <span className="absolute left-1.5 top-1.5 z-10 rounded-full bg-[rgba(160,90,10,0.14)] px-2 py-0.5 text-[10px] font-medium text-[#9a5a0a] shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+          首推
+        </span>
+      ) : null}
       {showDelete && onDelete ? (
         <span className="absolute right-1 top-1 z-10">
           <button
