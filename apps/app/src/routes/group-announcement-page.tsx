@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { Copy, Share2 } from "lucide-react";
 import { getGroup, updateGroup } from "@yinjie/contracts";
-import { Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
-import { EmptyState } from "../components/empty-state";
+import { Button, InlineNotice, cn } from "@yinjie/ui";
 import { ChatDetailsShell } from "../features/chat-details/chat-details-shell";
 import { ChatDetailsSection } from "../features/chat-details/chat-details-section";
 import { isMissingGroupError } from "../lib/group-route-fallback";
@@ -166,28 +165,77 @@ export function GroupAnnouncementPage() {
         ) : undefined
       }
     >
-      {groupQuery.isLoading ? <LoadingBlock label="正在读取群公告..." /> : null}
+      {groupQuery.isLoading ? (
+        <div className="px-4">
+          <MobileAnnouncementStatusCard
+            badge="读取中"
+            title="正在读取群公告"
+            description="稍等一下，正在同步当前群聊的公告内容。"
+            tone="loading"
+          />
+        </div>
+      ) : null}
       {groupQuery.isError && groupQuery.error instanceof Error ? (
         <div className="px-4">
-          <ErrorBlock message={groupQuery.error.message} />
+          <MobileAnnouncementStatusCard
+            badge="群聊"
+            title="群公告暂时不可用"
+            description={groupQuery.error.message}
+            tone="danger"
+            action={
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  void groupQuery.refetch();
+                }}
+                className="rounded-full"
+              >
+                重新加载
+              </Button>
+            }
+          />
         </div>
       ) : null}
       {notice ? (
         <div className="px-4">
-          <InlineNotice tone={notice.tone}>{notice.message}</InlineNotice>
+          <InlineNotice
+            tone={notice.tone}
+            className="rounded-[14px] px-3 py-2 text-[11px] leading-[1.45] shadow-none"
+          >
+            {notice.message}
+          </InlineNotice>
         </div>
       ) : null}
       {saveMutation.isError && saveMutation.error instanceof Error ? (
         <div className="px-4">
-          <ErrorBlock message={saveMutation.error.message} />
+          <InlineNotice
+            tone="danger"
+            className="rounded-[14px] border border-[color:var(--border-danger)] bg-[linear-gradient(180deg,rgba(255,245,245,0.96),rgba(254,242,242,0.94))] px-3 py-2 text-[11px] leading-[1.45] shadow-none"
+          >
+            {saveMutation.error.message}
+          </InlineNotice>
         </div>
       ) : null}
 
       {!groupQuery.isLoading && !groupQuery.data ? (
         <div className="px-4">
-          <EmptyState
+          <MobileAnnouncementStatusCard
+            badge="群聊"
             title="群聊不存在"
             description="这个群聊暂时不可用，返回上一页再试一次。"
+            action={
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  void navigate({ to: "/tabs/chat" });
+                }}
+                className="rounded-full"
+              >
+                返回消息列表
+              </Button>
+            }
           />
         </div>
       ) : null}
@@ -228,5 +276,55 @@ export function GroupAnnouncementPage() {
         </>
       ) : null}
     </ChatDetailsShell>
+  );
+}
+
+function MobileAnnouncementStatusCard({
+  badge,
+  title,
+  description,
+  action,
+  tone = "default",
+}: {
+  badge: string;
+  title: string;
+  description: string;
+  action?: ReactNode;
+  tone?: "default" | "danger" | "loading";
+}) {
+  return (
+    <section
+      className={cn(
+        "rounded-[16px] border px-3.5 py-4 text-center shadow-none",
+        tone === "danger"
+          ? "border-[color:var(--border-danger)] bg-[linear-gradient(180deg,rgba(255,245,245,0.96),rgba(254,242,242,0.94))]"
+          : "border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)]",
+      )}
+    >
+      <div
+        className={cn(
+          "mx-auto inline-flex rounded-full px-2 py-0.5 text-[8px] font-medium tracking-[0.04em]",
+          tone === "danger"
+            ? "bg-[rgba(220,38,38,0.08)] text-[color:var(--state-danger-text)]"
+            : "bg-[rgba(7,193,96,0.1)] text-[#07c160]",
+        )}
+      >
+        {badge}
+      </div>
+      {tone === "loading" ? (
+        <div className="mt-2.5 flex items-center justify-center gap-1.5">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-black/15" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-black/25 [animation-delay:120ms]" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-[#8ecf9d] [animation-delay:240ms]" />
+        </div>
+      ) : null}
+      <div className="mt-2.5 text-[14px] font-medium text-[color:var(--text-primary)]">
+        {title}
+      </div>
+      <p className="mx-auto mt-1.5 max-w-[17rem] text-[11px] leading-[1.35rem] text-[color:var(--text-secondary)]">
+        {description}
+      </p>
+      {action ? <div className="mt-3 flex justify-center">{action}</div> : null}
+    </section>
   );
 }
