@@ -688,6 +688,10 @@ export function StickerPanel({
     setSearchKeyword("");
     onPackChange("featured");
   };
+  const switchCustomSortToAdded = () => {
+    setCustomSortMode("added");
+    setCustomManageMode(false);
+  };
 
   useEffect(() => {
     if (activeSectionId !== "custom" || trimmedKeyword.length > 0) {
@@ -1630,7 +1634,7 @@ export function StickerPanel({
                         customSortMode !== "added" ? (
                           <button
                             type="button"
-                            onClick={() => setCustomSortMode("added")}
+                            onClick={switchCustomSortToAdded}
                             className="rounded-full bg-white/88 px-3 py-1.5 text-xs font-medium text-[color:var(--text-secondary)] transition hover:bg-white"
                           >
                             看最近添加
@@ -1742,14 +1746,30 @@ export function StickerPanel({
               }
             >
               <span>{customCapacityNotice}</span>
-              {!isMobile && customStickerLibraryFull && !customManageMode ? (
-                <button
-                  type="button"
-                  onClick={openCustomManageMode}
-                  className="shrink-0 rounded-full bg-white px-3 py-1 text-[11px] font-medium text-[#92400e] shadow-[0_1px_3px_rgba(15,23,42,0.06)]"
-                >
-                  去管理
-                </button>
+              {!isMobile && !customManageMode ? (
+                <div className="flex shrink-0 items-center gap-2">
+                  {!customStickerLibraryFull &&
+                  customSlotsRemaining <= 20 &&
+                  catalog.customStickerCount > 1 &&
+                  customSortMode !== "added" ? (
+                    <button
+                      type="button"
+                      onClick={switchCustomSortToAdded}
+                      className="rounded-full bg-white/88 px-3 py-1 text-[11px] font-medium text-[color:var(--text-secondary)] shadow-[0_1px_3px_rgba(15,23,42,0.06)]"
+                    >
+                      看最近添加
+                    </button>
+                  ) : null}
+                  {customStickerLibraryFull || customSlotsRemaining <= 20 ? (
+                    <button
+                      type="button"
+                      onClick={openCustomManageMode}
+                      className="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-[#92400e] shadow-[0_1px_3px_rgba(15,23,42,0.06)]"
+                    >
+                      {customStickerLibraryFull ? "去管理" : "去清理"}
+                    </button>
+                  ) : null}
+                </div>
               ) : null}
             </div>
           ) : null}
