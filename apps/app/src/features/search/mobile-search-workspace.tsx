@@ -13,8 +13,7 @@ import {
   Sparkles,
   UsersRound,
 } from "lucide-react";
-import { ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
-import { EmptyState } from "../../components/empty-state";
+import { InlineNotice, cn } from "@yinjie/ui";
 import { SearchResultCard } from "./search-result-card";
 import {
   searchCategoryLabels,
@@ -172,8 +171,22 @@ export function MobileSearchWorkspace({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-6 pt-3">
-        {loading ? <LoadingBlock label="正在准备搜一搜..." /> : null}
-        {error ? <ErrorBlock message={error} /> : null}
+        {loading ? (
+          <MobileSearchStatusCard
+            badge="读取中"
+            title="正在准备搜一搜"
+            description="稍等一下，正在整理最近记录和可搜索范围。"
+            tone="loading"
+          />
+        ) : null}
+        {error ? (
+          <MobileSearchStatusCard
+            badge="读取失败"
+            title="搜一搜暂时不可用"
+            description={error}
+            tone="danger"
+          />
+        ) : null}
 
         {!loading && !error && !hasKeyword ? (
           <div className="space-y-4">
@@ -287,14 +300,18 @@ export function MobileSearchWorkspace({
         ) : null}
 
         {!loading && !error && hasKeyword && searchingMessages ? (
-          <InlineNotice tone="info">
+          <InlineNotice
+            className="rounded-[11px] px-2.5 py-1.5 text-[11px] leading-[1.35rem] shadow-none"
+            tone="info"
+          >
             正在补全全局聊天记录索引，消息结果会继续增加。
           </InlineNotice>
         ) : null}
 
         {!loading && !error && hasKeyword && !visibleResults.length ? (
-          <div className="pt-8">
-            <EmptyState
+          <div className="pt-3">
+            <MobileSearchStatusCard
+              badge="无结果"
               title="没有找到相关内容"
               description="换个关键词，或者切到别的分类试试。"
             />
@@ -368,6 +385,53 @@ export function MobileSearchWorkspace({
         ) : null}
       </div>
     </div>
+  );
+}
+
+function MobileSearchStatusCard({
+  badge,
+  title,
+  description,
+  tone = "default",
+}: {
+  badge: string;
+  title: string;
+  description: string;
+  tone?: "default" | "danger" | "loading";
+}) {
+  return (
+    <section
+      className={cn(
+        "rounded-[16px] border px-3.5 py-4 text-center shadow-none",
+        tone === "danger"
+          ? "border-[color:var(--border-danger)] bg-[linear-gradient(180deg,rgba(255,245,245,0.96),rgba(254,242,242,0.94))]"
+          : "border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)]",
+      )}
+    >
+      <div
+        className={cn(
+          "mx-auto inline-flex rounded-full px-2 py-0.5 text-[8px] font-medium tracking-[0.04em]",
+          tone === "danger"
+            ? "bg-[rgba(220,38,38,0.08)] text-[color:var(--state-danger-text)]"
+            : "bg-[rgba(7,193,96,0.1)] text-[#07c160]",
+        )}
+      >
+        {badge}
+      </div>
+      {tone === "loading" ? (
+        <div className="mt-2.5 flex items-center justify-center gap-1.5">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-black/15" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-black/25 [animation-delay:120ms]" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-[#8ecf9d] [animation-delay:240ms]" />
+        </div>
+      ) : null}
+      <div className="mt-2.5 text-[14px] font-medium text-[color:var(--text-primary)]">
+        {title}
+      </div>
+      <p className="mx-auto mt-1.5 max-w-[17rem] text-[11px] leading-[1.35rem] text-[color:var(--text-secondary)]">
+        {description}
+      </p>
+    </section>
   );
 }
 
