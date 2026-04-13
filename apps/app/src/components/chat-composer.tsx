@@ -52,6 +52,7 @@ import {
   type DesktopFavoriteRecord,
 } from "../features/desktop/favorites/desktop-favorites-storage";
 import {
+  hydrateRecentStickersFromNative,
   loadRecentStickers,
   pushRecentSticker,
 } from "../features/chat/stickers/recent-stickers";
@@ -301,6 +302,7 @@ export function ChatComposer({
 }: ChatComposerProps) {
   const runtimeConfig = useAppRuntimeConfig();
   const nativeDesktopFavorites = runtimeConfig.appPlatform === "desktop";
+  const nativeDesktopRecentStickers = runtimeConfig.appPlatform === "desktop";
   const sendMessageShortcut = useChatPreferencesStore(
     (state) => state.sendMessageShortcut,
   );
@@ -783,6 +785,51 @@ export function ChatComposer({
     window.addEventListener("pointerdown", handlePointerDown);
     return () => window.removeEventListener("pointerdown", handlePointerDown);
   }, [isDesktop, stickerPanelOpen]);
+
+  useEffect(() => {
+    if (!isDesktop || !nativeDesktopRecentStickers) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncRecentStickers = async () => {
+      const nextItems = await hydrateRecentStickersFromNative();
+      if (cancelled) {
+        return;
+      }
+
+      setRecentStickers((current) =>
+        JSON.stringify(current) === JSON.stringify(nextItems)
+          ? current
+          : nextItems,
+      );
+    };
+
+    const handleFocus = () => {
+      void syncRecentStickers();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      void syncRecentStickers();
+    };
+
+    void syncRecentStickers();
+
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("storage", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("storage", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isDesktop, nativeDesktopRecentStickers]);
 
   useEffect(() => {
     if (!isDesktop || !desktopPlusMenuOpen) {
