@@ -38,6 +38,7 @@ import { EmptyState } from "../components/empty-state";
 import { DigitalHumanEntryNotice } from "../features/chat/digital-human-entry-notice";
 import { useDigitalHumanEntryGuard } from "../features/chat/use-digital-human-entry-guard";
 import { MobileDetailsActionSheet } from "../features/chat-details/mobile-details-action-sheet";
+import { buildDesktopAddFriendRouteHash } from "../features/desktop/contacts/desktop-add-friend-route-state";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { formatTimestamp } from "../lib/format";
 import {
@@ -449,6 +450,26 @@ export function CharacterDetailPage() {
 
     setDangerSheetAction("delete");
   };
+  const handleAddToContacts = () => {
+    if (hasPendingFriendRequest) {
+      void navigate({ to: "/friend-requests" });
+      return;
+    }
+
+    if (isDesktopLayout) {
+      void navigate({
+        to: "/desktop/add-friend",
+        hash: buildDesktopAddFriendRouteHash({
+          keyword: character?.name ?? "",
+          characterId,
+          openCompose: true,
+        }),
+      });
+      return;
+    }
+
+    sendFriendRequestMutation.mutate();
+  };
   const dangerSheetConfig =
     dangerSheetAction === "block"
       ? {
@@ -728,13 +749,19 @@ export function CharacterDetailPage() {
                   icon={<ChevronRight size={18} />}
                   label={
                     hasPendingFriendRequest
-                      ? "通过好友申请"
+                      ? isDesktopLayout
+                        ? "查看好友申请"
+                        : "通过好友申请"
                       : sendFriendRequestMutation.isPending
                         ? "发送中..."
                         : "添加到通讯录"
                   }
-                  onClick={() => sendFriendRequestMutation.mutate()}
-                  disabled={sendFriendRequestMutation.isPending}
+                  onClick={handleAddToContacts}
+                  disabled={
+                    isDesktopLayout
+                      ? !characterId
+                      : sendFriendRequestMutation.isPending
+                  }
                   compact={!isDesktopLayout}
                 />
               )}
