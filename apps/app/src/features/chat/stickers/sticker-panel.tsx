@@ -320,6 +320,16 @@ export function StickerPanel({
     activeSectionId === "custom" &&
     trimmedKeyword.length === 0 &&
     catalog.customStickerCount > 1;
+  const showSearchKeyboardHint =
+    !isMobile &&
+    searching &&
+    !searchPending &&
+    activeItems.length > 0;
+  const showCustomManageHint =
+    !isMobile &&
+    activeSectionId === "custom" &&
+    trimmedKeyword.length === 0 &&
+    customManageMode;
   const clearSearch = () => {
     setKeyword("");
     setSearchKeyword("");
@@ -655,6 +665,19 @@ export function StickerPanel({
               </button>
             ) : null}
           </label>
+          {showSearchKeyboardHint ? (
+            <div className="px-1 pt-2 text-[11px] text-[color:var(--text-muted)]">
+              <span className="rounded-full bg-white/88 px-2 py-1">
+                ↑↓←→ 选择
+              </span>
+              <span className="ml-2 rounded-full bg-white/88 px-2 py-1">
+                Enter 发送
+              </span>
+              <span className="ml-2 rounded-full bg-white/88 px-2 py-1">
+                Esc 清空
+              </span>
+            </div>
+          ) : null}
         </div>
 
         <div
@@ -662,6 +685,14 @@ export function StickerPanel({
             isMobile ? "min-h-0 flex-1 overflow-y-auto px-3 pb-2.5" : "min-h-[280px] max-h-[360px] overflow-y-auto px-1 pb-3"
           }
         >
+          {showCustomManageHint ? (
+            <div className="mb-3 flex items-center justify-between gap-3 rounded-[16px] border border-[rgba(15,23,42,0.08)] bg-white/82 px-3 py-2.5 text-xs text-[color:var(--text-secondary)]">
+              <span>管理中：点击表情右上角删除，按 Esc 可直接完成。</span>
+              <span className="shrink-0 rounded-full bg-[rgba(15,23,42,0.06)] px-2 py-1 text-[11px] text-[color:var(--text-primary)]">
+                已保存 {catalog.customStickerCount}
+              </span>
+            </div>
+          ) : null}
           {showCustomSortBar ? (
             <div
               className={
