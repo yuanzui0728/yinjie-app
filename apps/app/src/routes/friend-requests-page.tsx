@@ -7,10 +7,13 @@ import { AppPage, Button, ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yi
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
+import { DesktopFriendRequestsWorkspace } from "../features/desktop/contacts/desktop-friend-requests-workspace";
+import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { navigateBackOrFallback } from "../lib/history-back";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export function FriendRequestsPage() {
+  const isDesktopLayout = useDesktopLayout();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
@@ -56,6 +59,30 @@ export function FriendRequestsPage() {
     const timer = window.setTimeout(() => setSuccessNotice(""), 2400);
     return () => window.clearTimeout(timer);
   }, [successNotice]);
+
+  if (isDesktopLayout) {
+    return (
+      <DesktopFriendRequestsWorkspace
+        loading={requestsQuery.isLoading}
+        error={
+          requestsQuery.error instanceof Error ? requestsQuery.error.message : null
+        }
+        notice={successNotice}
+        requests={requestsQuery.data ?? []}
+        acceptPendingId={
+          acceptMutation.isPending ? (acceptMutation.variables ?? null) : null
+        }
+        declinePendingId={
+          declineMutation.isPending ? (declineMutation.variables ?? null) : null
+        }
+        onAccept={(requestId) => acceptMutation.mutate(requestId)}
+        onDecline={(requestId) => declineMutation.mutate(requestId)}
+        onOpenAddFriend={() => {
+          void navigate({ to: "/desktop/add-friend" });
+        }}
+      />
+    );
+  }
 
   return (
     <AppPage className="space-y-0 bg-[#f5f5f5] px-0 py-0">
