@@ -27,12 +27,15 @@ import {
   removeGroupMember,
   setConversationMuted,
   setConversationPinned,
+  setFriendStarred,
   setGroupPinned,
+  updateFriendProfile,
   updateGroup,
   updateGroupOwnerProfile,
   updateGroupPreferences,
   type ConversationListItem,
   type GroupMember,
+  type UpdateFriendProfileRequest,
 } from "@yinjie/contracts";
 import { ChevronRight, Minus, Plus, Search, X } from "lucide-react";
 import { Button, ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
@@ -45,6 +48,14 @@ import { DesktopGroupMemberPicker } from "./desktop-group-member-picker";
 import { DesktopGroupMemberRemovalPicker } from "./desktop-group-member-removal-picker";
 import { getChatBackgroundLabel } from "../../chat/backgrounds/chat-background-helpers";
 import { buildDesktopAddFriendRouteHash } from "../contacts/desktop-add-friend-route-state";
+import { DesktopContactTextEditDialog } from "../contacts/desktop-contact-text-edit-dialog";
+import {
+  DesktopContactProfileActionRow,
+  DesktopContactProfileHeader,
+  DesktopContactProfileRow,
+  DesktopContactProfileSection,
+  DesktopContactProfileToggleRow,
+} from "../contacts/desktop-contact-profile-blocks";
 import { buildDesktopMomentsRouteHash } from "../moments/desktop-moments-route-state";
 import {
   useConversationBackground,
@@ -110,6 +121,7 @@ type DirectDetailsConfirmAction = "hide" | "clear" | "report" | "block";
 type GroupDetailsConfirmAction = "clear" | "leave";
 
 type DesktopGroupMemberBrowserFilter = "all" | "owner" | "admin" | "character";
+type EditableDirectProfileField = "remarkName" | "tags" | null;
 
 const DESKTOP_GROUP_MEMBER_PREVIEW_COUNT = 10;
 
@@ -154,6 +166,12 @@ function DirectChatDetailsPanel({
     useState<DirectDetailsConfirmAction | null>(null);
   const [avatarPopover, setAvatarPopover] =
     useState<DesktopAvatarPopoverState | null>(null);
+  const [editingField, setEditingField] =
+    useState<EditableDirectProfileField>(null);
+  const [profileForm, setProfileForm] = useState({
+    remarkName: "",
+    tags: "",
+  });
   const backgroundQuery = useConversationBackground(conversation.id);
   const targetCharacterId = conversation.participants[0] ?? "";
 
@@ -161,6 +179,7 @@ function DirectChatDetailsPanel({
     setNotice(null);
     setConfirmAction(null);
     setAvatarPopover(null);
+    setEditingField(null);
   }, [conversation.id]);
 
   useEffect(() => {
@@ -234,6 +253,14 @@ function DirectChatDetailsPanel({
   const backgroundLabel = getChatBackgroundLabel(
     backgroundQuery.data?.effectiveBackground ?? null,
   );
+  const tagValue = friendship?.tags?.length ? friendship.tags.join("、") : "未设置";
+
+  useEffect(() => {
+    setProfileForm({
+      remarkName: friendship?.remarkName ?? "",
+      tags: friendship?.tags?.join("，") ?? "",
+    });
+  }, [friendship?.remarkName, friendship?.tags]);
 
   const pinMutation = useMutation({
     mutationFn: (pinned: boolean) =>
@@ -253,6 +280,33 @@ function DirectChatDetailsPanel({
       setNotice(muted ? "已开启消息免打扰。" : "已关闭消息免打扰。");
       await queryClient.invalidateQueries({
         queryKey: ["app-conversations", baseUrl],
+      });
+    },
+  });
+
+  const setStarredMutation = useMutation({
+    mutationFn: (starred: boolean) =>
+      setFriendStarred(targetCharacterId, { starred }, baseUrl),
+    onSuccess: async (_, starred) => {
+      setNotice(starred ? "已设为星标朋友。" : "已取消星标朋友。");
+      await queryClient.invalidateQueries({
+        queryKey: ["app-friends", baseUrl],
+      });
+    },
+  });
+
+  const updateProfileMutation = useMutation({
+    mutationFn: (payload: UpdateFriendProfileRequest) => {
+      if (!targetCharacterId || !friendship) {
+        throw new Error("Friend not found");
+      }
+
+      return updateFriendProfile(targetCharacterId, payload, baseUrl);
+    },
+    onSuccess: async () => {
+      setNotice("联系人资料已更新。");
+      await queryClient.invalidateQueries({
+        queryKey: ["app-friends", baseUrl],
       });
     },
   });
@@ -353,7 +407,64 @@ function DirectChatDetailsPanel({
     });
   };
 
+  const handleOpenMoments = () => {
+    if (!isFriend || !targetCharacterId) {
+      return;
+    }
+
+    void navigate({
+      to: "/tabs/moments",
+      hash: buildDesktopMomentsRouteHash({
+        authorId: targetCharacterId,
+      }),
+    });
+  };
+
+  const currentEditDialog =
+    editingField === "remarkName"
+      ? {
+          title: "设置备注",
+          description: "备注名会优先显示在聊天信息和通讯录里。",
+          placeholder: "给联系人设置备注名",
+          initialValue: profileForm.remarkName,
+          onConfirm: async (value: string) => {
+            const nextForm = { ...profileForm, remarkName: value };
+            setProfileForm(nextForm);
+            await handleProfileSave(nextForm);
+            setEditingField(null);
+          },
+        }
+      : editingField === "tags"
+        ? {
+            title: "设置标签",
+            description: "用逗号分隔多个标签，例如：同事，插画，策展。",
+            placeholder: "输入联系人标签",
+            initialValue: profileForm.tags,
+            onConfirm: async (value: string) => {
+              const nextForm = { ...profileForm, tags: value };
+              setProfileForm(nextForm);
+              await handleProfileSave(nextForm);
+              setEditingField(null);
+            },
+          }
+        : null;
+
+  async function handleProfileSave(nextForm: {
+    remarkName: string;
+    tags: string;
+  }) {
+    await updateProfileMutation.mutateAsync({
+      remarkName: nextForm.remarkName.trim() || null,
+      tags: nextForm.tags
+        .split(/[，,]/)
+        .map((tag) => tag.trim())
+        .filter(Boolean),
+    });
+  }
+
   const busy =
+    setStarredMutation.isPending ||
+    updateProfileMutation.isPending ||
     pinMutation.isPending ||
     muteMutation.isPending ||
     clearMutation.isPending ||
@@ -414,7 +525,7 @@ function DirectChatDetailsPanel({
             : null;
 
   return (
-    <div className="space-y-2.5 bg-[#f5f5f5] px-3 py-3">
+    <div className="space-y-2 bg-[#f5f5f5] px-3 py-3">
       {notice ? <InlineNotice tone="success">{notice}</InlineNotice> : null}
       {characterQuery.isError && characterQuery.error instanceof Error ? (
         <ErrorBlock message={characterQuery.error.message} />
@@ -433,271 +544,265 @@ function DirectChatDetailsPanel({
       {blockedQuery.isError && blockedQuery.error instanceof Error ? (
         <ErrorBlock message={blockedQuery.error.message} />
       ) : null}
+      {setStarredMutation.isError &&
+      setStarredMutation.error instanceof Error ? (
+        <ErrorBlock message={setStarredMutation.error.message} />
+      ) : null}
+      {updateProfileMutation.isError &&
+      updateProfileMutation.error instanceof Error ? (
+        <ErrorBlock message={updateProfileMutation.error.message} />
+      ) : null}
 
-      <DesktopPanelSection>
-        <div className="flex items-start gap-3 px-4 py-4">
-          <button
-            type="button"
-            disabled={!targetCharacterId}
-            onClick={(event) => {
-              if (!targetCharacterId) {
-                return;
-              }
-
-              setAvatarPopover({
-                anchorElement: event.currentTarget,
-                kind: "character",
-                characterId: targetCharacterId,
-                fallbackName: targetCharacter?.name ?? conversation.title,
-                fallbackAvatar: targetCharacter?.avatar,
-                threadContext: {
-                  id: conversation.id,
-                  type: "direct",
-                  title: conversation.title,
-                },
-              });
-            }}
-            className="shrink-0 rounded-[14px] transition hover:opacity-90 disabled:cursor-default disabled:opacity-100"
-            aria-label={`查看${displayName}资料卡`}
-          >
-            <AvatarChip
-              name={targetCharacter?.name ?? conversation.title}
-              src={targetCharacter?.avatar}
-              size="wechat"
-            />
-          </button>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="truncate text-[16px] font-medium text-[color:var(--text-primary)]">
-                {displayName}
-              </div>
-              <span className="rounded-full bg-[rgba(0,0,0,0.05)] px-2 py-0.5 text-[10px] text-[color:var(--text-secondary)]">
-                {isFriend ? "联系人" : "世界角色"}
-              </span>
-            </div>
-            <div className="mt-1 text-[12px] text-[color:var(--text-muted)]">
-              {relationshipSummary}
-            </div>
-            <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-[color:var(--text-secondary)]">
-              {signature}
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[color:var(--text-dim)]">
-              {remarkName ? (
-                <span className="rounded-full bg-[rgba(0,0,0,0.035)] px-2 py-0.5">
-                  备注 {remarkName}
-                </span>
-              ) : null}
-              {identifier ? (
-                <span className="rounded-full bg-[rgba(0,0,0,0.035)] px-2 py-0.5">
-                  隐界号 {identifier}
-                </span>
-              ) : null}
-            </div>
-          </div>
-        </div>
-      </DesktopPanelSection>
-
-      <DesktopPanelSection>
-        <DesktopPanelRow
-          label="查找聊天记录"
-          value="搜索当前聊天"
-          icon={<Search size={15} />}
-          onClick={onOpenHistory}
-        />
-        <DesktopPanelRow
-          label="聊天文件"
-          value="查看本聊天附件"
-          onClick={() => {
-            void navigate({
-              to: "/desktop/chat-files",
-              hash: buildDesktopChatFilesRouteHash(conversation.id),
-            });
-          }}
-        />
-        <DesktopPanelRow
-          label="聊天背景"
-          value={backgroundLabel}
-          onClick={() => {
-            void navigate({
-              to: "/chat/$conversationId/background",
-              params: { conversationId: conversation.id },
-            });
-          }}
-        />
-      </DesktopPanelSection>
-
-      <DesktopPanelSection>
-        <DesktopPanelRow
-          label="消息免打扰"
-          checked={conversation.isMuted}
-          disabled={busy}
-          onToggle={(checked) => muteMutation.mutate(checked)}
-        />
-        <DesktopPanelRow
-          label="置顶聊天"
-          checked={conversation.isPinned}
-          disabled={busy}
-          onToggle={(checked) => pinMutation.mutate(checked)}
-        />
-        {!isFriend ? (
-          <DesktopPanelRow
-            label="添加到通讯录"
-            value={hasPendingFriendRequest ? "待处理" : "添加"}
-            disabled={busy || !targetCharacterId}
-            onClick={handleAddToContacts}
-          />
-        ) : null}
-        <DesktopPanelRow
-          label="发起群聊"
-          value="和对方创建新群"
-          onClick={() => {
-            if (onCreateGroup) {
-              onCreateGroup({
-                conversationId: conversation.id,
-                seedMemberIds: targetCharacterId ? [targetCharacterId] : [],
-              });
-              return;
-            }
-
-            void navigate({
-              to: "/group/new",
-              hash: buildCreateGroupRouteHash({
-                source: "desktop-chat",
-                conversationId: conversation.id,
-                seedMemberIds: targetCharacterId ? [targetCharacterId] : [],
-              }),
-            });
-          }}
-        />
-        <DesktopPanelRow
-          label="查看资料"
-          value={isFriend ? "联系人资料" : "角色资料"}
-          onClick={() => {
-            if (!targetCharacterId) {
-              return;
-            }
-
-            void navigate({
-              to: "/character/$characterId",
-              params: { characterId: targetCharacterId },
-            });
-          }}
-          disabled={!targetCharacterId}
-        />
-        {isFriend ? (
-          <DesktopPanelRow
-            label="朋友圈"
-            value="查看这位好友最近的朋友圈"
-            onClick={() => {
-              if (!targetCharacterId) {
-                return;
-              }
-
-              void navigate({
-                to: "/tabs/moments",
-                hash: buildDesktopMomentsRouteHash({
-                  authorId: targetCharacterId,
-                }),
-              });
-            }}
-            disabled={!targetCharacterId}
-          />
-        ) : null}
-      </DesktopPanelSection>
+      <DesktopContactProfileHeader
+        avatar={targetCharacter?.avatar}
+        name={targetCharacter?.name ?? conversation.title}
+        displayName={displayName}
+        subline={relationshipSummary}
+        identifier={identifier}
+        compact
+        action={
+          !isFriend ? (
+            <Button
+              type="button"
+              variant="primary"
+              onClick={handleAddToContacts}
+              disabled={busy || !targetCharacterId}
+              className="rounded-[10px] bg-[#07c160] px-4 text-white shadow-none hover:bg-[#06ad56]"
+            >
+              {hasPendingFriendRequest ? "待处理" : "添加到通讯录"}
+            </Button>
+          ) : undefined
+        }
+      />
 
       {characterQuery.isLoading ? (
-        <DesktopPanelSection>
-          <div className="px-4 py-4">
+        <DesktopContactProfileSection title="资料">
+          <div className="px-6 py-4">
             <LoadingBlock label="正在读取聊天信息..." />
           </div>
-        </DesktopPanelSection>
+        </DesktopContactProfileSection>
       ) : (
-        <DesktopPanelSection title="更多信息">
-          {isFriend ? (
-            <>
-              <DesktopPanelInfoRow
-                label="备注"
-                value={remarkName || "未设置"}
-              />
-              <DesktopPanelInfoRow
-                label="昵称"
-                value={targetCharacter?.name ?? conversation.title}
-              />
-              <DesktopPanelInfoRow
-                label="地区"
-                value={friendship?.region?.trim() || "未设置"}
-              />
-              <DesktopPanelInfoRow
-                label="来源"
-                value={friendship?.source?.trim() || "未设置"}
-              />
-              <DesktopPanelInfoRow
-                label="标签"
-                value={
-                  friendship?.tags?.length
-                    ? friendship.tags.join(" / ")
-                    : "未设置"
-                }
-              />
-            </>
-          ) : (
-            <DesktopPanelInfoRow
-              label="身份"
-              value={targetCharacter?.relationship || "世界角色"}
+        <>
+          <DesktopContactProfileSection title="基础资料">
+            {isFriend ? (
+              <>
+                <DesktopContactProfileActionRow
+                  label="备注"
+                  value={remarkName || "未设置"}
+                  onClick={() => setEditingField("remarkName")}
+                  valueMuted={!remarkName}
+                />
+                <DesktopContactProfileRow
+                  label="昵称"
+                  value={targetCharacter?.name ?? conversation.title}
+                />
+                <DesktopContactProfileRow
+                  label="隐界号"
+                  value={identifier ?? "未设置"}
+                  muted={!identifier}
+                />
+                <DesktopContactProfileRow
+                  label="地区"
+                  value={friendship?.region?.trim() || "未设置"}
+                  muted={!friendship?.region?.trim()}
+                />
+                <DesktopContactProfileRow
+                  label="来源"
+                  value={friendship?.source?.trim() || "未设置"}
+                  muted={!friendship?.source?.trim()}
+                />
+                <DesktopContactProfileActionRow
+                  label="标签"
+                  value={tagValue}
+                  onClick={() => setEditingField("tags")}
+                  valueMuted={!friendship?.tags?.length}
+                />
+              </>
+            ) : (
+              <>
+                <DesktopContactProfileRow
+                  label="昵称"
+                  value={targetCharacter?.name ?? conversation.title}
+                />
+                <DesktopContactProfileRow
+                  label="身份"
+                  value={targetCharacter?.relationship || "世界角色"}
+                />
+                <DesktopContactProfileRow
+                  label="隐界号"
+                  value={identifier ?? "未设置"}
+                  muted={!identifier}
+                />
+              </>
+            )}
+          </DesktopContactProfileSection>
+
+          <DesktopContactProfileSection title="内容入口">
+            <DesktopContactProfileActionRow
+              label="朋友圈"
+              value={isFriend ? "查看这位好友最近的朋友圈" : "加为好友后可查看"}
+              onClick={isFriend ? handleOpenMoments : handleAddToContacts}
+              disabled={!isFriend}
+              valueMuted={!isFriend}
             />
-          )}
-          <DesktopPanelInfoRow
-            label="共同群聊"
-            value={
-              commonGroups.length ? `${commonGroups.length} 个` : "暂无共同群聊"
-            }
-          />
-          {commonGroups.slice(0, 2).map((group) => (
-            <DesktopPanelRow
-              key={group.id}
-              label="群聊"
-              value={group.title}
+            <DesktopContactProfileActionRow
+              label="共同群聊"
+              value={commonGroups.length ? `${commonGroups.length} 个共同群聊` : "暂时没有共同群聊"}
               onClick={() => {
+                if (!commonGroups[0]) {
+                  return;
+                }
+
                 void navigate({
                   to: "/group/$groupId",
-                  params: { groupId: group.id },
+                  params: { groupId: commonGroups[0].id },
+                });
+              }}
+              disabled={!commonGroups.length}
+              valueMuted={!commonGroups.length}
+            />
+            <DesktopContactProfileActionRow
+              label="更多资料"
+              value={isFriend ? "查看角色档案与扩展介绍" : "查看角色资料"}
+              onClick={() => {
+                if (!targetCharacterId) {
+                  return;
+                }
+
+                void navigate({
+                  to: "/character/$characterId",
+                  params: { characterId: targetCharacterId },
+                });
+              }}
+              disabled={!targetCharacterId}
+            />
+          </DesktopContactProfileSection>
+
+          <DesktopContactProfileSection title="更多信息">
+            <DesktopContactProfileRow
+              label="个性签名"
+              value={signature}
+              multiline
+              muted={!targetCharacter?.currentStatus?.trim() && !targetCharacter?.bio?.trim()}
+            />
+          </DesktopContactProfileSection>
+
+          <DesktopContactProfileSection title="聊天信息">
+            <DesktopContactProfileActionRow
+              label="查找记录"
+              value="搜索当前聊天"
+              onClick={onOpenHistory}
+            />
+            <DesktopContactProfileActionRow
+              label="聊天文件"
+              value="查看本聊天附件"
+              onClick={() => {
+                void navigate({
+                  to: "/desktop/chat-files",
+                  hash: buildDesktopChatFilesRouteHash(conversation.id),
                 });
               }}
             />
-          ))}
-          <DesktopPanelInfoRow label="个性签名" value={signature} multiline />
-        </DesktopPanelSection>
-      )}
+            <DesktopContactProfileActionRow
+              label="聊天背景"
+              value={backgroundLabel}
+              onClick={() => {
+                void navigate({
+                  to: "/chat/$conversationId/background",
+                  params: { conversationId: conversation.id },
+                });
+              }}
+            />
+            <DesktopContactProfileActionRow
+              label="发起群聊"
+              value="和对方创建新群"
+              onClick={() => {
+                if (onCreateGroup) {
+                  onCreateGroup({
+                    conversationId: conversation.id,
+                    seedMemberIds: targetCharacterId ? [targetCharacterId] : [],
+                  });
+                  return;
+                }
 
-      <DesktopPanelSection>
-        <DesktopPanelRow
-          label="加入黑名单"
-          value={isBlocked ? "已加入" : "不再接收该角色互动"}
-          danger
-          disabled={busy || isBlocked || !targetCharacterId}
-          onClick={() => setConfirmAction("block")}
-        />
-        <DesktopPanelRow
-          label="删除聊天"
-          value="从消息列表移除"
-          disabled={busy}
-          onClick={() => setConfirmAction("hide")}
-        />
-        <DesktopPanelRow
-          label="清空聊天记录"
-          value="删除当前聊天内容"
-          danger
-          disabled={busy}
-          onClick={() => setConfirmAction("clear")}
-        />
-        <DesktopPanelRow
-          label="投诉"
-          value="提交聊天相关投诉"
-          danger
-          disabled={busy || !targetCharacterId}
-          onClick={() => setConfirmAction("report")}
-        />
-      </DesktopPanelSection>
+                void navigate({
+                  to: "/group/new",
+                  hash: buildCreateGroupRouteHash({
+                    source: "desktop-chat",
+                    conversationId: conversation.id,
+                    seedMemberIds: targetCharacterId ? [targetCharacterId] : [],
+                  }),
+                });
+              }}
+            />
+          </DesktopContactProfileSection>
+
+          {isFriend ? (
+            <DesktopContactProfileSection title="聊天设置">
+              <DesktopContactProfileToggleRow
+                label="星标朋友"
+                checked={friendship?.isStarred ?? false}
+                disabled={busy}
+                onToggle={() =>
+                  setStarredMutation.mutate(!(friendship?.isStarred ?? false))
+                }
+              />
+              <DesktopContactProfileToggleRow
+                label="置顶聊天"
+                checked={conversation.isPinned}
+                disabled={busy}
+                onToggle={() => pinMutation.mutate(!conversation.isPinned)}
+              />
+              <DesktopContactProfileToggleRow
+                label="消息免打扰"
+                checked={conversation.isMuted}
+                disabled={busy}
+                onToggle={() => muteMutation.mutate(!conversation.isMuted)}
+              />
+            </DesktopContactProfileSection>
+          ) : null}
+
+          <DesktopContactProfileSection title={isFriend ? "联系人管理" : "聊天管理"}>
+            {isFriend ? (
+              <DesktopContactProfileActionRow
+                label="加入黑名单"
+                value={isBlocked ? "已加入黑名单" : "不再接收该角色互动"}
+                danger
+                disabled={busy || isBlocked || !targetCharacterId}
+                onClick={() => setConfirmAction("block")}
+              />
+            ) : null}
+            {!isFriend ? (
+              <DesktopContactProfileActionRow
+                label="添加到通讯录"
+                value={hasPendingFriendRequest ? "待处理" : "发送好友申请"}
+                disabled={busy || !targetCharacterId}
+                onClick={handleAddToContacts}
+              />
+            ) : null}
+            <DesktopContactProfileActionRow
+              label="删除聊天"
+              value="从消息列表移除"
+              disabled={busy}
+              onClick={() => setConfirmAction("hide")}
+            />
+            <DesktopContactProfileActionRow
+              label="清空聊天记录"
+              value="删除当前聊天内容"
+              danger
+              disabled={busy}
+              onClick={() => setConfirmAction("clear")}
+            />
+            <DesktopContactProfileActionRow
+              label="投诉"
+              value="提交聊天相关投诉"
+              danger
+              disabled={busy || !targetCharacterId}
+              onClick={() => setConfirmAction("report")}
+            />
+          </DesktopContactProfileSection>
+        </>
+      )}
 
       {pinMutation.isError && pinMutation.error instanceof Error ? (
         <ErrorBlock message={pinMutation.error.message} />
@@ -746,6 +851,20 @@ function DirectChatDetailsPanel({
             onClose={() => setAvatarPopover(null)}
           />
         )
+      ) : null}
+      {currentEditDialog ? (
+        <DesktopContactTextEditDialog
+          open
+          title={currentEditDialog.title}
+          description={currentEditDialog.description}
+          placeholder={currentEditDialog.placeholder}
+          initialValue={currentEditDialog.initialValue}
+          pending={updateProfileMutation.isPending}
+          onClose={() => setEditingField(null)}
+          onConfirm={(value) => {
+            void currentEditDialog.onConfirm(value);
+          }}
+        />
       ) : null}
     </div>
   );
@@ -1512,132 +1631,6 @@ function GroupChatDetailsPanel({
           />
         )
       ) : null}
-    </div>
-  );
-}
-
-function DesktopPanelSection({
-  title,
-  children,
-}: {
-  title?: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="overflow-hidden rounded-[12px] border border-[rgba(0,0,0,0.06)] bg-white">
-      {title ? (
-        <div className="border-b border-[rgba(0,0,0,0.06)] px-4 py-2 text-[11px] tracking-[0.06em] text-[color:var(--text-dim)]">
-          {title}
-        </div>
-      ) : null}
-      <div>{children}</div>
-    </section>
-  );
-}
-
-function DesktopPanelRow({
-  label,
-  value,
-  danger = false,
-  disabled = false,
-  checked,
-  icon,
-  onClick,
-  onToggle,
-}: {
-  label: string;
-  value?: string;
-  danger?: boolean;
-  disabled?: boolean;
-  checked?: boolean;
-  icon?: ReactNode;
-  onClick?: () => void;
-  onToggle?: (checked: boolean) => void;
-}) {
-  const isSwitch = typeof checked === "boolean" && Boolean(onToggle);
-
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={() => {
-        if (disabled) {
-          return;
-        }
-
-        if (isSwitch) {
-          onToggle?.(!checked);
-          return;
-        }
-
-        onClick?.();
-      }}
-      className={cn(
-        "flex min-h-11 w-full items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-4 py-3 text-left last:border-b-0",
-        danger ? "text-[#d74b45]" : "text-[color:var(--text-primary)]",
-        disabled
-          ? "cursor-not-allowed opacity-50"
-          : "hover:bg-[rgba(0,0,0,0.025)]",
-      )}
-      role={isSwitch ? "switch" : undefined}
-      aria-checked={isSwitch ? checked : undefined}
-    >
-      <span className="flex min-w-0 items-center gap-2 text-[14px]">
-        {icon ? (
-          <span className="text-[color:var(--text-muted)]">{icon}</span>
-        ) : null}
-        <span>{label}</span>
-      </span>
-      <span className="flex shrink-0 items-center gap-2">
-        {value ? (
-          <span className="max-w-[12rem] truncate text-[12px] text-[color:var(--text-muted)]">
-            {value}
-          </span>
-        ) : null}
-        {isSwitch ? (
-          <span
-            className={cn(
-              "relative h-6 w-10 rounded-full transition-colors",
-              checked ? "bg-[color:var(--brand-primary)]" : "bg-[#d8d8d8]",
-            )}
-          >
-            <span
-              className={cn(
-                "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
-                checked ? "left-[18px]" : "left-0.5",
-              )}
-            />
-          </span>
-        ) : (
-          <ChevronRight size={16} className="text-[color:var(--text-dim)]" />
-        )}
-      </span>
-    </button>
-  );
-}
-
-function DesktopPanelInfoRow({
-  label,
-  value,
-  multiline = false,
-}: {
-  label: string;
-  value: string;
-  multiline?: boolean;
-}) {
-  return (
-    <div className="flex min-h-11 items-start justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-4 py-3 text-left last:border-b-0">
-      <span className="min-w-0 pt-0.5 text-[14px] text-[color:var(--text-primary)]">
-        {label}
-      </span>
-      <span
-        className={cn(
-          "max-w-[12rem] text-right text-[12px] text-[color:var(--text-muted)]",
-          multiline ? "whitespace-pre-wrap break-words leading-5" : "truncate",
-        )}
-      >
-        {value}
-      </span>
     </div>
   );
 }
