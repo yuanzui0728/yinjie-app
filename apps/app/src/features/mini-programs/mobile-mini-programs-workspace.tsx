@@ -270,14 +270,14 @@ export function MobileMiniProgramsWorkspace({
         <AppSection className="space-y-2 border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)] shadow-none">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-[13px] font-medium text-[color:var(--text-primary)]">
+              <div className="text-[12px] font-medium text-[color:var(--text-primary)]">
                 最近使用
               </div>
-              <div className="mt-0.5 text-[10px] leading-4 text-[color:var(--text-muted)]">
+              <div className="mt-0.5 text-[9px] leading-4 text-[color:var(--text-muted)]">
                 模拟微信里最近打开的小程序快捷入口。
               </div>
             </div>
-            <div className="text-[11px] text-[color:var(--text-muted)]">
+            <div className="text-[10px] text-[color:var(--text-muted)]">
               {recentMiniPrograms.length} 个
             </div>
           </div>
@@ -304,14 +304,14 @@ export function MobileMiniProgramsWorkspace({
         <AppSection className="space-y-2 border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)] shadow-none">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-[13px] font-medium text-[color:var(--text-primary)]">
+              <div className="text-[12px] font-medium text-[color:var(--text-primary)]">
                 我的小程序
               </div>
-              <div className="mt-0.5 text-[10px] leading-4 text-[color:var(--text-muted)]">
+              <div className="mt-0.5 text-[9px] leading-4 text-[color:var(--text-muted)]">
                 这里承接微信式固定常用入口。
               </div>
             </div>
-            <div className="text-[11px] text-[color:var(--text-muted)]">
+            <div className="text-[10px] text-[color:var(--text-muted)]">
               {pinnedMiniPrograms.length} 个
             </div>
           </div>
@@ -341,7 +341,7 @@ export function MobileMiniProgramsWorkspace({
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="h-8 rounded-full border-[color:var(--border-subtle)] bg-white px-3.5 text-[11px]"
+                  className="h-7.5 rounded-full border-[color:var(--border-subtle)] bg-white px-3 text-[10px]"
                   onClick={() => onSelectMiniProgram(selectedMiniProgram.id)}
                 >
                   先看看当前推荐
@@ -352,7 +352,7 @@ export function MobileMiniProgramsWorkspace({
         </AppSection>
 
         <AppSection className="space-y-2 border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)] shadow-none">
-          <div className="text-[13px] font-medium text-[color:var(--text-primary)]">
+          <div className="text-[12px] font-medium text-[color:var(--text-primary)]">
             今日推荐
           </div>
           <div className="space-y-2">
@@ -367,7 +367,7 @@ export function MobileMiniProgramsWorkspace({
                   )}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <div className="text-[13px] font-medium text-[color:var(--text-primary)]">
+                    <div className="text-[12px] font-medium text-[color:var(--text-primary)]">
                       {campaign.title}
                     </div>
                     <div
@@ -391,16 +391,16 @@ export function MobileMiniProgramsWorkspace({
         <AppSection className="space-y-2 border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)] shadow-none">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-[13px] font-medium text-[color:var(--text-primary)]">
+              <div className="text-[12px] font-medium text-[color:var(--text-primary)]">
                 全部小程序
               </div>
-              <div className="mt-0.5 text-[10px] leading-4 text-[color:var(--text-muted)]">
+              <div className="mt-0.5 text-[9px] leading-4 text-[color:var(--text-muted)]">
                 {searchText
                   ? `搜索“${searchText.trim()}”命中 ${visibleMiniPrograms.length} 个结果。`
                   : "按分类浏览当前可用的小程序目录。"}
               </div>
             </div>
-            <div className="text-[11px] text-[color:var(--text-muted)]">
+            <div className="text-[10px] text-[color:var(--text-muted)]">
               {visibleMiniPrograms.length} 个
             </div>
           </div>
@@ -430,7 +430,7 @@ export function MobileMiniProgramsWorkspace({
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="h-8 rounded-full border-[color:var(--border-subtle)] bg-white px-3.5 text-[11px]"
+                  className="h-7.5 rounded-full border-[color:var(--border-subtle)] bg-white px-3 text-[10px]"
                   onClick={() => {
                     onSearchTextChange("");
                     onCategoryChange("all");
@@ -591,7 +591,7 @@ function MiniProgramListCard({
             event.stopPropagation();
             onOpen(miniProgram.id);
           }}
-          className="h-8 rounded-full bg-[#07c160] px-3.5 text-[11px] text-white hover:bg-[#06ad56]"
+          className="h-7.5 rounded-full bg-[#07c160] px-3 text-[10px] text-white hover:bg-[#06ad56]"
         >
           打开
         </Button>
@@ -602,7 +602,7 @@ function MiniProgramListCard({
             event.stopPropagation();
             onTogglePinned(miniProgram.id);
           }}
-          className="h-8 rounded-full border-[color:var(--border-subtle)] bg-[color:var(--bg-canvas)] px-3.5 text-[11px] text-[color:var(--text-secondary)]"
+          className="h-7.5 rounded-full border-[color:var(--border-subtle)] bg-[color:var(--bg-canvas)] px-3 text-[10px] text-[color:var(--text-secondary)]"
         >
           {pinned ? "移出常用" : "加入常用"}
         </Button>
