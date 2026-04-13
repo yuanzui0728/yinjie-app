@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft, Copy, PenSquare, Share2 } from "lucide-react";
@@ -12,12 +12,9 @@ import {
 import {
   AppPage,
   Button,
-  ErrorBlock,
   InlineNotice,
-  LoadingBlock,
   TextField,
 } from "@yinjie/ui";
-import { EmptyState } from "../components/empty-state";
 import { MobileSocialComposerCard } from "../components/mobile-social-composer-card";
 import { SocialPostCard } from "../components/social-post-card";
 import {
@@ -482,21 +479,44 @@ export function MomentsPage() {
 
         <section className="space-y-2.5">
           <div className="px-1">
-            <div className="text-[12px] text-[color:var(--text-muted)]">最近动态</div>
-            <div className="mt-0.5 text-[11px] leading-[1.125rem] text-[color:var(--text-muted)]">
-              这里只展示你和好友之间的朋友圈内容，互动也留在熟人范围里。
+            <div className="text-[11px] text-[color:var(--text-muted)]">最近动态</div>
+            <div className="mt-0.5 text-[10px] leading-4 text-[color:var(--text-muted)]">
+              这里只展示好友之间可见的朋友圈内容。
             </div>
           </div>
           {notice ? (
-            <InlineNotice className="text-[12px] leading-5" tone={noticeTone}>
+            <InlineNotice className="text-[11px] leading-[1.35rem]" tone={noticeTone}>
               {notice}
             </InlineNotice>
           ) : null}
           {momentsQuery.isLoading ? (
-            <LoadingBlock label="正在读取朋友圈..." />
+            <MobileMomentsStatusCard
+              badge="读取中"
+              title="正在刷新朋友圈"
+              description="稍等一下，正在同步好友的最新动态。"
+              tone="loading"
+            />
           ) : null}
           {momentsQuery.isError && momentsQuery.error instanceof Error ? (
-            <ErrorBlock message={momentsQuery.error.message} />
+            <MobileMomentsStatusCard
+              badge="读取失败"
+              title="朋友圈暂时不可用"
+              description={momentsQuery.error.message}
+              tone="danger"
+              action={
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 rounded-full border-[color:var(--border-subtle)] bg-white px-3.5 text-[11px]"
+                  onClick={() => {
+                    void momentsQuery.refetch();
+                    void blockedQuery.refetch();
+                  }}
+                >
+                  重新加载
+                </Button>
+              }
+            />
           ) : null}
 
           {visibleMoments.map((moment) => {
@@ -635,9 +655,20 @@ export function MomentsPage() {
           {!momentsQuery.isLoading &&
           !momentsQuery.isError &&
           !visibleMoments.length ? (
-            <EmptyState
-              title="朋友圈还很安静"
+            <MobileMomentsStatusCard
+              badge="朋友圈"
+              title="还很安静"
               description="你先发一条仅好友可见的动态，或者等好友们先开口。"
+              action={
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="h-8 rounded-full bg-[#07c160] px-3.5 text-[11px] text-white hover:bg-[#06ad56]"
+                  onClick={focusComposer}
+                >
+                  发一条朋友圈
+                </Button>
+              }
             />
           ) : null}
         </section>
@@ -654,6 +685,55 @@ function parseMomentsRouteHash(hash: string) {
 
   const params = new URLSearchParams(normalizedHash);
   return params.get("moment")?.trim() || null;
+}
+
+function MobileMomentsStatusCard({
+  badge,
+  title,
+  description,
+  tone = "default",
+  action,
+}: {
+  badge: string;
+  title: string;
+  description: string;
+  tone?: "default" | "danger" | "loading";
+  action?: ReactNode;
+}) {
+  const loading = tone === "loading";
+  return (
+    <section
+      className={
+        tone === "danger"
+          ? "rounded-[18px] border border-[color:var(--border-danger)] bg-[linear-gradient(180deg,rgba(255,245,245,0.96),rgba(254,242,242,0.94))] px-4 py-5 text-center shadow-none"
+          : "rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)] px-4 py-5 text-center shadow-none"
+      }
+    >
+      <div
+        className={
+          tone === "danger"
+            ? "mx-auto inline-flex rounded-full bg-[rgba(220,38,38,0.08)] px-2.5 py-1 text-[9px] font-medium tracking-[0.04em] text-[color:var(--state-danger-text)]"
+            : "mx-auto inline-flex rounded-full bg-[rgba(7,193,96,0.1)] px-2.5 py-1 text-[9px] font-medium tracking-[0.04em] text-[#07c160]"
+        }
+      >
+        {badge}
+      </div>
+      {loading ? (
+        <div className="mt-3 flex items-center justify-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-black/15 animate-pulse" />
+          <span className="h-2 w-2 rounded-full bg-black/25 animate-pulse [animation-delay:120ms]" />
+          <span className="h-2 w-2 rounded-full bg-[#8ecf9d] animate-pulse [animation-delay:240ms]" />
+        </div>
+      ) : null}
+      <div className="mt-3 text-[15px] font-medium text-[color:var(--text-primary)]">
+        {title}
+      </div>
+      <p className="mx-auto mt-2 max-w-[18rem] text-[11px] leading-[1.35rem] text-[color:var(--text-secondary)]">
+        {description}
+      </p>
+      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
+    </section>
+  );
 }
 
 function buildMomentsRouteHash(momentId?: string | null) {
