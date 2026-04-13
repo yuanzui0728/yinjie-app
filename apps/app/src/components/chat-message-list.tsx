@@ -52,6 +52,7 @@ import { Button, InlineNotice, cn } from "@yinjie/ui";
 import { AvatarChip } from "./avatar-chip";
 import { InlineNoticeActionButton } from "./inline-notice-action-button";
 import {
+  hydrateDetailedTimestampModeFromNative,
   readDetailedTimestampModeEnabled,
   writeDetailedTimestampModeEnabled,
 } from "../features/chat/detailed-timestamp-mode";
@@ -247,6 +248,8 @@ export function ChatMessageList({
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl ?? "";
+  const nativeDesktopDetailedTimestampMode =
+    runtimeConfig.appPlatform === "desktop";
   const nativeDesktopFavorites = runtimeConfig.appPlatform === "desktop";
   const { entryNotice, clearEntryNotice, guardVideoEntry, resetEntryGuard } =
     useDigitalHumanEntryGuard({
@@ -411,8 +414,54 @@ export function ChatMessageList({
   }, []);
 
   useEffect(() => {
+    if (readDetailedTimestampModeEnabled() === detailedTimestampMode) {
+      return;
+    }
+
     writeDetailedTimestampModeEnabled(detailedTimestampMode);
   }, [detailedTimestampMode]);
+
+  useEffect(() => {
+    if (!isDesktop || !nativeDesktopDetailedTimestampMode) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncDetailedTimestampMode = async () => {
+      const nextState = await hydrateDetailedTimestampModeFromNative();
+      if (cancelled) {
+        return;
+      }
+
+      setDetailedTimestampMode((current) =>
+        current === nextState.enabled ? current : nextState.enabled,
+      );
+    };
+    const handleFocus = () => {
+      void syncDetailedTimestampMode();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      void syncDetailedTimestampMode();
+    };
+
+    void syncDetailedTimestampMode();
+
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("storage", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("storage", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isDesktop, nativeDesktopDetailedTimestampMode]);
 
   useEffect(() => {
     setSelectionMode(false);
