@@ -96,11 +96,11 @@ import {
 } from "../lib/format";
 import { emitChatMessage, joinConversationRoom } from "../lib/socket";
 import {
-  isNativeMobileBridgeAvailable,
   openAppSettings,
   requestNotificationPermission,
   shareWithNativeShell,
 } from "../runtime/mobile-bridge";
+import { isNativeMobileShareSurface } from "../runtime/mobile-share-surface";
 import { openRemoteFile } from "../runtime/open-remote-file";
 import { saveRemoteFile } from "../runtime/save-remote-file";
 import { revealSavedFile } from "../runtime/reveal-saved-file";
@@ -827,7 +827,7 @@ export function ChatMessageList({
     attachment: Extract<MessageAttachment, { kind: "location_card" }>,
   ) => {
     const summary = buildLocationAttachmentSummary(attachment);
-    if (!isNativeMobileBridgeAvailable()) {
+    if (!isNativeMobileShareSurface()) {
       await copyToClipboard(summary, "位置内容已复制。");
       return;
     }
@@ -881,7 +881,7 @@ export function ChatMessageList({
         : `${window.location.origin}${profilePath}`;
     const summary = buildContactAttachmentSummary(attachment, profileUrl);
 
-    if (!isNativeMobileBridgeAvailable()) {
+    if (!isNativeMobileShareSurface()) {
       await copyToClipboard(summary, "名片摘要已复制。");
       return;
     }
@@ -1483,6 +1483,7 @@ export function ChatMessageList({
     }
 
     void requestNotificationPermission().then((permissionState) => {
+      const nativeMobileShareSupported = isNativeMobileShareSurface();
       const summary = formatReminderSummary(option.remindAt);
       if (permissionState === "granted") {
         setActionNotice({
@@ -1494,12 +1495,12 @@ export function ChatMessageList({
 
       if (permissionState === "denied") {
         setActionNotice({
-          message: isNativeMobileBridgeAvailable()
+          message: nativeMobileShareSupported
             ? `已设为消息提醒 · ${summary}，系统通知未开启。可前往系统设置继续打开通知。`
             : `已设为消息提醒 · ${summary}，系统通知未开启。`,
           tone: "warning",
-          actionLabel: isNativeMobileBridgeAvailable() ? "去设置" : undefined,
-          onAction: isNativeMobileBridgeAvailable()
+          actionLabel: nativeMobileShareSupported ? "去设置" : undefined,
+          onAction: nativeMobileShareSupported
             ? () => {
                 void openAppSettings();
               }
@@ -3249,11 +3250,19 @@ function resolveSaveAttachmentLabel(
   variant: "mobile" | "desktop",
 ) {
   if (message.type === "contact_card") {
-    return isNativeMobileBridgeAvailable() ? "系统分享" : "复制名片";
+    return isNativeMobileShareSurface({
+      isDesktopLayout: variant === "desktop",
+    })
+      ? "系统分享"
+      : "复制名片";
   }
 
   if (message.type === "location_card") {
-    return isNativeMobileBridgeAvailable() ? "系统分享" : "复制位置";
+    return isNativeMobileShareSurface({
+      isDesktopLayout: variant === "desktop",
+    })
+      ? "系统分享"
+      : "复制位置";
   }
 
   if (message.type === "image") {
@@ -4978,7 +4987,7 @@ function LocationViewerOverlay({
 }) {
   const isDesktop = variant === "desktop";
   const nativeMobileShareSupported =
-    !isDesktop && isNativeMobileBridgeAvailable();
+    !isDesktop && isNativeMobileShareSurface();
 
   return (
     <div className="fixed inset-0 z-50 bg-[rgba(5,10,20,0.88)] backdrop-blur-md">
