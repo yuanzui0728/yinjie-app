@@ -661,12 +661,12 @@ export function AdminHintCard({
   detail,
 }: {
   title: string;
-  detail: ReactNode;
+  detail?: ReactNode;
 }) {
   return (
     <div className="rounded-[20px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4 shadow-[var(--shadow-soft)]">
       <div className="font-semibold text-[color:var(--text-primary)]">{title}</div>
-      <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{detail}</div>
+      {detail ? <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{detail}</div> : null}
     </div>
   );
 }
