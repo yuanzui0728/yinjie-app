@@ -39,6 +39,7 @@ type StickerPanelTab = {
   badgeText?: string;
   coverSticker?: StickerAttachment | null;
 };
+type CustomStickerSortMode = "recent" | "added";
 
 export function StickerPanel({
   baseUrl,
@@ -52,7 +53,10 @@ export function StickerPanel({
 }: StickerPanelProps) {
   const isMobile = variant === "mobile";
   const [keyword, setKeyword] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
   const [customManageMode, setCustomManageMode] = useState(false);
+  const [customSortMode, setCustomSortMode] =
+    useState<CustomStickerSortMode>("recent");
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const queryClient = useQueryClient();
   const stickerCatalogQuery = useQuery({
@@ -79,10 +83,22 @@ export function StickerPanel({
     () => recentStickerEntries.map((item) => item.sticker),
     [recentStickerEntries],
   );
+  const customStickers = useMemo(
+    () =>
+      sortCustomStickers({
+        stickers: catalog.customStickers,
+        recentStickerEntries,
+        sortMode: customSortMode,
+      }),
+    [catalog.customStickers, customSortMode, recentStickerEntries],
+  );
   const featuredStickers = useMemo(
     () => buildFeaturedStickers(catalog.builtinPacks),
     [catalog.builtinPacks],
   );
+  const trimmedKeyword = keyword.trim();
+  const searchPending =
+    trimmedKeyword.length > 0 && trimmedKeyword !== searchKeyword;
 
   const uploadMutation = useMutation({
     mutationFn: async (files: File[]) => {
@@ -148,11 +164,11 @@ export function StickerPanel({
     },
   });
 
-  const searching = keyword.trim().length > 0;
+  const searching = searchKeyword.length > 0;
   const activeItems = useMemo<StickerPanelItem[]>(() => {
     if (searching) {
       return searchStickerItems({
-        keyword,
+        keyword: searchKeyword,
         recentStickerEntries,
         builtinPacks: catalog.builtinPacks,
         customStickers: catalog.customStickers,
@@ -172,7 +188,7 @@ export function StickerPanel({
     }
 
     if (activeSectionId === "custom") {
-      return catalog.customStickers.map((sticker): StickerPanelItem => ({
+      return customStickers.map((sticker): StickerPanelItem => ({
         sticker,
         canDelete: true,
       }));
@@ -195,10 +211,11 @@ export function StickerPanel({
     activeSectionId,
     catalog.builtinPacks,
     catalog.customStickers,
+    customStickers,
     featuredStickers,
-    keyword,
     recentStickerEntries,
     recentStickers,
+    searchKeyword,
     searching,
   ]);
 
@@ -220,8 +237,10 @@ export function StickerPanel({
     [catalog.builtinPacks, catalog.customStickerCount, isMobile],
   );
   const activeTab = tabs.find((tab) => tab.id === activeSectionId) ?? tabs[0];
-  const panelSubtitle = searching
-    ? `搜索“${keyword.trim()}”`
+  const panelSubtitle = trimmedKeyword.length > 0
+    ? searchPending
+      ? `正在搜索“${trimmedKeyword}”`
+      : `搜索“${trimmedKeyword}”`
     : activeSectionId === "custom" && customManageMode
       ? `管理自定义表情 · 已保存 ${catalog.customStickerCount} / ${catalog.maxCustomStickerCount}`
       : activeSectionId === "custom" && customStickerLibraryFull
@@ -232,19 +251,36 @@ export function StickerPanel({
         ? "最近发送和使用过的表情"
         : `${activeTab?.label ?? "表情"} · 桌面端连续发送`;
   const customCapacityNotice =
-    activeSectionId === "custom" && !searching
+    activeSectionId === "custom" && trimmedKeyword.length === 0
       ? customStickerLibraryFull
         ? "自定义表情已满，请先删除几个再继续添加。"
         : customSlotsRemaining <= 20
           ? `还能再添加 ${customSlotsRemaining} 个自定义表情。`
           : null
       : null;
+  const showCustomSortBar =
+    activeSectionId === "custom" &&
+    trimmedKeyword.length === 0 &&
+    catalog.customStickerCount > 1;
 
   useEffect(() => {
-    if (activeSectionId !== "custom" || searching) {
+    if (activeSectionId !== "custom" || trimmedKeyword.length > 0) {
       setCustomManageMode(false);
     }
-  }, [activeSectionId, searching]);
+  }, [activeSectionId, trimmedKeyword.length]);
+
+  useEffect(() => {
+    if (!trimmedKeyword) {
+      setSearchKeyword("");
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setSearchKeyword(trimmedKeyword);
+    }, 180);
+
+    return () => window.clearTimeout(timer);
+  }, [trimmedKeyword]);
 
   return (
     <div
@@ -279,7 +315,9 @@ export function StickerPanel({
             ) : null}
           </div>
           <div className="flex items-center gap-2">
-            {!isMobile && activeSectionId === "custom" && !searching ? (
+            {!isMobile &&
+            activeSectionId === "custom" &&
+            trimmedKeyword.length === 0 ? (
               <button
                 type="button"
                 onClick={() => setCustomManageMode((current) => !current)}
@@ -347,6 +385,44 @@ export function StickerPanel({
             isMobile ? "min-h-0 flex-1 overflow-y-auto px-3 pb-2.5" : "min-h-[280px] max-h-[360px] overflow-y-auto px-1 pb-3"
           }
         >
+          {showCustomSortBar ? (
+            <div
+              className={
+                isMobile
+                  ? "mb-2 flex items-center gap-1.5"
+                  : "mb-3 flex items-center gap-2"
+              }
+            >
+              {([
+                ["recent", "最近使用"],
+                ["added", "最近添加"],
+              ] as const).map(([mode, label]) => {
+                const active = customSortMode === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setCustomSortMode(mode)}
+                    className={
+                      isMobile
+                        ? `rounded-full px-2.5 py-1 text-[11px] transition ${
+                            active
+                              ? "bg-[rgba(160,90,10,0.14)] text-[#9a5a0a]"
+                              : "bg-white text-[color:var(--text-secondary)]"
+                          }`
+                        : `rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                            active
+                              ? "bg-[rgba(160,90,10,0.14)] text-[#9a5a0a]"
+                              : "bg-white/82 text-[color:var(--text-secondary)] hover:bg-white"
+                          }`
+                    }
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
           {customCapacityNotice ? (
             <div
               className={
@@ -425,6 +501,7 @@ export function StickerPanel({
                 type="button"
                 onClick={() => {
                   setKeyword("");
+                  setSearchKeyword("");
                   onPackChange(tab.id);
                 }}
                 className={
@@ -615,6 +692,43 @@ function resolveRecentStickers(
         : null;
     })
     .filter((item): item is ResolvedRecentStickerItem => Boolean(item));
+}
+
+function sortCustomStickers(input: {
+  stickers: CustomStickerRecord[];
+  recentStickerEntries: ResolvedRecentStickerItem[];
+  sortMode: CustomStickerSortMode;
+}) {
+  const recentUsedAtMap = new Map<string, number>();
+  input.recentStickerEntries.forEach((entry) => {
+    if (entry.sticker.sourceType !== "custom") {
+      return;
+    }
+
+    const current = recentUsedAtMap.get(entry.sticker.stickerId) ?? 0;
+    if (entry.usedAt > current) {
+      recentUsedAtMap.set(entry.sticker.stickerId, entry.usedAt);
+    }
+  });
+
+  return [...input.stickers].sort((left, right) => {
+    if (input.sortMode === "recent") {
+      const recentDiff =
+        (recentUsedAtMap.get(right.stickerId) ?? 0) -
+        (recentUsedAtMap.get(left.stickerId) ?? 0);
+      if (recentDiff !== 0) {
+        return recentDiff;
+      }
+    }
+
+    const updatedDiff =
+      Date.parse(right.updatedAt) - Date.parse(left.updatedAt);
+    if (updatedDiff !== 0) {
+      return updatedDiff;
+    }
+
+    return Date.parse(right.createdAt) - Date.parse(left.createdAt);
+  });
 }
 
 function buildFeaturedStickers(
