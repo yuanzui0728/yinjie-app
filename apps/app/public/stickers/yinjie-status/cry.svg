@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <rect width="160" height="160" rx="36" fill="#BFDBFE"/>
+  <circle cx="80" cy="72" r="38" fill="#EFF6FF"/>
+  <circle cx="66" cy="66" r="5" fill="#1D4ED8"/>
+  <circle cx="94" cy="66" r="5" fill="#1D4ED8"/>
+  <path d="M64 94c8-8 24-8 32 0" stroke="#1D4ED8" stroke-width="6" stroke-linecap="round"/>
+  <path d="M55 74c-6 10-5 18 2 24 7-4 8-12 4-22" fill="#60A5FA"/>
+  <path d="M105 74c6 10 5 18-2 24-7-4-8-12-4-22" fill="#60A5FA"/>
+  <text x="80" y="136" font-size="22" text-anchor="middle" fill="#1D4ED8" font-family="Arial, sans-serif">委屈</text>
+</svg>

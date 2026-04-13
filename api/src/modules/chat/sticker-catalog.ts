@@ -32,6 +32,19 @@ const STICKER_PACKS: StickerPack[] = [
     ],
   },
   {
+    id: 'yinjie-status',
+    title: '情绪现场',
+    coverStickerId: 'happy',
+    stickers: [
+      { id: 'happy', src: '/stickers/yinjie-status/happy.svg', width: 160, height: 160, label: '开心', keywords: ['开心', '嘿嘿', '高兴', '快乐'] },
+      { id: 'please', src: '/stickers/yinjie-status/please.svg', width: 160, height: 160, label: '拜托', keywords: ['拜托', '求求', '帮忙', '求你'] },
+      { id: 'cry', src: '/stickers/yinjie-status/cry.svg', width: 160, height: 160, label: '委屈', keywords: ['委屈', '难过', '哭哭', '呜呜'] },
+      { id: 'daze', src: '/stickers/yinjie-status/daze.svg', width: 160, height: 160, label: '发呆', keywords: ['发呆', '懵', '走神', '呆住'] },
+      { id: 'clap', src: '/stickers/yinjie-status/clap.svg', width: 160, height: 160, label: '鼓掌', keywords: ['鼓掌', '厉害', '棒', '赞'] },
+      { id: 'broken', src: '/stickers/yinjie-status/broken.svg', width: 160, height: 160, label: '破防', keywords: ['破防', '崩溃', '裂开', '顶不住'] },
+    ],
+  },
+  {
     id: 'yinjie-bubble',
     title: '气泡对白',
     coverStickerId: 'cheer',
@@ -42,6 +55,19 @@ const STICKER_PACKS: StickerPack[] = [
       { id: 'thinking', src: '/stickers/yinjie-bubble/thinking.svg', width: 180, height: 180, label: '思考中', keywords: ['思考', '等等', '让我想想'] },
       { id: 'approve', src: '/stickers/yinjie-bubble/approve.svg', width: 180, height: 180, label: '收到', keywords: ['收到', '明白', '行', 'ok'] },
       { id: 'laugh', src: '/stickers/yinjie-bubble/laugh.svg', width: 180, height: 180, label: '笑出声', keywords: ['笑', '哈哈', '乐', '开心'] },
+    ],
+  },
+  {
+    id: 'yinjie-office',
+    title: '回复速递',
+    coverStickerId: 'arriving',
+    stickers: [
+      { id: 'arriving', src: '/stickers/yinjie-office/arriving.svg', width: 180, height: 180, label: '在路上', keywords: ['在路上', '马上到', '快到了', '出发了'] },
+      { id: 'later', src: '/stickers/yinjie-office/later.svg', width: 180, height: 180, label: '稍等', keywords: ['稍等', '等等', '等我', '马上'] },
+      { id: 'review', src: '/stickers/yinjie-office/review.svg', width: 180, height: 180, label: '马上看', keywords: ['马上看', '我先看', '处理中', '安排'] },
+      { id: 'done', src: '/stickers/yinjie-office/done.svg', width: 180, height: 180, label: '已安排', keywords: ['已安排', '搞定', '好了', '办了'] },
+      { id: 'busy', src: '/stickers/yinjie-office/busy.svg', width: 180, height: 180, label: '先忙', keywords: ['先忙', '在忙', '晚点', '回你'] },
+      { id: 'coming', src: '/stickers/yinjie-office/coming.svg', width: 180, height: 180, label: '这就来', keywords: ['这就来', '马上来', '到我了', '来了'] },
     ],
   },
 ];

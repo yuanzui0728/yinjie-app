@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <rect width="160" height="160" rx="36" fill="#C7D2FE"/>
+  <circle cx="80" cy="72" r="38" fill="#EEF2FF"/>
+  <path d="M58 68h16" stroke="#3730A3" stroke-width="6" stroke-linecap="round"/>
+  <path d="M86 68h16" stroke="#3730A3" stroke-width="6" stroke-linecap="round"/>
+  <path d="M68 92h24" stroke="#3730A3" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="114" cy="42" r="8" fill="#FFF"/>
+  <circle cx="126" cy="32" r="5" fill="#FFF"/>
+  <text x="80" y="136" font-size="22" text-anchor="middle" fill="#3730A3" font-family="Arial, sans-serif">发呆</text>
+</svg>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <rect width="160" height="160" rx="36" fill="#FDE68A"/>
+  <circle cx="80" cy="72" r="38" fill="#FFF8DB"/>
+  <circle cx="66" cy="66" r="5" fill="#7C4700"/>
+  <circle cx="94" cy="66" r="5" fill="#7C4700"/>
+  <path d="M60 84c8 12 32 12 40 0" stroke="#7C4700" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="56" cy="84" r="6" fill="#F9A8D4" opacity="0.75"/>
+  <circle cx="104" cy="84" r="6" fill="#F9A8D4" opacity="0.75"/>
+  <text x="80" y="136" font-size="22" text-anchor="middle" fill="#7C4700" font-family="Arial, sans-serif">开心</text>
+</svg>

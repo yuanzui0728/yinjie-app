@@ -28,6 +28,12 @@ type StickerPanelItem = {
   sticker: StickerAttachment;
   canDelete?: boolean;
 };
+type StickerPanelTab = {
+  id: string;
+  label: string;
+  badgeText?: string;
+  coverSticker?: StickerAttachment | null;
+};
 
 export function StickerPanel({
   baseUrl,
@@ -64,26 +70,35 @@ export function StickerPanel({
   );
 
   const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.set("file", file, file.name);
-      const dimensions = await readStickerFileDimensions(file);
-      if (dimensions.width) {
-        formData.set("width", String(dimensions.width));
+    mutationFn: async (files: File[]) => {
+      let uploadedCount = 0;
+
+      for (const file of files) {
+        const formData = new FormData();
+        formData.set("file", file, file.name);
+        const dimensions = await readStickerFileDimensions(file);
+        if (dimensions.width) {
+          formData.set("width", String(dimensions.width));
+        }
+        if (dimensions.height) {
+          formData.set("height", String(dimensions.height));
+        }
+        await uploadCustomSticker(formData, baseUrl);
+        uploadedCount += 1;
       }
-      if (dimensions.height) {
-        formData.set("height", String(dimensions.height));
-      }
-      return uploadCustomSticker(formData, baseUrl);
+
+      return uploadedCount;
     },
     onMutate: () => {
       onError?.(null);
     },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: [PANEL_QUERY_KEY, baseUrl],
-      });
-      onPackChange("custom");
+    onSuccess: async (uploadedCount) => {
+      if (uploadedCount > 0) {
+        await queryClient.invalidateQueries({
+          queryKey: [PANEL_QUERY_KEY, baseUrl],
+        });
+        onPackChange("custom");
+      }
     },
     onError: (error) => {
       onError?.(
@@ -162,18 +177,31 @@ export function StickerPanel({
     searching,
   ]);
 
-  const tabs = useMemo(
+  const tabs = useMemo<StickerPanelTab[]>(
     () => [
-      { id: "recent", label: isMobile ? "最近" : "最近使用" },
-      { id: "featured", label: "精选" },
-      { id: "custom", label: `自定义 ${catalog.customStickerCount}` },
+      { id: "recent", label: isMobile ? "最近" : "最近使用", badgeText: "近" },
+      { id: "featured", label: "精选", badgeText: "荐" },
+      {
+        id: "custom",
+        label: `自定义 ${catalog.customStickerCount}`,
+        badgeText: "自",
+      },
       ...catalog.builtinPacks.map((pack) => ({
         id: pack.id,
         label: pack.title,
+        coverSticker: getStickerAttachment(pack.id, pack.coverStickerId),
       })),
     ],
     [catalog.builtinPacks, catalog.customStickerCount, isMobile],
   );
+  const activeTab = tabs.find((tab) => tab.id === activeSectionId) ?? tabs[0];
+  const panelSubtitle = searching
+    ? `搜索“${keyword.trim()}”`
+    : activeSectionId === "custom"
+      ? `已保存 ${catalog.customStickerCount} / ${catalog.maxCustomStickerCount}，支持图片和 GIF`
+      : activeSectionId === "recent"
+        ? "最近发送和使用过的表情"
+        : `${activeTab?.label ?? "表情"} · 桌面端连续发送`;
 
   return (
     <div
@@ -203,7 +231,7 @@ export function StickerPanel({
             </div>
             {!isMobile ? (
               <div className="pt-0.5 text-[11px] text-[color:var(--text-secondary)]">
-                搜索、发送和管理自定义表情
+                {panelSubtitle}
               </div>
             ) : null}
           </div>
@@ -219,7 +247,7 @@ export function StickerPanel({
               }
             >
               {uploadMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
-              添加
+              {isMobile ? "添加" : "添加表情"}
             </button>
             <button
               type="button"
@@ -323,14 +351,36 @@ export function StickerPanel({
                           ? "border-[color:var(--border-subtle)] bg-white text-[#111827]"
                           : "border-transparent bg-transparent text-[#7b7f84]"
                       }`
-                    : `shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                    : `shrink-0 rounded-[16px] p-1.5 transition ${
                         active
-                          ? "bg-[var(--brand-gradient)] text-[color:var(--text-on-brand)] shadow-[0_6px_14px_rgba(160,90,10,0.20)]"
-                          : "border border-white/80 bg-white/72 text-[color:var(--text-secondary)]"
+                          ? "bg-[rgba(160,90,10,0.12)] shadow-[0_6px_14px_rgba(160,90,10,0.14)]"
+                          : "bg-transparent hover:bg-white/76"
                       }`
                 }
+                title={tab.label}
               >
-                {tab.label}
+                {isMobile ? (
+                  tab.label
+                ) : (
+                  <span
+                    className={`flex h-10 w-10 items-center justify-center overflow-hidden rounded-[12px] border text-xs font-semibold ${
+                      active
+                        ? "border-[rgba(160,90,10,0.35)] bg-white text-[#9a5a0a]"
+                        : "border-white/80 bg-white/84 text-[color:var(--text-secondary)]"
+                    }`}
+                  >
+                    {tab.coverSticker ? (
+                      <img
+                        src={tab.coverSticker.url}
+                        alt={tab.label}
+                        className="h-full w-full object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <span>{tab.badgeText ?? tab.label.slice(0, 1)}</span>
+                    )}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -340,11 +390,12 @@ export function StickerPanel({
           ref={uploadInputRef}
           type="file"
           accept="image/*"
+          multiple
           className="hidden"
           onChange={(event) => {
-            const [file] = Array.from(event.currentTarget.files ?? []);
-            if (file) {
-              void uploadMutation.mutateAsync(file);
+            const files = Array.from(event.currentTarget.files ?? []);
+            if (files.length) {
+              void uploadMutation.mutateAsync(files);
             }
             event.currentTarget.value = "";
           }}

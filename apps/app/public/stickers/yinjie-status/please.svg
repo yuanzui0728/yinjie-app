@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160">
+  <rect width="160" height="160" rx="36" fill="#FBCFE8"/>
+  <circle cx="80" cy="72" r="38" fill="#FFF4FA"/>
+  <ellipse cx="66" cy="68" rx="9" ry="11" fill="#7C2D5D"/>
+  <ellipse cx="94" cy="68" rx="9" ry="11" fill="#7C2D5D"/>
+  <circle cx="68" cy="66" r="3" fill="#FFF"/>
+  <circle cx="96" cy="66" r="3" fill="#FFF"/>
+  <path d="M68 92c6-5 18-5 24 0" stroke="#7C2D5D" stroke-width="5" stroke-linecap="round"/>
+  <text x="80" y="136" font-size="22" text-anchor="middle" fill="#7C2D5D" font-family="Arial, sans-serif">拜托</text>
+</svg>
