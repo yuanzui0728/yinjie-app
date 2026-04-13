@@ -440,7 +440,16 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
           isDesktopLayout ? "bg-[#f3f3f3]" : "bg-[#111827] text-white",
         )}
       >
-        <LoadingBlock label={`正在连接${callTitle}...`} />
+        {isDesktopLayout ? (
+          <LoadingBlock label={`正在连接${callTitle}...`} />
+        ) : (
+          <MobileCallStatusCard
+            badge="连接中"
+            title={`正在连接${callTitle}`}
+            description="稍等一下，正在同步群资料和成员状态。"
+            tone="loading"
+          />
+        )}
       </AppPage>
     );
   }
@@ -453,7 +462,26 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
           isDesktopLayout ? "bg-[#f3f3f3]" : "bg-[#111827] text-white",
         )}
       >
-        <ErrorBlock message={groupQuery.error.message} />
+        {isDesktopLayout ? (
+          <ErrorBlock message={groupQuery.error.message} />
+        ) : (
+          <MobileCallStatusCard
+            badge="群聊"
+            title="群通话暂时不可用"
+            description={groupQuery.error.message}
+            tone="danger"
+            action={
+              <MobileCallActionButton
+                onClick={() => {
+                  void groupQuery.refetch();
+                }}
+                className="min-w-[132px]"
+              >
+                重新加载
+              </MobileCallActionButton>
+            }
+          />
+        )}
       </AppPage>
     );
   }
@@ -466,7 +494,26 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
           isDesktopLayout ? "bg-[#f3f3f3]" : "bg-[#111827] text-white",
         )}
       >
-        <ErrorBlock message={membersQuery.error.message} />
+        {isDesktopLayout ? (
+          <ErrorBlock message={membersQuery.error.message} />
+        ) : (
+          <MobileCallStatusCard
+            badge="成员"
+            title="成员信息暂时不可用"
+            description={membersQuery.error.message}
+            tone="danger"
+            action={
+              <MobileCallActionButton
+                onClick={() => {
+                  void membersQuery.refetch();
+                }}
+                className="min-w-[132px]"
+              >
+                重新加载
+              </MobileCallActionButton>
+            }
+          />
+        )}
       </AppPage>
     );
   }
@@ -479,18 +526,37 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
           isDesktopLayout ? "bg-[#f3f3f3]" : "bg-[#111827] text-white",
         )}
       >
-        <ErrorBlock message="当前群聊不存在，暂时无法发起群通话。" />
-        <Button
-          variant="secondary"
-          onClick={handleBack}
-          className={cn(
-            isDesktopLayout
-              ? "rounded-[10px] border-black/8 bg-white shadow-none hover:bg-[#efefef]"
-              : "rounded-full",
-          )}
-        >
-          返回群聊
-        </Button>
+        {isDesktopLayout ? (
+          <>
+            <ErrorBlock message="当前群聊不存在，暂时无法发起群通话。" />
+            <Button
+              variant="secondary"
+              onClick={handleBack}
+              className={cn(
+                isDesktopLayout
+                  ? "rounded-[10px] border-black/8 bg-white shadow-none hover:bg-[#efefef]"
+                  : "rounded-full",
+              )}
+            >
+              返回群聊
+            </Button>
+          </>
+        ) : (
+          <MobileCallStatusCard
+            badge="群聊"
+            title="当前不能发起群通话"
+            description="这个群聊暂时不可用，先返回群聊列表或上一个会话再试一次。"
+            tone="danger"
+            action={
+              <MobileCallActionButton
+                onClick={handleBack}
+                className="min-w-[132px]"
+              >
+                返回群聊
+              </MobileCallActionButton>
+            }
+          />
+        )}
       </AppPage>
     );
   }
@@ -745,7 +811,9 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
             </MobileCallNotice>
           ) : null}
           {syncStatusMutation.error instanceof Error ? (
-            <ErrorBlock message={syncStatusMutation.error.message} />
+            <MobileCallNotice tone="danger">
+              {syncStatusMutation.error.message}
+            </MobileCallNotice>
           ) : null}
           {syncStatusMutation.error instanceof Error ? (
             <MobileCallNotice tone="info">
@@ -771,7 +839,9 @@ export function MobileGroupCallScreen({ mode }: MobileGroupCallScreenProps) {
             </div>
           ) : null}
           {endStatusMutation.error instanceof Error ? (
-            <ErrorBlock message={endStatusMutation.error.message} />
+            <MobileCallNotice tone="danger">
+              {endStatusMutation.error.message}
+            </MobileCallNotice>
           ) : null}
           {endStatusMutation.error instanceof Error ? (
             <MobileCallNotice tone="info">
@@ -955,6 +1025,54 @@ function buildInitialJoinedMemberIds(
   }
 
   return Array.from(new Set(joinedMembers));
+}
+
+function MobileCallStatusCard({
+  badge,
+  title,
+  description,
+  action,
+  tone = "default",
+}: {
+  badge: string;
+  title: string;
+  description: string;
+  action?: ReactNode;
+  tone?: "default" | "danger" | "loading";
+}) {
+  return (
+    <section
+      className={cn(
+        "mx-auto flex max-w-[26rem] flex-col items-center rounded-[28px] border px-5 py-6 text-center shadow-[0_24px_64px_rgba(2,6,23,0.28)]",
+        tone === "danger"
+          ? "border-[#f87171]/24 bg-[linear-gradient(180deg,rgba(127,29,29,0.34),rgba(69,10,10,0.3))] text-white"
+          : "border-white/10 bg-[linear-gradient(180deg,rgba(15,23,42,0.72),rgba(2,6,23,0.88))] text-white",
+      )}
+    >
+      <div
+        className={cn(
+          "inline-flex rounded-full px-2.5 py-1 text-[10px] font-medium tracking-[0.12em]",
+          tone === "danger"
+            ? "bg-[#ef4444]/14 text-[#fecaca]"
+            : "bg-[#34d399]/12 text-[#bbf7d0]",
+        )}
+      >
+        {badge}
+      </div>
+      {tone === "loading" ? (
+        <div className="mt-3 flex items-center justify-center gap-1.5">
+          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-white/24" />
+          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-white/36 [animation-delay:120ms]" />
+          <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-[#86efac] [animation-delay:240ms]" />
+        </div>
+      ) : null}
+      <div className="mt-3 text-[18px] font-medium leading-7">{title}</div>
+      <p className="mt-2 max-w-[18rem] text-[13px] leading-6 text-white/68">
+        {description}
+      </p>
+      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
+    </section>
+  );
 }
 
 function MobileCallNotice({
