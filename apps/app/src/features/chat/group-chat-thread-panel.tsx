@@ -652,7 +652,7 @@ export function GroupChatThreadPanel({
       }`}
     >
       {isDesktop ? (
-        <header className="flex items-center gap-3 border-b border-[color:var(--border-faint)] bg-white/74 px-6 py-3 backdrop-blur-xl">
+        <header className="relative z-20 flex items-center gap-3 border-b border-[color:var(--border-faint)] bg-white/74 px-6 py-3 backdrop-blur-xl">
           <div className="min-w-0 flex-1 px-1 py-1">
             <button
               type="button"
