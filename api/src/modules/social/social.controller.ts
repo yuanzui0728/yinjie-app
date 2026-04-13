@@ -39,8 +39,6 @@ export class SocialController {
     @Body()
     body: {
       remarkName?: string | null;
-      region?: string | null;
-      source?: string | null;
       tags?: string[] | null;
     },
   ) {

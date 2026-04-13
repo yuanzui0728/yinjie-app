@@ -51,8 +51,6 @@ export interface SetFriendStarredRequest {
 
 export interface UpdateFriendProfileRequest {
   remarkName?: string | null;
-  region?: string | null;
-  source?: string | null;
   tags?: string[] | null;
 }
 
