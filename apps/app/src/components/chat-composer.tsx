@@ -2857,15 +2857,15 @@ export function ChatComposer({
                   disabled={
                     speech.status === "processing" || mobileSpeechPressing
                   }
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/72 text-[#606266] transition active:bg-white disabled:opacity-45"
+                  className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full bg-white/72 text-[#606266] transition active:bg-white disabled:opacity-45"
                   aria-label={
                     mobileSpeechMode ? "切换到键盘输入" : "切换到语音输入"
                   }
                 >
                   {mobileSpeechMode ? (
-                    <Keyboard size={20} />
+                    <Keyboard size={18} />
                   ) : (
-                    <Mic size={20} />
+                    <Mic size={18} />
                   )}
                 </button>
               ) : null}
@@ -2886,7 +2886,7 @@ export function ChatComposer({
                   }
                   title={speechDisabledReason ?? undefined}
                   className={cn(
-                    "flex min-h-[36px] min-w-0 flex-1 select-none items-center justify-center rounded-[18px] border border-[color:var(--border-subtle)] bg-white px-4 py-2 text-[14px] transition touch-none",
+                    "flex min-h-[34px] min-w-0 flex-1 select-none items-center justify-center rounded-[17px] border border-[color:var(--border-subtle)] bg-white px-3.5 py-1.5 text-[13px] transition touch-none",
                     mobileSpeechPressing
                       ? mobileSpeechCancelIntent
                         ? "border-[#ff4d4f]/45 bg-[#fff5f5] text-[#ff4d4f]"
@@ -2907,7 +2907,7 @@ export function ChatComposer({
                       : "按住说话"}
                 </button>
               ) : (
-                <div className="flex min-w-0 flex-1 items-end rounded-[18px] border border-[color:var(--border-subtle)] bg-white px-3 py-0.5">
+                <div className="flex min-w-0 flex-1 items-end rounded-[17px] border border-[color:var(--border-subtle)] bg-white px-2.5 py-0.5">
                   <textarea
                     ref={mobileTextareaRef}
                     rows={1}
@@ -2929,7 +2929,7 @@ export function ChatComposer({
                     onKeyUp={syncInputCursor}
                     onSelect={syncInputCursor}
                     placeholder={placeholder}
-                    className="min-h-[34px] max-h-[104px] flex-1 resize-none bg-transparent py-1.5 text-[14px] leading-5 text-[#111827] outline-none placeholder:text-[#a3a3a3]"
+                    className="min-h-[32px] max-h-[96px] flex-1 resize-none bg-transparent py-1 text-[14px] leading-[19px] text-[#111827] outline-none placeholder:text-[#a3a3a3]"
                   />
                 </div>
               )}
@@ -2938,15 +2938,15 @@ export function ChatComposer({
                 type="button"
                 onClick={toggleStickerPanel}
                 className={cn(
-                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/72 text-[#606266] transition active:bg-white",
+                  "flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full bg-white/72 text-[#606266] transition active:bg-white",
                   stickerPanelOpen ? "bg-white text-[#111827]" : "",
                 )}
                 aria-label={stickerPanelOpen ? "切换到键盘输入" : "表情"}
               >
                 {stickerPanelOpen ? (
-                  <Keyboard size={20} />
+                  <Keyboard size={18} />
                 ) : (
-                  <Smile size={20} />
+                  <Smile size={18} />
                 )}
               </button>
 
@@ -2955,7 +2955,7 @@ export function ChatComposer({
                   type="button"
                   onClick={onSubmit}
                   disabled={composerPending}
-                  className="flex h-8.5 min-w-[54px] shrink-0 items-center justify-center rounded-[16px] bg-[#07c160] px-3 text-[14px] font-medium text-white disabled:opacity-45"
+                  className="flex h-8 min-w-[52px] shrink-0 items-center justify-center rounded-[15px] bg-[#07c160] px-3 text-[13px] font-medium text-white disabled:opacity-45"
                 >
                   发送
                 </button>
@@ -2965,12 +2965,12 @@ export function ChatComposer({
                   onClick={togglePlusPanel}
                   disabled={!onSendAttachment || attachmentBusy}
                   className={cn(
-                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/72 text-[#606266] transition active:bg-white disabled:opacity-45",
+                    "flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full bg-white/72 text-[#606266] transition active:bg-white disabled:opacity-45",
                     plusPanelOpen ? "bg-white text-[#111827]" : "",
                   )}
                   aria-label="更多功能"
                 >
-                  <Plus size={20} />
+                  <Plus size={18} />
                 </button>
               )}
             </div>
