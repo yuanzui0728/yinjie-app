@@ -63,6 +63,7 @@ export function MiniProgramsPage() {
   const isDesktopLayout = useDesktopLayout();
   const nativeMobileShareSupported =
     !isDesktopLayout && isNativeMobileBridgeAvailable();
+  const mobileWebCopyFallback = !isDesktopLayout && !nativeMobileShareSupported;
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
   const locationSearch = useRouterState({
@@ -277,6 +278,28 @@ export function MiniProgramsPage() {
       return;
     }
 
+    if (mobileWebCopyFallback) {
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.clipboard ||
+        typeof navigator.clipboard.writeText !== "function"
+      ) {
+        setNoticeTone("info");
+        setSuccessNotice("当前环境暂不支持复制入口链接。");
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(link);
+        setNoticeTone("success");
+        setSuccessNotice("入口链接已复制。");
+      } catch {
+        setNoticeTone("info");
+        setSuccessNotice("复制入口链接失败，请稍后重试。");
+      }
+      return;
+    }
+
     if (
       typeof navigator === "undefined" ||
       !navigator.clipboard ||
@@ -419,9 +442,7 @@ export function MiniProgramsPage() {
       successNotice={successNotice}
       noticeTone={noticeTone}
       visibleMiniPrograms={visibleMiniPrograms}
-      onCopyMiniProgramToMobile={
-        nativeMobileShareSupported ? handleCopyMiniProgramToMobile : undefined
-      }
+      onCopyMiniProgramToMobile={handleCopyMiniProgramToMobile}
       onBack={handleBack}
       onCategoryChange={setActiveCategory}
       onDismissActiveMiniProgram={dismissActiveMiniProgram}
