@@ -2,12 +2,16 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFavoriteNote,
+  getConversations,
   getFavoriteNote,
   removeFavoriteNote,
+  sendGroupMessage,
   updateFavoriteNote,
   uploadChatAttachment,
+  type ConversationListItem,
   type FavoriteNoteAsset,
   type FavoriteNoteDocument,
+  type NoteCardAttachment,
 } from "@yinjie/contracts";
 import { Button, ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
 import {
@@ -18,12 +22,15 @@ import {
   List,
   ListTodo,
   Save,
+  Send,
   Tag,
   Trash2,
   Underline,
   X,
 } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
+import { isPersistedGroupConversation } from "../../../lib/conversation-route";
+import { emitChatMessage, joinConversationRoom } from "../../../lib/socket";
 import { useAppRuntimeConfig } from "../../../runtime/runtime-config-store";
 import { closeCurrentDesktopWindow } from "../../../runtime/desktop-windowing";
 import {
@@ -35,6 +42,10 @@ import {
   type DesktopNoteDraftRecord,
 } from "./desktop-notes-storage";
 import { DesktopChatConfirmDialog } from "./desktop-chat-confirm-dialog";
+import {
+  DesktopNoteSendDialog,
+  type DesktopNoteSendDialogNote,
+} from "./desktop-note-send-dialog";
 
 type DesktopNotesWorkspaceProps = {
   selectedNoteId?: string;
@@ -93,11 +104,18 @@ export function DesktopNotesWorkspace({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [closeDialogOpen, setCloseDialogOpen] = useState(false);
   const [attachmentPending, setAttachmentPending] = useState(false);
+  const [sendDialogNote, setSendDialogNote] =
+    useState<DesktopNoteSendDialogNote | null>(null);
 
   const noteQuery = useQuery({
     queryKey: ["favorite-note", baseUrl, selectedNoteId],
     queryFn: () => getFavoriteNote(selectedNoteId!, baseUrl),
     enabled: Boolean(selectedNoteId),
+  });
+  const recentConversationsQuery = useQuery({
+    queryKey: ["desktop-note-send-conversations", baseUrl],
+    queryFn: () => getConversations(baseUrl),
+    enabled: Boolean(sendDialogNote),
   });
 
   const sessionKey = `${selectedNoteId ?? "new"}:${draftId ?? ""}`;
@@ -178,6 +196,8 @@ export function DesktopNotesWorkspace({
         clearDesktopNoteDraft(activeDraftId);
       }
 
+      setSendDialogNote(null);
+
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ["app-favorites", baseUrl],
@@ -205,6 +225,60 @@ export function DesktopNotesWorkspace({
         tone: "danger",
         message:
           error instanceof Error ? error.message : "删除失败，请稍后再试。",
+      });
+    },
+  });
+  const sendMutation = useMutation({
+    mutationFn: async (conversation: ConversationListItem) => {
+      const note = sendDialogNote;
+      if (!note) {
+        throw new Error("当前没有可发送的笔记。");
+      }
+
+      const attachment = buildNoteCardAttachment(note);
+      if (isPersistedGroupConversation(conversation)) {
+        await sendGroupMessage(
+          conversation.id,
+          {
+            type: "note_card",
+            text: `[笔记] ${attachment.title}`,
+            attachment,
+          },
+          baseUrl,
+        );
+      } else {
+        const characterId = conversation.participants[0]?.trim();
+        if (!characterId) {
+          throw new Error("当前会话没有可用的接收目标。");
+        }
+
+        joinConversationRoom({ conversationId: conversation.id });
+        emitChatMessage({
+          conversationId: conversation.id,
+          characterId,
+          type: "note_card",
+          text: `[笔记] ${attachment.title}`,
+          attachment,
+        });
+      }
+
+      return conversation.title;
+    },
+    onSuccess: async (conversationTitle) => {
+      setSendDialogNote(null);
+      setNotice({
+        tone: "success",
+        message: `笔记已发送到 ${conversationTitle}。`,
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["app-conversations", baseUrl],
+      });
+    },
+    onError: (error) => {
+      setNotice({
+        tone: "danger",
+        message:
+          error instanceof Error ? error.message : "发送失败，请稍后再试。",
       });
     },
   });
@@ -651,6 +725,45 @@ export function DesktopNotesWorkspace({
     void handleClose();
   }
 
+  async function requestSend() {
+    const hasSendableContent =
+      Boolean(editorState.contentText.trim()) || editorState.assets.length > 0;
+    if (!hasSendableContent) {
+      setNotice({
+        tone: "danger",
+        message: "先写一点内容，再把这条笔记发送出去。",
+      });
+      return;
+    }
+
+    const savedNote =
+      isDirty || !noteId
+        ? await handleSave()
+        : noteQuery.data && noteQuery.data.id === noteId
+          ? noteQuery.data
+          : null;
+
+    const nextNote = savedNote
+      ? buildNoteSendDialogNoteFromDocument(savedNote)
+      : noteId
+        ? buildNoteSendDialogNote({
+            noteId,
+            state: editorState,
+            updatedAt: noteQuery.data?.updatedAt,
+          })
+        : null;
+
+    if (!nextNote) {
+      setNotice({
+        tone: "danger",
+        message: "笔记还没有保存成功，请稍后再试。",
+      });
+      return;
+    }
+
+    setSendDialogNote(nextNote);
+  }
+
   if (
     selectedNoteId &&
     noteQuery.isLoading &&
@@ -742,6 +855,15 @@ export function DesktopNotesWorkspace({
               删除
             </button>
           ) : null}
+          <Button
+            variant="secondary"
+            onClick={() => void requestSend()}
+            disabled={saveMutation.isPending || sendMutation.isPending}
+            className="h-9 rounded-[10px] border-[color:var(--border-faint)] bg-white px-4 shadow-none hover:bg-[color:var(--surface-console)]"
+          >
+            <Send size={15} />
+            {sendMutation.isPending ? "发送中..." : "发送"}
+          </Button>
           <Button
             variant="primary"
             onClick={() => void handleSave()}
@@ -914,6 +1036,27 @@ export function DesktopNotesWorkspace({
         onClose={() => setCloseDialogOpen(false)}
         onDiscard={() => void handleDiscardAndClose()}
         onSave={() => void handleSaveAndClose()}
+      />
+
+      <DesktopNoteSendDialog
+        open={Boolean(sendDialogNote)}
+        note={sendDialogNote}
+        conversations={recentConversationsQuery.data ?? []}
+        loading={recentConversationsQuery.isLoading}
+        pending={sendMutation.isPending}
+        error={
+          recentConversationsQuery.error instanceof Error
+            ? recentConversationsQuery.error.message
+            : null
+        }
+        onClose={() => {
+          if (!sendMutation.isPending) {
+            setSendDialogNote(null);
+          }
+        }}
+        onSend={(conversation) => {
+          void sendMutation.mutateAsync(conversation);
+        }}
       />
     </div>
   );
@@ -1117,6 +1260,69 @@ function resolveNoteTitle(contentText: string) {
     .find(Boolean);
 
   return firstLine?.slice(0, 28) || "无标题笔记";
+}
+
+function resolveNoteExcerpt(contentText: string, title: string) {
+  const lines = contentText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const body = lines.join(" ").trim();
+  if (!body) {
+    return "";
+  }
+
+  if (body === title) {
+    return "";
+  }
+
+  const withoutTitle = body.startsWith(title)
+    ? body.slice(title.length).trim()
+    : body;
+  return withoutTitle.slice(0, 120);
+}
+
+function buildNoteSendDialogNote(input: {
+  noteId: string;
+  state: NoteEditorState;
+  updatedAt?: string;
+}): DesktopNoteSendDialogNote {
+  const title = resolveNoteTitle(input.state.contentText);
+  return {
+    noteId: input.noteId,
+    title,
+    excerpt: resolveNoteExcerpt(input.state.contentText, title),
+    tags: [...input.state.tags],
+    assets: filterAssetsByHtml(input.state.contentHtml, input.state.assets),
+    updatedAt: input.updatedAt ?? new Date().toISOString(),
+  };
+}
+
+function buildNoteSendDialogNoteFromDocument(
+  note: FavoriteNoteDocument,
+): DesktopNoteSendDialogNote {
+  return {
+    noteId: note.id,
+    title: note.title,
+    excerpt: note.excerpt,
+    tags: [...note.tags],
+    assets: note.assets.map((asset) => ({ ...asset })),
+    updatedAt: note.updatedAt,
+  };
+}
+
+function buildNoteCardAttachment(
+  note: DesktopNoteSendDialogNote,
+): NoteCardAttachment {
+  return {
+    kind: "note_card",
+    noteId: note.noteId,
+    title: note.title,
+    excerpt: note.excerpt,
+    tags: [...note.tags],
+    assets: note.assets.map((asset) => ({ ...asset })),
+    updatedAt: note.updatedAt,
+  };
 }
 
 function escapeHtml(value: string) {

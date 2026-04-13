@@ -35,7 +35,8 @@ type SearchMessageTypeFilter =
   | "file"
   | "voice"
   | "contact_card"
-  | "location_card";
+  | "location_card"
+  | "note_card";
 
 type IndexedSearchMessage = {
   message: SearchableChatMessage;
@@ -79,6 +80,7 @@ const SEARCH_MESSAGE_TYPE_FILTERS: Array<{
   { id: "sticker", label: "表情" },
   { id: "contact_card", label: "名片" },
   { id: "location_card", label: "位置" },
+  { id: "note_card", label: "笔记" },
   { id: "system", label: "系统" },
 ];
 
@@ -243,6 +245,7 @@ export function ChatMessageSearchPanel({
         sticker: 0,
         contact_card: 0,
         location_card: 0,
+        note_card: 0,
         system: 0,
       },
     );
@@ -792,6 +795,10 @@ function resolveMessageTypeFilter(
     return "location_card";
   }
 
+  if (message.type === "note_card") {
+    return "note_card";
+  }
+
   return "text";
 }
 
@@ -824,6 +831,12 @@ function resolveSupportText(message: SearchableChatMessage) {
       : "位置";
   }
 
+  if (message.attachment?.kind === "note_card") {
+    return message.attachment.title
+      ? `笔记 · ${message.attachment.title}`
+      : "笔记";
+  }
+
   if (message.attachment?.kind === "sticker") {
     return message.attachment.label
       ? `表情 · ${message.attachment.label}`
@@ -852,6 +865,10 @@ function resolveMessageTypeLabel(message: SearchableChatMessage) {
 
   if (message.type === "location_card") {
     return "位置";
+  }
+
+  if (message.type === "note_card") {
+    return "笔记";
   }
 
   if (message.type === "sticker") {

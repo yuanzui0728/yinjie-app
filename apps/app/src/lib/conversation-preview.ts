@@ -88,6 +88,10 @@ export function getConversationPreviewParts(
     return { prefix, text: "[位置]" };
   }
 
+  if (lastMessage.type === "note_card") {
+    return { prefix, text: "[笔记]" };
+  }
+
   if (lastMessage.type === "sticker") {
     return {
       prefix,

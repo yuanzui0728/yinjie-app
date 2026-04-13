@@ -76,6 +76,7 @@ import {
   openDesktopChatImageViewerWindow,
   type DesktopChatImageViewerSessionItem,
 } from "../features/desktop/chat/desktop-chat-image-viewer-route-state";
+import { openDesktopNoteWindow } from "../features/desktop/chat/desktop-note-window-route-state";
 import {
   hydrateDesktopFavoritesFromNative,
   mergeDesktopFavoriteRecords,
@@ -149,7 +150,8 @@ type OpenableAttachment =
   | Extract<MessageAttachment, { kind: "image" }>
   | Extract<MessageAttachment, { kind: "file" }>
   | Extract<MessageAttachment, { kind: "contact_card" }>
-  | Extract<MessageAttachment, { kind: "location_card" }>;
+  | Extract<MessageAttachment, { kind: "location_card" }>
+  | Extract<MessageAttachment, { kind: "note_card" }>;
 
 type SaveableAttachment =
   | Extract<MessageAttachment, { kind: "image" }>
@@ -379,15 +381,13 @@ export function ChatMessageList({
         : null,
     );
     setSelectedMessageIds((current) =>
-      filterStableStringIds(
-        current,
-        (item) => messages.some((message) => message.id === item),
+      filterStableStringIds(current, (item) =>
+        messages.some((message) => message.id === item),
       ),
     );
     setForwardMessages((current) =>
-      filterStableMessageList(
-        current,
-        (item) => messages.some((message) => message.id === item.id),
+      filterStableMessageList(current, (item) =>
+        messages.some((message) => message.id === item.id),
       ),
     );
     setSelectionAnchorMessageId((current) =>
@@ -578,7 +578,12 @@ export function ChatMessageList({
       window.removeEventListener("storage", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [favoritesQuery.data, isDesktop, nativeDesktopFavorites, syncFavoriteSourceIds]);
+  }, [
+    favoritesQuery.data,
+    isDesktop,
+    nativeDesktopFavorites,
+    syncFavoriteSourceIds,
+  ]);
 
   const forwardMutation = useMutation({
     mutationFn: async (input: {
@@ -1030,8 +1035,9 @@ export function ChatMessageList({
   const visibleMessages = visibleMessagesSnapshot.messages;
   const collapsedMessageRedirects = visibleMessagesSnapshot.redirectedIds;
   const resolvedUnreadMarkerMessageId =
-    unreadMarkerMessageId && collapsedMessageRedirects.has(unreadMarkerMessageId)
-      ? collapsedMessageRedirects.get(unreadMarkerMessageId) ?? null
+    unreadMarkerMessageId &&
+    collapsedMessageRedirects.has(unreadMarkerMessageId)
+      ? (collapsedMessageRedirects.get(unreadMarkerMessageId) ?? null)
       : unreadMarkerMessageId;
   const resolvedHighlightedMessageId =
     activeHighlightedMessageId &&
@@ -1276,6 +1282,23 @@ export function ChatMessageList({
       return;
     }
 
+    if (attachment.kind === "note_card") {
+      if (variant === "desktop") {
+        void openDesktopNoteWindow({
+          noteId: attachment.noteId,
+          draftId: attachment.noteId,
+          returnTo: "/tabs/favorites",
+        });
+        return;
+      }
+
+      void navigate({
+        to: "/notes",
+        hash: attachment.noteId,
+      });
+      return;
+    }
+
     if (attachment.kind === "file") {
       void openRemoteFile({
         url: attachment.url,
@@ -1314,19 +1337,18 @@ export function ChatMessageList({
         message: result.message,
         tone: result.status === "failed" ? "danger" : "success",
         actionLabel: canRevealSavedFile ? "打开位置" : undefined,
-        onAction:
-          savedPath
-            ? () => {
-                void revealSavedFile(savedPath).then((revealed) => {
-                  setActionNotice({
-                    message: revealed
-                      ? "已打开所在位置。"
-                      : "打开所在位置失败，请稍后再试。",
-                    tone: revealed ? "success" : "danger",
-                  });
+        onAction: savedPath
+          ? () => {
+              void revealSavedFile(savedPath).then((revealed) => {
+                setActionNotice({
+                  message: revealed
+                    ? "已打开所在位置。"
+                    : "打开所在位置失败，请稍后再试。",
+                  tone: revealed ? "success" : "danger",
                 });
-              }
-            : undefined,
+              });
+            }
+          : undefined,
       });
     });
   };
@@ -2040,8 +2062,7 @@ export function ChatMessageList({
           !!previousMessage &&
           previousMessage.senderType === message.senderType &&
           (previousMessage.senderType === "user" ||
-            (previousMessage.senderName ?? "") ===
-              (message.senderName ?? ""));
+            (previousMessage.senderName ?? "") === (message.senderName ?? ""));
         const showSenderName =
           !isUser &&
           groupMode &&
@@ -2049,8 +2070,7 @@ export function ChatMessageList({
           (isDesktop ||
             showTimestamp ||
             previousMessage?.senderType !== message.senderType ||
-            (previousMessage?.senderName ?? "") !==
-              (message.senderName ?? ""));
+            (previousMessage?.senderName ?? "") !== (message.senderName ?? ""));
         const isSharedHistoryMessage = importedSharedMessageIdSet.has(
           message.id,
         );
@@ -2069,7 +2089,10 @@ export function ChatMessageList({
 
         if (isSystem || isRecalled) {
           return (
-            <div key={message.id} className={isDesktop ? "space-y-2" : "space-y-1.5"}>
+            <div
+              key={message.id}
+              className={isDesktop ? "space-y-2" : "space-y-1.5"}
+            >
               {resolvedUnreadMarkerMessageId === message.id ? (
                 <UnreadMarkerDivider
                   id={unreadMarkerDomId}
@@ -2175,7 +2198,11 @@ export function ChatMessageList({
             >
               <div
                 className={`flex items-start ${
-                  isDesktop ? "gap-2.5" : continuesMessageRun ? "gap-1.5" : "gap-2"
+                  isDesktop
+                    ? "gap-2.5"
+                    : continuesMessageRun
+                      ? "gap-1.5"
+                      : "gap-2"
                 } ${isUser ? "justify-end" : "justify-start"}`}
               >
                 {!isUser && selectionMode ? (
@@ -2295,6 +2322,17 @@ export function ChatMessageList({
                           : () => openAttachment(message)
                       }
                     />
+                  ) : message.type === "note_card" &&
+                    message.attachment?.kind === "note_card" ? (
+                    <NoteCardMessage
+                      attachment={message.attachment}
+                      variant={variant}
+                      onOpen={
+                        selectionMode
+                          ? undefined
+                          : () => openAttachment(message)
+                      }
+                    />
                   ) : directCallInvite ? (
                     <DirectCallInviteMessage
                       own={isUser}
@@ -2329,12 +2367,13 @@ export function ChatMessageList({
                                 activeCount:
                                   groupCallInvite.status === "ended"
                                     ? null
-                                    : groupCallInvite.activeCount?.current ??
-                                      null,
+                                    : (groupCallInvite.activeCount?.current ??
+                                      null),
                                 totalCount:
                                   groupCallInvite.status === "ended"
                                     ? null
-                                    : groupCallInvite.activeCount?.total ?? null,
+                                    : (groupCallInvite.activeCount?.total ??
+                                      null),
                                 recordedAt:
                                   groupCallInvite.status === "ended"
                                     ? null
@@ -2788,8 +2827,7 @@ export function ChatMessageList({
               ? () => {
                   void openDesktopChatImageViewerWindow({
                     imageUrl: activeImage.url,
-                    title:
-                      activeImage.fileName || activeImage.label || "图片",
+                    title: activeImage.fileName || activeImage.label || "图片",
                     meta: activeImage.meta,
                     returnTo: activeImage.returnTo,
                     items: standaloneViewerItems,
@@ -2816,8 +2854,7 @@ export function ChatMessageList({
               ? () => {
                   void openDesktopChatImageViewerWindow({
                     imageUrl: activeImage.url,
-                    title:
-                      activeImage.fileName || activeImage.label || "图片",
+                    title: activeImage.fileName || activeImage.label || "图片",
                     meta: activeImage.meta,
                     returnTo: activeImage.returnTo,
                     items: standaloneViewerItems,
@@ -2890,7 +2927,10 @@ function UnreadMarkerDivider({
   const isDesktop = variant === "desktop";
 
   return (
-    <div id={id} className={`flex items-center ${isDesktop ? "gap-3 py-1.5" : "gap-2.5 py-1"}`}>
+    <div
+      id={id}
+      className={`flex items-center ${isDesktop ? "gap-3 py-1.5" : "gap-2.5 py-1"}`}
+    >
       <div
         className={
           isDesktop
@@ -3044,7 +3084,9 @@ function SharedHistorySummaryNotice({
       <div
         className={cn(
           "text-[color:var(--text-muted)]",
-          isDesktop ? "mt-1.5 text-[11px] leading-5" : "mt-1 text-[10px] leading-[18px]",
+          isDesktop
+            ? "mt-1.5 text-[11px] leading-5"
+            : "mt-1 text-[10px] leading-[18px]",
         )}
       >
         来自你和 {summary.participantName} 的 {summary.count} 条消息
@@ -3179,6 +3221,12 @@ function buildClipboardText(message: ChatRenderableMessage) {
       : "[位置]";
   }
 
+  if (message.type === "note_card") {
+    return message.attachment?.kind === "note_card"
+      ? `[笔记] ${message.attachment.title}`
+      : "[笔记]";
+  }
+
   if (message.type === "sticker") {
     return message.attachment?.kind === "sticker" && message.attachment.label
       ? `[表情] ${message.attachment.label}`
@@ -3218,6 +3266,10 @@ function resolveForwardTypeLabel(message: ChatRenderableMessage) {
     return "位置";
   }
 
+  if (message.type === "note_card") {
+    return "笔记";
+  }
+
   if (message.type === "sticker") {
     return "表情";
   }
@@ -3240,6 +3292,10 @@ function resolveOpenAttachmentLabel(message: ChatRenderableMessage) {
 
   if (message.type === "location_card") {
     return "查看位置";
+  }
+
+  if (message.type === "note_card") {
+    return "打开笔记";
   }
 
   return "打开附件";
@@ -3343,6 +3399,13 @@ function getOpenableAttachment(
   if (
     message.type === "location_card" &&
     message.attachment?.kind === "location_card"
+  ) {
+    return message.attachment;
+  }
+
+  if (
+    message.type === "note_card" &&
+    message.attachment?.kind === "note_card"
   ) {
     return message.attachment;
   }
@@ -3519,6 +3582,17 @@ function buildGroupForwardPayload(
     };
   }
 
+  if (
+    message.type === "note_card" &&
+    message.attachment?.kind === "note_card"
+  ) {
+    return {
+      type: "note_card",
+      text,
+      attachment: message.attachment,
+    };
+  }
+
   if (message.type === "sticker") {
     return null;
   }
@@ -3590,6 +3664,19 @@ function buildDirectForwardPayload(
       conversationId: conversation.id,
       characterId,
       type: "location_card",
+      text,
+      attachment: message.attachment,
+    };
+  }
+
+  if (
+    message.type === "note_card" &&
+    message.attachment?.kind === "note_card"
+  ) {
+    return {
+      conversationId: conversation.id,
+      characterId,
+      type: "note_card",
       text,
       attachment: message.attachment,
     };
@@ -3710,7 +3797,9 @@ function ReplyQuoteCard({
       </div>
       <div
         className={`line-clamp-2 text-[color:var(--text-muted)] ${
-          isDesktop ? "mt-1 text-[12px] leading-5" : "mt-0.5 text-[11px] leading-[18px]"
+          isDesktop
+            ? "mt-1 text-[12px] leading-5"
+            : "mt-0.5 text-[11px] leading-[18px]"
         }`}
       >
         {renderTextWithMentions(previewText)}
@@ -3874,6 +3963,109 @@ function ContactCardMessage({
   );
 }
 
+function NoteCardMessage({
+  attachment,
+  variant,
+  onOpen,
+}: {
+  attachment: Extract<MessageAttachment, { kind: "note_card" }>;
+  variant: "mobile" | "desktop";
+  onOpen?: () => void;
+}) {
+  const isDesktop = variant === "desktop";
+  const previewImage = attachment.assets.find(
+    (asset) => asset.kind === "image",
+  );
+  const fileCount = attachment.assets.filter(
+    (asset) => asset.kind === "file",
+  ).length;
+  const card = (
+    <div
+      className={`overflow-hidden bg-white shadow-none ${
+        isDesktop
+          ? "w-[248px] rounded-[16px] border border-black/6"
+          : "w-[220px] rounded-[13px] border border-[color:var(--border-subtle)]"
+      }`}
+    >
+      {previewImage?.url ? (
+        <div className={isDesktop ? "h-[104px]" : "h-[92px]"}>
+          <img
+            src={previewImage.url}
+            alt={attachment.title}
+            className="h-full w-full object-cover"
+          />
+        </div>
+      ) : (
+        <div
+          className={`flex items-end bg-[linear-gradient(160deg,#f3f6f5_0%,#dde6e3_100%)] ${
+            isDesktop ? "h-[104px] px-3.5 py-3.5" : "h-[92px] px-3 py-3"
+          }`}
+        >
+          <div
+            className={`rounded-[14px] border border-[rgba(15,23,42,0.08)] bg-white/88 text-[color:var(--text-muted)] shadow-[var(--shadow-soft)] ${
+              isDesktop
+                ? "px-3 py-2 text-[11px] tracking-[0.16em]"
+                : "px-2.5 py-1.5 text-[10px] tracking-[0.14em]"
+            }`}
+          >
+            收藏笔记
+          </div>
+        </div>
+      )}
+      <div
+        className={
+          isDesktop ? "space-y-2.5 px-3.5 py-3.5" : "space-y-2 px-3 py-3"
+        }
+      >
+        <div
+          className={`line-clamp-2 font-medium text-[color:var(--text-primary)] ${
+            isDesktop ? "text-sm leading-6" : "text-[13px] leading-5"
+          }`}
+        >
+          {attachment.title}
+        </div>
+        <div
+          className={`line-clamp-3 text-[color:var(--text-muted)] ${
+            isDesktop ? "text-xs leading-5" : "text-[11px] leading-[18px]"
+          }`}
+        >
+          {attachment.excerpt || "点击查看完整笔记"}
+        </div>
+        <div className="flex items-center justify-between gap-3 border-t border-[rgba(15,23,42,0.06)] pt-2.5">
+          <div className="flex min-w-0 flex-wrap gap-1.5">
+            {attachment.tags.slice(0, 2).map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full bg-[rgba(7,193,96,0.08)] px-2 py-0.5 text-[10px] text-[color:var(--brand-primary)]"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+          <div className="shrink-0 text-[10px] tracking-[0.12em] text-[color:var(--text-dim)]">
+            {fileCount ? `${fileCount} 个文件` : "笔记"}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (!onOpen) {
+    return card;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="text-left transition hover:opacity-95"
+      aria-label={`打开笔记 ${attachment.title}`}
+    >
+      {card}
+    </button>
+  );
+}
+
 function FileAttachmentMessage({
   attachment,
   variant,
@@ -3981,7 +4173,9 @@ function LocationCardMessage({
       {attachment.subtitle ? (
         <div
           className={`text-[color:var(--text-muted)] ${
-            isDesktop ? "mt-1 text-xs leading-5" : "mt-0.5 text-[11px] leading-[18px]"
+            isDesktop
+              ? "mt-1 text-xs leading-5"
+              : "mt-0.5 text-[11px] leading-[18px]"
           }`}
         >
           {attachment.subtitle}
@@ -4082,7 +4276,9 @@ function VoiceMessage({
       >
         {playing ? <Pause size={16} /> : <Play size={16} className="ml-0.5" />}
       </button>
-      <div className={`flex min-w-0 flex-1 items-center ${isDesktop ? "gap-1.5" : "gap-1"}`}>
+      <div
+        className={`flex min-w-0 flex-1 items-center ${isDesktop ? "gap-1.5" : "gap-1"}`}
+      >
         <span
           className={`${isDesktop ? "h-2.5 w-1" : "h-2 w-1"} rounded-full ${playing ? "animate-pulse" : ""} ${
             own ? "bg-[#3d7f1a]" : "bg-[#9ca3af]"
@@ -4099,7 +4295,9 @@ function VoiceMessage({
           }`}
         />
       </div>
-      <span className={`shrink-0 tabular-nums text-black/60 ${isDesktop ? "text-xs" : "text-[11px]"}`}>
+      <span
+        className={`shrink-0 tabular-nums text-black/60 ${isDesktop ? "text-xs" : "text-[11px]"}`}
+      >
         {formatVoiceDurationLabel(attachment.durationMs)}
       </span>
       <audio ref={audioRef} src={attachment.url} preload="none" />
@@ -4152,12 +4350,16 @@ function GroupRelaySummaryMessage({
         <div className="flex flex-col items-end gap-1.5">
           <ResultCardBadge
             tone={summary.publishedSource === "mobile" ? "info" : "warning"}
-            label={summary.publishedSource === "mobile" ? "手机回填" : "桌面回填"}
+            label={
+              summary.publishedSource === "mobile" ? "手机回填" : "桌面回填"
+            }
           />
           {summary.launchSourceLabel ? (
             <ResultCardBadge
               tone="neutral"
-              label={summary.launchSource === "mobile" ? "手机发起" : "桌面发起"}
+              label={
+                summary.launchSource === "mobile" ? "手机发起" : "桌面发起"
+              }
             />
           ) : null}
           {summary.statusLabel ? (
@@ -4254,10 +4456,14 @@ function GroupRelaySummaryMessage({
       {onOpen ? (
         <div
           className={`${isDesktop ? "mt-4 gap-3 pt-3" : "mt-3 gap-2.5 pt-2.5"} flex items-center justify-between ${
-            isDesktop ? "border-t border-black/6" : "border-t border-[color:var(--border-subtle)]"
+            isDesktop
+              ? "border-t border-black/6"
+              : "border-t border-[color:var(--border-subtle)]"
           }`}
         >
-          <div className={`text-[color:var(--text-muted)] ${isDesktop ? "text-[11px] leading-5" : "text-[10px] leading-[18px]"}`}>
+          <div
+            className={`text-[color:var(--text-muted)] ${isDesktop ? "text-[11px] leading-5" : "text-[10px] leading-[18px]"}`}
+          >
             {ctaCopy.description}
           </div>
           <div
@@ -4319,8 +4525,7 @@ function collapseGroupCallMessages(messages: ChatRenderableMessage[]) {
 }
 
 function resolveGroupCallInvite(message: ChatRenderableMessage) {
-  const isSystem =
-    message.type === "system" || message.senderType === "system";
+  const isSystem = message.type === "system" || message.senderType === "system";
   if (isSystem || message.senderType === "user") {
     return null;
   }
@@ -4348,10 +4553,10 @@ function shouldCollapseGroupCallMessage(
 
   return Boolean(
     currentInvite &&
-      previousInvite &&
-      previousInvite.status === "ongoing" &&
-      currentInvite.kind === previousInvite.kind &&
-      currentInvite.groupName === previousInvite.groupName,
+    previousInvite &&
+    previousInvite.status === "ongoing" &&
+    currentInvite.kind === previousInvite.kind &&
+    currentInvite.groupName === previousInvite.groupName,
   );
 }
 
@@ -4368,8 +4573,8 @@ function shouldCollapseGroupRelayMessage(
 
   return Boolean(
     currentSummary &&
-      previousSummary &&
-      currentSummary.sourceGroupName === previousSummary.sourceGroupName,
+    previousSummary &&
+    currentSummary.sourceGroupName === previousSummary.sourceGroupName,
   );
 }
 
@@ -4474,12 +4679,13 @@ function GroupCallInviteMessage({
             variant={variant}
           />
         ) : null}
-        {invite.status === "ended" &&
-        invite.startedAt &&
-        invite.recordedAt ? (
+        {invite.status === "ended" && invite.startedAt && invite.recordedAt ? (
           <ResultCardMetric
             label="起止时间"
-            value={formatGroupCallRangeSummary(invite.startedAt, invite.recordedAt)}
+            value={formatGroupCallRangeSummary(
+              invite.startedAt,
+              invite.recordedAt,
+            )}
             variant={variant}
           />
         ) : null}
@@ -4505,7 +4711,11 @@ function GroupCallInviteMessage({
           />
         ) : null}
         {invite.activeCount ? (
-          <div className={isDesktop ? "grid grid-cols-2 gap-2" : "grid grid-cols-2 gap-1.5"}>
+          <div
+            className={
+              isDesktop ? "grid grid-cols-2 gap-2" : "grid grid-cols-2 gap-1.5"
+            }
+          >
             <ResultCardMetric
               label="当前在线"
               value={`${invite.activeCount.current}/${invite.activeCount.total}`}
@@ -4534,10 +4744,14 @@ function GroupCallInviteMessage({
 
       <div
         className={`${isDesktop ? "mt-4 gap-3 pt-3" : "mt-3 gap-2.5 pt-2.5"} flex items-center justify-between ${
-          isDesktop ? "border-t border-black/6" : "border-t border-[color:var(--border-subtle)]"
+          isDesktop
+            ? "border-t border-black/6"
+            : "border-t border-[color:var(--border-subtle)]"
         }`}
       >
-        <div className={`text-[color:var(--text-muted)] ${isDesktop ? "text-[11px] leading-5" : "text-[10px] leading-[18px]"}`}>
+        <div
+          className={`text-[color:var(--text-muted)] ${isDesktop ? "text-[11px] leading-5" : "text-[10px] leading-[18px]"}`}
+        >
           {footerCopy.description}
         </div>
         <div
@@ -4702,10 +4916,14 @@ function DirectCallInviteMessage({
 
       <div
         className={`${isDesktop ? "mt-4 gap-3 pt-3" : "mt-3 gap-2.5 pt-2.5"} flex items-center justify-between ${
-          isDesktop ? "border-t border-black/6" : "border-t border-[color:var(--border-subtle)]"
+          isDesktop
+            ? "border-t border-black/6"
+            : "border-t border-[color:var(--border-subtle)]"
         }`}
       >
-        <div className={`text-[color:var(--text-muted)] ${isDesktop ? "text-[11px] leading-5" : "text-[10px] leading-[18px]"}`}>
+        <div
+          className={`text-[color:var(--text-muted)] ${isDesktop ? "text-[11px] leading-5" : "text-[10px] leading-[18px]"}`}
+        >
           {footerCopy.description}
         </div>
         <div
@@ -4986,8 +5204,7 @@ function LocationViewerOverlay({
   onShareOrCopy: () => void;
 }) {
   const isDesktop = variant === "desktop";
-  const nativeMobileShareSupported =
-    !isDesktop && isNativeMobileShareSurface();
+  const nativeMobileShareSupported = !isDesktop && isNativeMobileShareSurface();
 
   return (
     <div className="fixed inset-0 z-50 bg-[rgba(5,10,20,0.88)] backdrop-blur-md">
@@ -5061,7 +5278,11 @@ function LocationViewerOverlay({
             label={nativeMobileShareSupported ? "系统分享" : "复制位置"}
             onClick={onShareOrCopy}
           >
-            {nativeMobileShareSupported ? <Share2 size={16} /> : <Copy size={16} />}
+            {nativeMobileShareSupported ? (
+              <Share2 size={16} />
+            ) : (
+              <Copy size={16} />
+            )}
           </ViewerActionButton>
           <ViewerActionButton label="定位消息" onClick={onLocate}>
             <LocateFixed size={16} />
