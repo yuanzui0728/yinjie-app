@@ -93,8 +93,6 @@ export class SocialService {
     characterId: string,
     payload: {
       remarkName?: string | null;
-      region?: string | null;
-      source?: string | null;
       tags?: string[] | null;
     },
   ): Promise<FriendshipEntity> {
@@ -106,8 +104,6 @@ export class SocialService {
     }
 
     friendship.remarkName = normalizeOptionalText(payload.remarkName);
-    friendship.region = normalizeOptionalText(payload.region);
-    friendship.source = normalizeOptionalText(payload.source);
     friendship.tags = normalizeTags(payload.tags);
 
     return this.friendshipRepo.save(friendship);
