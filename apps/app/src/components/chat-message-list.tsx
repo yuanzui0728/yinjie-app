@@ -154,7 +154,8 @@ type OpenableAttachment =
 type SaveableAttachment =
   | Extract<MessageAttachment, { kind: "image" }>
   | Extract<MessageAttachment, { kind: "file" }>
-  | Extract<MessageAttachment, { kind: "contact_card" }>;
+  | Extract<MessageAttachment, { kind: "contact_card" }>
+  | Extract<MessageAttachment, { kind: "location_card" }>;
 
 type ChatMessageListProps = {
   messages: ChatRenderableMessage[];
@@ -1333,6 +1334,11 @@ export function ChatMessageList({
   const saveAttachment = (message: ChatRenderableMessage) => {
     const attachment = getSaveableAttachment(message);
     if (!attachment) {
+      return;
+    }
+
+    if (attachment.kind === "location_card") {
+      void shareLocationSummary(attachment);
       return;
     }
 
@@ -3246,6 +3252,10 @@ function resolveSaveAttachmentLabel(
     return isNativeMobileBridgeAvailable() ? "系统分享" : "复制名片";
   }
 
+  if (message.type === "location_card") {
+    return isNativeMobileBridgeAvailable() ? "系统分享" : "复制位置";
+  }
+
   if (message.type === "image") {
     return variant === "mobile" ? "保存图片" : "另存图片";
   }
@@ -3353,6 +3363,13 @@ function getSaveableAttachment(
   if (
     message.type === "contact_card" &&
     message.attachment?.kind === "contact_card"
+  ) {
+    return message.attachment;
+  }
+
+  if (
+    message.type === "location_card" &&
+    message.attachment?.kind === "location_card"
   ) {
     return message.attachment;
   }
