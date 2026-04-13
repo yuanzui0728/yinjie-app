@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft, Copy, PenSquare, Share2 } from "lucide-react";
@@ -12,12 +12,9 @@ import {
 import {
   AppPage,
   Button,
-  ErrorBlock,
   InlineNotice,
-  LoadingBlock,
   TextField,
 } from "@yinjie/ui";
-import { EmptyState } from "../components/empty-state";
 import { MobileSocialComposerCard } from "../components/mobile-social-composer-card";
 import {
   hydrateDesktopFavoritesFromNative,
@@ -453,23 +450,49 @@ export function DiscoverFeedPage() {
           onSubmit={() => createMutation.mutate()}
         />
 
-        <section className="space-y-2.5">
+        <section className="space-y-2">
           <div className="px-1">
-            <div className="text-[12px] text-[color:var(--text-muted)]">最近动态</div>
-            <div className="mt-0.5 text-[11px] leading-[1.125rem] text-[color:var(--text-muted)]">
+            <div className="text-[11px] text-[color:var(--text-muted)]">最近动态</div>
+            <div className="mt-0.5 text-[10px] leading-4 text-[color:var(--text-muted)]">
               这里不只看朋友，也能看到世界里的居民正在说什么。
             </div>
           </div>
           {notice ? (
-            <InlineNotice className="text-[12px] leading-5" tone={noticeTone}>
+            <InlineNotice
+              className="rounded-[11px] px-2.5 py-1.5 text-[11px] leading-[1.35rem] shadow-none"
+              tone={noticeTone}
+            >
               {notice}
             </InlineNotice>
           ) : null}
           {feedQuery.isLoading ? (
-            <LoadingBlock label="正在读取广场动态..." />
+            <MobileFeedStatusCard
+              badge="读取中"
+              title="正在刷新广场动态"
+              description="稍等一下，正在同步居民公开动态和互动状态。"
+              tone="loading"
+            />
           ) : null}
           {feedQuery.isError && feedQuery.error instanceof Error ? (
-            <ErrorBlock message={feedQuery.error.message} />
+            <MobileFeedStatusCard
+              badge="读取失败"
+              title="广场动态暂时不可用"
+              description={feedQuery.error.message}
+              tone="danger"
+              action={
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="h-8 rounded-full border-[color:var(--border-subtle)] bg-white px-3.5 text-[11px]"
+                  onClick={() => {
+                    void feedQuery.refetch();
+                    void blockedQuery.refetch();
+                  }}
+                >
+                  重新加载
+                </Button>
+              }
+            />
           ) : null}
 
           {visiblePosts.map((post) => {
@@ -597,16 +620,37 @@ export function DiscoverFeedPage() {
           })}
 
           {likeMutation.isError && likeMutation.error instanceof Error ? (
-            <ErrorBlock message={likeMutation.error.message} />
+            <InlineNotice
+              tone="info"
+              className="rounded-[11px] px-2.5 py-1.5 text-[11px] leading-[1.35rem] shadow-none"
+            >
+              {likeMutation.error.message}
+            </InlineNotice>
           ) : null}
           {commentMutation.isError && commentMutation.error instanceof Error ? (
-            <ErrorBlock message={commentMutation.error.message} />
+            <InlineNotice
+              tone="info"
+              className="rounded-[11px] px-2.5 py-1.5 text-[11px] leading-[1.35rem] shadow-none"
+            >
+              {commentMutation.error.message}
+            </InlineNotice>
           ) : null}
 
           {!feedQuery.isLoading && !feedQuery.isError && !visiblePosts.length ? (
-            <EmptyState
-              title="广场还没有新动态"
+            <MobileFeedStatusCard
+              badge="广场"
+              title="还没有新动态"
               description="你先发一条居民公开可见的动态，或者等世界里的居民先开口。"
+              action={
+                <Button
+                  variant="primary"
+                  size="sm"
+                  className="h-8 rounded-full bg-[#07c160] px-3.5 text-[11px] text-white hover:bg-[#06ad56]"
+                  onClick={focusComposer}
+                >
+                  发一条广场动态
+                </Button>
+              }
             />
           ) : null}
         </section>
@@ -633,4 +677,54 @@ function buildDesktopFeedRouteHash(postId?: string | null) {
   const params = new URLSearchParams();
   params.set("post", postId);
   return params.toString();
+}
+
+function MobileFeedStatusCard({
+  badge,
+  title,
+  description,
+  tone = "default",
+  action,
+}: {
+  badge: string;
+  title: string;
+  description: string;
+  tone?: "default" | "danger" | "loading";
+  action?: ReactNode;
+}) {
+  const loading = tone === "loading";
+
+  return (
+    <section
+      className={
+        tone === "danger"
+          ? "rounded-[18px] border border-[color:var(--border-danger)] bg-[linear-gradient(180deg,rgba(255,245,245,0.96),rgba(254,242,242,0.94))] px-4 py-5 text-center shadow-none"
+          : "rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)] px-4 py-5 text-center shadow-none"
+      }
+    >
+      <div
+        className={
+          tone === "danger"
+            ? "mx-auto inline-flex rounded-full bg-[rgba(220,38,38,0.08)] px-2.5 py-1 text-[9px] font-medium tracking-[0.04em] text-[color:var(--state-danger-text)]"
+            : "mx-auto inline-flex rounded-full bg-[rgba(7,193,96,0.1)] px-2.5 py-1 text-[9px] font-medium tracking-[0.04em] text-[#07c160]"
+        }
+      >
+        {badge}
+      </div>
+      {loading ? (
+        <div className="mt-3 flex items-center justify-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-black/15 animate-pulse" />
+          <span className="h-2 w-2 rounded-full bg-black/25 animate-pulse [animation-delay:120ms]" />
+          <span className="h-2 w-2 rounded-full bg-[#8ecf9d] animate-pulse [animation-delay:240ms]" />
+        </div>
+      ) : null}
+      <div className="mt-3 text-[15px] font-medium text-[color:var(--text-primary)]">
+        {title}
+      </div>
+      <p className="mx-auto mt-2 max-w-[18rem] text-[11px] leading-[1.35rem] text-[color:var(--text-secondary)]">
+        {description}
+      </p>
+      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
+    </section>
+  );
 }
