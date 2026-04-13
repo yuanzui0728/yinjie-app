@@ -11,10 +11,7 @@ import {
 } from "@yinjie/contracts";
 import { Loader2, Plus, Search, Trash2, X } from "lucide-react";
 import { prepareCustomStickerUpload } from "./prepare-custom-sticker-upload";
-import {
-  removeRecentSticker,
-  type RecentStickerItem,
-} from "./recent-stickers";
+import { removeRecentSticker, type RecentStickerItem } from "./recent-stickers";
 
 type StickerPanelProps = {
   baseUrl?: string;
@@ -78,6 +75,9 @@ export function StickerPanel({
     useState<CustomDeleteFeedback | null>(null);
   const [customDeleteFeedbackFlashActive, setCustomDeleteFeedbackFlashActive] =
     useState(false);
+  const [collapsingStickerKeys, setCollapsingStickerKeys] = useState<string[]>(
+    [],
+  );
   const [pendingManageFocusKey, setPendingManageFocusKey] = useState<
     string | null
   >(null);
@@ -95,6 +95,8 @@ export function StickerPanel({
   const stickerItemRefs = useRef(new Map<string, HTMLDivElement>());
   const manageDeleteButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const deleteFeedbackFlashTimerRef = useRef<number | null>(null);
+  const deleteTransitionTimerRefs = useRef(new Map<string, number>());
+  const collapsingStickerKeysRef = useRef(new Set<string>());
   const queryClient = useQueryClient();
   const stickerCatalogQuery = useQuery({
     queryKey: [PANEL_QUERY_KEY, baseUrl],
@@ -149,6 +151,31 @@ export function StickerPanel({
     }, 720);
   };
 
+  const clearDeleteTransitionTimer = (stickerKey: string) => {
+    const timer = deleteTransitionTimerRefs.current.get(stickerKey);
+    if (timer === undefined) {
+      return;
+    }
+
+    window.clearTimeout(timer);
+    deleteTransitionTimerRefs.current.delete(stickerKey);
+  };
+
+  const setStickerCollapsing = (stickerKey: string, collapsing: boolean) => {
+    if (collapsing) {
+      collapsingStickerKeysRef.current.add(stickerKey);
+      setCollapsingStickerKeys((current) =>
+        current.includes(stickerKey) ? current : [...current, stickerKey],
+      );
+      return;
+    }
+
+    collapsingStickerKeysRef.current.delete(stickerKey);
+    setCollapsingStickerKeys((current) =>
+      current.filter((key) => key !== stickerKey),
+    );
+  };
+
   const uploadMutation = useMutation({
     mutationFn: async (files: File[]) => {
       if (customStickerLibraryFull) {
@@ -156,7 +183,9 @@ export function StickerPanel({
       }
 
       if (files.length > customSlotsRemaining) {
-        throw new Error(`还能再添加 ${customSlotsRemaining} 个表情，请分批上传。`);
+        throw new Error(
+          `还能再添加 ${customSlotsRemaining} 个表情，请分批上传。`,
+        );
       }
 
       let uploadedCount = 0;
@@ -201,6 +230,7 @@ export function StickerPanel({
   const deleteMutation = useMutation({
     mutationFn: async (input: {
       stickerId: string;
+      stickerKey: string;
       label?: string;
       nextFocusKey?: string | null;
       exitManageModeAfterDelete?: boolean;
@@ -210,6 +240,7 @@ export function StickerPanel({
     },
     onSuccess: async ({
       stickerId,
+      stickerKey,
       label,
       nextFocusKey,
       exitManageModeAfterDelete,
@@ -241,8 +272,12 @@ export function StickerPanel({
       await queryClient.invalidateQueries({
         queryKey: [PANEL_QUERY_KEY, baseUrl],
       });
+      clearDeleteTransitionTimer(stickerKey);
+      setStickerCollapsing(stickerKey, false);
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      clearDeleteTransitionTimer(variables.stickerKey);
+      setStickerCollapsing(variables.stickerKey, false);
       onError?.(
         error instanceof Error ? error.message : "删除表情失败，请稍后再试。",
       );
@@ -274,22 +309,28 @@ export function StickerPanel({
     }
 
     if (activeSectionId === "recent") {
-      return recentStickers.map((sticker): StickerPanelItem => ({
-        sticker,
-      }));
+      return recentStickers.map(
+        (sticker): StickerPanelItem => ({
+          sticker,
+        }),
+      );
     }
 
     if (activeSectionId === "featured") {
-      return featuredStickers.map((sticker): StickerPanelItem => ({
-        sticker,
-      }));
+      return featuredStickers.map(
+        (sticker): StickerPanelItem => ({
+          sticker,
+        }),
+      );
     }
 
     if (activeSectionId === "custom") {
-      return customStickers.map((sticker): StickerPanelItem => ({
-        sticker,
-        canDelete: true,
-      }));
+      return customStickers.map(
+        (sticker): StickerPanelItem => ({
+          sticker,
+          canDelete: true,
+        }),
+      );
     }
 
     const activePack = catalog.builtinPacks.find(
@@ -302,9 +343,11 @@ export function StickerPanel({
     return activePack.stickers
       .map((item) => getStickerAttachment(activePack.id, item.id))
       .filter((item): item is StickerAttachment => Boolean(item))
-      .map((sticker): StickerPanelItem => ({
-        sticker,
-      }));
+      .map(
+        (sticker): StickerPanelItem => ({
+          sticker,
+        }),
+      );
   }, [
     activeSectionId,
     catalog.builtinPacks,
@@ -321,6 +364,10 @@ export function StickerPanel({
     () => activeItems.map((item) => getStickerIdentity(item.sticker)),
     [activeItems],
   );
+  const collapsingStickerKeySet = useMemo(
+    () => new Set(collapsingStickerKeys),
+    [collapsingStickerKeys],
+  );
   const highlightedSearchItem = useMemo(() => {
     if (!searching || searchPending || activeItems.length === 0) {
       return null;
@@ -333,14 +380,11 @@ export function StickerPanel({
     return (
       activeItems.find(
         (item) => getStickerIdentity(item.sticker) === highlightedStickerKey,
-      ) ?? activeItems[0] ?? null
+      ) ??
+      activeItems[0] ??
+      null
     );
-  }, [
-    activeItems,
-    highlightedStickerKey,
-    searchPending,
-    searching,
-  ]);
+  }, [activeItems, highlightedStickerKey, searchPending, searching]);
   const highlightedSearchSourceLabel = useMemo(() => {
     if (!highlightedSearchItem) {
       return null;
@@ -396,19 +440,20 @@ export function StickerPanel({
     ],
   );
   const activeTab = tabs.find((tab) => tab.id === activeSectionId) ?? tabs[0];
-  const panelSubtitle = trimmedKeyword.length > 0
-    ? searchPending
-      ? `正在搜索“${trimmedKeyword}”`
-      : `搜索“${trimmedKeyword}”`
-    : activeSectionId === "custom" && customManageMode
-      ? `管理自定义表情 · 已保存 ${catalog.customStickerCount} / ${catalog.maxCustomStickerCount}`
-      : activeSectionId === "custom" && customStickerLibraryFull
-        ? "自定义表情已满，请先删除几个再继续添加"
-      : activeSectionId === "custom"
-        ? `已保存 ${catalog.customStickerCount} / ${catalog.maxCustomStickerCount}，支持图片和 GIF`
-        : activeSectionId === "recent"
-        ? "最近发送和使用过的表情"
-        : `${activeTab?.label ?? "表情"} · 桌面端连续发送`;
+  const panelSubtitle =
+    trimmedKeyword.length > 0
+      ? searchPending
+        ? `正在搜索“${trimmedKeyword}”`
+        : `搜索“${trimmedKeyword}”`
+      : activeSectionId === "custom" && customManageMode
+        ? `管理自定义表情 · 已保存 ${catalog.customStickerCount} / ${catalog.maxCustomStickerCount}`
+        : activeSectionId === "custom" && customStickerLibraryFull
+          ? "自定义表情已满，请先删除几个再继续添加"
+          : activeSectionId === "custom"
+            ? `已保存 ${catalog.customStickerCount} / ${catalog.maxCustomStickerCount}，支持图片和 GIF`
+            : activeSectionId === "recent"
+              ? "最近发送和使用过的表情"
+              : `${activeTab?.label ?? "表情"} · 桌面端连续发送`;
   const customCapacityNotice =
     activeSectionId === "custom" && trimmedKeyword.length === 0
       ? customStickerLibraryFull
@@ -421,7 +466,10 @@ export function StickerPanel({
     catalog.maxCustomStickerCount > 0
       ? Math.min(
           1,
-          Math.max(0, catalog.customStickerCount / catalog.maxCustomStickerCount),
+          Math.max(
+            0,
+            catalog.customStickerCount / catalog.maxCustomStickerCount,
+          ),
         )
       : 0;
   const showCustomStorageMeter =
@@ -436,24 +484,42 @@ export function StickerPanel({
     trimmedKeyword.length === 0 &&
     catalog.customStickerCount > 1;
   const showSearchKeyboardHint =
-    !isMobile &&
-    searching &&
-    !searchPending &&
-    activeItems.length > 0;
+    !isMobile && searching && !searchPending && activeItems.length > 0;
   const showCustomManageHint =
     !isMobile &&
     activeSectionId === "custom" &&
     trimmedKeyword.length === 0 &&
     customManageMode;
   const customManageKeyboardActive =
-    !isMobile &&
-    activeSectionId === "custom" &&
-    customManageMode &&
-    !searching;
+    !isMobile && activeSectionId === "custom" && customManageMode && !searching;
   const openCustomManageMode = () => {
     setCustomSortMode("added");
     setCustomDeleteFeedback(null);
     setCustomManageMode(true);
+  };
+  const queueStickerDelete = (input: {
+    sticker: StickerAttachment;
+    nextFocusKey?: string | null;
+    exitManageModeAfterDelete?: boolean;
+  }) => {
+    const stickerKey = getStickerIdentity(input.sticker);
+    if (collapsingStickerKeysRef.current.has(stickerKey)) {
+      return;
+    }
+
+    setStickerCollapsing(stickerKey, true);
+    clearDeleteTransitionTimer(stickerKey);
+    const timer = window.setTimeout(() => {
+      deleteTransitionTimerRefs.current.delete(stickerKey);
+      void deleteMutation.mutateAsync({
+        stickerId: input.sticker.stickerId,
+        stickerKey,
+        label: input.sticker.label,
+        nextFocusKey: input.nextFocusKey,
+        exitManageModeAfterDelete: input.exitManageModeAfterDelete,
+      });
+    }, 140);
+    deleteTransitionTimerRefs.current.set(stickerKey, timer);
   };
   const clearSearch = () => {
     setKeyword("");
@@ -484,6 +550,11 @@ export function StickerPanel({
       if (deleteFeedbackFlashTimerRef.current !== null) {
         window.clearTimeout(deleteFeedbackFlashTimerRef.current);
       }
+      deleteTransitionTimerRefs.current.forEach((timer) =>
+        window.clearTimeout(timer),
+      );
+      deleteTransitionTimerRefs.current.clear();
+      collapsingStickerKeysRef.current.clear();
     };
   }, []);
 
@@ -514,7 +585,12 @@ export function StickerPanel({
   }, [isMobile]);
 
   useEffect(() => {
-    if (isMobile || !searching || searchPending || activeStickerKeys.length === 0) {
+    if (
+      isMobile ||
+      !searching ||
+      searchPending ||
+      activeStickerKeys.length === 0
+    ) {
       setHighlightedStickerKey(null);
       return;
     }
@@ -522,7 +598,7 @@ export function StickerPanel({
     setHighlightedStickerKey((current) =>
       current && activeStickerKeys.includes(current)
         ? current
-        : activeStickerKeys[0] ?? null,
+        : (activeStickerKeys[0] ?? null),
     );
   }, [activeStickerKeys, isMobile, searchPending, searching]);
 
@@ -553,7 +629,13 @@ export function StickerPanel({
     });
     setFocusedManageDeleteKey(pendingManageFocusKey);
     setPendingManageFocusKey(null);
-  }, [activeItems, customManageMode, isMobile, pendingManageFocusKey, searching]);
+  }, [
+    activeItems,
+    customManageMode,
+    isMobile,
+    pendingManageFocusKey,
+    searching,
+  ]);
 
   useEffect(() => {
     if (!customManageKeyboardActive) {
@@ -760,128 +842,124 @@ export function StickerPanel({
   ]);
 
   const renderStickerGrid = (items: StickerPanelItem[]) => (
-    <div className={isMobile ? "grid grid-cols-4 gap-1.5" : "grid grid-cols-4 gap-2"}>
-      {items.map(({ sticker, canDelete }) => (
-        <StickerButton
-          key={getStickerIdentity(sticker)}
-          itemRef={(node) => {
-            const stickerKey = getStickerIdentity(sticker);
-            if (node) {
-              stickerItemRefs.current.set(stickerKey, node);
-              return;
-            }
+    <div
+      className={
+        isMobile ? "grid grid-cols-4 gap-1.5" : "grid grid-cols-4 gap-2"
+      }
+    >
+      {items.map(({ sticker, canDelete }) => {
+        const stickerKey = getStickerIdentity(sticker);
+        return (
+          <StickerButton
+            key={stickerKey}
+            itemRef={(node) => {
+              if (node) {
+                stickerItemRefs.current.set(stickerKey, node);
+                return;
+              }
 
-            stickerItemRefs.current.delete(stickerKey);
-          }}
-          compact={isMobile}
-          sticker={sticker}
-          highlighted={
-            !isMobile &&
-            searching &&
-            highlightedStickerKey === getStickerIdentity(sticker)
-          }
-          showDelete={Boolean(canDelete) && (!isMobile ? customManageMode : true)}
-          deleteAlwaysVisible={!isMobile && customManageMode}
-          selectionDisabled={!isMobile && customManageMode && Boolean(canDelete)}
-          deleting={
-            deleteMutation.isPending &&
-            deleteMutation.variables?.stickerId === sticker.stickerId
-          }
-          deleteButtonRef={(node) => {
-            const stickerKey = getStickerIdentity(sticker);
-            if (node) {
-              manageDeleteButtonRefs.current.set(stickerKey, node);
-              return;
+              stickerItemRefs.current.delete(stickerKey);
+            }}
+            compact={isMobile}
+            sticker={sticker}
+            highlighted={
+              !isMobile && searching && highlightedStickerKey === stickerKey
             }
+            showDelete={
+              Boolean(canDelete) && (!isMobile ? customManageMode : true)
+            }
+            deleteAlwaysVisible={!isMobile && customManageMode}
+            selectionDisabled={
+              !isMobile && customManageMode && Boolean(canDelete)
+            }
+            deleting={collapsingStickerKeySet.has(stickerKey)}
+            deleteButtonRef={(node) => {
+              if (node) {
+                manageDeleteButtonRefs.current.set(stickerKey, node);
+                return;
+              }
 
-            manageDeleteButtonRefs.current.delete(stickerKey);
-          }}
-          onDelete={
-            canDelete
-              ? () => {
-                  const stickerKey = getStickerIdentity(sticker);
-                  const nextFocusKey =
-                    !isMobile &&
-                    activeSectionId === "custom" &&
-                    customManageMode &&
-                    !searching
-                      ? resolveAdjacentStickerKey(activeItems, stickerKey)
-                      : null;
-                  void deleteMutation.mutateAsync({
-                    stickerId: sticker.stickerId,
-                    label: sticker.label,
-                    nextFocusKey,
-                    exitManageModeAfterDelete:
+              manageDeleteButtonRefs.current.delete(stickerKey);
+            }}
+            onDelete={
+              canDelete
+                ? () => {
+                    const nextFocusKey =
                       !isMobile &&
                       activeSectionId === "custom" &&
                       customManageMode &&
-                      !searching &&
-                      activeItems.length === 1,
-                  });
-                }
-              : undefined
-          }
-          onHover={() => {
-            if (!isMobile && searching) {
-              setHighlightedStickerKey(getStickerIdentity(sticker));
+                      !searching
+                        ? resolveAdjacentStickerKey(activeItems, stickerKey)
+                        : null;
+                    queueStickerDelete({
+                      sticker,
+                      nextFocusKey,
+                      exitManageModeAfterDelete:
+                        !isMobile &&
+                        activeSectionId === "custom" &&
+                        customManageMode &&
+                        !searching &&
+                        activeItems.length === 1,
+                    });
+                  }
+                : undefined
             }
-          }}
-          onDeleteFocus={() => {
-            if (customManageKeyboardActive && canDelete) {
-              setFocusedManageDeleteKey(getStickerIdentity(sticker));
-            }
-          }}
-          onDeleteKeyDown={(event) => {
-            if (!customManageKeyboardActive || !canDelete) {
-              return;
-            }
+            onHover={() => {
+              if (!isMobile && searching) {
+                setHighlightedStickerKey(stickerKey);
+              }
+            }}
+            onDeleteFocus={() => {
+              if (customManageKeyboardActive && canDelete) {
+                setFocusedManageDeleteKey(stickerKey);
+              }
+            }}
+            onDeleteKeyDown={(event) => {
+              if (!customManageKeyboardActive || !canDelete) {
+                return;
+              }
 
-            if (event.key === "ArrowRight") {
-              event.preventDefault();
-              moveManageDeleteFocus(1);
-              return;
-            }
+              if (event.key === "ArrowRight") {
+                event.preventDefault();
+                moveManageDeleteFocus(1);
+                return;
+              }
 
-            if (event.key === "ArrowLeft") {
-              event.preventDefault();
-              moveManageDeleteFocus(-1);
-              return;
-            }
+              if (event.key === "ArrowLeft") {
+                event.preventDefault();
+                moveManageDeleteFocus(-1);
+                return;
+              }
 
-            if (event.key === "ArrowDown") {
-              event.preventDefault();
-              moveManageDeleteFocus(4);
-              return;
-            }
+              if (event.key === "ArrowDown") {
+                event.preventDefault();
+                moveManageDeleteFocus(4);
+                return;
+              }
 
-            if (event.key === "ArrowUp") {
-              event.preventDefault();
-              moveManageDeleteFocus(-4);
-              return;
-            }
+              if (event.key === "ArrowUp") {
+                event.preventDefault();
+                moveManageDeleteFocus(-4);
+                return;
+              }
 
-            if (event.key === "Delete" || event.key === "Backspace") {
-              event.preventDefault();
-              event.stopPropagation();
-              const deleteHandler = () => {
-                const stickerKey = getStickerIdentity(sticker);
-                const nextFocusKey = resolveAdjacentStickerKey(
-                  activeItems,
-                  stickerKey,
-                );
-                void deleteMutation.mutateAsync({
-                  stickerId: sticker.stickerId,
-                  label: sticker.label,
-                  nextFocusKey,
+              if (event.key === "Delete" || event.key === "Backspace") {
+                event.preventDefault();
+                event.stopPropagation();
+                queueStickerDelete({
+                  sticker,
+                  nextFocusKey: resolveAdjacentStickerKey(
+                    activeItems,
+                    stickerKey,
+                  ),
                   exitManageModeAfterDelete: activeItems.length === 1,
                 });
-              };
-              deleteHandler();
-            }
-          }}
-          onSelect={onSelect}
-        />
-      ))}
+              }
+            }}
+            onSelect={onSelect}
+          />
+        );
+      })}
     </div>
   );
 
@@ -955,7 +1033,11 @@ export function StickerPanel({
                   : "inline-flex items-center gap-1.5 rounded-full border border-[color:var(--border-subtle)] bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--text-primary)] transition hover:bg-[color:var(--surface-console)] disabled:opacity-45"
               }
             >
-              {uploadMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+              {uploadMutation.isPending ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <Plus size={13} />
+              )}
               {isMobile ? "添加" : "添加表情"}
             </button>
             <button
@@ -1006,7 +1088,9 @@ export function StickerPanel({
                 <div className="mb-2 flex items-center justify-between gap-3 rounded-[14px] border border-[rgba(160,90,10,0.18)] bg-[rgba(255,251,235,0.94)] px-3 py-2 text-[11px]">
                   <div className="min-w-0">
                     <div className="font-medium text-[#9a5a0a]">
-                      回车发送：{highlightedSearchItem.sticker.label ?? highlightedSearchItem.sticker.stickerId}
+                      回车发送：
+                      {highlightedSearchItem.sticker.label ??
+                        highlightedSearchItem.sticker.stickerId}
                     </div>
                     <div className="truncate pt-0.5 text-[color:var(--text-secondary)]">
                       来源：{highlightedSearchSourceLabel ?? "搜索结果"}
@@ -1034,7 +1118,9 @@ export function StickerPanel({
 
         <div
           className={
-            isMobile ? "min-h-0 flex-1 overflow-y-auto px-3 pb-2.5" : "min-h-[280px] max-h-[360px] overflow-y-auto px-1 pb-3"
+            isMobile
+              ? "min-h-0 flex-1 overflow-y-auto px-3 pb-2.5"
+              : "min-h-[280px] max-h-[360px] overflow-y-auto px-1 pb-3"
           }
         >
           {showCustomStorageMeter ? (
@@ -1061,7 +1147,8 @@ export function StickerPanel({
                     自定义表情库
                   </div>
                   <div className="pt-0.5 text-[11px] text-[color:var(--text-secondary)]">
-                    已保存 {catalog.customStickerCount} / {catalog.maxCustomStickerCount}
+                    已保存 {catalog.customStickerCount} /{" "}
+                    {catalog.maxCustomStickerCount}
                   </div>
                 </div>
                 <div
@@ -1071,9 +1158,7 @@ export function StickerPanel({
                       : customStorageTone === "warning"
                         ? "bg-[rgba(245,158,11,0.14)] text-[#9a5a0a]"
                         : "bg-[rgba(15,23,42,0.06)] text-[color:var(--text-primary)]"
-                  } ${
-                    customDeleteFeedbackFlashActive ? "animate-pulse" : ""
-                  }`}
+                  } ${customDeleteFeedbackFlashActive ? "animate-pulse" : ""}`}
                 >
                   {customStickerLibraryFull
                     ? "已满"
@@ -1114,7 +1199,9 @@ export function StickerPanel({
                       {customDeleteFeedback ? (
                         <span
                           className={`rounded-full bg-[rgba(160,90,10,0.12)] px-2 py-1 text-[10px] font-medium text-[#9a5a0a] ${
-                            customDeleteFeedbackFlashActive ? "animate-pulse" : ""
+                            customDeleteFeedbackFlashActive
+                              ? "animate-pulse"
+                              : ""
                           }`}
                         >
                           +{customDeleteFeedback.deletedCount} 空位
@@ -1142,7 +1229,8 @@ export function StickerPanel({
                       </button>
                     ) : (
                       <>
-                        {(customStickerLibraryFull || customSlotsRemaining <= 20) ? (
+                        {customStickerLibraryFull ||
+                        customSlotsRemaining <= 20 ? (
                           <button
                             type="button"
                             onClick={openCustomManageMode}
@@ -1198,7 +1286,9 @@ export function StickerPanel({
                   </span>
                 ) : null}
                 <span className="rounded-full bg-[rgba(15,23,42,0.06)] px-2 py-1 text-[11px] text-[color:var(--text-primary)]">
-                  剩余 {customDeleteFeedback?.remainingCount ?? catalog.customStickerCount}
+                  剩余{" "}
+                  {customDeleteFeedback?.remainingCount ??
+                    catalog.customStickerCount}
                 </span>
               </div>
             </div>
@@ -1211,10 +1301,12 @@ export function StickerPanel({
                   : "mb-3 flex items-center gap-2"
               }
             >
-              {([
-                ["recent", "最近使用"],
-                ["added", "最近添加"],
-              ] as const).map(([mode, label]) => {
+              {(
+                [
+                  ["recent", "最近使用"],
+                  ["added", "最近添加"],
+                ] as const
+              ).map(([mode, label]) => {
                 const active = customSortMode === mode;
                 return (
                   <button
@@ -1270,13 +1362,20 @@ export function StickerPanel({
             searching ? (
               <div className={isMobile ? "space-y-3" : "space-y-4"}>
                 {searchSections.map((section) => (
-                  <section key={section.id} className={isMobile ? "space-y-1.5" : "space-y-2"}>
+                  <section
+                    key={section.id}
+                    className={isMobile ? "space-y-1.5" : "space-y-2"}
+                  >
                     <div className="flex items-center justify-between px-0.5">
                       <div className="inline-flex items-center gap-2 text-[color:var(--text-secondary)]">
                         <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[rgba(160,90,10,0.12)] px-1.5 text-[10px] font-semibold text-[#9a5a0a]">
                           {section.badgeText}
                         </span>
-                        <span className={isMobile ? "text-[11px]" : "text-xs font-medium"}>
+                        <span
+                          className={
+                            isMobile ? "text-[11px]" : "text-xs font-medium"
+                          }
+                        >
                           {section.label}
                         </span>
                       </div>
@@ -1310,7 +1409,9 @@ export function StickerPanel({
                     ref={customEmptyActionButtonRef}
                     type="button"
                     onClick={() => uploadInputRef.current?.click()}
-                    disabled={uploadMutation.isPending || customStickerLibraryFull}
+                    disabled={
+                      uploadMutation.isPending || customStickerLibraryFull
+                    }
                     className="rounded-full bg-[rgba(160,90,10,0.14)] px-3 py-1.5 text-xs font-medium text-[#9a5a0a] transition disabled:opacity-45"
                   >
                     {customDeleteFeedback?.deletedCount
@@ -1452,11 +1553,19 @@ function StickerButton({
       onMouseEnter={onHover}
       className={
         compact
-          ? "group relative flex flex-col items-center justify-center rounded-[11px] border border-[color:var(--border-subtle)] bg-white p-2 transition active:bg-[color:var(--surface-card-hover)]"
-          : `group relative flex flex-col items-center gap-1 rounded-[18px] border bg-white/76 p-2 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_8px_18px_rgba(160,90,10,0.12)] ${
+          ? `group relative flex flex-col items-center justify-center rounded-[11px] border border-[color:var(--border-subtle)] bg-white p-2 transition-[transform,opacity,filter,background-color] duration-150 ease-out active:bg-[color:var(--surface-card-hover)] ${
+              deleting
+                ? "pointer-events-none scale-[0.84] opacity-0 saturate-50"
+                : ""
+            }`
+          : `group relative flex flex-col items-center gap-1 rounded-[18px] border bg-white/76 p-2 transition-[transform,opacity,filter,box-shadow,background-color] duration-150 ease-out hover:-translate-y-0.5 hover:bg-white hover:shadow-[0_8px_18px_rgba(160,90,10,0.12)] ${
               highlighted
                 ? "border-[rgba(160,90,10,0.38)] bg-white shadow-[0_10px_22px_rgba(160,90,10,0.18)]"
                 : "border-white/80"
+            } ${
+              deleting
+                ? "pointer-events-none scale-[0.8] opacity-0 saturate-50"
+                : ""
             }`
       }
     >
@@ -1473,12 +1582,18 @@ function StickerButton({
               onDelete();
             }}
             className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-[rgba(15,23,42,0.72)] text-white transition ${
-              deleteAlwaysVisible ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              deleteAlwaysVisible
+                ? "opacity-100"
+                : "opacity-0 group-hover:opacity-100"
             }`}
             aria-label="删除自定义表情"
             disabled={deleting}
           >
-            {deleting ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+            {deleting ? (
+              <Loader2 size={11} className="animate-spin" />
+            ) : (
+              <Trash2 size={11} />
+            )}
           </button>
         </span>
       ) : null}
@@ -1658,7 +1773,10 @@ function searchStickerItems(input: {
   input.recentStickerEntries.forEach((entry, index) => {
     const score =
       320 +
-      computeSearchScore(query, [entry.sticker.label, entry.sticker.stickerId]) +
+      computeSearchScore(query, [
+        entry.sticker.label,
+        entry.sticker.stickerId,
+      ]) +
       computeRankBoost(index, 72);
     if (score <= 320) {
       return;
