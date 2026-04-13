@@ -4121,6 +4121,10 @@ function ImageMessage({
   const isDesktop = variant === "desktop";
   const [loadFailed, setLoadFailed] = useState(false);
 
+  useEffect(() => {
+    setLoadFailed(false);
+  }, [url]);
+
   if (loadFailed) {
     return (
       <div
@@ -5264,6 +5268,10 @@ function StickerMessage({
 }) {
   const [loadFailed, setLoadFailed] = useState(false);
 
+  useEffect(() => {
+    setLoadFailed(false);
+  }, [url]);
+
   if (loadFailed) {
     return (
       <div className="flex h-24 w-24 items-center justify-center rounded-[22px] border border-white/80 bg-white/90 px-3 text-center text-xs text-[color:var(--text-secondary)] shadow-[var(--shadow-soft)]">
@@ -5647,14 +5655,13 @@ function resolveRuntimeAttachmentUrl(url: string, runtimeBaseUrl?: string) {
     return normalizedUrl;
   }
 
-  const rebaseTarget =
-    runtimeUrl && shouldRebaseLoopbackAttachment(resolvedUrl, runtimeUrl)
-      ? runtimeUrl
-      : !runtimeUrl &&
-          browserOriginUrl &&
-          shouldRebaseLoopbackAttachment(resolvedUrl, browserOriginUrl)
-        ? browserOriginUrl
-        : null;
+  if (!runtimeUrl) {
+    return resolvedUrl.toString();
+  }
+
+  const rebaseTarget = shouldRebaseLoopbackAttachment(resolvedUrl, runtimeUrl)
+    ? runtimeUrl
+    : null;
 
   if (!rebaseTarget) {
     return resolvedUrl.toString();
