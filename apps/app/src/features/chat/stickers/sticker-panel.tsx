@@ -222,12 +222,23 @@ export function StickerPanel({
 
   const tabs = useMemo<StickerPanelTab[]>(
     () => [
-      { id: "recent", label: isMobile ? "最近" : "最近使用", badgeText: "近" },
-      { id: "featured", label: "精选", badgeText: "荐" },
+      {
+        id: "recent",
+        label: isMobile ? "最近" : "最近使用",
+        badgeText: "近",
+        coverSticker: recentStickers[0] ?? null,
+      },
+      {
+        id: "featured",
+        label: "精选",
+        badgeText: "荐",
+        coverSticker: featuredStickers[0] ?? null,
+      },
       {
         id: "custom",
         label: `自定义 ${catalog.customStickerCount}`,
         badgeText: "自",
+        coverSticker: customStickers[0] ?? null,
       },
       ...catalog.builtinPacks.map((pack) => ({
         id: pack.id,
@@ -235,7 +246,14 @@ export function StickerPanel({
         coverSticker: getStickerAttachment(pack.id, pack.coverStickerId),
       })),
     ],
-    [catalog.builtinPacks, catalog.customStickerCount, isMobile],
+    [
+      catalog.builtinPacks,
+      catalog.customStickerCount,
+      customStickers,
+      featuredStickers,
+      isMobile,
+      recentStickers,
+    ],
   );
   const activeTab = tabs.find((tab) => tab.id === activeSectionId) ?? tabs[0];
   const panelSubtitle = trimmedKeyword.length > 0
@@ -528,13 +546,40 @@ export function StickerPanel({
             </div>
           ) : (
             <div className="flex min-h-[160px] items-center justify-center rounded-[18px] border border-dashed border-[color:var(--border-subtle)] bg-white/70 px-5 text-center text-sm text-[color:var(--text-secondary)]">
-              {searching
-                ? `没有找到“${keyword.trim()}”相关表情`
-                : activeSectionId === "custom"
-                  ? "还没有自定义表情，先上传几张图片或 GIF。"
-                  : activeSectionId === "recent"
-                    ? "最近还没有使用过表情。"
-                    : "当前没有可用表情。"}
+              <div className="flex max-w-[240px] flex-col items-center gap-3">
+                <div>
+                  {searching
+                    ? `没有找到“${trimmedKeyword}”相关表情`
+                    : activeSectionId === "custom"
+                      ? "还没有自定义表情，先上传几张图片或 GIF。"
+                      : activeSectionId === "recent"
+                        ? "最近还没有使用过表情。"
+                        : "当前没有可用表情。"}
+                </div>
+                {!searching && activeSectionId === "custom" ? (
+                  <button
+                    type="button"
+                    onClick={() => uploadInputRef.current?.click()}
+                    disabled={uploadMutation.isPending || customStickerLibraryFull}
+                    className="rounded-full bg-[rgba(160,90,10,0.14)] px-3 py-1.5 text-xs font-medium text-[#9a5a0a] transition disabled:opacity-45"
+                  >
+                    添加第一张表情
+                  </button>
+                ) : null}
+                {!searching && activeSectionId === "recent" ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setKeyword("");
+                      setSearchKeyword("");
+                      onPackChange("featured");
+                    }}
+                    className="rounded-full bg-[rgba(160,90,10,0.14)] px-3 py-1.5 text-xs font-medium text-[#9a5a0a] transition"
+                  >
+                    去精选看看
+                  </button>
+                ) : null}
+              </div>
             </div>
           )}
         </div>
