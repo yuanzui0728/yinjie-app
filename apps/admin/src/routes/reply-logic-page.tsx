@@ -800,7 +800,7 @@ export function ReplyLogicPage() {
                         {(characterDraft.onlineMode ?? "auto") === "auto" ||
                         (characterDraft.activityMode ?? "auto") === "auto" ? (
                           <InlineNotice tone="warning">
-                            处于“自动调度”的字段仍会被定时任务更新；切到“人工锁定”后，后台手动设置的在线状态或当前活动才会持续生效。
+                            处于"自动调度"的字段仍会被定时任务更新；切到"人工锁定"后，后台手动设置的在线状态或当前活动才会持续生效。
                           </InlineNotice>
                         ) : null}
                       </ConfigSection>
@@ -2979,7 +2979,7 @@ function RuntimeRulesEditorCard({
 
             <ConfigSection title="链路解释模板">
               <InlineNotice tone="muted">
-                这部分主要影响后台里“角色视图备注 / 会话分支摘要 / 候选消息预演说明 / 历史窗口注释”这些解释文字。
+                这部分主要影响后台里"角色视图备注 / 会话分支摘要 / 候选消息预演说明 / 历史窗口注释"这些解释文字。
               </InlineNotice>
               <TextAreaBlock
                 label="角色视图总说明"

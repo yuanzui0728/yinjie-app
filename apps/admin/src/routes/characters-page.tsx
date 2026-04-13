@@ -560,13 +560,13 @@ export function CharactersPage() {
             </div>
           </Card>
 
-          <Card className=”bg-[color:var(--surface-console)]”>
+          <Card className="bg-[color:var(--surface-console)]">
             <AdminEyebrow>运营建议</AdminEyebrow>
-            <div className=”mt-4 space-y-3”>
-              <AdminHintCard title=”新角色创建” />
-              <AdminHintCard title=”预设注入” />
-              <AdminHintCard title=”角色制造” />
-              <AdminHintCard title=”运行排查” />
+            <div className="mt-4 space-y-3">
+              <AdminHintCard title="新角色创建" />
+              <AdminHintCard title="预设注入" />
+              <AdminHintCard title="角色制造" />
+              <AdminHintCard title="运行排查" />
             </div>
           </Card>
         </div>
