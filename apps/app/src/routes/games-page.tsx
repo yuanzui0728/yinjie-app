@@ -16,6 +16,7 @@ import {
 import {
   ArrowLeft,
   Clock3,
+  Copy,
   Flame,
   Gift,
   Pin,
@@ -101,6 +102,7 @@ export function GamesPage() {
   const isDesktopLayout = useDesktopLayout();
   const nativeMobileShareSupported =
     !isDesktopLayout && isNativeMobileBridgeAvailable();
+  const mobileWebCopyFallback = !isDesktopLayout && !nativeMobileShareSupported;
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
   const ownerId = useWorldOwnerStore((state) => state.id);
@@ -178,7 +180,7 @@ export function GamesPage() {
     if (inviteActivityFromSearch) {
       setNoticeTone("info");
       setSuccessNotice(
-        `已带上 ${inviteActivityFromSearch.friendName} 的组局邀约，可在手机继续查看 ${getGameCenterGame(inviteActivityFromSearch.gameId)?.name ?? "当前游戏"}。`,
+        `已带上 ${inviteActivityFromSearch.friendName} 的组局邀约，可继续查看 ${getGameCenterGame(inviteActivityFromSearch.gameId)?.name ?? "当前游戏"}。`,
       );
     }
   }, [inviteActivityFromSearch]);
@@ -419,6 +421,30 @@ export function GamesPage() {
       return;
     }
 
+    if (mobileWebCopyFallback) {
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.clipboard ||
+        typeof navigator.clipboard.writeText !== "function"
+      ) {
+        setNoticeTone("info");
+        setSuccessNotice("当前环境暂不支持复制组局链接。");
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(link);
+        applyFriendInvite(activityId, "invited");
+        setSelectedGameId(activity.gameId);
+        setNoticeTone("success");
+        setSuccessNotice("组局链接已复制。");
+      } catch {
+        setNoticeTone("info");
+        setSuccessNotice("复制组局链接失败，请稍后重试。");
+      }
+      return;
+    }
+
     if (
       typeof navigator === "undefined" ||
       !navigator.clipboard ||
@@ -481,6 +507,28 @@ export function GamesPage() {
       } catch {
         setNoticeTone("info");
         setSuccessNotice("系统分享失败，请稍后重试。");
+      }
+      return;
+    }
+
+    if (mobileWebCopyFallback) {
+      if (
+        typeof navigator === "undefined" ||
+        !navigator.clipboard ||
+        typeof navigator.clipboard.writeText !== "function"
+      ) {
+        setNoticeTone("info");
+        setSuccessNotice("当前环境暂不支持复制入口链接。");
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(link);
+        setNoticeTone("success");
+        setSuccessNotice("入口链接已复制。");
+      } catch {
+        setNoticeTone("info");
+        setSuccessNotice("复制入口链接失败，请稍后重试。");
       }
       return;
     }
@@ -584,9 +632,11 @@ export function GamesPage() {
             size="icon"
             className="h-9 w-9 rounded-full border-0 bg-transparent text-[color:var(--text-primary)] hover:bg-black/5"
             onClick={() => void handleCopyGameToMobile(selectedGame.id)}
-            aria-label={nativeMobileShareSupported ? "分享当前游戏" : "发到手机继续"}
+            aria-label={
+              nativeMobileShareSupported ? "分享当前游戏" : "复制游戏入口"
+            }
           >
-            <Share2 size={18} />
+            {nativeMobileShareSupported ? <Share2 size={18} /> : <Copy size={18} />}
           </Button>
         }
       />
@@ -690,11 +740,11 @@ export function GamesPage() {
         lastOpenedAt={lastOpenedAtById[selectedGame.id]}
         compact
         onDismiss={activeGameId === selectedGame.id ? dismissActiveGame : undefined}
-        onCopyToMobile={
-          nativeMobileShareSupported ? handleCopyGameToMobile : undefined
+        onCopyToMobile={handleCopyGameToMobile}
+        copyActionIcon={
+          nativeMobileShareSupported ? <Share2 size={16} /> : <Copy size={16} />
         }
-        copyActionIcon={<Share2 size={16} />}
-        copyActionLabel="系统分享"
+        copyActionLabel={nativeMobileShareSupported ? "系统分享" : "复制入口"}
         onLaunch={handleLaunchGame}
       />
 
