@@ -2,7 +2,12 @@ import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
-import { getFavorites, removeFavorite } from "@yinjie/contracts";
+import {
+  getFavoriteNotes,
+  getFavorites,
+  removeFavorite,
+  type FavoriteNoteSummary,
+} from "@yinjie/contracts";
 import {
   Button,
   ErrorBlock,
@@ -63,8 +68,17 @@ export function FavoritesPage() {
     queryKey: ["app-favorites", baseUrl],
     queryFn: () => getFavorites(baseUrl),
   });
+  const favoriteNotesQuery = useQuery({
+    queryKey: ["favorite-notes", baseUrl],
+    queryFn: () => getFavoriteNotes(baseUrl),
+  });
 
   const normalizedSearchText = deferredSearchText.trim().toLowerCase();
+  const favoriteNoteSummaryMap = useMemo(() => {
+    return new Map(
+      (favoriteNotesQuery.data ?? []).map((item) => [item.id, item] as const),
+    );
+  }, [favoriteNotesQuery.data]);
 
   useEffect(() => {
     setFavorites(
@@ -167,10 +181,13 @@ export function FavoritesPage() {
       return (
         item.title.toLowerCase().includes(normalizedSearchText) ||
         item.description.toLowerCase().includes(normalizedSearchText) ||
-        item.meta.toLowerCase().includes(normalizedSearchText)
+        item.meta.toLowerCase().includes(normalizedSearchText) ||
+        resolveFavoriteNoteSearchText(item, favoriteNoteSummaryMap).includes(
+          normalizedSearchText,
+        )
       );
     });
-  }, [activeCategory, favorites, normalizedSearchText]);
+  }, [activeCategory, favoriteNoteSummaryMap, favorites, normalizedSearchText]);
 
   useEffect(() => {
     if (
@@ -189,6 +206,9 @@ export function FavoritesPage() {
     filteredFavorites.find(
       (item) => item.sourceId === selectedFavoriteSourceId,
     ) ?? null;
+  const selectedFavoriteNoteSummary = selectedFavorite
+    ? resolveFavoriteNoteSummary(selectedFavorite, favoriteNoteSummaryMap)
+    : null;
 
   const counts = useMemo(
     () => ({
@@ -323,14 +343,18 @@ export function FavoritesPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[14px] border border-[color:var(--border-faint)] bg-white p-4">
-                  <div className="text-xs text-[color:var(--text-muted)]">
-                    内容摘要
+                {selectedFavoriteNoteSummary ? (
+                  <FavoriteNotePreview summary={selectedFavoriteNoteSummary} />
+                ) : (
+                  <div className="rounded-[14px] border border-[color:var(--border-faint)] bg-white p-4">
+                    <div className="text-xs text-[color:var(--text-muted)]">
+                      内容摘要
+                    </div>
+                    <div className="mt-3 text-sm leading-7 text-[color:var(--text-secondary)]">
+                      {selectedFavorite.description}
+                    </div>
                   </div>
-                  <div className="mt-3 text-sm leading-7 text-[color:var(--text-secondary)]">
-                    {selectedFavorite.description}
-                  </div>
-                </div>
+                )}
 
                 <div className="rounded-[14px] border border-[color:var(--border-faint)] bg-white p-4">
                   <div className="text-xs text-[color:var(--text-muted)]">
@@ -347,6 +371,14 @@ export function FavoritesPage() {
                       label="收藏时间"
                       value={formatTimestamp(selectedFavorite.collectedAt)}
                     />
+                    {selectedFavoriteNoteSummary ? (
+                      <FavoriteMetric
+                        label="最近修改"
+                        value={formatTimestamp(
+                          selectedFavoriteNoteSummary.updatedAt,
+                        )}
+                      />
+                    ) : null}
                   </div>
                 </div>
 
@@ -475,6 +507,10 @@ export function FavoritesPage() {
                   <div className="mt-2 line-clamp-2 text-[13px] leading-6 text-[color:var(--text-secondary)]">
                     {item.description}
                   </div>
+                  {renderFavoriteListExtra(
+                    item,
+                    resolveFavoriteNoteSummary(item, favoriteNoteSummaryMap),
+                  )}
                 </div>
               </button>
             ))}
@@ -496,6 +532,57 @@ function FavoriteMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
+function FavoriteNotePreview({ summary }: { summary: FavoriteNoteSummary }) {
+  const imageCount = summary.assets.filter(
+    (item) => item.kind === "image",
+  ).length;
+  const fileCount = summary.assets.filter(
+    (item) => item.kind === "file",
+  ).length;
+
+  return (
+    <div className="overflow-hidden rounded-[18px] border border-[rgba(15,23,42,0.08)] bg-[linear-gradient(180deg,#ffffff_0%,#f8faf9_100%)] shadow-[var(--shadow-soft)]">
+      <div className="border-b border-[rgba(15,23,42,0.06)] px-4 py-3">
+        <div className="text-xs text-[color:var(--text-muted)]">笔记预览</div>
+        <div className="mt-2 line-clamp-2 text-[15px] font-medium leading-7 text-[color:var(--text-primary)]">
+          {summary.title}
+        </div>
+      </div>
+      <div className="space-y-4 px-4 py-4">
+        <div className="rounded-[14px] border border-[rgba(15,23,42,0.06)] bg-white px-4 py-4 text-[13px] leading-7 text-[color:var(--text-secondary)] shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+          {summary.excerpt || "这条笔记还没有正文摘要。"}
+        </div>
+        {summary.tags.length ? (
+          <div className="flex flex-wrap gap-2">
+            {summary.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full bg-[rgba(7,193,96,0.08)] px-2.5 py-1 text-[11px] text-[color:var(--brand-primary)]"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        {summary.assets.length ? (
+          <div className="flex flex-wrap gap-2">
+            {imageCount ? (
+              <span className="rounded-full bg-[rgba(15,23,42,0.06)] px-2.5 py-1 text-[11px] text-[color:var(--text-secondary)]">
+                图片 {imageCount}
+              </span>
+            ) : null}
+            {fileCount ? (
+              <span className="rounded-full bg-[rgba(15,23,42,0.06)] px-2.5 py-1 text-[11px] text-[color:var(--text-secondary)]">
+                文件 {fileCount}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function resolveFavoriteCategoryLabel(category: DesktopFavoriteCategory) {
   return categoryLabels.find((item) => item.id === category)?.label ?? "未分类";
 }
@@ -504,4 +591,60 @@ function parseFavoriteNoteIdFromSourceId(sourceId: string) {
   return sourceId.startsWith("favorite-note-")
     ? sourceId.slice("favorite-note-".length) || null
     : null;
+}
+
+function resolveFavoriteNoteSummary(
+  favorite: DesktopFavoriteRecord,
+  noteSummaryMap: Map<string, FavoriteNoteSummary>,
+) {
+  if (favorite.category !== "notes") {
+    return null;
+  }
+
+  const noteId = parseFavoriteNoteIdFromSourceId(favorite.sourceId);
+  if (!noteId) {
+    return null;
+  }
+
+  return noteSummaryMap.get(noteId) ?? null;
+}
+
+function resolveFavoriteNoteSearchText(
+  favorite: DesktopFavoriteRecord,
+  noteSummaryMap: Map<string, FavoriteNoteSummary>,
+) {
+  const summary = resolveFavoriteNoteSummary(favorite, noteSummaryMap);
+  if (!summary) {
+    return "";
+  }
+
+  const assetNames = summary.assets.map((item) => item.fileName).join(" ");
+  return `${summary.excerpt} ${summary.tags.join(" ")} ${assetNames}`.toLowerCase();
+}
+
+function renderFavoriteListExtra(
+  favorite: DesktopFavoriteRecord,
+  summary: FavoriteNoteSummary | null,
+) {
+  if (favorite.category !== "notes" || !summary) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      {summary.tags.slice(0, 3).map((tag) => (
+        <span
+          key={tag}
+          className="rounded-full bg-[rgba(7,193,96,0.08)] px-2 py-0.5 text-[10px] text-[color:var(--brand-primary)]"
+        >
+          #{tag}
+        </span>
+      ))}
+      {summary.assets.length ? (
+        <span className="rounded-full bg-[rgba(15,23,42,0.06)] px-2 py-0.5 text-[10px] text-[color:var(--text-muted)]">
+          附件 {summary.assets.length}
+        </span>
+      ) : null}
+    </div>
+  );
 }
