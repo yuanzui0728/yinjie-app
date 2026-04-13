@@ -9,10 +9,9 @@ import {
 import {
   AppPage,
   Button,
-  ErrorBlock,
-  LoadingBlock,
+  InlineNotice,
+  cn,
 } from "@yinjie/ui";
-import { EmptyState } from "../components/empty-state";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { OfficialArticleCard } from "../components/official-article-card";
 import { DesktopChatWorkspace } from "../features/desktop/chat/desktop-chat-workspace";
@@ -112,17 +111,32 @@ function MobileSubscriptionInboxPage() {
       <div className="pb-[calc(env(safe-area-inset-bottom,0px)+1rem)]">
         {inboxQuery.isLoading ? (
           <div className="px-4 pt-2">
-            <LoadingBlock label="正在读取订阅号消息..." />
+            <MobileSubscriptionInboxStatusCard
+              badge="读取中"
+              title="正在读取订阅号消息"
+              description="稍等一下，正在同步最近的订阅推送。"
+              tone="loading"
+            />
           </div>
         ) : null}
         {inboxQuery.isError && inboxQuery.error instanceof Error ? (
           <div className="px-4 pt-2">
-            <ErrorBlock message={inboxQuery.error.message} />
+            <MobileSubscriptionInboxStatusCard
+              badge="读取失败"
+              title="订阅号消息暂时不可用"
+              description={inboxQuery.error.message}
+              tone="danger"
+            />
           </div>
         ) : null}
         {markReadMutation.isError && markReadMutation.error instanceof Error ? (
           <div className="px-4 pt-2">
-            <ErrorBlock message={markReadMutation.error.message} />
+            <InlineNotice
+              className="rounded-[11px] px-2.5 py-1.5 text-[11px] leading-[1.35rem] shadow-none"
+              tone="danger"
+            >
+              {markReadMutation.error.message}
+            </InlineNotice>
           </div>
         ) : null}
 
@@ -171,7 +185,8 @@ function MobileSubscriptionInboxPage() {
           ))
         ) : !inboxQuery.isLoading ? (
           <div className="px-4 pt-4">
-            <EmptyState
+            <MobileSubscriptionInboxStatusCard
+              badge="暂时空白"
               title="还没有订阅号消息"
               description="先关注一个订阅号，后续推送会汇总到这里。"
             />
@@ -179,5 +194,52 @@ function MobileSubscriptionInboxPage() {
         ) : null}
       </div>
     </AppPage>
+  );
+}
+
+function MobileSubscriptionInboxStatusCard({
+  badge,
+  title,
+  description,
+  tone = "default",
+}: {
+  badge: string;
+  title: string;
+  description: string;
+  tone?: "default" | "danger" | "loading";
+}) {
+  return (
+    <section
+      className={cn(
+        "rounded-[16px] border px-3.5 py-4 text-center shadow-none",
+        tone === "danger"
+          ? "border-[color:var(--border-danger)] bg-[linear-gradient(180deg,rgba(255,245,245,0.96),rgba(254,242,242,0.94))]"
+          : "border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)]",
+      )}
+    >
+      <div
+        className={cn(
+          "mx-auto inline-flex rounded-full px-2 py-0.5 text-[8px] font-medium tracking-[0.04em]",
+          tone === "danger"
+            ? "bg-[rgba(220,38,38,0.08)] text-[color:var(--state-danger-text)]"
+            : "bg-[rgba(7,193,96,0.1)] text-[#07c160]",
+        )}
+      >
+        {badge}
+      </div>
+      {tone === "loading" ? (
+        <div className="mt-2.5 flex items-center justify-center gap-1.5">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-black/15" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-black/25 [animation-delay:120ms]" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-[#8ecf9d] [animation-delay:240ms]" />
+        </div>
+      ) : null}
+      <div className="mt-2.5 text-[14px] font-medium text-[color:var(--text-primary)]">
+        {title}
+      </div>
+      <p className="mx-auto mt-1.5 max-w-[17rem] text-[11px] leading-[1.35rem] text-[color:var(--text-secondary)]">
+        {description}
+      </p>
+    </section>
   );
 }
