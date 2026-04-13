@@ -253,7 +253,7 @@ export function ProfileSettingsPage() {
         >
           <div
             className={cn(
-              "overflow-hidden rounded-[16px] border",
+              "overflow-hidden rounded-[14px] border",
               desktopMode
                 ? "border-[color:var(--border-faint)] bg-[color:var(--surface-console)]"
                 : "border-[color:var(--border-faint)] bg-white",
@@ -268,7 +268,7 @@ export function ProfileSettingsPage() {
                   type="button"
                   onClick={() => setSendMessageShortcut(option.id)}
                   className={cn(
-                    "flex w-full items-center gap-3 px-4 py-2.5 text-left transition",
+                    "flex w-full items-center gap-3 px-4 py-2 text-left transition",
                     index > 0 && "border-t border-[color:var(--border-faint)]",
                     selected
                       ? desktopMode
@@ -278,23 +278,23 @@ export function ProfileSettingsPage() {
                   )}
                 >
                   <div className="min-w-0 flex-1">
-                    <div className="text-[14px] font-medium text-[color:var(--text-primary)]">
+                    <div className="text-[13px] font-medium text-[color:var(--text-primary)]">
                       {option.label}
                     </div>
-                    <div className="mt-0.5 text-[11px] leading-[1.125rem] text-[color:var(--text-muted)]">
+                    <div className="mt-0.5 text-[10px] leading-4 text-[color:var(--text-muted)]">
                       {option.description}
                     </div>
                   </div>
                   <span
                     className={cn(
-                      "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition",
+                      "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition",
                       selected
                         ? "border-[color:var(--brand-primary)] bg-[color:var(--brand-primary)] text-white"
                         : "border-[color:var(--border-faint)] bg-white text-transparent",
                     )}
                     aria-hidden="true"
                   >
-                    <Check size={14} strokeWidth={2.5} />
+                    <Check size={12} strokeWidth={2.5} />
                   </span>
                 </button>
               );
@@ -302,7 +302,7 @@ export function ProfileSettingsPage() {
           </div>
 
           <InlineNotice
-            className={desktopMode ? undefined : "text-[12px] leading-5"}
+            className={desktopMode ? undefined : "text-[11px] leading-[1.35rem]"}
             tone="muted"
           >
             当前仅影响桌面和 Web 的键盘聊天输入，移动端仍以发送按钮和语音入口为主。
@@ -819,10 +819,10 @@ function MobileLinkRow({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[color:var(--surface-card-hover)]"
+      className="flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[color:var(--surface-card-hover)]"
     >
       <div className="min-w-0 flex-1">
-        <div className="text-[15px] text-[color:var(--text-primary)]">
+        <div className="text-[14px] text-[color:var(--text-primary)]">
           {label}
         </div>
         {subtitle ? (
