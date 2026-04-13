@@ -369,7 +369,7 @@ export function ConversationThreadPanel({
           className={
             isDesktop
               ? "border-b border-[color:var(--border-faint)] bg-[rgba(249,251,250,0.92)] px-6 py-3"
-              : "border-b border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] px-3 py-1.5"
+              : "border-b border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] px-2.5 py-1"
           }
         >
           <InlineNotice
@@ -377,7 +377,7 @@ export function ConversationThreadPanel({
             className={
               isDesktop
                 ? "border-[color:var(--border-faint)] bg-white"
-                : "rounded-[13px] border-[rgba(7,193,96,0.14)] bg-[rgba(247,251,248,0.98)] px-3 py-2 text-[#166534] shadow-none"
+                : "rounded-[12px] border-[rgba(7,193,96,0.14)] bg-[rgba(247,251,248,0.98)] px-2.5 py-1.5 text-[#166534] shadow-none"
             }
           >
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -385,7 +385,7 @@ export function ConversationThreadPanel({
                 className={`min-w-0 flex-1 ${
                   isDesktop
                     ? "text-xs leading-6 text-[color:var(--text-secondary)]"
-                    : "text-[11px] leading-[17px] text-[#166534]"
+                    : "text-[10px] leading-4 text-[#166534]"
                 }`}
               >
                 {routeContextNotice.description}
@@ -400,7 +400,7 @@ export function ConversationThreadPanel({
                     className={
                       isDesktop
                         ? "shrink-0 rounded-full"
-                        : "h-8 shrink-0 rounded-full px-2.5 text-[10px]"
+                        : "h-7 shrink-0 rounded-full px-2.5 text-[10px]"
                     }
                   >
                     {routeContextNotice.secondaryActionLabel}
@@ -413,7 +413,7 @@ export function ConversationThreadPanel({
                   className={
                     isDesktop
                       ? "shrink-0 rounded-full"
-                      : "h-8 shrink-0 rounded-full px-2.5 text-[10px]"
+                      : "h-7 shrink-0 rounded-full px-2.5 text-[10px]"
                   }
                 >
                   {routeContextNotice.actionLabel}
@@ -428,7 +428,7 @@ export function ConversationThreadPanel({
           className={
             isDesktop
               ? "border-b border-[color:var(--border-faint)] bg-[rgba(249,251,250,0.92)] px-6 py-3"
-              : "border-b border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] px-3 py-1.5"
+              : "border-b border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] px-2.5 py-1"
           }
         >
           <DigitalHumanEntryNotice
@@ -527,7 +527,7 @@ export function ConversationThreadPanel({
             className={
               isDesktop
                 ? "relative flex h-full flex-col space-y-4 overflow-auto px-7 py-5"
-                : "relative flex h-full flex-col overflow-auto px-3 py-4"
+                : "relative flex h-full flex-col overflow-auto px-3 py-3.5"
             }
             onScrollCapture={handleDismissRouteContextNotice}
           >
@@ -580,7 +580,7 @@ export function ConversationThreadPanel({
         {!isDesktop &&
         !selectionModeActive &&
         (!isAtBottom || pendingCount > 0) ? (
-          <div className="pointer-events-none absolute bottom-4 right-3 z-10">
+          <div className="pointer-events-none absolute right-2.5 bottom-3 z-10">
             <div className="pointer-events-auto">
               <MobileChatScrollBottomButton
                 pendingCount={pendingCount}

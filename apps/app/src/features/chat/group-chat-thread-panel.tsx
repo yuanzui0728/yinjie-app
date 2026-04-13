@@ -756,7 +756,7 @@ export function GroupChatThreadPanel({
       ) : null}
 
       {!isDesktop && announcement ? (
-        <div className="border-b border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] px-3 py-1.5">
+        <div className="border-b border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] px-2.5 py-1">
           <button
             type="button"
             onClick={() => {
@@ -765,12 +765,12 @@ export function GroupChatThreadPanel({
                 params: { groupId },
               });
             }}
-            className="flex w-full items-center gap-2 rounded-[13px] border border-[rgba(7,193,96,0.12)] bg-[rgba(247,251,248,0.96)] px-3 py-2 text-left active:bg-white"
+            className="flex w-full items-center gap-2 rounded-[12px] border border-[rgba(7,193,96,0.12)] bg-[rgba(247,251,248,0.96)] px-2.5 py-1.5 text-left active:bg-white"
           >
-            <span className="shrink-0 rounded-full bg-[rgba(7,193,96,0.1)] px-2.5 py-1 text-[10px] font-medium text-[#15803d]">
+            <span className="shrink-0 rounded-full bg-[rgba(7,193,96,0.1)] px-2 py-0.5 text-[10px] font-medium text-[#15803d]">
               群公告
             </span>
-            <span className="min-w-0 flex-1 truncate text-[12px] text-[color:var(--text-primary)]">
+            <span className="min-w-0 flex-1 truncate text-[11px] text-[color:var(--text-primary)]">
               {announcement}
             </span>
             <span className="shrink-0 text-[10px] text-[color:var(--text-muted)]">
@@ -816,9 +816,9 @@ export function GroupChatThreadPanel({
             </InlineNotice>
           </div>
         ) : (
-          <div className="border-b border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] px-3 py-1.5">
-            <div className="rounded-[13px] border border-[rgba(7,193,96,0.14)] bg-[rgba(247,251,248,0.98)] px-3 py-2 shadow-none">
-              <div className="text-[11px] leading-[17px] text-[#166534]">
+          <div className="border-b border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] px-2.5 py-1">
+            <div className="rounded-[12px] border border-[rgba(7,193,96,0.14)] bg-[rgba(247,251,248,0.98)] px-2.5 py-1.5 shadow-none">
+              <div className="text-[10px] leading-4 text-[#166534]">
                 {routeContextNotice.description}
               </div>
               <div className="mt-2 flex items-center justify-end gap-1.5">
@@ -828,7 +828,7 @@ export function GroupChatThreadPanel({
                     variant="ghost"
                     size="sm"
                     onClick={routeContextNotice.onSecondaryAction}
-                    className="h-8 shrink-0 rounded-full px-2.5 text-[10px]"
+                    className="h-7 shrink-0 rounded-full px-2.5 text-[10px]"
                   >
                     {routeContextNotice.secondaryActionLabel}
                   </Button>
@@ -837,7 +837,7 @@ export function GroupChatThreadPanel({
                   variant="secondary"
                   size="sm"
                   onClick={routeContextNotice.onAction}
-                  className="h-8 shrink-0 rounded-full px-2.5 text-[10px]"
+                  className="h-7 shrink-0 rounded-full px-2.5 text-[10px]"
                 >
                   {routeContextNotice.actionLabel}
                 </Button>
@@ -950,7 +950,7 @@ export function GroupChatThreadPanel({
           <div
             ref={scrollAnchorRef}
             className={`relative flex h-full flex-col overflow-auto ${
-              isDesktop ? "px-7 py-5" : "px-3 py-4"
+              isDesktop ? "px-7 py-5" : "px-3 py-3.5"
             }`}
             onScrollCapture={handleDismissRouteContextNotice}
           >
@@ -1031,7 +1031,7 @@ export function GroupChatThreadPanel({
         {!isDesktop &&
         !selectionModeActive &&
         (!isAtBottom || pendingCount > 0) ? (
-          <div className="pointer-events-none absolute bottom-4 right-3 z-10">
+          <div className="pointer-events-none absolute right-2.5 bottom-3 z-10">
             <div className="pointer-events-auto">
               <MobileChatScrollBottomButton
                 pendingCount={pendingCount}
