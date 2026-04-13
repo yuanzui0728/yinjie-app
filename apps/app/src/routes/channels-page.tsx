@@ -25,13 +25,10 @@ import {
   AppPage,
   Button,
   cn,
-  ErrorBlock,
   InlineNotice,
-  LoadingBlock,
   TextField,
 } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
-import { EmptyState } from "../components/empty-state";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { DesktopChannelsWorkspace } from "../features/desktop/channels/desktop-channels-workspace";
 import {
@@ -383,15 +380,52 @@ export function ChannelsPage() {
             {notice}
           </InlineNotice>
         ) : null}
-        {errorMessage ? <ErrorBlock message={errorMessage} /> : null}
+        {errorMessage ? (
+          <MobileChannelsStatusCard
+            badge="读取失败"
+            description={errorMessage}
+            title="视频号暂时不可用"
+            tone="danger"
+            action={
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-8 rounded-full border-[color:var(--border-subtle)] bg-white px-3.5 text-[11px]"
+                onClick={() => {
+                  void channelsQuery.refetch();
+                  void blockedQuery.refetch();
+                }}
+              >
+                重新加载
+              </Button>
+            }
+          />
+        ) : null}
         {channelsQuery.isLoading ? (
-          <LoadingBlock label="正在读取视频号内容..." />
+          <MobileChannelsStatusCard
+            badge="读取中"
+            title="正在刷新视频号内容"
+            description="稍等一下，正在同步推荐流和互动状态。"
+            tone="loading"
+          />
         ) : null}
 
         {!channelsQuery.isLoading && !visiblePosts.length ? (
-          <EmptyState
-            title="视频号还没有内容"
+          <MobileChannelsStatusCard
+            badge="视频号"
+            title="还没有内容"
             description="再生成一批内容后，这里会逐步形成更连续的视频推荐流。"
+            action={
+              <Button
+                variant="primary"
+                size="sm"
+                className="h-8 rounded-full bg-[#07c160] px-3.5 text-[11px] text-white hover:bg-[#06ad56]"
+                disabled={generateMutation.isPending}
+                onClick={() => generateMutation.mutate()}
+              >
+                {generateMutation.isPending ? "生成中..." : "换一批"}
+              </Button>
+            }
           />
         ) : null}
         {!channelsQuery.isLoading && visiblePosts.length ? (
@@ -416,6 +450,57 @@ export function ChannelsPage() {
         ) : null}
       </div>
     </AppPage>
+  );
+}
+
+function MobileChannelsStatusCard({
+  badge,
+  title,
+  description,
+  tone = "default",
+  action,
+}: {
+  badge: string;
+  title: string;
+  description: string;
+  tone?: "default" | "danger" | "loading";
+  action?: ReactNode;
+}) {
+  const loading = tone === "loading";
+  return (
+    <section
+      className={cn(
+        "rounded-[18px] border px-4 py-5 text-center shadow-none",
+        tone === "danger"
+          ? "border-[color:var(--border-danger)] bg-[linear-gradient(180deg,rgba(255,245,245,0.96),rgba(254,242,242,0.94))]"
+          : "border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)]",
+      )}
+    >
+      <div
+        className={cn(
+          "mx-auto inline-flex rounded-full px-2.5 py-1 text-[9px] font-medium tracking-[0.04em]",
+          tone === "danger"
+            ? "bg-[rgba(220,38,38,0.08)] text-[color:var(--state-danger-text)]"
+            : "bg-[rgba(7,193,96,0.1)] text-[#07c160]",
+        )}
+      >
+        {badge}
+      </div>
+      {loading ? (
+        <div className="mt-3 flex items-center justify-center gap-1.5">
+          <span className="h-2 w-2 rounded-full bg-black/15 animate-pulse" />
+          <span className="h-2 w-2 rounded-full bg-black/25 animate-pulse [animation-delay:120ms]" />
+          <span className="h-2 w-2 rounded-full bg-[#8ecf9d] animate-pulse [animation-delay:240ms]" />
+        </div>
+      ) : null}
+      <div className="mt-3 text-[15px] font-medium text-[color:var(--text-primary)]">
+        {title}
+      </div>
+      <p className="mx-auto mt-2 max-w-[18rem] text-[11px] leading-[1.35rem] text-[color:var(--text-secondary)]">
+        {description}
+      </p>
+      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
+    </section>
   );
 }
 
