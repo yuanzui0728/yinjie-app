@@ -34,17 +34,10 @@ import {
   type ConversationListItem,
   type GroupMember,
 } from "@yinjie/contracts";
-import { BellRing, ChevronRight, Search, X } from "lucide-react";
+import { ChevronRight, Search, X } from "lucide-react";
 import { Button, ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
 import { AvatarChip } from "../../../components/avatar-chip";
 import { GroupAvatarChip } from "../../../components/group-avatar-chip";
-import {
-  DesktopContactProfileActionRow,
-  DesktopContactProfileHeader,
-  DesktopContactProfileRow,
-  DesktopContactProfileSection,
-  DesktopContactProfileToggleRow,
-} from "../../contacts/desktop-contact-profile-blocks";
 import { DesktopChatConfirmDialog } from "./desktop-chat-confirm-dialog";
 import { DesktopChatTextEditDialog } from "./desktop-chat-text-edit-dialog";
 import { buildDesktopChatFilesRouteHash } from "./desktop-chat-files-route-state";
@@ -53,9 +46,8 @@ import { DesktopGroupMemberRemovalPicker } from "./desktop-group-member-removal-
 import { getChatBackgroundLabel } from "../../chat/backgrounds/chat-background-helpers";
 import {
   useConversationBackground,
-  useDefaultChatBackground,
+  useGroupBackground,
 } from "../../chat/backgrounds/use-conversation-background";
-import { useMessageReminders } from "../../chat/use-message-reminders";
 import { isPersistedGroupConversation } from "../../../lib/conversation-route";
 import { buildCreateGroupRouteHash } from "../../../lib/create-group-route-state";
 import { formatTimestamp } from "../../../lib/format";
@@ -141,7 +133,6 @@ function DirectChatDetailsPanel({
   const [confirmAction, setConfirmAction] =
     useState<DirectDetailsConfirmAction | null>(null);
   const backgroundQuery = useConversationBackground(conversation.id);
-  const { reminders } = useMessageReminders();
   const targetCharacterId = conversation.participants[0] ?? "";
 
   useEffect(() => {
@@ -210,14 +201,6 @@ function DirectChatDetailsPanel({
     : targetCharacter?.relationship || "世界角色";
   const backgroundLabel = getChatBackgroundLabel(
     backgroundQuery.data?.effectiveBackground ?? null,
-  );
-  const reminderCount = useMemo(
-    () =>
-      reminders.filter(
-        (item) =>
-          item.threadType === "direct" && item.threadId === conversation.id,
-      ).length,
-    [conversation.id, reminders],
   );
 
   const pinMutation = useMutation({
@@ -403,7 +386,7 @@ function DirectChatDetailsPanel({
             : null;
 
   return (
-    <div className="space-y-3 bg-[rgba(247,250,250,0.78)] p-3">
+    <div className="space-y-2.5 bg-[#f5f5f5] px-3 py-3">
       {notice ? <InlineNotice tone="success">{notice}</InlineNotice> : null}
       {characterQuery.isError && characterQuery.error instanceof Error ? (
         <ErrorBlock message={characterQuery.error.message} />
@@ -419,62 +402,157 @@ function DirectChatDetailsPanel({
         <ErrorBlock message={blockedQuery.error.message} />
       ) : null}
 
-      <section className="overflow-hidden rounded-[16px] border border-[color:var(--border-faint)] bg-white shadow-[var(--shadow-soft)]">
-        <DesktopContactProfileHeader
-          compact
-          avatar={targetCharacter?.avatar}
-          name={targetCharacter?.name ?? conversation.title}
-          displayName={displayName}
-          badge={isFriend ? "联系人" : "世界角色"}
-          subline={relationshipSummary}
-          identifier={identifier}
-          signature={signature}
-          action={
-            targetCharacterId ? (
-              <button
-                type="button"
-                onClick={() => {
-                  void navigate({
-                    to: "/character/$characterId",
-                    params: { characterId: targetCharacterId },
-                  });
-                }}
-                className="rounded-full border border-[color:var(--border-faint)] bg-white px-3 py-1.5 text-xs text-[color:var(--text-secondary)] transition-colors hover:bg-[color:var(--surface-console)]"
-              >
-                联系人资料
-              </button>
-            ) : null
-          }
-        />
-
-        <DesktopContactProfileSection title="联系人资料">
-          {characterQuery.isLoading ? (
-            <div className="px-8 py-3">
-              <LoadingBlock label="正在读取联系人资料..." />
+      <DesktopPanelSection>
+        <div className="flex items-start gap-3 px-4 py-4">
+          <AvatarChip
+            name={targetCharacter?.name ?? conversation.title}
+            src={targetCharacter?.avatar}
+            size="wechat"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="truncate text-[16px] font-medium text-[color:var(--text-primary)]">
+                {displayName}
+              </div>
+              <span className="rounded-full bg-[rgba(0,0,0,0.05)] px-2 py-0.5 text-[10px] text-[color:var(--text-secondary)]">
+                {isFriend ? "联系人" : "世界角色"}
+              </span>
             </div>
-          ) : isFriend ? (
+            <div className="mt-1 text-[12px] text-[color:var(--text-muted)]">
+              {relationshipSummary}
+            </div>
+            <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-[color:var(--text-secondary)]">
+              {signature}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[color:var(--text-dim)]">
+              {remarkName ? (
+                <span className="rounded-full bg-[rgba(0,0,0,0.035)] px-2 py-0.5">
+                  备注 {remarkName}
+                </span>
+              ) : null}
+              {identifier ? (
+                <span className="rounded-full bg-[rgba(0,0,0,0.035)] px-2 py-0.5">
+                  隐界号 {identifier}
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </DesktopPanelSection>
+
+      <DesktopPanelSection>
+        <DesktopPanelRow
+          label="查找聊天记录"
+          value="搜索当前聊天"
+          icon={<Search size={15} />}
+          onClick={onOpenHistory}
+        />
+        <DesktopPanelRow
+          label="聊天文件"
+          value="查看本聊天附件"
+          onClick={() => {
+            void navigate({
+              to: "/desktop/chat-files",
+              hash: buildDesktopChatFilesRouteHash(conversation.id),
+            });
+          }}
+        />
+        <DesktopPanelRow
+          label="聊天背景"
+          value={backgroundLabel}
+          onClick={() => {
+            void navigate({
+              to: "/chat/$conversationId/background",
+              params: { conversationId: conversation.id },
+            });
+          }}
+        />
+      </DesktopPanelSection>
+
+      <DesktopPanelSection>
+        <DesktopPanelRow
+          label="消息免打扰"
+          checked={conversation.isMuted}
+          disabled={busy}
+          onToggle={(checked) => muteMutation.mutate(checked)}
+        />
+        <DesktopPanelRow
+          label="置顶聊天"
+          checked={conversation.isPinned}
+          disabled={busy}
+          onToggle={(checked) => pinMutation.mutate(checked)}
+        />
+        {!isFriend ? (
+          <DesktopPanelRow
+            label="添加到通讯录"
+            value="发送好友申请"
+            disabled={busy || !targetCharacterId}
+            onClick={() => saveToContactsMutation.mutate()}
+          />
+        ) : null}
+        <DesktopPanelRow
+          label="发起群聊"
+          value="和对方创建新群"
+          onClick={() => {
+            if (onCreateGroup) {
+              onCreateGroup({
+                conversationId: conversation.id,
+                seedMemberIds: targetCharacterId ? [targetCharacterId] : [],
+              });
+              return;
+            }
+
+            void navigate({
+              to: "/group/new",
+              hash: buildCreateGroupRouteHash({
+                source: "desktop-chat",
+                conversationId: conversation.id,
+                seedMemberIds: targetCharacterId ? [targetCharacterId] : [],
+              }),
+            });
+          }}
+        />
+        <DesktopPanelRow
+          label="查看资料"
+          value={isFriend ? "联系人资料" : "角色资料"}
+          onClick={() => {
+            if (!targetCharacterId) {
+              return;
+            }
+
+            void navigate({
+              to: "/character/$characterId",
+              params: { characterId: targetCharacterId },
+            });
+          }}
+          disabled={!targetCharacterId}
+        />
+      </DesktopPanelSection>
+
+      {characterQuery.isLoading ? (
+        <DesktopPanelSection>
+          <div className="px-4 py-4">
+            <LoadingBlock label="正在读取聊天信息..." />
+          </div>
+        </DesktopPanelSection>
+      ) : (
+        <DesktopPanelSection title="更多信息">
+          {isFriend ? (
             <>
-              <DesktopContactProfileRow
-                label="备注"
-                value={remarkName || "未设置"}
-              />
-              <DesktopContactProfileRow
+              <DesktopPanelInfoRow label="备注" value={remarkName || "未设置"} />
+              <DesktopPanelInfoRow
                 label="昵称"
                 value={targetCharacter?.name ?? conversation.title}
               />
-              <DesktopContactProfileRow
-                label="隐界号"
-                value={identifier ?? "未设置"}
-              />
-              <DesktopContactProfileRow
+              <DesktopPanelInfoRow
                 label="地区"
                 value={friendship?.region?.trim() || "未设置"}
               />
-              <DesktopContactProfileRow
+              <DesktopPanelInfoRow
                 label="来源"
                 value={friendship?.source?.trim() || "未设置"}
               />
-              <DesktopContactProfileRow
+              <DesktopPanelInfoRow
                 label="标签"
                 value={
                   friendship?.tags?.length
@@ -482,96 +560,21 @@ function DirectChatDetailsPanel({
                     : "未设置"
                 }
               />
-              <DesktopContactProfileRow
-                label="个性签名"
-                value={signature}
-                multiline
-              />
             </>
           ) : (
-            <>
-              <DesktopContactProfileRow
-                label="昵称"
-                value={targetCharacter?.name ?? conversation.title}
-              />
-              <DesktopContactProfileRow
-                label="身份"
-                value={targetCharacter?.relationship || "世界角色"}
-              />
-              <DesktopContactProfileRow
-                label="隐界号"
-                value={identifier ?? "未设置"}
-              />
-              <DesktopContactProfileRow
-                label="个性签名"
-                value={signature}
-                multiline
-              />
-            </>
+            <DesktopPanelInfoRow
+              label="身份"
+              value={targetCharacter?.relationship || "世界角色"}
+            />
           )}
-        </DesktopContactProfileSection>
-
-        <DesktopContactProfileSection title="聊天内容">
-          <DesktopContactProfileActionRow
-            label="搜索聊天记录"
-            value="在当前会话内查找"
-            onClick={onOpenHistory}
-          />
-          <DesktopContactProfileActionRow
-            label="消息提醒"
-            value={
-              reminderCount
-                ? `当前会话 ${reminderCount} 条`
-                : "当前会话暂无提醒"
-            }
-            onClick={onOpenHistory}
-          />
-          <DesktopContactProfileActionRow
-            label="聊天文件"
-            value="查看本聊天附件"
-            onClick={() => {
-              void navigate({
-                to: "/desktop/chat-files",
-                hash: buildDesktopChatFilesRouteHash(conversation.id),
-              });
-            }}
-          />
-        </DesktopContactProfileSection>
-
-        <DesktopContactProfileSection title="内容与关系">
-          <DesktopContactProfileActionRow
-            label="发起群聊"
-            value="和对方创建新群"
-            onClick={() => {
-              if (onCreateGroup) {
-                onCreateGroup({
-                  conversationId: conversation.id,
-                  seedMemberIds: targetCharacterId ? [targetCharacterId] : [],
-                });
-                return;
-              }
-
-              void navigate({
-                to: "/group/new",
-                hash: buildCreateGroupRouteHash({
-                  source: "desktop-chat",
-                  conversationId: conversation.id,
-                  seedMemberIds: targetCharacterId ? [targetCharacterId] : [],
-                }),
-              });
-            }}
-          />
-          <DesktopContactProfileRow
+          <DesktopPanelInfoRow
             label="共同群聊"
             value={
-              commonGroups.length
-                ? `${commonGroups.length} 个共同群聊`
-                : "暂时没有共同群聊"
+              commonGroups.length ? `${commonGroups.length} 个` : "暂无共同群聊"
             }
-            muted={!commonGroups.length}
           />
           {commonGroups.slice(0, 2).map((group) => (
-            <DesktopContactProfileActionRow
+            <DesktopPanelRow
               key={group.id}
               label="群聊"
               value={group.title}
@@ -583,84 +586,43 @@ function DirectChatDetailsPanel({
               }}
             />
           ))}
-          <DesktopContactProfileActionRow
-            label="更多资料"
-            value={isFriend ? "查看完整联系人资料" : "查看角色完整资料"}
-            onClick={() => {
-              if (!targetCharacterId) {
-                return;
-              }
+          <DesktopPanelInfoRow
+            label="个性签名"
+            value={signature}
+            multiline
+          />
+        </DesktopPanelSection>
+      )}
 
-              void navigate({
-                to: "/character/$characterId",
-                params: { characterId: targetCharacterId },
-              });
-            }}
-            disabled={!targetCharacterId}
-          />
-        </DesktopContactProfileSection>
-
-        <DesktopContactProfileSection title="聊天设置">
-          <DesktopContactProfileToggleRow
-            label="消息免打扰"
-            checked={conversation.isMuted}
-            disabled={busy}
-            onToggle={() => muteMutation.mutate(!conversation.isMuted)}
-          />
-          <DesktopContactProfileToggleRow
-            label="置顶聊天"
-            checked={conversation.isPinned}
-            disabled={busy}
-            onToggle={() => pinMutation.mutate(!conversation.isPinned)}
-          />
-          <DesktopContactProfileActionRow
-            label="添加到通讯录"
-            value={isFriend ? "已添加" : "添加"}
-            disabled={busy || isFriend || !targetCharacterId}
-            onClick={() => saveToContactsMutation.mutate()}
-          />
-          <DesktopContactProfileActionRow
-            label="聊天背景"
-            value={backgroundLabel}
-            onClick={() => {
-              void navigate({
-                to: "/chat/$conversationId/background",
-                params: { conversationId: conversation.id },
-              });
-            }}
-          />
-        </DesktopContactProfileSection>
-
-        <DesktopContactProfileSection title="更多">
-          <DesktopContactProfileActionRow
-            label="加入黑名单"
-            value={isBlocked ? "已加入" : "不再接收该角色互动"}
-            danger
-            disabled={busy || isBlocked || !targetCharacterId}
-            onClick={() => setConfirmAction("block")}
-          />
-          <DesktopContactProfileActionRow
-            label="删除聊天"
-            value="从消息列表移除"
-            disabled={busy}
-            onClick={() => setConfirmAction("hide")}
-          />
-          <DesktopContactProfileActionRow
-            label="清空记录"
-            value="删除当前聊天内容"
-            danger
-            disabled={busy}
-            onClick={() => setConfirmAction("clear")}
-          />
-          <DesktopContactProfileActionRow
-            label="投诉"
-            value="提交聊天相关投诉"
-            danger
-            disabled={busy || !targetCharacterId}
-            onClick={() => setConfirmAction("report")}
-          />
-        </DesktopContactProfileSection>
-      </section>
+      <DesktopPanelSection>
+        <DesktopPanelRow
+          label="加入黑名单"
+          value={isBlocked ? "已加入" : "不再接收该角色互动"}
+          danger
+          disabled={busy || isBlocked || !targetCharacterId}
+          onClick={() => setConfirmAction("block")}
+        />
+        <DesktopPanelRow
+          label="删除聊天"
+          value="从消息列表移除"
+          disabled={busy}
+          onClick={() => setConfirmAction("hide")}
+        />
+        <DesktopPanelRow
+          label="清空聊天记录"
+          value="删除当前聊天内容"
+          danger
+          disabled={busy}
+          onClick={() => setConfirmAction("clear")}
+        />
+        <DesktopPanelRow
+          label="投诉"
+          value="提交聊天相关投诉"
+          danger
+          disabled={busy || !targetCharacterId}
+          onClick={() => setConfirmAction("report")}
+        />
+      </DesktopPanelSection>
 
       {pinMutation.isError && pinMutation.error instanceof Error ? (
         <ErrorBlock message={pinMutation.error.message} />
@@ -709,8 +671,7 @@ function GroupChatDetailsPanel({
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
-  const ownerQuery = useDefaultChatBackground();
-  const { reminders } = useMessageReminders();
+  const backgroundQuery = useGroupBackground(conversation.id);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] =
     useState<GroupDetailsConfirmAction | null>(null);
@@ -772,15 +733,7 @@ function GroupChatDetailsPanel({
   });
 
   const backgroundLabel = getChatBackgroundLabel(
-    ownerQuery.data?.defaultChatBackground ?? null,
-  );
-  const reminderCount = useMemo(
-    () =>
-      reminders.filter(
-        (item) =>
-          item.threadType === "group" && item.threadId === conversation.id,
-      ).length,
-    [conversation.id, reminders],
+    backgroundQuery.data?.effectiveBackground ?? null,
   );
 
   const updateGroupMutation = useMutation({
@@ -1111,10 +1064,10 @@ function GroupChatDetailsPanel({
   const activeConfirm =
     confirmAction === "hide"
       ? {
-          title: "隐藏聊天",
-          description: "确认将该群聊从消息列表中隐藏吗？有新消息时会再次出现。",
-          confirmLabel: "隐藏聊天",
-          pendingLabel: "正在隐藏...",
+          title: "删除聊天",
+          description: "删除后，这个群聊会从消息列表移除；有新消息时会再次出现。",
+          confirmLabel: "删除聊天",
+          pendingLabel: "正在删除...",
           onConfirm: () => {
             setConfirmAction(null);
             hideMutation.mutate();
@@ -1149,7 +1102,7 @@ function GroupChatDetailsPanel({
           : null;
 
   return (
-    <div className="space-y-3 p-3">
+    <div className="space-y-2.5 bg-[#f5f5f5] px-3 py-3">
       {notice ? <InlineNotice tone="success">{notice}</InlineNotice> : null}
       {groupQuery.isError && groupQuery.error instanceof Error ? (
         <ErrorBlock message={groupQuery.error.message} />
@@ -1174,28 +1127,17 @@ function GroupChatDetailsPanel({
             size="wechat"
           />
           <div className="min-w-0 flex-1">
-            <div className="truncate text-[15px] font-medium text-[color:var(--text-primary)]">
+            <div className="truncate text-[16px] font-medium text-[color:var(--text-primary)]">
               {groupQuery.data?.name ?? conversation.title}
             </div>
             <div className="mt-1 truncate text-[12px] text-[color:var(--text-muted)]">
-              {(membersQuery.data ?? []).length} 人 · 群聊
+              {(membersQuery.data ?? []).length} 人群聊
             </div>
           </div>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              setMemberBrowserAutoFocusSearch(true);
-              setMemberBrowserOpen(true);
-            }}
-            className="h-8 shrink-0 rounded-full border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-3 text-[12px] shadow-none hover:bg-white"
-          >
-            搜索群成员
-          </Button>
         </div>
       </DesktopPanelSection>
 
-      <DesktopPanelSection title="群成员">
+      <DesktopPanelSection>
         {membersQuery.isLoading ? (
           <div className="px-4 py-4">
             <LoadingBlock label="正在读取群成员..." />
@@ -1203,6 +1145,14 @@ function GroupChatDetailsPanel({
         ) : (
           <>
             <DesktopMemberGrid items={memberItems} />
+            <DesktopPanelRow
+              label="查看全部群成员"
+              value={`${groupMembers.length} 人`}
+              onClick={() => {
+                setMemberBrowserAutoFocusSearch(false);
+                setMemberBrowserOpen(true);
+              }}
+            />
             <DesktopPanelRow
               label="搜索群成员"
               value="按昵称或角色查找"
@@ -1212,21 +1162,11 @@ function GroupChatDetailsPanel({
                 setMemberBrowserOpen(true);
               }}
             />
-            {groupMembers.length > 8 ? (
-              <DesktopPanelRow
-                label="更多群成员"
-                value={`${groupMembers.length} 人`}
-                onClick={() => {
-                  setMemberBrowserAutoFocusSearch(false);
-                  setMemberBrowserOpen(true);
-                }}
-              />
-            ) : null}
           </>
         )}
       </DesktopPanelSection>
 
-      <DesktopPanelSection title="群聊信息">
+      <DesktopPanelSection>
         <DesktopPanelRow
           label="群聊名称"
           value={groupQuery.data?.name ?? conversation.title}
@@ -1239,10 +1179,6 @@ function GroupChatDetailsPanel({
           disabled={busy}
           onClick={() => setEditorMode("announcement")}
         />
-        <DesktopPanelInfoRow
-          label="群主"
-          value={ownerMember?.memberName?.trim() || "我"}
-        />
         <DesktopPanelRow
           label="群二维码"
           value="查看邀请卡"
@@ -1254,30 +1190,9 @@ function GroupChatDetailsPanel({
           }}
         />
         <DesktopPanelRow
-          label="全部成员"
-          value={`${groupMembers.length} 人`}
-          onClick={() => {
-            setMemberBrowserAutoFocusSearch(false);
-            setMemberBrowserOpen(true);
-          }}
-        />
-        <DesktopPanelInfoRow
-          label="最近活跃"
-          value={formatTimestamp(conversation.lastActivityAt) || "刚刚"}
-        />
-      </DesktopPanelSection>
-
-      <DesktopPanelSection title="聊天内容">
-        <DesktopPanelRow
           label="查找聊天记录"
           value="搜索当前群消息"
           icon={<Search size={15} />}
-          onClick={onOpenHistory}
-        />
-        <DesktopPanelRow
-          label="消息提醒"
-          value={reminderCount ? `${reminderCount} 条` : "暂无提醒"}
-          icon={<BellRing size={15} />}
           onClick={onOpenHistory}
         />
         <DesktopPanelRow
@@ -1292,33 +1207,7 @@ function GroupChatDetailsPanel({
         />
       </DesktopPanelSection>
 
-      <DesktopPanelSection title="群工具">
-        <DesktopPanelRow
-          label="群接龙"
-          value="发起或查看"
-          onClick={() => {
-            const query = new URLSearchParams({
-              miniProgram: "group-relay",
-              sourceGroupId: conversation.id,
-              sourceGroupName: groupQuery.data?.name ?? conversation.title,
-            });
-
-            void navigate({
-              to: "/tabs/mini-programs",
-              search: `?${query.toString()}`,
-            });
-          }}
-        />
-        <DesktopPanelRow
-          label="成员管理"
-          value={`${groupMembers.length} 人`}
-          onClick={() => {
-            setMemberBrowserOpen(true);
-          }}
-        />
-      </DesktopPanelSection>
-
-      <DesktopPanelSection title="设置">
+      <DesktopPanelSection>
         <DesktopPanelRow
           label="消息免打扰"
           checked={isMuted}
@@ -1397,9 +1286,20 @@ function GroupChatDetailsPanel({
         />
       </DesktopPanelSection>
 
-      <DesktopPanelSection title="更多">
+      <DesktopPanelSection title="更多信息">
+        <DesktopPanelInfoRow
+          label="群主"
+          value={ownerMember?.memberName?.trim() || "我"}
+        />
+        <DesktopPanelInfoRow
+          label="最近活跃"
+          value={formatTimestamp(conversation.lastActivityAt) || "刚刚"}
+        />
+      </DesktopPanelSection>
+
+      <DesktopPanelSection>
         <DesktopPanelRow
-          label="隐藏聊天"
+          label="删除聊天"
           value="从消息列表移除"
           disabled={busy}
           onClick={() => setConfirmAction("hide")}
@@ -1534,9 +1434,9 @@ function DesktopPanelSection({
   children: ReactNode;
 }) {
   return (
-    <section className="overflow-hidden rounded-[14px] border border-[color:var(--border-faint)] bg-white shadow-[var(--shadow-soft)]">
+    <section className="overflow-hidden rounded-[12px] border border-[rgba(0,0,0,0.06)] bg-white">
       {title ? (
-        <div className="border-b border-[color:var(--border-faint)] bg-white/78 px-4 py-2 text-[11px] tracking-[0.12em] text-[color:var(--text-dim)] backdrop-blur-xl">
+        <div className="border-b border-[rgba(0,0,0,0.06)] px-4 py-2 text-[11px] tracking-[0.06em] text-[color:var(--text-dim)]">
           {title}
         </div>
       ) : null}
@@ -1583,11 +1483,11 @@ function DesktopPanelRow({
         onClick?.();
       }}
       className={cn(
-        "flex min-h-11 w-full items-center justify-between gap-3 border-b border-[color:var(--border-faint)] px-4 py-3 text-left last:border-b-0",
+        "flex min-h-11 w-full items-center justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-4 py-3 text-left last:border-b-0",
         danger ? "text-[#d74b45]" : "text-[color:var(--text-primary)]",
         disabled
           ? "cursor-not-allowed opacity-50"
-          : "hover:bg-[color:var(--surface-console)]",
+          : "hover:bg-[rgba(0,0,0,0.025)]",
       )}
       role={isSwitch ? "switch" : undefined}
       aria-checked={isSwitch ? checked : undefined}
@@ -1600,7 +1500,7 @@ function DesktopPanelRow({
       </span>
       <span className="flex shrink-0 items-center gap-2">
         {value ? (
-          <span className="max-w-[10rem] truncate text-[12px] text-[color:var(--text-muted)]">
+          <span className="max-w-[12rem] truncate text-[12px] text-[color:var(--text-muted)]">
             {value}
           </span>
         ) : null}
@@ -1629,16 +1529,23 @@ function DesktopPanelRow({
 function DesktopPanelInfoRow({
   label,
   value,
+  multiline = false,
 }: {
   label: string;
   value: string;
+  multiline?: boolean;
 }) {
   return (
-    <div className="flex min-h-11 items-center justify-between gap-3 border-b border-[color:var(--border-faint)] px-4 py-3 text-left last:border-b-0">
-      <span className="min-w-0 text-[14px] text-[color:var(--text-primary)]">
+    <div className="flex min-h-11 items-start justify-between gap-3 border-b border-[rgba(0,0,0,0.06)] px-4 py-3 text-left last:border-b-0">
+      <span className="min-w-0 pt-0.5 text-[14px] text-[color:var(--text-primary)]">
         {label}
       </span>
-      <span className="max-w-[12rem] truncate text-[12px] text-[color:var(--text-muted)]">
+      <span
+        className={cn(
+          "max-w-[12rem] text-right text-[12px] text-[color:var(--text-muted)]",
+          multiline ? "whitespace-pre-wrap break-words leading-5" : "truncate",
+        )}
+      >
         {value}
       </span>
     </div>
@@ -1662,8 +1569,8 @@ function DesktopMemberGrid({ items }: { items: DesktopMemberGridItem[] }) {
                 className={cn(
                   "flex h-12 w-12 items-center justify-center rounded-[12px] border text-2xl transition-colors",
                   item.kind === "remove"
-                    ? "border-[rgba(220,38,38,0.14)] bg-[rgba(254,242,242,0.88)] text-red-500"
-                    : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] text-[color:var(--text-secondary)]",
+                    ? "border-[rgba(220,38,38,0.12)] bg-[rgba(254,242,242,0.88)] text-red-500"
+                    : "border-[rgba(0,0,0,0.06)] bg-[#f5f5f5] text-[color:var(--text-secondary)]",
                 )}
               >
                 {item.kind === "remove" ? "−" : "+"}
