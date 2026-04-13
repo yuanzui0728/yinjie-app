@@ -9,6 +9,7 @@ import {
   getBlockedCharacters,
   getCharacter,
   getConversations,
+  getFriendRequests,
   getFriends,
   hideConversation,
   sendFriendRequest,
@@ -34,6 +35,8 @@ import { ChatDetailsSection } from "../features/chat-details/chat-details-sectio
 import { ChatMemberGrid } from "../features/chat-details/chat-member-grid";
 import { ChatSettingRow } from "../features/chat-details/chat-setting-row";
 import { MobileDetailsActionSheet } from "../features/chat-details/mobile-details-action-sheet";
+import { buildDesktopAddFriendRouteHash } from "../features/desktop/contacts/desktop-add-friend-route-state";
+import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { buildCreateGroupRouteHash } from "../lib/create-group-route-state";
 import {
   openAppSettings,
@@ -53,6 +56,7 @@ export function ChatDetailsPage() {
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
   const ownerName = useWorldOwnerStore((state) => state.username) ?? "我";
+  const isDesktopLayout = useDesktopLayout();
   const nativeMobileShareSupported = isNativeMobileShareSurface();
   const [notice, setNotice] = useState<{
     tone: "success" | "info" | "warning";
@@ -102,6 +106,11 @@ export function ChatDetailsPage() {
     queryKey: ["app-friends", baseUrl],
     queryFn: () => getFriends(baseUrl),
   });
+  const friendRequestsQuery = useQuery({
+    queryKey: ["app-friend-requests", baseUrl],
+    queryFn: () => getFriendRequests(baseUrl),
+    enabled: isDesktopLayout && Boolean(targetCharacterId),
+  });
 
   const blockedQuery = useQuery({
     queryKey: ["app-chat-details-blocked", baseUrl],
@@ -146,6 +155,9 @@ export function ChatDetailsPage() {
   );
   const isFriend = (friendsQuery.data ?? []).some(
     (item) => item.character.id === targetCharacterId,
+  );
+  const hasPendingFriendRequest = (friendRequestsQuery.data ?? []).some(
+    (item) => item.characterId === targetCharacterId && item.status === "pending",
   );
   const isBlocked = (blockedQuery.data ?? []).some(
     (item) => item.characterId === targetCharacterId,
@@ -535,6 +547,30 @@ export function ChatDetailsPage() {
                 onConfirm: () => blockMutation.mutate(),
               }
             : null;
+  const handleSaveToContacts = () => {
+    if (!targetCharacterId) {
+      return;
+    }
+
+    if (isDesktopLayout) {
+      if (hasPendingFriendRequest) {
+        void navigate({ to: "/friend-requests" });
+        return;
+      }
+
+      void navigate({
+        to: "/desktop/add-friend",
+        hash: buildDesktopAddFriendRouteHash({
+          keyword: targetCharacter?.name ?? conversation?.title ?? "",
+          characterId: targetCharacterId,
+          openCompose: true,
+        }),
+      });
+      return;
+    }
+
+    saveToContactsMutation.mutate();
+  };
 
   return (
     <ChatDetailsShell
@@ -578,6 +614,12 @@ export function ChatDetailsPage() {
       {friendsQuery.isError && friendsQuery.error instanceof Error ? (
         <div className="px-2.5">
           <ErrorBlock message={friendsQuery.error.message} />
+        </div>
+      ) : null}
+      {friendRequestsQuery.isError &&
+      friendRequestsQuery.error instanceof Error ? (
+        <div className="px-2.5">
+          <ErrorBlock message={friendRequestsQuery.error.message} />
         </div>
       ) : null}
       {blockedQuery.isError && blockedQuery.error instanceof Error ? (
@@ -723,10 +765,16 @@ export function ChatDetailsPage() {
             <div className="divide-y divide-[color:var(--border-faint)]">
               <ChatSettingRow
                 label="保存到通讯录"
-                value={isFriend ? "已添加" : undefined}
+                value={
+                  isFriend
+                    ? "已添加"
+                    : isDesktopLayout && hasPendingFriendRequest
+                      ? "待处理"
+                      : undefined
+                }
                 variant="wechat"
                 disabled={isFriend || !targetCharacterId}
-                onClick={() => saveToContactsMutation.mutate()}
+                onClick={handleSaveToContacts}
               />
               <ChatSettingRow
                 label="设置当前聊天背景"
