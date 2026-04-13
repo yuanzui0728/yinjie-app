@@ -605,13 +605,13 @@ function MobileChatListPage() {
           </div>
         ) : null}
         {reminderEntries.length ? (
-          <section className="mt-1.5 overflow-hidden border-y border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)]">
-            <div className="flex items-center justify-between px-4 py-1.5">
-              <div className="flex items-center gap-1.5 text-[12px] font-medium text-[#111827]">
-                <BellRing size={14} className="text-[#07c160]" />
+          <section className="mt-1 overflow-hidden border-y border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)]">
+            <div className="flex items-center justify-between px-4 py-1.25">
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-[#111827]">
+                <BellRing size={13} className="text-[#07c160]" />
                 <span>消息提醒</span>
               </div>
-              <div className="text-[9px] text-[#8f9992]">
+              <div className="text-[8px] text-[#8f9992]">
                 <ChatReminderSummaryText
                   summary={filteredReminderSummary}
                   className="opacity-80"
@@ -637,11 +637,11 @@ function MobileChatListPage() {
                   return (
                     <>
                       {collapsible ? (
-                        <div className="flex items-center justify-between bg-[color:var(--surface-panel)] px-4 py-1.25">
+                        <div className="flex items-center justify-between bg-[color:var(--surface-panel)] px-4 py-1">
                           <div className="flex items-center gap-2">
                             <span
                               className={cn(
-                                "rounded-full px-2 py-0.5 text-[9px] font-medium",
+                                "rounded-full px-1.5 py-0.5 text-[8px] font-medium",
                                 group.status === "notified"
                                   ? "bg-[#fff7e6] text-[#d48806]"
                                   : group.status === "due"
@@ -663,7 +663,7 @@ function MobileChatListPage() {
                                     ),
                                   );
                                 }}
-                                className="px-2.5 py-1 text-[9px] text-[#7b847e]"
+                                className="px-2 py-0.5 text-[8px] text-[#7b847e]"
                               >
                                 {getChatReminderGroupClearLabel(group.status)}
                               </ChatReminderControlButton>
@@ -674,24 +674,24 @@ function MobileChatListPage() {
                                   (current) => !current,
                                 )
                               }
-                              className="px-2.5 py-1 text-[9px] text-[#8f9992]"
+                              className="px-2 py-0.5 text-[8px] text-[#8f9992]"
                               aria-label={
                                 collapsed ? "展开已通知提醒" : "收起已通知提醒"
                               }
                               aria-expanded={!collapsed}
                               collapsed={collapsed}
                               count={group.count}
-                              iconSize={13}
+                              iconSize={12}
                               iconClassName="opacity-75"
                             />
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center justify-between bg-[color:var(--surface-panel)] px-4 py-1.25">
+                        <div className="flex items-center justify-between bg-[color:var(--surface-panel)] px-4 py-1">
                           <div className="flex items-center gap-2">
                             <span
                               className={cn(
-                                "rounded-full px-2 py-0.5 text-[9px] font-medium",
+                                "rounded-full px-1.5 py-0.5 text-[8px] font-medium",
                                 group.status === "notified"
                                   ? "bg-[#fff7e6] text-[#d48806]"
                                   : group.status === "due"
@@ -702,7 +702,7 @@ function MobileChatListPage() {
                                 {group.title}
                               </span>
                           </div>
-                          <ChatReminderMetaPill className="px-2 py-1 text-[9px] text-[#8f9992]">
+                          <ChatReminderMetaPill className="px-1.5 py-0.5 text-[8px] text-[#8f9992]">
                             <ChatReminderCountText count={group.count} />
                           </ChatReminderMetaPill>
                         </div>
@@ -720,7 +720,7 @@ function MobileChatListPage() {
                             <div
                               key={entry.messageId}
                               className={cn(
-                                "flex items-center gap-2 px-4 py-1.5",
+                                "flex items-center gap-1.5 px-4 py-1.25",
                                 index > 0
                                   ? "border-t border-[color:var(--border-faint)]"
                                   : "",
@@ -734,7 +734,7 @@ function MobileChatListPage() {
                                 <div className="flex items-center gap-1.5">
                                   <span
                                     className={cn(
-                                      "rounded-full px-1.5 py-[1px] text-[8px] font-medium",
+                                      "rounded-full px-1.5 py-[1px] text-[7px] font-medium",
                                       getChatReminderStatus(entry) ===
                                         "notified"
                                         ? "bg-[#fff7e6] text-[#d48806]"
@@ -745,15 +745,15 @@ function MobileChatListPage() {
                                   >
                                     {getChatReminderStatusLabel(entry)}
                                   </span>
-                                  <span className="min-w-0 truncate text-[10px] font-medium text-[#111827]">
+                                  <span className="min-w-0 truncate text-[9.5px] font-medium text-[#111827]">
                                     {entry.title}
                                   </span>
                                 </div>
-                                <div className="mt-0.5 flex items-center gap-2 text-[#8c8c8c]">
-                                  <span className="min-w-0 flex-1 truncate text-[9px] leading-[1.35] text-[#5f6368]">
+                                <div className="mt-0.5 flex items-center gap-1.5 text-[#8c8c8c]">
+                                  <span className="min-w-0 flex-1 truncate text-[8px] leading-[1.35] text-[#5f6368]">
                                     {entry.previewText}
                                   </span>
-                                  <span className="shrink-0 text-[8px]">
+                                  <span className="shrink-0 text-[7px]">
                                     {formatReminderListTimestamp(
                                       entry.remindAt,
                                       entry.isDue,
@@ -768,7 +768,7 @@ function MobileChatListPage() {
                                   void completeReminder(entry);
                                 }}
                                 className={cn(
-                                  "shrink-0 self-center rounded-full px-2 py-1 text-[8px] leading-none transition-colors",
+                                  "shrink-0 self-center rounded-full px-1.5 py-0.5 text-[7px] leading-none transition-colors",
                                   getChatReminderActionTone(entry) === "warning"
                                     ? "border border-[#f3ddba] bg-[#fff9ef] text-[#ba740f] hover:bg-[#fff2df]"
                                     : "border border-transparent bg-[#f5f7f5] text-[#6b736d] hover:bg-[#edf1ee]",
