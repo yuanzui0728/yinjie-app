@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
   type MouseEvent,
   type ReactNode,
 } from "react";
@@ -213,6 +214,26 @@ export function DesktopChatWorkspace({
     setDetailsAnnouncementRequest(null);
     setDetailsMemberSearchRequest(null);
   }, []);
+
+  const handleWorkspacePointerDownCapture = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (!rightPanelMode) {
+        return;
+      }
+
+      const target = event.target as Node;
+      if (sidePanelRef.current?.contains(target)) {
+        return;
+      }
+
+      if (desktopHeaderActionsRef.current?.contains(target)) {
+        return;
+      }
+
+      closeRightPanel();
+    },
+    [closeRightPanel, rightPanelMode],
+  );
 
   const conversationsQuery = useQuery({
     queryKey: ["app-conversations", baseUrl],
@@ -939,7 +960,10 @@ export function DesktopChatWorkspace({
   }
 
   return (
-    <div className="relative flex h-full min-h-0">
+    <div
+      className="relative flex h-full min-h-0"
+      onPointerDownCapture={handleWorkspacePointerDownCapture}
+    >
       {standaloneWindow ? null : (
         <section className="flex w-[324px] shrink-0 flex-col border-r border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.88)]">
           <div className="border-b border-[color:var(--border-faint)] bg-[rgba(255,255,255,0.78)] px-3 py-3 backdrop-blur-xl">
@@ -1332,16 +1356,6 @@ export function DesktopChatWorkspace({
           </div>
         )}
       </section>
-
-      {activeConversation && rightPanelMode ? (
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 z-10 cursor-default bg-transparent"
-          onPointerDown={() => {
-            closeRightPanel();
-          }}
-        />
-      ) : null}
 
       {activeConversation && rightPanelMode ? (
         <DesktopChatSidePanel
