@@ -45,6 +45,7 @@ import { DesktopGroupMemberPicker } from "./desktop-group-member-picker";
 import { DesktopGroupMemberRemovalPicker } from "./desktop-group-member-removal-picker";
 import { getChatBackgroundLabel } from "../../chat/backgrounds/chat-background-helpers";
 import { buildDesktopAddFriendRouteHash } from "../contacts/desktop-add-friend-route-state";
+import { buildDesktopMomentsRouteHash } from "../moments/desktop-moments-route-state";
 import {
   useConversationBackground,
   useGroupBackground,
@@ -583,6 +584,25 @@ function DirectChatDetailsPanel({
           }}
           disabled={!targetCharacterId}
         />
+        {isFriend ? (
+          <DesktopPanelRow
+            label="朋友圈"
+            value="查看这位好友最近的朋友圈"
+            onClick={() => {
+              if (!targetCharacterId) {
+                return;
+              }
+
+              void navigate({
+                to: "/tabs/moments",
+                hash: buildDesktopMomentsRouteHash({
+                  authorId: targetCharacterId,
+                }),
+              });
+            }}
+            disabled={!targetCharacterId}
+          />
+        ) : null}
       </DesktopPanelSection>
 
       {characterQuery.isLoading ? (
