@@ -231,7 +231,12 @@ export function ProfileSettingsPage() {
             <ErrorBlock message={saveProfileMutation.error.message} />
           ) : null}
           {saveProfileMutation.isSuccess ? (
-            <InlineNotice tone="success">资料已更新。</InlineNotice>
+            <InlineNotice
+              className={desktopMode ? undefined : "text-[12px] leading-5"}
+              tone="success"
+            >
+              资料已更新。
+            </InlineNotice>
           ) : null}
         </MobileSettingsSection>
       ) : null}
@@ -296,7 +301,10 @@ export function ProfileSettingsPage() {
             })}
           </div>
 
-          <InlineNotice tone="muted">
+          <InlineNotice
+            className={desktopMode ? undefined : "text-[12px] leading-5"}
+            tone="muted"
+          >
             当前仅影响桌面和 Web 的键盘聊天输入，移动端仍以发送按钮和语音入口为主。
           </InlineNotice>
         </MobileSettingsSection>
@@ -320,6 +328,7 @@ export function ProfileSettingsPage() {
           ) : null}
           {ownerQuery.data ? (
             <InlineNotice
+              className={desktopMode ? undefined : "text-[12px] leading-5"}
               tone={ownerQuery.data.hasCustomApiKey ? "success" : "muted"}
             >
               {ownerQuery.data.hasCustomApiKey
@@ -385,10 +394,20 @@ export function ProfileSettingsPage() {
             <ErrorBlock message={clearApiKeyMutation.error.message} />
           ) : null}
           {saveApiKeyMutation.isSuccess ? (
-            <InlineNotice tone="success">专属 API Key 已保存。</InlineNotice>
+            <InlineNotice
+              className={desktopMode ? undefined : "text-[12px] leading-5"}
+              tone="success"
+            >
+              专属 API Key 已保存。
+            </InlineNotice>
           ) : null}
           {clearApiKeyMutation.isSuccess ? (
-            <InlineNotice tone="success">专属 API Key 已清除。</InlineNotice>
+            <InlineNotice
+              className={desktopMode ? undefined : "text-[12px] leading-5"}
+              tone="success"
+            >
+              专属 API Key 已清除。
+            </InlineNotice>
           ) : null}
         </MobileSettingsSection>
       ) : null}
