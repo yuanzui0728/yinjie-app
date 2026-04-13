@@ -1029,22 +1029,12 @@ export function ChatMessageList({
       return;
     }
 
-    setDesktopAvatarPopover((current) => {
-      if (
-        current?.kind === "character" &&
-        current?.anchorElement === event.currentTarget &&
-        current.characterId === characterId
-      ) {
-        return null;
-      }
-
-      return {
-        anchorElement: event.currentTarget,
-        kind: "character",
-        characterId,
-        senderName: message.senderName?.trim() || "对方",
-        senderAvatar: message.senderAvatar,
-      };
+    setDesktopAvatarPopover({
+      anchorElement: event.currentTarget,
+      kind: "character",
+      characterId,
+      senderName: message.senderName?.trim() || "对方",
+      senderAvatar: message.senderAvatar,
     });
   };
 
@@ -1052,18 +1042,9 @@ export function ChatMessageList({
     event: MouseEvent<HTMLButtonElement>,
   ) => {
     event.stopPropagation();
-    setDesktopAvatarPopover((current) => {
-      if (
-        current?.kind === "owner" &&
-        current.anchorElement === event.currentTarget
-      ) {
-        return null;
-      }
-
-      return {
-        anchorElement: event.currentTarget,
-        kind: "owner",
-      };
+    setDesktopAvatarPopover({
+      anchorElement: event.currentTarget,
+      kind: "owner",
     });
   };
 
