@@ -361,25 +361,25 @@ export function ChannelsPage() {
           </Button>
         }
       >
-        <div className="mt-2.5 flex items-center gap-1.5">
-          <div className="rounded-full bg-[rgba(7,193,96,0.12)] px-2.5 py-1 text-[10px] font-medium text-[#07c160]">
+        <div className="mt-2 flex items-center gap-1">
+          <div className="rounded-full bg-[rgba(7,193,96,0.12)] px-2 py-0.5 text-[9px] font-medium text-[#07c160]">
             推荐
           </div>
-          <div className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-canvas-elevated)] px-2.5 py-1 text-[10px] text-[color:var(--text-muted)]">
+          <div className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-canvas-elevated)] px-2 py-0.5 text-[9px] text-[color:var(--text-muted)]">
             朋友
           </div>
-          <div className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-canvas-elevated)] px-2.5 py-1 text-[10px] text-[color:var(--text-muted)]">
+          <div className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-canvas-elevated)] px-2 py-0.5 text-[9px] text-[color:var(--text-muted)]">
             直播
           </div>
         </div>
       </TabPageTopBar>
 
-      <div className="space-y-3 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-2.5">
-        <InlineNotice className="text-[12px] leading-5" tone="muted">
+      <div className="space-y-2.5 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-2.5">
+        <InlineNotice className="text-[11px] leading-[1.35rem]" tone="muted">
           当前先聚焦推荐流体验，系统会持续补充 AI 生成的视频内容与互动演示。
         </InlineNotice>
         {notice ? (
-          <InlineNotice className="text-[12px] leading-5" tone={noticeTone}>
+          <InlineNotice className="text-[11px] leading-[1.35rem]" tone={noticeTone}>
             {notice}
           </InlineNotice>
         ) : null}
@@ -522,7 +522,7 @@ function MobileChannelsViewport({
   }, [routeSelectedPostId, posts]);
 
   return (
-    <div className="h-[calc(100dvh-10rem)] snap-y snap-mandatory space-y-2.5 overflow-y-auto overscroll-contain pb-3">
+    <div className="h-[calc(100dvh-9.6rem)] snap-y snap-mandatory space-y-2 overflow-y-auto overscroll-contain scroll-pb-2 pb-2">
       {posts.map((post) => (
         <MobileChannelsCard
           key={post.id}
@@ -620,7 +620,7 @@ function MobileChannelsCard({
     <article
       ref={setCardRef}
       data-post-id={post.id}
-      className="snap-start overflow-hidden rounded-[18px] border border-[color:var(--border-subtle)] bg-white shadow-none"
+      className="snap-start scroll-mt-2 overflow-hidden rounded-[18px] border border-[color:var(--border-subtle)] bg-white shadow-none"
     >
       <div className="relative min-h-[calc(100dvh-12rem)] bg-[#0f1115]">
         <video
