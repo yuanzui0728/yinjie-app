@@ -431,146 +431,125 @@ export function CharactersPage() {
             )}
           </Card>
 
-          <Card className="bg-[color:var(--surface-console)]">
-            <AdminEyebrow>名人预设</AdminEyebrow>
-            <div className="mt-4 space-y-3">
-              <div className="rounded-[20px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4 shadow-[var(--shadow-soft)]">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-semibold text-[color:var(--text-primary)]">预设库概览</div>
-                    <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
-                      当前已安装 {(presetsQuery.data ?? []).filter((preset) => preset.installed).length} / {presetsQuery.data?.length ?? 0}
-                      ，可直接按分组一键注入到当前世界。
-                    </div>
-                  </div>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() =>
-                      installPresetBatchMutation.mutate({
-                        scope: "all",
-                        presetKeys: remainingPresetKeys,
-                      })
-                    }
-                    disabled={!remainingPresetKeys.length || isInstallingAnyPreset}
-                  >
-                    {installingAllPresets
-                      ? "安装中..."
-                      : remainingPresetKeys.length
-                        ? `安装剩余 ${remainingPresetKeys.length}`
-                        : "全部已安装"}
-                  </Button>
-                </div>
-              </div>
-
-              {presetGroups.map((group) => (
-                <div
-                  key={group.groupKey}
-                  className="rounded-[20px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4 shadow-[var(--shadow-soft)]"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="truncate font-semibold text-[color:var(--text-primary)]">{group.groupLabel}</div>
-                      <div className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">
-                        {group.groupDescription}
-                      </div>
-                      <div className="mt-2 text-xs text-[color:var(--text-muted)]">
-                        已安装 {group.installedCount} / {group.totalCount}
-                      </div>
-                    </div>
-                    <Button
-                      variant={group.remainingPresetKeys.length ? "primary" : "secondary"}
-                      size="sm"
-                      onClick={() =>
-                        installPresetBatchMutation.mutate({
-                          scope: "group",
-                          groupKey: group.groupKey,
-                          presetKeys: group.remainingPresetKeys,
-                        })
-                      }
-                      disabled={!group.remainingPresetKeys.length || isInstallingAnyPreset}
-                    >
-                      {installingGroupKey === group.groupKey
-                        ? "安装中..."
-                        : group.remainingPresetKeys.length
-                          ? `安装本组 ${group.remainingPresetKeys.length}`
-                          : "本组已安装"}
-                    </Button>
-                  </div>
-
-                  <div className="mt-4 space-y-3">
-                    {group.presets.map((preset) => {
-                      const installing = installingPresetKey === preset.presetKey;
-                      return (
-                        <div
-                          key={preset.presetKey}
-                          className="rounded-[18px] border border-[color:var(--border-faint)] bg-white/70 p-4"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="truncate font-semibold text-[color:var(--text-primary)]">
-                                {preset.avatar} {preset.name}
-                              </div>
-                              <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
-                                {preset.relationship}
-                              </div>
-                            </div>
-                            <StatusPill tone={preset.installed ? "healthy" : "muted"}>
-                              {preset.installed ? "已安装" : "未安装"}
-                            </StatusPill>
-                          </div>
-                          <div className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">
-                            {preset.description}
-                          </div>
-                          <div className="mt-3 flex flex-wrap gap-2 text-xs text-[color:var(--text-muted)]">
-                            {preset.expertDomains.map((domain) => (
-                              <span
-                                key={domain}
-                                className="rounded-full border border-[color:var(--border-faint)] bg-white/70 px-3 py-1"
-                              >
-                                {domain}
-                              </span>
-                            ))}
-                          </div>
-                          <div className="mt-4 flex items-center justify-between gap-3">
-                            <div className="text-xs text-[color:var(--text-muted)]">
-                              {preset.installed
-                                ? `已进入世界角色：${preset.installedCharacterName ?? preset.name}`
-                                : ""}
-                            </div>
-                            <Button
-                              variant={preset.installed ? "secondary" : "primary"}
-                              size="sm"
-                              onClick={() => installPresetMutation.mutate(preset.presetKey)}
-                              disabled={preset.installed || isInstallingAnyPreset}
-                            >
-                              {installing ? "安装中..." : preset.installed ? "已安装" : "安装到世界"}
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-
-              {!presetsQuery.isLoading && !(presetsQuery.data ?? []).length ? (
-                <AdminEmptyState title="当前没有可安装预设" />
-              ) : null}
-            </div>
-          </Card>
-
-          <Card className="bg-[color:var(--surface-console)]">
-            <AdminEyebrow>运营建议</AdminEyebrow>
-            <div className="mt-4 space-y-3">
-              <AdminHintCard title="新角色创建" />
-              <AdminHintCard title="预设注入" />
-              <AdminHintCard title="角色制造" />
-              <AdminHintCard title="运行排查" />
-            </div>
-          </Card>
         </div>
       </div>
+
+      <Card className="bg-[color:var(--surface-console)]">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <AdminEyebrow>名人预设</AdminEyebrow>
+            <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
+              已安装 {(presetsQuery.data ?? []).filter((preset) => preset.installed).length} / {presetsQuery.data?.length ?? 0}
+            </div>
+          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={() =>
+              installPresetBatchMutation.mutate({
+                scope: "all",
+                presetKeys: remainingPresetKeys,
+              })
+            }
+            disabled={!remainingPresetKeys.length || isInstallingAnyPreset}
+          >
+            {installingAllPresets
+              ? "安装中..."
+              : remainingPresetKeys.length
+                ? `安装全部剩余 ${remainingPresetKeys.length}`
+                : "全部已安装"}
+          </Button>
+        </div>
+
+        {!presetsQuery.isLoading && !(presetsQuery.data ?? []).length ? (
+          <AdminEmptyState className="mt-4" title="当前没有可安装预设" />
+        ) : null}
+
+        <div className="mt-6 space-y-6">
+          {presetGroups.map((group) => (
+            <div key={group.groupKey}>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="font-semibold text-[color:var(--text-primary)]">{group.groupLabel}</div>
+                  <div className="mt-0.5 text-xs text-[color:var(--text-muted)]">
+                    已安装 {group.installedCount} / {group.totalCount}
+                  </div>
+                </div>
+                <Button
+                  variant={group.remainingPresetKeys.length ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() =>
+                    installPresetBatchMutation.mutate({
+                      scope: "group",
+                      groupKey: group.groupKey,
+                      presetKeys: group.remainingPresetKeys,
+                    })
+                  }
+                  disabled={!group.remainingPresetKeys.length || isInstallingAnyPreset}
+                >
+                  {installingGroupKey === group.groupKey
+                    ? "安装中..."
+                    : group.remainingPresetKeys.length
+                      ? `安装本组 ${group.remainingPresetKeys.length}`
+                      : "本组已安装"}
+                </Button>
+              </div>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {group.presets.map((preset) => {
+                  const installing = installingPresetKey === preset.presetKey;
+                  return (
+                    <div
+                      key={preset.presetKey}
+                      className="flex flex-col rounded-[20px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4 shadow-[var(--shadow-soft)]"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="truncate font-semibold text-[color:var(--text-primary)]">
+                            {preset.avatar} {preset.name}
+                          </div>
+                          <div className="mt-0.5 text-xs text-[color:var(--text-secondary)]">
+                            {preset.relationship}
+                          </div>
+                        </div>
+                        <StatusPill tone={preset.installed ? "healthy" : "muted"}>
+                          {preset.installed ? "已装" : "未装"}
+                        </StatusPill>
+                      </div>
+                      <div className="mt-2 flex-1 text-sm leading-6 text-[color:var(--text-secondary)]">
+                        {preset.description}
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {preset.expertDomains.map((domain) => (
+                          <span
+                            key={domain}
+                            className="rounded-full border border-[color:var(--border-faint)] bg-[color:var(--surface-primary)] px-2 py-0.5 text-xs text-[color:var(--text-muted)]"
+                          >
+                            {domain}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <div className="truncate text-xs text-[color:var(--text-muted)]">
+                          {preset.installed ? `↳ ${preset.installedCharacterName ?? preset.name}` : ""}
+                        </div>
+                        <Button
+                          variant={preset.installed ? "secondary" : "primary"}
+                          size="sm"
+                          onClick={() => installPresetMutation.mutate(preset.presetKey)}
+                          disabled={preset.installed || isInstallingAnyPreset}
+                        >
+                          {installing ? "安装中..." : preset.installed ? "已安装" : "安装"}
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }
