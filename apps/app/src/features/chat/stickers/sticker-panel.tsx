@@ -683,6 +683,11 @@ export function StickerPanel({
       searchInputRef.current?.focus();
     }, 0);
   };
+  const switchToFeatured = () => {
+    setKeyword("");
+    setSearchKeyword("");
+    onPackChange("featured");
+  };
 
   useEffect(() => {
     if (activeSectionId !== "custom" || trimmedKeyword.length > 0) {
@@ -1560,11 +1565,13 @@ export function StickerPanel({
                     <span>
                       {customDeleteFeedback
                         ? `本轮已释放 ${customDeleteFeedback.deletedCount} 个位置。`
-                        : customStickerLibraryFull
-                          ? "表情库已占满，删除后才能继续导入。"
-                          : customSlotsRemaining <= 20
-                            ? "空间不多了，建议先清理不常用表情。"
-                            : "支持继续添加图片和 GIF，建议保留常用项。"}
+                        : catalog.customStickerCount === 0
+                          ? "支持上传图片 / GIF，也能把聊天里的图片、动图添加到表情。"
+                          : customStickerLibraryFull
+                            ? "表情库已占满，删除后才能继续导入。"
+                            : customSlotsRemaining <= 20
+                              ? "空间不多了，建议先清理不常用表情。"
+                              : "支持继续添加图片和 GIF，建议保留常用项。"}
                     </span>
                     <div className="flex items-center gap-2">
                       {customDeleteFeedback ? (
@@ -1583,13 +1590,22 @@ export function StickerPanel({
                   </div>
                   <div className="mt-3 flex items-center gap-2">
                     {catalog.customStickerCount === 0 ? (
-                      <button
-                        type="button"
-                        onClick={() => uploadInputRef.current?.click()}
-                        className="rounded-full bg-[rgba(160,90,10,0.14)] px-3 py-1.5 text-xs font-medium text-[#9a5a0a] transition hover:bg-[rgba(160,90,10,0.18)]"
-                      >
-                        添加第一张
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => uploadInputRef.current?.click()}
+                          className="rounded-full bg-[rgba(160,90,10,0.14)] px-3 py-1.5 text-xs font-medium text-[#9a5a0a] transition hover:bg-[rgba(160,90,10,0.18)]"
+                        >
+                          添加第一张
+                        </button>
+                        <button
+                          type="button"
+                          onClick={switchToFeatured}
+                          className="rounded-full bg-white/88 px-3 py-1.5 text-xs font-medium text-[color:var(--text-secondary)] transition hover:bg-white"
+                        >
+                          去精选看看
+                        </button>
+                      </>
                     ) : customManageMode ? (
                       <button
                         type="button"
@@ -1828,34 +1844,48 @@ export function StickerPanel({
                     : activeSectionId === "custom"
                       ? customDeleteFeedback?.deletedCount
                         ? "自定义表情已经清空，可以继续添加新的图片或 GIF。"
-                        : "还没有自定义表情，先上传几张图片或 GIF。"
+                        : "还没有自定义表情，可上传图片 / GIF，也能把聊天里的图片、动图添加到表情。"
                       : activeSectionId === "recent"
                         ? "最近还没有使用过表情。"
                         : "当前没有可用表情。"}
                 </div>
                 {!searching && activeSectionId === "custom" ? (
-                  <button
-                    ref={customEmptyActionButtonRef}
-                    type="button"
-                    onClick={() => uploadInputRef.current?.click()}
-                    disabled={
-                      uploadMutation.isPending || customStickerLibraryFull
-                    }
-                    className="rounded-full bg-[rgba(160,90,10,0.14)] px-3 py-1.5 text-xs font-medium text-[#9a5a0a] transition disabled:opacity-45"
-                  >
-                    {customDeleteFeedback?.deletedCount
-                      ? "继续添加表情"
-                      : "添加第一张表情"}
-                  </button>
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <button
+                        ref={customEmptyActionButtonRef}
+                        type="button"
+                        onClick={() => uploadInputRef.current?.click()}
+                        disabled={
+                          uploadMutation.isPending || customStickerLibraryFull
+                        }
+                        className="rounded-full bg-[rgba(160,90,10,0.14)] px-3 py-1.5 text-xs font-medium text-[#9a5a0a] transition disabled:opacity-45"
+                      >
+                        {customDeleteFeedback?.deletedCount
+                          ? "继续添加表情"
+                          : "添加第一张表情"}
+                      </button>
+                      {!customDeleteFeedback?.deletedCount ? (
+                        <button
+                          type="button"
+                          onClick={switchToFeatured}
+                          className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-console)]"
+                        >
+                          去精选看看
+                        </button>
+                      ) : null}
+                    </div>
+                    {!customDeleteFeedback?.deletedCount ? (
+                      <div className="text-[11px] text-[color:var(--text-muted)]">
+                        聊天里的图片 / GIF 也能添加为表情
+                      </div>
+                    ) : null}
+                  </div>
                 ) : null}
                 {!searching && activeSectionId === "recent" ? (
                   <button
                     type="button"
-                    onClick={() => {
-                      setKeyword("");
-                      setSearchKeyword("");
-                      onPackChange("featured");
-                    }}
+                    onClick={switchToFeatured}
                     className="rounded-full bg-[rgba(160,90,10,0.14)] px-3 py-1.5 text-xs font-medium text-[#9a5a0a] transition"
                   >
                     去精选看看
