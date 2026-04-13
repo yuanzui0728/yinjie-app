@@ -32,7 +32,6 @@ import {
   X,
 } from "lucide-react";
 import {
-  createCustomStickerFromMessage,
   createMessageFavorite,
   deleteConversationMessage,
   deleteGroupMessage,
@@ -48,6 +47,7 @@ import {
   type Message,
   type SendGroupMessageRequest,
   type SendMessagePayload,
+  uploadCustomSticker,
 } from "@yinjie/contracts";
 import { Button, InlineNotice, cn } from "@yinjie/ui";
 import { AvatarChip } from "./avatar-chip";
@@ -112,6 +112,7 @@ import { useWorldOwnerStore } from "../store/world-owner-store";
 import { buildChatUnreadMarkerDomId } from "../features/chat/chat-unread-marker";
 import { DigitalHumanEntryNotice } from "../features/chat/digital-human-entry-notice";
 import { ResultCardBadge } from "../features/chat/result-card-badge";
+import { prepareRemoteCustomStickerUpload } from "../features/chat/stickers/prepare-custom-sticker-upload";
 import { resolveResultCardFooterActionClassName } from "../features/chat/result-card-footer";
 import {
   resolveDirectCallFooterCopy,
@@ -336,6 +337,10 @@ export function ChatMessageList({
   } = useMessageReminders();
   const [detailedTimestampMode, setDetailedTimestampMode] = useState(() =>
     readDetailedTimestampModeEnabled(),
+  );
+  const resolveAttachmentUrl = useCallback(
+    (url: string) => resolveRuntimeAttachmentUrl(url, baseUrl),
+    [baseUrl],
   );
 
   useEffect(() => {
@@ -839,18 +844,21 @@ export function ChatMessageList({
 
   const addToStickerMutation = useMutation({
     mutationFn: async (message: ChatRenderableMessage) => {
-      if (!threadContext) {
-        throw new Error("当前线程暂不支持添加到表情。");
+      const source = resolveCustomStickerUploadSource(message);
+      if (!source) {
+        throw new Error("当前消息暂不支持添加到表情。");
       }
 
-      return createCustomStickerFromMessage(
-        {
-          threadType: threadContext.type === "group" ? "group" : "conversation",
-          threadId: threadContext.id,
-          messageId: message.id,
-        },
-        baseUrl,
-      );
+      const prepared = await prepareRemoteCustomStickerUpload(source);
+      const payload = new FormData();
+      payload.set("file", prepared.file, prepared.file.name);
+      payload.set("width", String(prepared.width));
+      payload.set("height", String(prepared.height));
+      if (prepared.label) {
+        payload.set("label", prepared.label);
+      }
+
+      return uploadCustomSticker(payload, baseUrl);
     },
     onSuccess: async () => {
       setActionNotice({
@@ -1196,7 +1204,7 @@ export function ChatMessageList({
 
       return {
         id: message.id,
-        url: message.attachment.url,
+        url: resolveAttachmentUrl(message.attachment.url),
         label,
         fileName: message.attachment.fileName,
         createdAt: message.createdAt,
@@ -1440,7 +1448,7 @@ export function ChatMessageList({
 
     if (attachment.kind === "file") {
       void openRemoteFile({
-        url: attachment.url,
+        url: resolveAttachmentUrl(attachment.url),
         fileName: attachment.fileName,
         mimeType: attachment.mimeType,
         dialogTitle: "打开文件",
@@ -1509,7 +1517,7 @@ export function ChatMessageList({
     }
 
     saveAttachmentFile({
-      url: attachment.url,
+      url: resolveAttachmentUrl(attachment.url),
       fileName:
         attachment.kind === "file"
           ? attachment.fileName
@@ -2433,7 +2441,7 @@ export function ChatMessageList({
                   ) : message.type === "image" &&
                     message.attachment?.kind === "image" ? (
                     <ImageMessage
-                      url={message.attachment.url}
+                      url={resolveAttachmentUrl(message.attachment.url)}
                       label={message.attachment.fileName || displayText}
                       variant={variant}
                       maxSize={isDesktop ? 180 : 136}
@@ -2458,6 +2466,7 @@ export function ChatMessageList({
                     message.attachment?.kind === "voice" ? (
                     <VoiceMessage
                       attachment={message.attachment}
+                      url={resolveAttachmentUrl(message.attachment.url)}
                       own={isUser}
                       variant={variant}
                     />
@@ -3917,11 +3926,62 @@ function buildDirectForwardPayload(
   };
 }
 
+function resolveCustomStickerUploadSource(message: ChatRenderableMessage) {
+  if (
+    message.type === "image" &&
+    message.attachment?.kind === "image" &&
+    message.attachment.url
+  ) {
+    return {
+      url: resolveAttachmentUrl(message.attachment.url),
+      fileName: message.attachment.fileName,
+      mimeType: message.attachment.mimeType,
+      label: stripFileExtension(message.attachment.fileName) || "图片表情",
+    };
+  }
+
+  if (
+    message.type === "sticker" &&
+    message.attachment?.kind === "sticker" &&
+    message.attachment.url
+  ) {
+    return {
+      url: resolveAttachmentUrl(message.attachment.url),
+      fileName:
+        message.attachment.label ||
+        `${message.attachment.stickerId}.${guessMessageAttachmentExtension(message.attachment.mimeType)}`,
+      mimeType: message.attachment.mimeType,
+      label: message.attachment.label || message.attachment.stickerId,
+    };
+  }
+
+  return null;
+}
+
 function canAddMessageToStickers(message: ChatRenderableMessage) {
   return (
     (message.type === "image" && message.attachment?.kind === "image") ||
     (message.type === "sticker" && message.attachment?.kind === "sticker")
   );
+}
+
+function stripFileExtension(fileName?: string | null) {
+  return fileName?.replace(/\.[^.]+$/, "").trim() || "";
+}
+
+function guessMessageAttachmentExtension(mimeType?: string) {
+  switch (mimeType) {
+    case "image/jpeg":
+      return "jpg";
+    case "image/webp":
+      return "webp";
+    case "image/gif":
+      return "gif";
+    case "image/svg+xml":
+      return "svg";
+    default:
+      return "png";
+  }
 }
 
 function buildMergedForwardText(messages: ChatRenderableMessage[]) {
@@ -4433,10 +4493,12 @@ function LocationCardMessage({
 
 function VoiceMessage({
   attachment,
+  url,
   own,
   variant,
 }: {
   attachment: Extract<MessageAttachment, { kind: "voice" }>;
+  url: string;
   own: boolean;
   variant: "mobile" | "desktop";
 }) {
@@ -4531,7 +4593,7 @@ function VoiceMessage({
       >
         {formatVoiceDurationLabel(attachment.durationMs)}
       </span>
-      <audio ref={audioRef} src={attachment.url} preload="none" />
+      <audio ref={audioRef} src={url} preload="none" />
     </div>
   );
 }
@@ -5556,6 +5618,77 @@ function formatVoiceDurationLabel(durationMs?: number) {
   return minutes > 0
     ? `${minutes}:${String(seconds).padStart(2, "0")}`
     : `${seconds}"`;
+}
+
+function resolveRuntimeAttachmentUrl(url: string, runtimeBaseUrl?: string) {
+  const normalizedUrl = url.trim();
+  if (!normalizedUrl) {
+    return normalizedUrl;
+  }
+
+  if (normalizedUrl.startsWith("blob:") || normalizedUrl.startsWith("data:")) {
+    return normalizedUrl;
+  }
+
+  const runtimeUrl = tryParseUrl(normalizeOptionalUrl(runtimeBaseUrl));
+  const browserOriginUrl =
+    typeof window !== "undefined" ? tryParseUrl(window.location.origin) : null;
+  const resolvedUrl =
+    tryParseUrl(normalizedUrl, runtimeUrl?.toString()) ??
+    tryParseUrl(normalizedUrl, browserOriginUrl?.toString());
+
+  if (!resolvedUrl) {
+    return normalizedUrl;
+  }
+
+  const rebaseTarget =
+    runtimeUrl && shouldRebaseLoopbackAttachment(resolvedUrl, runtimeUrl)
+      ? runtimeUrl
+      : !runtimeUrl &&
+          browserOriginUrl &&
+          shouldRebaseLoopbackAttachment(resolvedUrl, browserOriginUrl)
+        ? browserOriginUrl
+        : null;
+
+  if (!rebaseTarget) {
+    return resolvedUrl.toString();
+  }
+
+  return new URL(
+    `${resolvedUrl.pathname}${resolvedUrl.search}${resolvedUrl.hash}`,
+    rebaseTarget,
+  ).toString();
+}
+
+function shouldRebaseLoopbackAttachment(assetUrl: URL, targetUrl: URL) {
+  return (
+    isLoopbackHostname(assetUrl.hostname) &&
+    assetUrl.origin !== targetUrl.origin
+  );
+}
+
+function isLoopbackHostname(hostname: string) {
+  return ["localhost", "127.0.0.1", "0.0.0.0", "10.0.2.2"].includes(
+    hostname.trim().toLowerCase(),
+  );
+}
+
+function normalizeOptionalUrl(value?: string | null) {
+  const normalizedValue = value?.trim();
+  return normalizedValue || undefined;
+}
+
+function tryParseUrl(value?: string | null, base?: string) {
+  const normalizedValue = value?.trim();
+  if (!normalizedValue) {
+    return null;
+  }
+
+  try {
+    return new URL(normalizedValue, base);
+  } catch {
+    return null;
+  }
 }
 
 function ViewerActionButton({
