@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { Button, cn } from "@yinjie/ui";
-import { Clock3, Flag, Play, Share2, Smartphone, Sparkles, X } from "lucide-react";
+import { Clock3, Copy, Flag, Play, Share2, Smartphone, Sparkles, X } from "lucide-react";
 import { formatConversationTimestamp } from "../../lib/format";
 import { isNativeMobileBridgeAvailable } from "../../runtime/mobile-bridge";
+import { useDesktopLayout } from "../shell/use-desktop-layout";
 import {
   getGameCenterToneStyle,
   type GameCenterGame,
@@ -34,7 +35,10 @@ export function GameCenterSessionPanel({
   onLaunch,
 }: GameCenterSessionPanelProps) {
   const tone = getGameCenterToneStyle(game.tone);
-  const nativeMobileShareSupported = isNativeMobileBridgeAvailable();
+  const isDesktopLayout = useDesktopLayout();
+  const nativeMobileShareSupported =
+    !isDesktopLayout && isNativeMobileBridgeAvailable();
+  const mobileWebCopyFallback = !isDesktopLayout && !nativeMobileShareSupported;
   const metricAccentClass = compact
     ? "text-[#15803d]"
     : "text-[color:var(--brand-secondary)]";
@@ -43,9 +47,20 @@ export function GameCenterSessionPanel({
     : "text-[color:var(--brand-primary)]";
   const resolvedCopyActionIcon =
     copyActionIcon ??
-    (nativeMobileShareSupported ? <Share2 size={16} /> : <Smartphone size={16} />);
-  const resolvedCopyActionLabel =
-    copyActionLabel ?? (nativeMobileShareSupported ? "系统分享" : "发到手机");
+    (nativeMobileShareSupported ? (
+      <Share2 size={16} />
+    ) : mobileWebCopyFallback ? (
+      <Copy size={16} />
+    ) : (
+      <Smartphone size={16} />
+    ));
+  const resolvedCopyActionLabel = copyActionLabel
+    ? copyActionLabel
+    : nativeMobileShareSupported
+      ? "系统分享"
+      : mobileWebCopyFallback
+        ? "复制入口"
+        : "发到手机";
 
   return (
     <section

@@ -3,12 +3,14 @@ import { Button, cn } from "@yinjie/ui";
 import {
   CheckCircle2,
   Clock3,
+  Copy,
   Pin,
   Share2,
   Smartphone,
   Sparkles,
   X,
 } from "lucide-react";
+import { useDesktopLayout } from "../shell/use-desktop-layout";
 import { formatConversationTimestamp } from "../../lib/format";
 import { isNativeMobileBridgeAvailable } from "../../runtime/mobile-bridge";
 import {
@@ -54,17 +56,33 @@ export function MiniProgramOpenPanel({
   onTogglePinned,
 }: MiniProgramOpenPanelProps) {
   const tone = getMiniProgramToneStyle(miniProgram.tone);
-  const nativeMobileShareSupported = isNativeMobileBridgeAvailable();
+  const isDesktopLayout = useDesktopLayout();
+  const nativeMobileShareSupported =
+    !isDesktopLayout && isNativeMobileBridgeAvailable();
+  const mobileWebCopyFallback = !isDesktopLayout && !nativeMobileShareSupported;
   const resolvedCopyActionHint =
     copyActionHint ??
     (nativeMobileShareSupported
       ? "当前先由轻工作台承接上下文，也可以直接通过系统分享发给联系人或其他应用。"
-      : "当前先由轻工作台承接上下文，也可以直接发到手机继续处理。");
+      : mobileWebCopyFallback
+        ? "当前先由轻工作台承接上下文，也可以直接复制入口链接继续使用。"
+        : "当前先由轻工作台承接上下文，也可以直接发到手机继续处理。");
   const resolvedCopyActionIcon =
     copyActionIcon ??
-    (nativeMobileShareSupported ? <Share2 size={16} /> : <Smartphone size={16} />);
-  const resolvedCopyActionLabel =
-    copyActionLabel ?? (nativeMobileShareSupported ? "系统分享" : "发到手机");
+    (nativeMobileShareSupported ? (
+      <Share2 size={16} />
+    ) : mobileWebCopyFallback ? (
+      <Copy size={16} />
+    ) : (
+      <Smartphone size={16} />
+    ));
+  const resolvedCopyActionLabel = copyActionLabel
+    ? copyActionLabel
+    : nativeMobileShareSupported
+      ? "系统分享"
+      : mobileWebCopyFallback
+        ? "复制入口"
+        : "发到手机";
 
   return (
     <section
