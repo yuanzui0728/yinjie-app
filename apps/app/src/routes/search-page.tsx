@@ -3,6 +3,7 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { DesktopSearchWorkspace } from "../features/search/desktop-search-workspace";
 import {
   clearSearchHistory,
+  hydrateSearchHistoryFromNative,
   loadSearchHistory,
   pushSearchHistory,
   removeSearchHistory,
@@ -18,10 +19,13 @@ import type {
 } from "../features/search/search-types";
 import { useSearchIndex } from "../features/search/use-search-index";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
+import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export function SearchPage() {
   const navigate = useNavigate();
   const isDesktopLayout = useDesktopLayout();
+  const runtimeConfig = useAppRuntimeConfig();
+  const nativeDesktopSearchHistory = runtimeConfig.appPlatform === "desktop";
   const hash = useRouterState({ select: (state) => state.location.hash });
   const routeState = parseSearchRouteState(hash);
   const [searchText, setSearchText] = useState(routeState.keyword);
@@ -67,6 +71,51 @@ export function SearchPage() {
       replace: true,
     });
   }, [activeCategory, hash, navigate, routeState.source, searchText]);
+
+  useEffect(() => {
+    if (!isDesktopLayout || !nativeDesktopSearchHistory) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncSearchHistory = async () => {
+      const nextHistory = await hydrateSearchHistoryFromNative();
+      if (cancelled) {
+        return;
+      }
+
+      setHistory((current) =>
+        JSON.stringify(current) === JSON.stringify(nextHistory)
+          ? current
+          : nextHistory,
+      );
+    };
+
+    const handleFocus = () => {
+      void syncSearchHistory();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      void syncSearchHistory();
+    };
+
+    void syncSearchHistory();
+
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("storage", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("storage", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [isDesktopLayout, nativeDesktopSearchHistory]);
 
   function handleCommitSearch(keyword: string) {
     setHistory(pushSearchHistory(keyword));
