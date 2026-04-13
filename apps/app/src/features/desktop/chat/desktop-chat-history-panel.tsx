@@ -681,7 +681,7 @@ export function DesktopChatHistoryPanel({
                           key={item.messageId}
                           type="button"
                           onClick={() => onOpenMessage(item.messageId)}
-                          className="group block w-full px-4 py-3.5 text-left transition hover:bg-[#f6fbf7] active:bg-[#eff7f0]"
+                          className="group block w-full border-l-2 border-l-transparent px-4 py-3.5 text-left transition-[background-color,border-color] duration-150 hover:border-l-[rgba(7,193,96,0.32)] hover:bg-[#fafcfb] active:bg-[#f3f7f4]"
                         >
                           <div className="flex gap-3">
                             <span
@@ -696,7 +696,7 @@ export function DesktopChatHistoryPanel({
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center justify-between gap-3">
                                 <div className="flex min-w-0 items-center gap-2">
-                                  <div className="truncate text-[13px] font-medium text-[color:var(--text-primary)]">
+                                  <div className="truncate text-[13px] font-medium text-[color:var(--text-primary)] transition-colors group-hover:text-[#2f3a33]">
                                     {item.senderName || "消息"}
                                   </div>
                                   <span
@@ -1289,42 +1289,42 @@ function resolveSearchResultBadgeLabel(item: ChatMessageSearchItem) {
 
 function resolveSearchResultBadgeTone(item: ChatMessageSearchItem) {
   if (item.categories.includes("links")) {
-    return "bg-[rgba(59,130,246,0.1)] text-[#2563eb]";
+    return "bg-[#eef3fa] text-[#5d6f88]";
   }
 
   if (item.messageType === "image") {
-    return "bg-[rgba(14,165,233,0.1)] text-[#0284c7]";
+    return "bg-[#eef7fb] text-[#59768a]";
   }
 
   if (item.messageType === "file") {
-    return "bg-[rgba(249,115,22,0.1)] text-[#ea580c]";
+    return "bg-[#faf2eb] text-[#87664f]";
   }
 
   if (item.messageType === "voice") {
-    return "bg-[rgba(168,85,247,0.1)] text-[#7c3aed]";
+    return "bg-[#f4eef9] text-[#6e6284]";
   }
 
   if (item.messageType === "location_card") {
-    return "bg-[rgba(239,68,68,0.1)] text-[#dc2626]";
+    return "bg-[#fbefef] text-[#87635d]";
   }
 
-  return "bg-[rgba(7,193,96,0.1)] text-[color:var(--brand-primary)]";
+  return "bg-[#eef7f1] text-[#5d7865]";
 }
 
 function resolveSearchResultAvatarTone(item: ChatMessageSearchItem) {
   if (item.messageType === "file") {
-    return "bg-[rgba(249,115,22,0.12)] text-[#c2410c]";
+    return "bg-[#f7efe8] text-[#87664f]";
   }
 
   if (item.categories.includes("links")) {
-    return "bg-[rgba(59,130,246,0.12)] text-[#2563eb]";
+    return "bg-[#eef3fa] text-[#5d6f88]";
   }
 
   if (item.messageType === "voice") {
-    return "bg-[rgba(168,85,247,0.12)] text-[#7c3aed]";
+    return "bg-[#f3eef8] text-[#6e6284]";
   }
 
-  return "bg-[rgba(7,193,96,0.12)] text-[color:var(--brand-primary)]";
+  return "bg-[#eef7f1] text-[#5d7865]";
 }
 
 function resolveSenderAvatarLabel(senderName: string) {
