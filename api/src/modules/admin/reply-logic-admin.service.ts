@@ -1297,7 +1297,7 @@ export class ReplyLogicAdminService {
       cancelRate: calculateGroupReplyCancelRate(bucket.statusCounts),
       trend: Object.values(bucket.dailyStats)
         .sort((left, right) => left.date.localeCompare(right.date))
-        .slice(-14)
+        .slice(-30)
         .map(
           (item): ReplyLogicGroupReplyArchiveTrendPoint => ({
             date: item.date,
