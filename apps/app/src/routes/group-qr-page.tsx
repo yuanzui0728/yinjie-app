@@ -901,7 +901,9 @@ export function GroupQrPage() {
               description={
                 nativeMobileShareSupported
                   ? "直接通过系统分享发送群入口链接。"
-                  : "把当前群聊入口发给别的设备继续打开。"
+                  : mobileWebCopyFallback
+                    ? "复制当前群聊入口链接，稍后可直接粘贴发送。"
+                    : "把当前群聊入口发给别的设备继续打开。"
               }
               onClick={() => {
                 void shareInviteLink();
@@ -914,7 +916,9 @@ export function GroupQrPage() {
               description={
                 nativeMobileShareSupported
                   ? "直接通过系统分享发送完整邀请文案。"
-                  : "带上群链接和邀请码，一次性发给对方。"
+                  : mobileWebCopyFallback
+                    ? "复制带群链接和邀请码的完整邀请文案。"
+                    : "带上群链接和邀请码，一次性发给对方。"
               }
               onClick={() => {
                 void shareInviteTextOnly();
