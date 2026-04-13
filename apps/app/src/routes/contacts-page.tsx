@@ -1240,7 +1240,8 @@ export function ContactsPage() {
 
           <ContactShortcutList
             items={mobileShortcutItems}
-            className="mt-1.5 border-x-0 shadow-none"
+            mobileDense
+            className="mt-1 border-x-0 shadow-none"
           />
 
           <section className="mt-2 overflow-hidden border-y border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)]">
@@ -1341,7 +1342,7 @@ function FriendListRow({
         "flex w-full items-center gap-3 bg-[color:var(--bg-canvas-elevated)] text-left transition-colors",
         desktop
           ? "px-4 py-3.5 hover:bg-[color:var(--surface-console)]"
-          : "px-4 py-3 hover:bg-[color:var(--surface-card-hover)]",
+          : "px-4 py-2.5 hover:bg-[color:var(--surface-card-hover)]",
         index > 0 ? "border-t border-[color:var(--border-faint)]" : undefined,
         active
           ? "border border-[rgba(7,193,96,0.16)] bg-[rgba(240,247,243,0.94)] shadow-[inset_0_0_0_1px_rgba(7,193,96,0.06)]"
@@ -1357,7 +1358,7 @@ function FriendListRow({
         <div
           className={cn(
             "truncate text-[color:var(--text-primary)]",
-            desktop ? "text-[16px]" : "text-[15px]",
+            desktop ? "text-[16px]" : "text-[14px]",
           )}
         >
           {item.character.name}
@@ -1404,7 +1405,7 @@ function WorldCharacterRow({
         "flex w-full items-center gap-3 bg-[color:var(--bg-canvas-elevated)] text-left transition-colors",
         desktop
           ? "px-4 py-3.5 hover:bg-[color:var(--surface-console)]"
-          : "px-4 py-3 hover:bg-[color:var(--surface-card-hover)]",
+          : "px-4 py-2.5 hover:bg-[color:var(--surface-card-hover)]",
         index > 0 ? "border-t border-[color:var(--border-faint)]" : undefined,
         active
           ? "border border-[rgba(7,193,96,0.14)] bg-[rgba(240,247,243,0.94)] shadow-[0_8px_22px_rgba(15,23,42,0.03)]"
@@ -1420,7 +1421,7 @@ function WorldCharacterRow({
         <div
           className={cn(
             "truncate text-[color:var(--text-primary)]",
-            desktop ? "text-[16px]" : "text-[15px]",
+            desktop ? "text-[16px]" : "text-[14px]",
           )}
         >
           {item.character.name}
@@ -1447,10 +1448,10 @@ function SectionHeader({
   return (
     <div
       className={cn(
-        "z-10 px-4 py-1.5 text-xs font-medium tracking-[0.08em] text-[color:var(--text-muted)]",
+        "z-10 px-4 py-1.25 font-medium tracking-[0.08em] text-[color:var(--text-muted)]",
         desktop
           ? "sticky top-0 border-b border-[color:var(--border-faint)] bg-white/78 backdrop-blur-xl"
-          : "sticky top-[82px] bg-[rgba(247,247,247,0.94)] backdrop-blur",
+          : "sticky top-[78px] text-[11px] bg-[rgba(247,247,247,0.94)] backdrop-blur",
       )}
     >
       {title}
