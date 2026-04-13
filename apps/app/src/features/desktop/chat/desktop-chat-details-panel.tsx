@@ -48,14 +48,14 @@ import { DesktopGroupMemberPicker } from "./desktop-group-member-picker";
 import { DesktopGroupMemberRemovalPicker } from "./desktop-group-member-removal-picker";
 import { getChatBackgroundLabel } from "../../chat/backgrounds/chat-background-helpers";
 import { buildDesktopAddFriendRouteHash } from "../contacts/desktop-add-friend-route-state";
-import { DesktopContactTextEditDialog } from "../contacts/desktop-contact-text-edit-dialog";
+import { DesktopContactTextEditDialog } from "../../contacts/desktop-contact-text-edit-dialog";
 import {
   DesktopContactProfileActionRow,
   DesktopContactProfileHeader,
   DesktopContactProfileRow,
   DesktopContactProfileSection,
   DesktopContactProfileToggleRow,
-} from "../contacts/desktop-contact-profile-blocks";
+} from "../../contacts/desktop-contact-profile-blocks";
 import { buildDesktopMomentsRouteHash } from "../moments/desktop-moments-route-state";
 import {
   useConversationBackground,
@@ -861,7 +861,7 @@ function DirectChatDetailsPanel({
           initialValue={currentEditDialog.initialValue}
           pending={updateProfileMutation.isPending}
           onClose={() => setEditingField(null)}
-          onConfirm={(value) => {
+          onConfirm={(value: string) => {
             void currentEditDialog.onConfirm(value);
           }}
         />
