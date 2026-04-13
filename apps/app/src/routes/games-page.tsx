@@ -577,6 +577,18 @@ export function GamesPage() {
             <ArrowLeft size={18} />
           </Button>
         }
+        rightActions={
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 rounded-full border-0 bg-transparent text-[color:var(--text-primary)] hover:bg-black/5"
+            onClick={() => void handleCopyGameToMobile(selectedGame.id)}
+            aria-label={nativeMobileShareSupported ? "分享当前游戏" : "发到手机继续"}
+          >
+            <Share2 size={18} />
+          </Button>
+        }
       />
 
       <div className="space-y-3 px-3 pb-[calc(env(safe-area-inset-bottom,0px)+1rem)] pt-3">
