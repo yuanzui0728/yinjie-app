@@ -1886,6 +1886,7 @@ function RuntimeRulesEditorCard({
   onReset: () => void;
   onSave: () => void;
 }) {
+  const [weatherSeason, setWeatherSeason] = useState<"spring" | "summer" | "autumn" | "winter">("spring");
   return (
     <Card className="bg-[color:var(--surface-console)]">
       <AdminSectionHeader
@@ -2854,10 +2855,30 @@ function RuntimeRulesEditorCard({
                   }))
                 }
               />
-              <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <div className="mb-2 flex gap-1">
+                  {(["spring", "summer", "autumn", "winter"] as const).map((s) => {
+                    const label = { spring: "春", summer: "夏", autumn: "秋", winter: "冬" }[s];
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setWeatherSeason(s)}
+                        className={[
+                          "rounded px-3 py-1 text-xs transition-colors",
+                          weatherSeason === s
+                            ? "bg-[color:var(--accent)] text-white"
+                            : "bg-[color:var(--surface-card)] text-[color:var(--text-muted)] hover:text-[color:var(--text-secondary)]",
+                        ].join(" ")}
+                      >
+                        {label}季天气
+                      </button>
+                    );
+                  })}
+                </div>
                 <TextAreaBlock
-                  label="春季天气候选"
-                  value={listToLines(draft.worldContextRules.weatherOptions.spring)}
+                  label={`${{ spring: "春", summer: "夏", autumn: "秋", winter: "冬" }[weatherSeason]}季天气候选`}
+                  value={listToLines(draft.worldContextRules.weatherOptions[weatherSeason])}
                   onChange={(value) =>
                     onPatch((current) => ({
                       ...current,
@@ -2865,55 +2886,7 @@ function RuntimeRulesEditorCard({
                         ...current.worldContextRules,
                         weatherOptions: {
                           ...current.worldContextRules.weatherOptions,
-                          spring: linesToList(value),
-                        },
-                      },
-                    }))
-                  }
-                />
-                <TextAreaBlock
-                  label="夏季天气候选"
-                  value={listToLines(draft.worldContextRules.weatherOptions.summer)}
-                  onChange={(value) =>
-                    onPatch((current) => ({
-                      ...current,
-                      worldContextRules: {
-                        ...current.worldContextRules,
-                        weatherOptions: {
-                          ...current.worldContextRules.weatherOptions,
-                          summer: linesToList(value),
-                        },
-                      },
-                    }))
-                  }
-                />
-                <TextAreaBlock
-                  label="秋季天气候选"
-                  value={listToLines(draft.worldContextRules.weatherOptions.autumn)}
-                  onChange={(value) =>
-                    onPatch((current) => ({
-                      ...current,
-                      worldContextRules: {
-                        ...current.worldContextRules,
-                        weatherOptions: {
-                          ...current.worldContextRules.weatherOptions,
-                          autumn: linesToList(value),
-                        },
-                      },
-                    }))
-                  }
-                />
-                <TextAreaBlock
-                  label="冬季天气候选"
-                  value={listToLines(draft.worldContextRules.weatherOptions.winter)}
-                  onChange={(value) =>
-                    onPatch((current) => ({
-                      ...current,
-                      worldContextRules: {
-                        ...current.worldContextRules,
-                        weatherOptions: {
-                          ...current.worldContextRules.weatherOptions,
-                          winter: linesToList(value),
+                          [weatherSeason]: linesToList(value),
                         },
                       },
                     }))
