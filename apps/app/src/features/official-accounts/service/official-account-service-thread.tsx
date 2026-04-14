@@ -15,11 +15,13 @@ import {
   BellRing,
   BookOpenText,
   MoreHorizontal,
+  Smartphone,
 } from "lucide-react";
 import { Button, ErrorBlock, LoadingBlock, cn } from "@yinjie/ui";
 import { OfficialArticleViewer } from "../../../components/official-article-viewer";
 import { OfficialServiceMessageBubble } from "../../../components/official-service-message-bubble";
 import { EmptyState } from "../../../components/empty-state";
+import { buildDesktopMobileOfficialHandoffHash } from "../../desktop/official-accounts/desktop-mobile-official-handoff-route-state";
 import { useAppRuntimeConfig } from "../../../runtime/runtime-config-store";
 
 export function OfficialAccountServiceThread({
@@ -235,6 +237,20 @@ export function OfficialAccountServiceThread({
     onOpenArticle?.(articleId, accountId);
   }
 
+  function handleOpenMobileHandoff() {
+    void navigate({
+      to: "/desktop/mobile",
+      hash: buildDesktopMobileOfficialHandoffHash({
+        surface: "service",
+        accountId,
+        articleId: activeDesktopArticleId ?? undefined,
+        accountName: accountQuery.data?.name,
+        articleTitle: articleQuery.data?.title,
+        accountType: "service",
+      }),
+    });
+  }
+
   if (isDesktop) {
     return (
       <div className="flex h-full min-h-0 bg-[color:var(--bg-app)]">
@@ -279,6 +295,16 @@ export function OfficialAccountServiceThread({
                 >
                   <BookOpenText size={14} />
                   公众号主页
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-xl"
+                  onClick={handleOpenMobileHandoff}
+                >
+                  <Smartphone size={14} />
+                  到手机继续
                 </Button>
                 <Button
                   type="button"

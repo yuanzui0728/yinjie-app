@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { BookOpenText, MessageSquareText } from "lucide-react";
+import { BookOpenText, MessageSquareText, Smartphone } from "lucide-react";
 import {
   followOfficialAccount,
   getOfficialAccount,
@@ -17,6 +17,7 @@ import { OfficialArticleCard } from "../../../components/official-article-card";
 import { OfficialArticleViewer } from "../../../components/official-article-viewer";
 import { EmptyState } from "../../../components/empty-state";
 import { buildDesktopOfficialMessageRouteHash } from "../chat/desktop-official-message-route-state";
+import { buildDesktopMobileOfficialHandoffHash } from "./desktop-mobile-official-handoff-route-state";
 import {
   buildOfficialAccountFavoriteRecord,
   buildOfficialArticleFavoriteRecord,
@@ -388,6 +389,24 @@ export function DesktopOfficialAccountsWorkspace({
     });
   }
 
+  function openMobileHandoff() {
+    if (!account) {
+      return;
+    }
+
+    void navigate({
+      to: "/desktop/mobile",
+      hash: buildDesktopMobileOfficialHandoffHash({
+        surface: "directory",
+        accountId: account.id,
+        articleId: activeArticleId ?? undefined,
+        accountName: account.name,
+        articleTitle: activeArticle?.title,
+        accountType: account.accountType,
+      }),
+    });
+  }
+
   return (
     <div className="flex h-full min-h-0 bg-[color:var(--bg-app)]">
       <section className="flex w-[300px] shrink-0 flex-col border-r border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.88)]">
@@ -564,6 +583,15 @@ export function DesktopOfficialAccountsWorkspace({
                   favoriteSourceIds.includes(accountFavoriteSourceId)
                     ? "取消收藏"
                     : "收藏主页"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={openMobileHandoff}
+                  className="rounded-xl border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] shadow-none hover:bg-[color:var(--surface-console)]"
+                >
+                  <Smartphone size={15} />
+                  到手机继续
                 </Button>
               </div>
             </>
