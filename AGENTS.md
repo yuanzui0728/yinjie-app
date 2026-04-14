@@ -229,6 +229,7 @@
   - `GET /api/official-accounts/subscription-inbox`
   - `GET /api/official-accounts/service-conversations`
   - `POST /api/official-accounts/subscription-inbox/read`
+  - `PATCH /api/official-accounts/:id/preferences`
   - `GET /api/official-accounts/:id/service-messages`
   - `POST /api/official-accounts/:id/service-messages/read`
   - `POST /api/official-accounts/deliveries/:deliveryId/read`
