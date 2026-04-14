@@ -678,6 +678,27 @@ export function DesktopSearchWorkspace({
   const keywordLabel = searchText.trim();
   const contextCategoryTitle =
     activeCategory === "all" ? "全部结果" : searchCategoryTitles[activeCategory];
+  const contextKeyboardHint = useMemo(() => {
+    if (keyboardFocusRegion === "results" && keyboardNavigableResults.length) {
+      return "↑ ↓ 切换结果 · Enter 打开 · Esc 回搜索框 · Home 回顶部";
+    }
+
+    if (keyboardFocusRegion === "categories") {
+      return "← → 切分类 · Home / End 跳转 · Esc 回搜索框";
+    }
+
+    if (keyboardNavigableResults.length) {
+      return selectedResultId
+        ? "Tab 进入预选结果 · Enter 打开 · Esc 取消预选"
+        : "Tab 进入预选结果 · ↑ ↓ 选择结果 · Esc 清空关键词";
+    }
+
+    return "Enter 搜索 · Esc 清空关键词";
+  }, [
+    keyboardFocusRegion,
+    keyboardNavigableResults.length,
+    selectedResultId,
+  ]);
   const handleScrollToTopContext = useEffectEvent(() => {
     scrollResultsToTop("smooth");
     focusSearchInput(Boolean(searchText.trim()));
@@ -776,6 +797,25 @@ export function DesktopSearchWorkspace({
       focusCategoryChip(nextCategory);
     },
   );
+  const handleReturnToSearchInput = useEffectEvent(() => {
+    focusSearchInput(true);
+    showTransitionHint(
+      selectedResultId
+        ? "已回到搜索框，再按 Esc 可取消预选结果。"
+        : searchText.trim()
+          ? "已回到搜索框，再按 Esc 可清空关键词。"
+          : "已回到搜索框，可继续输入或切换分类。",
+    );
+  });
+  const handleClearSelectedResult = useEffectEvent(() => {
+    autoSelectResultRef.current = false;
+    setSelectedResultId(null);
+    showTransitionHint(
+      searchText.trim()
+        ? "已取消结果选择，再按 Esc 可清空关键词。"
+        : "已取消结果选择，可继续输入关键词。",
+    );
+  });
   const handleWorkspaceKeyDownCapture = useEffectEvent(
     (event: ReactKeyboardEvent<HTMLDivElement>) => {
       if (event.nativeEvent.isComposing) {
@@ -816,8 +856,7 @@ export function DesktopSearchWorkspace({
 
         if (event.key === "Escape") {
           event.preventDefault();
-          focusSearchInput(true);
-          showTransitionHint("已回到搜索框，可继续输入或切换分类。");
+          handleReturnToSearchInput();
           return;
         }
 
@@ -871,8 +910,7 @@ export function DesktopSearchWorkspace({
 
         if (event.key === "Escape") {
           event.preventDefault();
-          focusSearchInput(true);
-          showTransitionHint("已回到搜索框，可继续输入或选择结果。");
+          handleReturnToSearchInput();
         }
       }
     },
@@ -953,9 +991,7 @@ export function DesktopSearchWorkspace({
 
       if (event.key === "Escape" && selectedResultId) {
         event.preventDefault();
-        autoSelectResultRef.current = false;
-        setSelectedResultId(null);
-        showTransitionHint("已取消结果选择，可继续输入关键词。");
+        handleClearSelectedResult();
       }
     },
   );
@@ -1186,11 +1222,7 @@ export function DesktopSearchWorkspace({
               categoryTitle={contextCategoryTitle}
               count={visibleResults.length}
               keyword={keywordLabel}
-              keyboardHint={
-                keyboardNavigableResults.length
-                  ? "Tab 进入预选结果 · Shift+Tab 回搜索框 · ↑ ↓ 选择结果 · ← → 切分类 · Home 回顶部"
-                  : undefined
-              }
+              keyboardHint={contextKeyboardHint}
               focusRegion={keyboardFocusRegion}
               onBackToAll={
                 activeCategory === "all"
