@@ -63,6 +63,7 @@ import { DesktopContactsWorkspace } from "../features/desktop/contacts/desktop-c
 import { DesktopContactsFriendRequestsPane } from "../features/desktop/contacts/desktop-contacts-friend-requests-pane";
 import { DesktopContactsGroupsPane } from "../features/desktop/contacts/desktop-contacts-groups-pane";
 import { DesktopContactsStarredFriendsPane } from "../features/desktop/contacts/desktop-contacts-starred-friends-pane";
+import { DesktopContactsTagsPane } from "../features/desktop/contacts/desktop-contacts-tags-pane";
 import {
   buildDesktopContactsRouteHash,
   parseDesktopContactsRouteState,
@@ -115,6 +116,9 @@ type DesktopSelection =
       kind: "groups";
       id?: string;
     }
+  | {
+      kind: "tags";
+    }
   | null;
 
 function areDesktopSelectionsEqual(
@@ -151,6 +155,12 @@ function buildDesktopSelectionFromRouteState(hash: string): DesktopSelection {
     return {
       kind: "groups",
       ...(routeState.characterId ? { id: routeState.characterId } : {}),
+    };
+  }
+
+  if (routeState.pane === "tags") {
+    return {
+      kind: "tags",
     };
   }
 
@@ -748,7 +758,8 @@ export function ContactsPage() {
     if (
       desktopSelection?.kind === "new-friends" ||
       desktopSelection?.kind === "starred-friends" ||
-      desktopSelection?.kind === "groups"
+      desktopSelection?.kind === "groups" ||
+      desktopSelection?.kind === "tags"
     ) {
       return;
     }
@@ -1008,7 +1019,18 @@ export function ContactsPage() {
       subtitle: tagCount > 0 ? `${tagCount} 个联系人标签` : "查看联系人标签",
       icon: Tag,
       iconClassName: "bg-[linear-gradient(135deg,#34d399,#07c160)]",
-      onClick: () => handleShortcutNavigate("/contacts/tags"),
+      onClick: () => {
+        if (!isDesktopLayout) {
+          handleShortcutNavigate("/contacts/tags");
+          return;
+        }
+
+        const nextSelection = {
+          kind: "tags",
+        } satisfies DesktopSelection;
+        setDesktopSelection(nextSelection);
+        commitDesktopRouteState(nextSelection, showWorldCharacters);
+      },
     },
     {
       key: "official-accounts",
@@ -1363,6 +1385,8 @@ export function ContactsPage() {
                 });
               }}
             />
+          ) : desktopSelection?.kind === "tags" ? (
+            <DesktopContactsTagsPane />
           ) : (
             <ContactDetailPane
               character={
