@@ -12,6 +12,7 @@ import {
   type ReplyLogicCharacterSnapshot,
   type ReplyLogicConstantSummary,
   type ReplyLogicConversationSnapshot,
+  type ReplyLogicGroupReplyActorDriftSummary,
   type ReplyLogicGroupReplyArchiveActorSummary,
   type ReplyLogicGroupReplyArchiveTrendPoint,
   type ReplyLogicGroupReplyIssueSummary,
@@ -1760,6 +1761,17 @@ function GroupReplyRuntimeCard({
       8,
     );
   }, [actorFilter, filteredTurns, runtime.issueSummary, statusFilter]);
+  const visibleActorDrift = useMemo(() => {
+    if (actorFilter !== "all") {
+      return runtime.actorDriftSummary.filter(
+        (actor) => actor.actorCharacterId === actorFilter,
+      );
+    }
+
+    return runtime.actorDriftSummary
+      .filter((actor) => actor.severity !== "stable")
+      .slice(0, 6);
+  }, [actorFilter, runtime.actorDriftSummary]);
   const selectedArchiveActor = useMemo(() => {
     if (!runtime.archiveSummary || actorFilter === "all") {
       return null;
@@ -1932,6 +1944,80 @@ function GroupReplyRuntimeCard({
                   </>
                 }
                 description={describeGroupReplyIssue(issue)}
+                className="bg-white/90"
+              />
+            ))}
+          </div>
+        )}
+      </AdminSubpanel>
+
+      <AdminSubpanel title="近期恶化角色" contentClassName="mt-4">
+        {!visibleActorDrift.length ? (
+          <AdminEmptyState
+            title={
+              actorFilter === "all" ? "最近没有明显恶化角色" : "当前角色最近没有异常抬头"
+            }
+            description={
+              actorFilter === "all"
+                ? "这里对比最近 8 轮终态任务和历史基线，只展示近期失败率或取消率明显抬高的角色。"
+                : "该角色最近 8 轮没有足够的终态样本，或者它的失败/取消率还没有明显高于历史基线。"
+            }
+          />
+        ) : (
+          <div className="space-y-3">
+            {visibleActorDrift.map((actor) => (
+              <AdminRecordCard
+                key={`drift-${actor.actorCharacterId}`}
+                title={actor.actorName}
+                badges={
+                  <>
+                    <StatusPill tone={toneForGroupReplyActorDriftSeverity(actor.severity)}>
+                      {formatGroupReplyActorDriftSeverity(actor.severity)}
+                    </StatusPill>
+                    <StatusPill tone="muted">最近 {actor.recentTaskCount} 任务</StatusPill>
+                    <StatusPill tone="muted">{actor.recentTurnCount} 轮</StatusPill>
+                    <StatusPill tone="warning">
+                      异常率 {(actor.recentIssueRate * 100).toFixed(1)}%
+                    </StatusPill>
+                    <StatusPill
+                      tone={actor.issueRateDelta > 0 ? "warning" : "muted"}
+                    >
+                      {formatRateDelta(actor.issueRateDelta)}
+                    </StatusPill>
+                  </>
+                }
+                description={describeGroupReplyActorDrift(actor)}
+                details={
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      <StatusPill tone="healthy">发送 {actor.recentSentCount}</StatusPill>
+                      <StatusPill tone="muted">取消 {actor.recentCancelledCount}</StatusPill>
+                      <StatusPill tone="warning">失败 {actor.recentFailedCount}</StatusPill>
+                      {actor.openTaskCount > 0 ? (
+                        <StatusPill tone="muted">未落定 {actor.openTaskCount}</StatusPill>
+                      ) : null}
+                    </div>
+                    <div className="text-xs leading-6 text-[color:var(--text-muted)]">
+                      基线来源：{formatGroupReplyActorDriftBaselineSource(actor.baselineSource)}
+                      {" · "}
+                      基线异常率 {(actor.baselineIssueRate * 100).toFixed(1)}%
+                      {" · "}
+                      失败率偏移 {formatRateDelta(actor.failureRateDelta)}
+                      {" · "}
+                      取消率偏移 {formatRateDelta(actor.cancelRateDelta)}
+                    </div>
+                    {actor.issueSummary.length ? (
+                      <AdminNoteList
+                        items={actor.issueSummary.map(
+                          (issue) =>
+                            `${issue.label} · ${issue.count} 次 · ${
+                              issue.status === "failed" ? "失败" : "取消"
+                            }`,
+                        )}
+                      />
+                    ) : null}
+                  </div>
+                }
                 className="bg-white/90"
               />
             ))}
@@ -4785,6 +4871,64 @@ function describeArchivedGroupReplyIssue(issue: ReplyLogicGroupReplyIssueSummary
   }
 
   return `这是已经归档的历史失败热点，累计出现 ${issue.count} 次，适合用来判断某类 provider 或上下文错误是否反复出现。`;
+}
+
+function toneForGroupReplyActorDriftSeverity(
+  severity: ReplyLogicGroupReplyActorDriftSummary["severity"],
+) {
+  switch (severity) {
+    case "warning":
+      return "warning" as const;
+    case "watch":
+      return "muted" as const;
+    default:
+      return "healthy" as const;
+  }
+}
+
+function formatGroupReplyActorDriftSeverity(
+  severity: ReplyLogicGroupReplyActorDriftSummary["severity"],
+) {
+  switch (severity) {
+    case "warning":
+      return "异常抬升";
+    case "watch":
+      return "需要关注";
+    default:
+      return "稳定";
+  }
+}
+
+function formatGroupReplyActorDriftBaselineSource(
+  source: ReplyLogicGroupReplyActorDriftSummary["baselineSource"],
+) {
+  switch (source) {
+    case "actor_archive":
+      return "角色历史";
+    case "group_archive":
+      return "群聊整体历史";
+    default:
+      return "暂无历史基线";
+  }
+}
+
+function describeGroupReplyActorDrift(actor: ReplyLogicGroupReplyActorDriftSummary) {
+  if (actor.baselineSource === "none") {
+    return `最近 8 轮里，这个角色已有 ${actor.recentTaskCount} 条终态任务；因为还没有足够历史基线，所以先按绝对异常率 ${(actor.recentIssueRate * 100).toFixed(1)}% 做兜底监控。`;
+  }
+
+  return `最近 ${actor.recentTurnCount} 轮里，这个角色的异常率是 ${(actor.recentIssueRate * 100).toFixed(1)}%，相对${formatGroupReplyActorDriftBaselineSource(actor.baselineSource)}抬高了 ${formatRateDelta(actor.issueRateDelta)}。`;
+}
+
+function formatRateDelta(value: number) {
+  const percentage = Math.abs(value * 100).toFixed(1);
+  if (value > 0) {
+    return `+${percentage} pt`;
+  }
+  if (value < 0) {
+    return `-${percentage} pt`;
+  }
+  return "0.0 pt";
 }
 
 function buildVisibleGroupReplyIssueSummary(
