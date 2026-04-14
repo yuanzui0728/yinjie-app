@@ -5,6 +5,10 @@ import { getFriends } from "@yinjie/contracts";
 import { Button, ErrorBlock, LoadingBlock, cn } from "@yinjie/ui";
 import { AvatarChip } from "../../../components/avatar-chip";
 import { EmptyState } from "../../../components/empty-state";
+import {
+  getFriendDisplayName,
+  matchesFriendSearch,
+} from "../../contacts/contact-utils";
 import { useAppRuntimeConfig } from "../../../runtime/runtime-config-store";
 
 type DesktopGroupMemberPickerProps = {
@@ -64,11 +68,7 @@ export function DesktopGroupMemberPicker({
         return true;
       }
 
-      return (
-        character.name.toLowerCase().includes(keyword) ||
-        (character.relationship ?? "").toLowerCase().includes(keyword) ||
-        (friendship.remarkName ?? "").toLowerCase().includes(keyword)
-      );
+      return matchesFriendSearch({ character, friendship }, keyword);
     });
   }, [existingMemberIdSet, friendsQuery.data, searchTerm]);
 
@@ -165,33 +165,41 @@ export function DesktopGroupMemberPicker({
             ) : null}
 
             <div className="space-y-1">
-              {availableFriends.map(({ character, friendship }) => (
-                <button
-                  key={character.id}
-                  type="button"
-                  disabled={pending}
-                  onClick={() => toggleSelection(character.id)}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-[10px] px-4 py-3 text-left transition disabled:opacity-60",
-                    selectedIds.includes(character.id)
-                      ? "border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] shadow-[var(--shadow-soft)]"
-                      : "border border-transparent bg-transparent hover:border-[color:var(--border-faint)] hover:bg-white",
-                  )}
-                >
-                  <AvatarChip name={character.name} src={character.avatar} />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">
-                      {friendship.remarkName?.trim() || character.name}
+              {availableFriends.map(({ character, friendship }) => {
+                const displayName = getFriendDisplayName({ character, friendship });
+                const subtitle =
+                  displayName !== character.name
+                    ? `昵称：${character.name}`
+                    : character.relationship;
+
+                return (
+                  <button
+                    key={character.id}
+                    type="button"
+                    disabled={pending}
+                    onClick={() => toggleSelection(character.id)}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-[10px] px-4 py-3 text-left transition disabled:opacity-60",
+                      selectedIds.includes(character.id)
+                        ? "border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] shadow-[var(--shadow-soft)]"
+                        : "border border-transparent bg-transparent hover:border-[color:var(--border-faint)] hover:bg-white",
+                    )}
+                  >
+                    <AvatarChip name={displayName} src={character.avatar} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">
+                        {displayName}
+                      </div>
+                      <div className="mt-1 truncate text-xs text-[color:var(--text-muted)]">
+                        {subtitle}
+                      </div>
                     </div>
-                    <div className="mt-1 truncate text-xs text-[color:var(--text-muted)]">
-                      {character.relationship}
-                    </div>
-                  </div>
-                  <SelectionBadge
-                    checked={selectedIds.includes(character.id)}
-                  />
-                </button>
-              ))}
+                    <SelectionBadge
+                      checked={selectedIds.includes(character.id)}
+                    />
+                  </button>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -224,31 +232,42 @@ export function DesktopGroupMemberPicker({
           <div className="min-h-0 flex-1 overflow-auto px-6 py-6">
             {selectedFriends.length ? (
               <div className="grid grid-cols-2 gap-3">
-                {selectedFriends.map(({ character, friendship }) => (
-                  <div
-                    key={character.id}
-                    className="flex items-center gap-3 rounded-[14px] border border-[color:var(--border-faint)] bg-white px-4 py-4 shadow-[var(--shadow-soft)]"
-                  >
-                    <AvatarChip name={character.name} src={character.avatar} />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">
-                        {friendship.remarkName?.trim() || character.name}
-                      </div>
-                      <div className="mt-1 truncate text-xs text-[color:var(--text-muted)]">
-                        {character.relationship}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => toggleSelection(character.id)}
-                      disabled={pending}
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-[color:var(--border-faint)] text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
-                      aria-label={`移除 ${character.name}`}
+                {selectedFriends.map(({ character, friendship }) => {
+                  const displayName = getFriendDisplayName({
+                    character,
+                    friendship,
+                  });
+                  const subtitle =
+                    displayName !== character.name
+                      ? `昵称：${character.name}`
+                      : character.relationship;
+
+                  return (
+                    <div
+                      key={character.id}
+                      className="flex items-center gap-3 rounded-[14px] border border-[color:var(--border-faint)] bg-white px-4 py-4 shadow-[var(--shadow-soft)]"
                     >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
+                      <AvatarChip name={displayName} src={character.avatar} />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">
+                          {displayName}
+                        </div>
+                        <div className="mt-1 truncate text-xs text-[color:var(--text-muted)]">
+                          {subtitle}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => toggleSelection(character.id)}
+                        disabled={pending}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-[color:var(--border-faint)] text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                        aria-label={`移除 ${displayName}`}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div className="flex h-full items-center justify-center px-8">
