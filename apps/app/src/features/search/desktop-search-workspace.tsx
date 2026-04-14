@@ -137,6 +137,9 @@ export function DesktopSearchWorkspace({
   setSearchText,
   visibleResults,
 }: DesktopSearchWorkspaceProps) {
+  const allResultSectionRefs = useRef<
+    Partial<Record<SearchResultCategory, HTMLElement | null>>
+  >({});
   const inputRef = useRef<HTMLInputElement | null>(null);
   const categoryTabRefs = useRef<
     Partial<Record<SearchCategory, HTMLButtonElement | null>>
@@ -144,6 +147,8 @@ export function DesktopSearchWorkspace({
   const scrollViewportRef = useRef<HTMLDivElement | null>(null);
   const spotlightPanelTimeoutRef = useRef<number | null>(null);
   const transitionHintTimeoutRef = useRef<number | null>(null);
+  const [activeAllResultsSection, setActiveAllResultsSection] =
+    useState<SearchResultCategory | null>(null);
   const [spotlightPanelId, setSpotlightPanelId] = useState<SearchCategory | null>(
     null,
   );
@@ -204,6 +209,15 @@ export function DesktopSearchWorkspace({
     };
   }, []);
 
+  useEffect(() => {
+    if (!hasKeyword || activeCategory !== "all") {
+      setActiveAllResultsSection(null);
+      return;
+    }
+
+    setActiveAllResultsSection(groupedResults[0]?.category ?? null);
+  }, [activeCategory, groupedResults, hasKeyword]);
+
   const focusSearchInput = useEffectEvent((moveCaretToEnd = false) => {
     window.requestAnimationFrame(() => {
       const input = inputRef.current;
@@ -263,6 +277,39 @@ export function DesktopSearchWorkspace({
       spotlightPanelTimeoutRef.current = null;
     }, 2200);
   });
+  const syncActiveAllResultsSection = useEffectEvent(() => {
+    if (!hasKeyword || activeCategory !== "all") {
+      return;
+    }
+
+    const viewport = scrollViewportRef.current;
+    if (!viewport || !groupedResults.length) {
+      return;
+    }
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const anchorTop = viewportRect.top + 220;
+    let nextCategory = groupedResults[0]?.category ?? null;
+
+    for (const section of groupedResults) {
+      const panel = allResultSectionRefs.current[section.category];
+      if (!panel) {
+        continue;
+      }
+
+      const panelRect = panel.getBoundingClientRect();
+      if (panelRect.top <= anchorTop) {
+        nextCategory = section.category;
+        continue;
+      }
+
+      break;
+    }
+
+    setActiveAllResultsSection((current) =>
+      current === nextCategory ? current : nextCategory,
+    );
+  });
   const resolveCategoryHintTitle = (category: SearchCategory) =>
     category === "all" ? "全部结果" : searchCategoryTitles[category];
   const resolveSpotlightPanelId = (
@@ -278,6 +325,23 @@ export function DesktopSearchWorkspace({
 
     return category;
   };
+  const handleJumpToAllResultsSection = useEffectEvent(
+    (category: SearchResultCategory) => {
+      const panel = allResultSectionRefs.current[category];
+      if (!panel) {
+        return;
+      }
+
+      panel.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+        inline: "nearest",
+      });
+      setActiveAllResultsSection(category);
+      showPanelSpotlight(category);
+      showTransitionHint(`已定位到${searchCategoryTitles[category]}分区。`);
+    },
+  );
   const handleSelectCategory = useEffectEvent(
     (category: SearchCategory, options?: { focusInput?: boolean }) => {
       const categoryChanged = category !== activeCategory;
@@ -337,6 +401,27 @@ export function DesktopSearchWorkspace({
     showPanelSpotlight(resolveSpotlightPanelId(activeCategory));
     showTransitionHint("已回到顶部，可继续调整关键词或切换分类。");
   });
+
+  useEffect(() => {
+    if (!hasKeyword || activeCategory !== "all") {
+      return;
+    }
+
+    const viewport = scrollViewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    const handleScroll = () => {
+      syncActiveAllResultsSection();
+    };
+
+    syncActiveAllResultsSection();
+    viewport.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      viewport.removeEventListener("scroll", handleScroll);
+    };
+  }, [activeCategory, groupedResults, hasKeyword, syncActiveAllResultsSection]);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[color:var(--bg-app)]">
@@ -479,6 +564,21 @@ export function DesktopSearchWorkspace({
               }
               onClearKeyword={handleClearKeyword}
               onScrollToTop={handleScrollToTopContext}
+              onSelectSection={
+                activeCategory === "all"
+                  ? handleJumpToAllResultsSection
+                  : undefined
+              }
+              sectionItems={
+                activeCategory === "all"
+                  ? groupedResults.map((section) => ({
+                      category: section.category,
+                      count: section.results.length,
+                      label: section.label,
+                    }))
+                  : undefined
+              }
+              activeSection={activeAllResultsSection}
             />
           ) : null}
 
@@ -666,6 +766,9 @@ export function DesktopSearchWorkspace({
                         section.category,
                       )}
                       highlighted={spotlightPanelId === section.category}
+                      panelRef={(node) => {
+                        allResultSectionRefs.current[section.category] = node;
+                      }}
                       title={section.label}
                     >
                       {section.category === "messages" ? (
@@ -1024,20 +1127,30 @@ function DesktopSearchScopeCard({
 
 function DesktopSearchContextBar({
   activeCategory,
+  activeSection,
   categoryTitle,
   count,
   keyword,
   onBackToAll,
   onClearKeyword,
   onScrollToTop,
+  onSelectSection,
+  sectionItems,
 }: {
   activeCategory: SearchCategory;
+  activeSection?: SearchResultCategory | null;
   categoryTitle: string;
   count: number;
   keyword: string;
   onBackToAll?: () => void;
   onClearKeyword: () => void;
   onScrollToTop: () => void;
+  onSelectSection?: (category: SearchResultCategory) => void;
+  sectionItems?: Array<{
+    category: SearchResultCategory;
+    count: number;
+    label: string;
+  }>;
 }) {
   const contextDescription =
     activeCategory === "all"
@@ -1081,6 +1194,40 @@ function DesktopSearchContextBar({
             </DesktopSearchActionButton>
           </div>
         </div>
+        {sectionItems?.length ? (
+          <div className="mt-4 border-t border-[rgba(15,23,42,0.06)] pt-4">
+            <div className="mb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-[color:var(--text-dim)]">
+              结果分区
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {sectionItems.map((item) => (
+                <button
+                  key={item.category}
+                  type="button"
+                  onClick={() => onSelectSection?.(item.category)}
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs transition",
+                    activeSection === item.category
+                      ? "border-[rgba(7,193,96,0.16)] bg-[rgba(7,193,96,0.08)] text-[color:var(--brand-primary)]"
+                      : "border-[rgba(15,23,42,0.06)] bg-white text-[color:var(--text-secondary)] hover:bg-[rgba(7,193,96,0.04)] hover:text-[color:var(--text-primary)]",
+                  )}
+                >
+                  <span>{item.label}</span>
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[10px]",
+                      activeSection === item.category
+                        ? "bg-white text-[color:var(--brand-primary)]"
+                        : "bg-[color:var(--surface-console)] text-[color:var(--text-muted)]",
+                    )}
+                  >
+                    {item.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
       </section>
     </div>
   );
@@ -1092,6 +1239,7 @@ function DesktopSearchResultsPanel({
   countLabel,
   description,
   highlighted = false,
+  panelRef,
   title,
 }: {
   action?: ReactNode;
@@ -1099,12 +1247,14 @@ function DesktopSearchResultsPanel({
   countLabel: string;
   description: string;
   highlighted?: boolean;
+  panelRef?: (node: HTMLElement | null) => void;
   title: string;
 }) {
   return (
     <section
+      ref={panelRef}
       className={cn(
-        "rounded-[20px] border bg-[color:var(--surface-console)] p-4 transition-[border-color,box-shadow,transform]",
+        "scroll-mt-36 rounded-[20px] border bg-[color:var(--surface-console)] p-4 transition-[border-color,box-shadow,transform]",
         highlighted
           ? "border-[rgba(7,193,96,0.24)] shadow-[0_20px_44px_rgba(7,193,96,0.10)]"
           : "border-[color:var(--border-faint)]",
