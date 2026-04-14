@@ -39,7 +39,7 @@ type DesktopMomentsSidebarProps = {
   onLike: (momentId: string) => void;
   onToggleFavorite: (momentId: string) => void;
   onOpenCompose: () => void;
-  onSelectAuthor: (authorId: string) => void;
+  onSelectAuthor: (authorId: string, momentId?: string) => void;
   onSelectMoment: (momentId: string) => void;
 };
 
@@ -93,7 +93,9 @@ export function DesktopMomentsSidebar({
           onCommentSubmit={() => onCommentSubmit(selectedMoment.id)}
           onLike={() => onLike(selectedMoment.id)}
           onToggleFavorite={() => onToggleFavorite(selectedMoment.id)}
-          onSelectAuthor={() => onSelectAuthor(selectedMoment.authorId)}
+          onSelectAuthor={() =>
+            onSelectAuthor(selectedMoment.authorId, selectedMoment.id)
+          }
         />
       </aside>
     );
@@ -295,7 +297,7 @@ export function DesktopMomentsSidebar({
                   {ownerUsername ?? "我"}
                 </div>
                 <div className="mt-2 text-[13px] leading-6 text-[color:var(--text-secondary)]">
-                  发一条新的朋友圈，或者从作者列表里切到某个人的时间线。
+                  发一条新的朋友圈，或者从右侧最近作者里进入某位好友的独立朋友圈页。
                 </div>
               </div>
             </div>

@@ -24,6 +24,9 @@ import {
   upsertDesktopFavorite,
 } from "../features/desktop/favorites/desktop-favorites-storage";
 import {
+  buildDesktopFriendMomentsRouteHash,
+} from "../features/desktop/moments/desktop-friend-moments-route-state";
+import {
   buildDesktopMomentsRouteHash,
   parseDesktopMomentsRouteState,
 } from "../features/desktop/moments/desktop-moments-route-state";
@@ -216,6 +219,27 @@ export function MomentsPage() {
     return () => window.clearTimeout(timer);
   }, [notice]);
 
+  useEffect(() => {
+    if (!isDesktopLayout || !routeSelectedAuthorId) {
+      return;
+    }
+
+    void navigate({
+      to: "/tabs/moments/friend/$characterId",
+      params: { characterId: routeSelectedAuthorId },
+      hash: buildDesktopFriendMomentsRouteHash({
+        momentId: routeSelectedMomentId ?? undefined,
+        source: "moments",
+      }),
+      replace: true,
+    });
+  }, [
+    isDesktopLayout,
+    navigate,
+    routeSelectedAuthorId,
+    routeSelectedMomentId,
+  ]);
+
   function focusComposer() {
     if (typeof document === "undefined") {
       return;
@@ -314,6 +338,10 @@ export function MomentsPage() {
   }
 
   if (isDesktopLayout) {
+    if (routeSelectedAuthorId) {
+      return null;
+    }
+
     const errors: string[] = [];
 
     if (momentsQuery.isError && momentsQuery.error instanceof Error) {
@@ -351,7 +379,6 @@ export function MomentsPage() {
         ownerAvatar={ownerAvatar}
         ownerId={ownerId}
         ownerUsername={ownerUsername}
-        routeSelectedAuthorId={routeSelectedAuthorId}
         routeSelectedMomentId={routeSelectedMomentId}
         showCompose={showCompose}
         successNotice={notice}
@@ -369,6 +396,16 @@ export function MomentsPage() {
         onCommentSubmit={(momentId) => commentMutation.mutate(momentId)}
         onCreate={() => createMutation.mutate()}
         onLike={(momentId) => likeMutation.mutate(momentId)}
+        onOpenAuthorMoments={({ authorId, momentId }) => {
+          void navigate({
+            to: "/tabs/moments/friend/$characterId",
+            params: { characterId: authorId },
+            hash: buildDesktopFriendMomentsRouteHash({
+              momentId,
+              source: "moments",
+            }),
+          });
+        }}
         onToggleFavorite={(momentId) => {
           const moment = visibleMoments.find((item) => item.id === momentId);
           if (!moment) {
