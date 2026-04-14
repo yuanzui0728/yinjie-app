@@ -560,33 +560,7 @@ export function DesktopOfficialAccountsWorkspace({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <div className="flex items-center gap-2 rounded-[18px] border border-[color:var(--border-faint)] bg-white px-2 py-2 shadow-[0_8px_22px_rgba(15,23,42,0.05)]">
-              <div className="px-2">
-                <div className="text-[11px] font-medium tracking-[0.08em] text-[color:var(--text-muted)]">
-                  展示方式
-                </div>
-                <div className="mt-0.5 text-[11px] text-[color:var(--text-secondary)]">
-                  {displayMode === "feed"
-                    ? "常看的号在上，文章在下"
-                    : "按公众号主页浏览"}
-                </div>
-              </div>
-              <DesktopOfficialModeButton
-                active={displayMode === "feed"}
-                icon={BookOpenText}
-                label="常看与文章"
-                description="上面常看的号"
-                onClick={() => handleDisplayModeChange("feed")}
-              />
-              <DesktopOfficialModeButton
-                active={displayMode === "accounts"}
-                icon={MessageSquareText}
-                label="按号查看"
-                description="逐个公众号主页"
-                onClick={() => handleDisplayModeChange("accounts")}
-              />
-            </div>
+          <div className="flex items-center gap-2">
             <Button
               type="button"
               variant="secondary"
@@ -597,6 +571,38 @@ export function DesktopOfficialAccountsWorkspace({
               <Smartphone size={14} />
               到手机继续
             </Button>
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-[20px] border border-[color:var(--border-faint)] bg-white px-3 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.05)]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-medium tracking-[0.08em] text-[color:var(--text-muted)]">
+                展示方式切换
+              </div>
+              <div className="mt-1 text-[12px] text-[color:var(--text-secondary)]">
+                {displayMode === "feed"
+                  ? "当前是常看与文章模式，上面常看的号，下面文章流。"
+                  : "当前是按号查看模式，逐个进入公众号主页。"}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <DesktopOfficialModeButton
+                active={displayMode === "feed"}
+                icon={BookOpenText}
+                label="常看与文章"
+                description="常看的号 + 文章流"
+                onClick={() => handleDisplayModeChange("feed")}
+              />
+              <DesktopOfficialModeButton
+                active={displayMode === "accounts"}
+                icon={MessageSquareText}
+                label="按号查看"
+                description="逐个公众号主页"
+                onClick={() => handleDisplayModeChange("accounts")}
+              />
+            </div>
           </div>
         </div>
 
