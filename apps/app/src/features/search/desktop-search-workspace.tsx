@@ -23,7 +23,6 @@ import {
   UsersRound,
 } from "lucide-react";
 import { AvatarChip } from "../../components/avatar-chip";
-import { EmptyState } from "../../components/empty-state";
 import { cn } from "@yinjie/ui";
 import { type DesktopSearchQuickLink } from "./desktop-search-quick-links";
 import { renderHighlightedText } from "./search-utils";
@@ -1332,12 +1331,13 @@ export function DesktopSearchWorkspace({
                       ))}
                     </div>
                   ) : (
-                    <div className="rounded-[16px] border border-dashed border-[color:var(--border-faint)] bg-white px-4 py-6">
-                      <EmptyState
-                        title="还没有最近搜索"
-                        description="从聊天、通讯录或左侧导航进入搜一搜后，这里会开始积累关键词。"
-                      />
-                    </div>
+                    <DesktopSearchStatusCard
+                      badgeLabel="等待记录"
+                      className="mb-0 rounded-[16px] border-[color:var(--border-faint)] bg-white p-3.5"
+                      description="从聊天、通讯录或左侧导航进入搜一搜后，这里会开始积累关键词。"
+                      status="empty"
+                      title="最近搜索"
+                    />
                   )}
                 </DesktopSearchLandingPanel>
 
@@ -1590,9 +1590,13 @@ function DesktopQuickLinksPanel({
           ))}
         </div>
       ) : emptyText ? (
-        <div className="rounded-[16px] border border-dashed border-[color:var(--border-faint)] bg-white px-4 py-6 text-xs leading-6 text-[color:var(--text-muted)]">
-          {emptyText}
-        </div>
+        <DesktopSearchStatusCard
+          badgeLabel="等待回访"
+          className="mb-0 rounded-[16px] border-[color:var(--border-faint)] bg-white p-3.5"
+          description={emptyText}
+          status="empty"
+          title={title}
+        />
       ) : null}
     </DesktopSearchLandingPanel>
   );
@@ -1730,12 +1734,14 @@ function DesktopSearchFooterAffordance({
 function DesktopSearchStatusCard({
   action,
   badgeLabel,
+  className,
   description,
   status,
   title,
 }: {
   action?: ReactNode;
   badgeLabel?: string;
+  className?: string;
   description: string;
   status: "done" | "empty" | "error" | "pending";
   title: string;
@@ -1764,7 +1770,9 @@ function DesktopSearchStatusCard({
           : "已完成";
 
   return (
-    <section className={cn("mb-4 rounded-[18px] border p-4", toneClassName)}>
+    <section
+      className={cn("mb-4 rounded-[18px] border p-4", toneClassName, className)}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="text-sm font-medium text-[color:var(--text-primary)]">
           {title}
