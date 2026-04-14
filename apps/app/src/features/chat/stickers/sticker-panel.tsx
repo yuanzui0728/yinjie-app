@@ -825,6 +825,9 @@ export function StickerPanel({
   const manageShortcutTitle = customStickerLibraryFull
     ? "表情库已满，进入管理删除后再继续添加。"
     : "空间不多了，先去清理不常用表情。";
+  const resumeUploadShortcutTitle = customUploadResumed
+    ? `当前已腾出 ${customUploadResumedSlots} 个空位，点这里直接继续添加图片或 GIF。`
+    : undefined;
   const searchResumeUploadButtonLabel = showManageSearchPauseHint
     ? "现在去添加"
     : catalog.customStickerCount === 0
@@ -930,9 +933,9 @@ export function StickerPanel({
   const headerUploadButtonTitle = headerUsesManageShortcut
     ? "自定义表情已满，先去管理里删掉几张再继续添加。"
     : headerUsesResumeUploadShortcut
-      ? `已经腾出 ${customUploadResumedSlots} 个空位，点这里直接继续添加图片或 GIF。`
+      ? resumeUploadShortcutTitle
       : showPausedManageResumeUploadShortcut
-        ? `搜索中也可以直接继续添加图片或 GIF，当前已腾出 ${customUploadResumedSlots} 个空位。`
+        ? resumeUploadShortcutTitle
         : customStickerLibraryFull
           ? "自定义表情已满，请先删除几个再继续添加"
           : undefined;
@@ -1809,6 +1812,7 @@ export function StickerPanel({
                   <button
                     type="button"
                     onClick={clearSearchAndOpenUpload}
+                    title={resumeUploadShortcutTitle}
                     className="shrink-0 rounded-full bg-[rgba(160,90,10,0.14)] px-2.5 py-1 text-[11px] font-medium text-[#9a5a0a] shadow-[0_1px_2px_rgba(15,23,42,0.06)] transition hover:bg-[rgba(160,90,10,0.18)]"
                   >
                     现在去添加
@@ -2288,6 +2292,7 @@ export function StickerPanel({
                           <button
                             type="button"
                             onClick={exitManageModeAndOpenUpload}
+                            title={resumeUploadShortcutTitle}
                             className="rounded-full bg-[rgba(160,90,10,0.14)] px-3 py-1.5 text-xs font-medium text-[#9a5a0a] transition hover:bg-[rgba(160,90,10,0.18)]"
                           >
                             现在去添加
@@ -2362,6 +2367,7 @@ export function StickerPanel({
                   <button
                     type="button"
                     onClick={exitManageModeAndOpenUpload}
+                    title={resumeUploadShortcutTitle}
                     className="rounded-full bg-[rgba(160,90,10,0.14)] px-2.5 py-1 text-[11px] font-medium text-[#9a5a0a] transition hover:bg-[rgba(160,90,10,0.18)]"
                   >
                     现在去添加
@@ -2658,6 +2664,7 @@ export function StickerPanel({
                         <button
                           type="button"
                           onClick={clearSearchAndOpenUpload}
+                          title={resumeUploadShortcutTitle}
                           className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-[#9a5a0a] transition hover:bg-[color:var(--surface-console)]"
                         >
                           {searchResumeUploadButtonLabel}
