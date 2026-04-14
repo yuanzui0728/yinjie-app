@@ -794,11 +794,8 @@ function DesktopSearchMessageResults({
       ))}
 
       {conversationResults.length ? (
-        <div className="rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-4">
-          <div className="text-xs font-medium text-[color:var(--text-muted)]">
-            会话命中
-          </div>
-          <div className="mt-3 space-y-2">
+        <DesktopSearchSubsectionPanel title="会话命中">
+          <div className="space-y-2">
             {conversationResults.map((item) => (
               <DesktopSearchResultRow
                 key={item.id}
@@ -808,7 +805,7 @@ function DesktopSearchMessageResults({
               />
             ))}
           </div>
-        </div>
+        </DesktopSearchSubsectionPanel>
       ) : null}
     </div>
   );
@@ -841,11 +838,8 @@ function DesktopSearchOfficialAccountResults({
       ))}
 
       {accountResults.length ? (
-        <div className="rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-4">
-          <div className="text-xs font-medium text-[color:var(--text-muted)]">
-            账号命中
-          </div>
-          <div className="mt-3 space-y-2">
+        <DesktopSearchSubsectionPanel title="账号命中">
+          <div className="space-y-2">
             {accountResults.map((item) => (
               <DesktopSearchResultRow
                 key={item.id}
@@ -855,9 +849,26 @@ function DesktopSearchOfficialAccountResults({
               />
             ))}
           </div>
-        </div>
+        </DesktopSearchSubsectionPanel>
       ) : null}
     </div>
+  );
+}
+
+function DesktopSearchSubsectionPanel({
+  children,
+  title,
+}: {
+  children: ReactNode;
+  title: string;
+}) {
+  return (
+    <section className="rounded-[18px] border border-[#dfe7dd] bg-[linear-gradient(180deg,#fbfdfb,white)] px-4 py-4">
+      <div className="text-xs font-medium text-[color:var(--text-muted)]">
+        {title}
+      </div>
+      <div className="mt-3">{children}</div>
+    </section>
   );
 }
 
@@ -1081,7 +1092,7 @@ function DesktopSearchMessageGroupCard({
   onOpen: (item: SearchResultItem) => void;
 }) {
   return (
-    <section className="overflow-hidden rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)]">
+    <section className="overflow-hidden rounded-[20px] border border-[#dde8dc] bg-[linear-gradient(180deg,#fbfdfb,white)] shadow-[0_10px_24px_rgba(15,23,42,0.03)]">
       <button
         type="button"
         onClick={() => onOpen(group.header)}
@@ -1110,14 +1121,14 @@ function DesktopSearchMessageGroupCard({
         </div>
       </button>
 
-      <div className="border-t border-[color:var(--border-faint)] px-4 py-3">
+      <div className="border-t border-[rgba(15,23,42,0.06)] bg-[rgba(248,251,249,0.84)] px-4 py-3">
         <div className="space-y-2">
           {group.messages.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => onOpen(item)}
-              className="flex w-full items-start gap-3 rounded-[14px] bg-white px-3 py-2.5 text-left transition hover:bg-[rgba(7,193,96,0.06)]"
+              className="flex w-full items-start gap-3 rounded-[14px] border border-[rgba(15,23,42,0.04)] bg-white px-3 py-3 text-left transition hover:bg-[rgba(7,193,96,0.04)] hover:shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
             >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[rgba(7,193,96,0.10)] text-[#15803d]">
                 <MessageSquareText size={15} />
@@ -1148,7 +1159,7 @@ function DesktopSearchOfficialAccountGroupCard({
   onOpen: (item: SearchResultItem) => void;
 }) {
   return (
-    <section className="overflow-hidden rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-console)]">
+    <section className="overflow-hidden rounded-[20px] border border-[#dde8dc] bg-[linear-gradient(180deg,#fbfdfb,white)] shadow-[0_10px_24px_rgba(15,23,42,0.03)]">
       <button
         type="button"
         onClick={() => onOpen(group.header)}
@@ -1180,14 +1191,14 @@ function DesktopSearchOfficialAccountGroupCard({
         </div>
       </button>
 
-      <div className="border-t border-[color:var(--border-faint)] px-4 py-3">
+      <div className="border-t border-[rgba(15,23,42,0.06)] bg-[rgba(248,251,249,0.84)] px-4 py-3">
         <div className="space-y-2">
           {group.articles.map((item) => (
             <button
               key={item.id}
               type="button"
               onClick={() => onOpen(item)}
-              className="flex w-full items-start gap-3 rounded-[14px] bg-white px-3 py-2.5 text-left transition hover:bg-[rgba(7,193,96,0.06)]"
+              className="flex w-full items-start gap-3 rounded-[14px] border border-[rgba(15,23,42,0.04)] bg-white px-3 py-3 text-left transition hover:bg-[rgba(7,193,96,0.04)] hover:shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
             >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[rgba(7,193,96,0.10)] text-[#15803d]">
                 <Newspaper size={15} />
@@ -1309,7 +1320,7 @@ function DesktopSearchResultRow({
     <button
       type="button"
       onClick={() => onOpen(item)}
-      className="flex w-full items-center gap-3 rounded-[16px] bg-white px-3.5 py-3 text-left transition hover:bg-[rgba(7,193,96,0.04)] hover:shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
+      className="flex w-full items-center gap-3 rounded-[16px] border border-[rgba(15,23,42,0.04)] bg-white px-3.5 py-3 text-left transition hover:bg-[rgba(7,193,96,0.04)] hover:shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
     >
       <AvatarChip
         name={item.avatarName ?? item.title}
@@ -1321,7 +1332,7 @@ function DesktopSearchResultRow({
           <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">
             {renderHighlightedText(item.title, keyword)}
           </div>
-          <span className="rounded-full bg-[color:var(--surface-console)] px-2 py-0.5 text-[10px] text-[color:var(--text-muted)]">
+          <span className="rounded-full bg-[rgba(7,193,96,0.08)] px-2 py-0.5 text-[10px] text-[color:var(--brand-primary)]">
             {item.badge}
           </span>
         </div>
