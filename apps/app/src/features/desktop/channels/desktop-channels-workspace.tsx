@@ -43,7 +43,9 @@ type DesktopChannelsWorkspaceProps = {
   onCommentSubmit: (postId: string) => void;
   onLike: (postId: string) => void;
   onRefresh: () => void;
+  onToggleFollowAuthor: (post: FeedPostListItem) => void;
   onToggleFavorite: (post: FeedPostListItem) => void;
+  onViewPost: (postId: string) => void;
 };
 
 export function DesktopChannelsWorkspace({
@@ -60,7 +62,9 @@ export function DesktopChannelsWorkspace({
   onCommentSubmit,
   onLike,
   onRefresh,
+  onToggleFollowAuthor,
   onToggleFavorite,
+  onViewPost,
 }: DesktopChannelsWorkspaceProps) {
   const navigate = useNavigate();
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
@@ -176,6 +180,14 @@ export function DesktopChannelsWorkspace({
         right.latestCreatedAt.localeCompare(left.latestCreatedAt),
       );
   }, [posts]);
+
+  useEffect(() => {
+    if (!selectedPost?.id) {
+      return;
+    }
+
+    onViewPost(selectedPost.id);
+  }, [onViewPost, selectedPost?.id]);
 
   return (
     <div className="flex h-full min-h-0 bg-[rgba(244,247,246,0.98)]">
@@ -442,14 +454,41 @@ export function DesktopChannelsWorkspace({
                             {selectedPost.authorName}
                           </div>
                           <div className="mt-1 text-xs text-[color:var(--text-muted)]">
-                            {formatTimestamp(selectedPost.createdAt)} · AI
-                            世界内容
+                            {formatTimestamp(selectedPost.createdAt)} ·{" "}
+                            {formatChannelMeta(selectedPost)}
                           </div>
                         </div>
+                        <Button
+                          variant={selectedPost.ownerState?.isFollowingAuthor ? "secondary" : "primary"}
+                          size="sm"
+                          onClick={() => onToggleFollowAuthor(selectedPost)}
+                          className={selectedPost.ownerState?.isFollowingAuthor
+                            ? "border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] shadow-none hover:bg-[color:var(--surface-console)]"
+                            : "bg-[color:var(--brand-primary)] text-white shadow-none hover:opacity-95"}
+                        >
+                          {selectedPost.ownerState?.isFollowingAuthor ? "已关注" : "+关注"}
+                        </Button>
                       </div>
+                      {selectedPost.title ? (
+                        <div className="mt-4 text-[18px] font-semibold text-[color:var(--text-primary)]">
+                          {selectedPost.title}
+                        </div>
+                      ) : null}
                       <div className="mt-4 text-[15px] leading-8 text-[color:var(--text-primary)]">
                         {selectedPost.text}
                       </div>
+                      {selectedPost.topicTags?.length ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {selectedPost.topicTags.slice(0, 4).map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded-full border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-2.5 py-1 text-[11px] text-[color:var(--text-secondary)]"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
                       </div>
 
                     <div className="flex items-center gap-2">
@@ -671,4 +710,18 @@ function resolveLiveQualityLabel(
   }
 
   return "高清";
+}
+
+function formatChannelMeta(post: FeedPostListItem) {
+  const pieces = [`${post.viewCount ?? 0} 播放`];
+
+  if (typeof post.durationMs === "number" && post.durationMs > 0) {
+    pieces.push(`${Math.max(1, Math.round(post.durationMs / 1000))} 秒`);
+  }
+
+  if (post.topicTags?.length) {
+    pieces.push(`#${post.topicTags[0]}`);
+  }
+
+  return pieces.join(" · ");
 }
