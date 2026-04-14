@@ -254,7 +254,7 @@ export function OfficialAccountServiceThread({
   if (isDesktop) {
     return (
       <div className="flex h-full min-h-0 bg-[color:var(--bg-app)]">
-        <section className="flex w-[440px] min-w-0 shrink-0 flex-col border-r border-[color:var(--border-faint)] bg-white">
+        <section className="flex w-[clamp(300px,44%,440px)] min-w-0 shrink-0 flex-col border-r border-[color:var(--border-faint)] bg-white">
           <header className="border-b border-[color:var(--border-faint)] bg-white/88 px-5 py-4 backdrop-blur-xl">
             <div className="space-y-3">
               <div className="min-w-0">
