@@ -55,6 +55,7 @@ import {
   loadSearchHistory,
   pushSearchHistory,
 } from "./search-history";
+import { renderHighlightedText } from "./search-utils";
 import type { SearchHistoryItem } from "./search-types";
 import {
   type DesktopSearchQuickLink,
@@ -769,6 +770,7 @@ export function DesktopSearchDropdownPanel({
                         key={item.id}
                         active={activeActionId === item.id}
                         item={item}
+                        keyword={trimmedKeyword}
                         variant="conversations"
                         onMouseEnter={() => setActiveActionId(item.id)}
                         onClick={() => handleOpenQuickLink(item)}
@@ -789,6 +791,7 @@ export function DesktopSearchDropdownPanel({
                         key={item.id}
                         active={activeActionId === item.id}
                         item={item}
+                        keyword={trimmedKeyword}
                         variant="officialAccounts"
                         onMouseEnter={() => setActiveActionId(item.id)}
                         onClick={() => handleOpenQuickLink(item)}
@@ -814,6 +817,7 @@ export function DesktopSearchDropdownPanel({
                         avatarSrc={item.character.avatar}
                         badge="联系人"
                         description={buildFriendSuggestionDescription(item)}
+                        keyword={trimmedKeyword}
                         title={getFriendDisplayName(item)}
                         variant="contact"
                         onMouseEnter={() =>
@@ -853,6 +857,7 @@ export function DesktopSearchDropdownPanel({
                           item.character.currentStatus?.trim() ||
                           "打开资料卡后可发起好友申请"
                         }
+                        keyword={trimmedKeyword}
                         title={item.character.name}
                         variant="worldCharacter"
                         onMouseEnter={() =>
@@ -884,6 +889,7 @@ export function DesktopSearchDropdownPanel({
                         key={item.id}
                         active={activeActionId === item.id}
                         item={item}
+                        keyword={trimmedKeyword}
                         variant="favorites"
                         onMouseEnter={() => setActiveActionId(item.id)}
                         onClick={() => handleOpenQuickLink(item)}
@@ -904,6 +910,7 @@ export function DesktopSearchDropdownPanel({
                         key={item.id}
                         active={activeActionId === item.id}
                         item={item}
+                        keyword={trimmedKeyword}
                         variant="miniPrograms"
                         onMouseEnter={() => setActiveActionId(item.id)}
                         onClick={() => handleOpenQuickLink(item)}
@@ -956,6 +963,7 @@ export function DesktopSearchDropdownPanel({
                       key={item.id}
                       active={activeActionId === item.id}
                       item={item}
+                      keyword=""
                       variant="conversations"
                       onMouseEnter={() => setActiveActionId(item.id)}
                       onClick={() => handleOpenQuickLink(item)}
@@ -976,6 +984,7 @@ export function DesktopSearchDropdownPanel({
                       key={item.id}
                       active={activeActionId === item.id}
                       item={item}
+                      keyword=""
                       variant="officialAccounts"
                       onMouseEnter={() => setActiveActionId(item.id)}
                       onClick={() => handleOpenQuickLink(item)}
@@ -996,6 +1005,7 @@ export function DesktopSearchDropdownPanel({
                       key={item.id}
                       active={activeActionId === item.id}
                       item={item}
+                      keyword=""
                       variant="miniPrograms"
                       onMouseEnter={() => setActiveActionId(item.id)}
                       onClick={() => handleOpenQuickLink(item)}
@@ -1022,6 +1032,7 @@ export function DesktopSearchDropdownPanel({
                       key={item.id}
                       active={activeActionId === item.id}
                       item={item}
+                      keyword=""
                       variant="favorites"
                       onMouseEnter={() => setActiveActionId(item.id)}
                       onClick={() => handleOpenQuickLink(item)}
@@ -1056,7 +1067,9 @@ export function DesktopSearchDropdownPanel({
                   size={14}
                   className="shrink-0 text-[color:var(--text-dim)]"
                 />
-                <span className="truncate">{item.keyword}</span>
+                <span className="truncate">
+                  {renderHighlightedText(item.keyword, trimmedKeyword)}
+                </span>
               </button>
             ))}
           </div>
@@ -1094,12 +1107,14 @@ function SearchLauncherSection({
 function SearchLauncherQuickLinkRow({
   active = false,
   item,
+  keyword,
   onMouseEnter,
   onClick,
   variant,
 }: {
   active?: boolean;
   item: DesktopSearchQuickLink;
+  keyword: string;
   onMouseEnter?: () => void;
   onClick: () => void;
   variant: "conversations" | "officialAccounts";
@@ -1141,7 +1156,7 @@ function SearchLauncherQuickLinkRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium text-[color:var(--text-primary)]">
-            {item.title}
+            {renderHighlightedText(item.title, keyword)}
           </span>
           <span
             className={cn(
@@ -1153,10 +1168,10 @@ function SearchLauncherQuickLinkRow({
           </span>
         </div>
         <div className="mt-1 truncate text-[11px] text-[color:var(--text-muted)]">
-          {item.meta}
+          {renderHighlightedText(item.meta, keyword)}
         </div>
         <div className="mt-2 line-clamp-2 text-[11px] leading-5 text-[color:var(--text-secondary)]">
-          {item.description}
+          {renderHighlightedText(item.description, keyword)}
         </div>
       </div>
       <div
@@ -1181,6 +1196,7 @@ function SearchLauncherCharacterRow({
   avatarSrc,
   badge,
   description,
+  keyword,
   onMouseEnter,
   onClick,
   title,
@@ -1191,6 +1207,7 @@ function SearchLauncherCharacterRow({
   avatarSrc?: string | null;
   badge: string;
   description: string;
+  keyword: string;
   onMouseEnter?: () => void;
   onClick: () => void;
   title: string;
@@ -1231,7 +1248,7 @@ function SearchLauncherCharacterRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium text-[color:var(--text-primary)]">
-            {title}
+            {renderHighlightedText(title, keyword)}
           </span>
           <span
             className={cn(
@@ -1243,7 +1260,7 @@ function SearchLauncherCharacterRow({
           </span>
         </div>
         <div className={cn("mt-1 truncate text-[11px]", metaTextClassName)}>
-          {description}
+          {renderHighlightedText(description, keyword)}
         </div>
       </div>
       <div
@@ -1261,12 +1278,14 @@ function SearchLauncherCharacterRow({
 function SearchLauncherFeatureRow({
   active = false,
   item,
+  keyword,
   onMouseEnter,
   onClick,
   variant,
 }: {
   active?: boolean;
   item: DesktopSearchQuickLink;
+  keyword: string;
   onMouseEnter?: () => void;
   onClick: () => void;
   variant: "favorites" | "miniPrograms";
@@ -1306,7 +1325,7 @@ function SearchLauncherFeatureRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium text-[color:var(--text-primary)]">
-            {item.title}
+            {renderHighlightedText(item.title, keyword)}
           </span>
           <span
             className={cn(
@@ -1318,10 +1337,10 @@ function SearchLauncherFeatureRow({
           </span>
         </div>
         <div className="mt-1 truncate text-[11px] text-[color:var(--text-muted)]">
-          {item.meta}
+          {renderHighlightedText(item.meta, keyword)}
         </div>
         <div className="mt-2 line-clamp-2 text-[11px] leading-5 text-[color:var(--text-secondary)]">
-          {item.description}
+          {renderHighlightedText(item.description, keyword)}
         </div>
       </div>
       <div
