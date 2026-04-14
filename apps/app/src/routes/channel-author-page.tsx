@@ -451,31 +451,67 @@ function AuthorMetricCard({
 }
 
 function ChannelPostCover({ post }: { post: FeedPostListItem }) {
+  const coverPresentation = resolveChannelPostCoverPresentation(post);
+
   if (post.coverUrl?.trim()) {
     return (
-      <div className="h-[8.75rem] w-[7rem] shrink-0 overflow-hidden rounded-[18px] bg-[#d8e5de]">
+      <div className="relative h-[8.75rem] w-[7rem] shrink-0 overflow-hidden rounded-[18px] bg-[#d8e5de]">
         <img
           src={post.coverUrl}
           alt={post.title || post.authorName}
           className="h-full w-full object-cover"
         />
+        <div
+          className={cn(
+            "absolute inset-x-0 top-0 flex items-center justify-between px-2.5 py-2 text-white",
+            coverPresentation.overlayClassName,
+          )}
+        >
+          <div
+            className={cn(
+              "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-medium",
+              coverPresentation.badgeClassName,
+            )}
+          >
+            {coverPresentation.icon}
+            {coverPresentation.label}
+          </div>
+        </div>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,rgba(15,23,42,0),rgba(15,23,42,0.86))] px-2.5 py-2">
+          <div className="text-[10px] text-white/88">
+            {coverPresentation.secondaryLabel}
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-[8.75rem] w-[7rem] shrink-0 flex-col justify-between rounded-[18px] bg-[linear-gradient(180deg,#1c1f24,#0f1115)] px-3 py-3 text-white">
-      <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/10">
-        <PlaySquare size={16} />
+    <div
+      className={cn(
+        "flex h-[8.75rem] w-[7rem] shrink-0 flex-col justify-between rounded-[18px] px-3 py-3 text-white",
+        coverPresentation.panelClassName,
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white/12">
+          {coverPresentation.icon}
+        </div>
+        <div
+          className={cn(
+            "rounded-full px-2 py-1 text-[10px] font-medium",
+            coverPresentation.badgeClassName,
+          )}
+        >
+          {coverPresentation.label}
+        </div>
       </div>
       <div>
         <div className="text-[11px] font-medium text-white/86">
-          {post.mediaType === "video" ? "视频号短片" : "内容卡片"}
+          {coverPresentation.title}
         </div>
         <div className="mt-1 text-[10px] text-white/62">
-          {post.durationMs
-            ? `${Math.max(1, Math.round(post.durationMs / 1000))} 秒`
-            : "等待补充封面"}
+          {coverPresentation.secondaryLabel}
         </div>
       </div>
     </div>
@@ -509,6 +545,50 @@ function matchesChannelAuthorCollection(
   }
 
   return post.mediaType !== "video";
+}
+
+function resolveChannelPostCoverPresentation(post: FeedPostListItem) {
+  if (post.sourceKind === "live_clip") {
+    return {
+      badgeClassName: "bg-[rgba(255,255,255,0.14)] text-white",
+      icon: <RadioTower size={14} />,
+      label: "直播回放",
+      overlayClassName:
+        "bg-[linear-gradient(180deg,rgba(120,24,24,0.82),rgba(120,24,24,0))]",
+      panelClassName:
+        "bg-[linear-gradient(180deg,#7f1d1d,#451a03)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
+      secondaryLabel: `${formatTimestamp(post.createdAt)} · ${post.viewCount} 播放`,
+      title: "直播精选",
+    };
+  }
+
+  if (post.mediaType === "video") {
+    return {
+      badgeClassName: "bg-[rgba(255,255,255,0.14)] text-white",
+      icon: <PlaySquare size={14} />,
+      label: "视频",
+      overlayClassName:
+        "bg-[linear-gradient(180deg,rgba(15,23,42,0.76),rgba(15,23,42,0))]",
+      panelClassName:
+        "bg-[linear-gradient(180deg,#1f2937,#0f172a)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
+      secondaryLabel: post.durationMs
+        ? `${Math.max(1, Math.round(post.durationMs / 1000))} 秒 · ${post.viewCount} 播放`
+        : `${post.viewCount} 播放`,
+      title: "视频号短片",
+    };
+  }
+
+  return {
+    badgeClassName: "bg-[rgba(7,193,96,0.18)] text-white",
+    icon: <MessageCircleMore size={14} />,
+    label: "动态",
+    overlayClassName:
+      "bg-[linear-gradient(180deg,rgba(22,101,52,0.72),rgba(22,101,52,0))]",
+    panelClassName:
+      "bg-[linear-gradient(180deg,#166534,#14532d)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]",
+    secondaryLabel: `${formatTimestamp(post.createdAt)} · 内容更新`,
+    title: "内容卡片",
+  };
 }
 
 function readStoredChannelAuthorCollection(authorId: string) {
