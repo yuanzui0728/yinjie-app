@@ -345,9 +345,6 @@ export function MobileFriendMomentsPage() {
           <section className="space-y-3">
             <div className="px-1">
               <div className="text-[11px] text-[color:var(--text-muted)]">最近内容</div>
-              <div className="mt-1 text-[12px] leading-5 text-[color:var(--text-secondary)]">
-                这里只看 {displayName} 的朋友圈，不再复用发现页里的大流筛选。
-              </div>
             </div>
 
             {timelineLoading ? (
