@@ -127,6 +127,22 @@ export function DesktopFeedWorkspace({
       );
   }, [posts]);
 
+  useEffect(() => {
+    if (selectedPostId && !posts.some((post) => post.id === selectedPostId)) {
+      setSelectedPostId(null);
+    }
+  }, [posts, selectedPostId]);
+
+  useEffect(() => {
+    if (!activeAuthorId) {
+      return;
+    }
+
+    if (!authorSummaries.some((author) => author.authorId === activeAuthorId)) {
+      setActiveAuthorId(null);
+    }
+  }, [activeAuthorId, authorSummaries]);
+
   const visiblePosts = useMemo(() => {
     if (!activeAuthorId) {
       return posts;
@@ -154,48 +170,6 @@ export function DesktopFeedWorkspace({
     return "当前展示整个世界的公开流，包括世界主人与居民的发言。";
   }, [activeAuthorSummary, visiblePosts.length]);
 
-  useEffect(() => {
-    if (
-      selectedPostId &&
-      !visiblePosts.some((post) => post.id === selectedPostId)
-    ) {
-      setSelectedPostId(null);
-    }
-  }, [selectedPostId, visiblePosts]);
-
-  useEffect(() => {
-    if (!activeAuthorId) {
-      return;
-    }
-
-    if (!authorSummaries.some((author) => author.authorId === activeAuthorId)) {
-      setActiveAuthorId(null);
-    }
-  }, [activeAuthorId, authorSummaries]);
-
-  const sidebarMode = selectedPostId
-    ? "detail"
-    : activeAuthorSummary
-      ? "author"
-      : "summary";
-  const residentPostsCount = useMemo(
-    () => posts.filter((post) => post.authorType === "character").length,
-    [posts],
-  );
-  const ownerPostsCount = useMemo(
-    () => posts.filter((post) => post.authorType === "user").length,
-    [posts],
-  );
-  const aiReactedPostsCount = useMemo(
-    () => posts.filter((post) => post.aiReacted).length,
-    [posts],
-  );
-  const recentPostsCount = useMemo(() => {
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
-    return posts.filter(
-      (post) => (parseTimestamp(post.createdAt) ?? 0) >= cutoff,
-    ).length;
-  }, [posts]);
   const activeResidentSummary = useMemo(() => {
     const residents = authorSummaries.filter(
       (author) => author.authorType === "character",
@@ -222,10 +196,35 @@ export function DesktopFeedWorkspace({
     );
   }, [authorSummaries]);
 
+  const sidebarMode = selectedPostId
+    ? "detail"
+    : activeAuthorSummary
+      ? "author"
+      : "summary";
+
   function focusAuthor(authorId: string) {
     setActiveAuthorId(authorId);
     setSelectedPostId(null);
   }
+
+  const residentPostsCount = useMemo(
+    () => posts.filter((post) => post.authorType === "character").length,
+    [posts],
+  );
+  const ownerPostsCount = useMemo(
+    () => posts.filter((post) => post.authorType === "user").length,
+    [posts],
+  );
+  const aiReactedPostsCount = useMemo(
+    () => posts.filter((post) => post.aiReacted).length,
+    [posts],
+  );
+  const recentPostsCount = useMemo(() => {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    return posts.filter(
+      (post) => (parseTimestamp(post.createdAt) ?? 0) >= cutoff,
+    ).length;
+  }, [posts]);
 
   return (
     <div className="relative flex h-full min-h-0 bg-[rgba(244,247,246,0.98)]">
@@ -236,7 +235,7 @@ export function DesktopFeedWorkspace({
             errors={errors}
             likeErrorMessage={likeErrorMessage}
             successNotice={successNotice}
-            totalCount={visiblePosts.length}
+            totalCount={posts.length}
             onBackToTop={() => {
               scrollViewportRef.current?.scrollTo({
                 top: 0,
@@ -260,13 +259,13 @@ export function DesktopFeedWorkspace({
                 posts={visiblePosts}
                 selectedPostId={selectedPostId}
                 isPostFavorite={isPostFavorite}
+                onSelectAuthor={focusAuthor}
                 onCommentChange={onCommentChange}
                 onCommentSubmit={onCommentSubmit}
                 onLike={onLike}
                 onToggleFavorite={onToggleFavorite}
                 onOpenCompose={() => setShowCompose(true)}
                 onOpenDetail={setSelectedPostId}
-                onSelectAuthor={focusAuthor}
               />
             </div>
           </div>
@@ -277,12 +276,11 @@ export function DesktopFeedWorkspace({
         activeAuthorId={activeAuthorId}
         activeAuthorSummary={activeAuthorSummary}
         activeResidentSummary={activeResidentSummary}
-        aiReactedPostsCount={aiReactedPostsCount}
         authorPosts={authorPosts}
         authorSummaries={authorSummaries}
+        currentFeedLabel={currentFeedLabel}
         commentDrafts={commentDrafts}
         commentPendingPostId={commentPendingPostId}
-        currentFeedLabel={currentFeedLabel}
         detailErrorMessage={
           selectedPostQuery.isError && selectedPostQuery.error instanceof Error
             ? selectedPostQuery.error.message
@@ -300,6 +298,7 @@ export function DesktopFeedWorkspace({
         selectedPostId={selectedPostId}
         totalPostsCount={posts.length}
         visiblePostsCount={visiblePosts.length}
+        aiReactedPostsCount={aiReactedPostsCount}
         isPostFavorite={isPostFavorite}
         onClearAuthor={() => setActiveAuthorId(null)}
         onCloseDetail={() => setSelectedPostId(null)}

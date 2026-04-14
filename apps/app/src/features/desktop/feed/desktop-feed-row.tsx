@@ -12,11 +12,11 @@ type DesktopFeedRowProps = {
   favorite: boolean;
   likeLoading: boolean;
   post: FeedPostListItem;
+  onSelectAuthor: () => void;
   onCommentChange: (value: string) => void;
   onCommentSubmit: () => void;
   onLike: () => void;
   onOpenDetail: () => void;
-  onSelectAuthor: () => void;
   onToggleFavorite: () => void;
 };
 
@@ -27,11 +27,11 @@ export function DesktopFeedRow({
   favorite,
   likeLoading,
   post,
+  onSelectAuthor,
   onCommentChange,
   onCommentSubmit,
   onLike,
   onOpenDetail,
-  onSelectAuthor,
   onToggleFavorite,
 }: DesktopFeedRowProps) {
   const [showComposer, setShowComposer] = useState(false);
@@ -69,7 +69,7 @@ export function DesktopFeedRow({
             onSelectAuthor();
           }}
           className="shrink-0 rounded-[18px]"
-          aria-label={`查看 ${post.authorName} 的公开动态`}
+          aria-label={`查看 ${post.authorName} 的动态`}
         >
           <AvatarChip
             name={post.authorName}
@@ -87,7 +87,7 @@ export function DesktopFeedRow({
                   event.stopPropagation();
                   onSelectAuthor();
                 }}
-                className="truncate text-left text-[15px] font-semibold text-[color:var(--text-primary)]"
+                className="truncate text-[15px] font-semibold text-[color:var(--text-primary)]"
               >
                 {post.authorName}
               </button>
