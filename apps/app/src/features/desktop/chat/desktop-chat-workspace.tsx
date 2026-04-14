@@ -306,7 +306,8 @@ export function DesktopChatWorkspace({
         serviceConversations,
         searchTerm,
         getConversationPreviewText: (conversation) =>
-          getConversationPreviewParts(conversation, localMessageActionState).text,
+          getConversationPreviewParts(conversation, localMessageActionState)
+            .text,
       }),
     [
       conversations,
@@ -832,6 +833,10 @@ export function DesktopChatWorkspace({
   }
 
   function handleSearchFieldKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.defaultPrevented) {
+      return;
+    }
+
     if (event.key !== "Enter") {
       return;
     }
@@ -1217,7 +1222,9 @@ export function DesktopChatWorkspace({
                   selectedServiceAccountId={selectedServiceAccountId}
                   subscriptionInboxActive={subscriptionInboxActive}
                   localMessageActionState={localMessageActionState}
-                  conversationContextMenuId={conversationContextMenu?.conversation.id}
+                  conversationContextMenuId={
+                    conversationContextMenu?.conversation.id
+                  }
                   onConversationContextMenu={handleConversationContextMenu}
                 />
               ))}
