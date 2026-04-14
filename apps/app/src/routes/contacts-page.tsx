@@ -203,7 +203,7 @@ type MobileQuickActionItem = {
   key: string;
   label: string;
   icon: typeof Users;
-  to?: "/group/new" | "/friend-requests";
+  to?: "/group/new";
   disabled?: boolean;
   disabledLabel?: string;
 };
@@ -214,12 +214,6 @@ const mobileQuickActionItems: MobileQuickActionItem[] = [
     label: "发起群聊",
     icon: Users,
     to: "/group/new",
-  },
-  {
-    key: "add-friend",
-    label: "添加朋友",
-    icon: UserPlus,
-    to: "/friend-requests",
   },
   {
     key: "scan",
@@ -844,11 +838,6 @@ export function ContactsPage() {
     void navigate({ to });
   }
 
-  function handleOpenDesktopAddFriend() {
-    setNotice(null);
-    void navigate({ to: "/desktop/add-friend" });
-  }
-
   function handleDesktopSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
     if (event.defaultPrevented) {
       return;
@@ -862,9 +851,7 @@ export function ContactsPage() {
     desktopSearchLauncher.openSearch();
   }
 
-  function handleMobileQuickActionNavigate(
-    to: "/group/new" | "/friend-requests",
-  ) {
+  function handleMobileQuickActionNavigate(to: "/group/new") {
     setIsQuickMenuOpen(false);
     setNotice(null);
     void navigate({ to });
@@ -1103,18 +1090,6 @@ export function ContactsPage() {
       onClick: handleOpenWorldCharacters,
     },
   ];
-  const desktopShortcutItems: ContactShortcutListItem[] = [
-    {
-      key: "add-friend",
-      label: "添加朋友",
-      subtitle: "搜索隐界号或角色名，发起好友申请",
-      active: false,
-      icon: Search,
-      iconClassName: "bg-[linear-gradient(135deg,#34d399,#07c160)]",
-      onClick: handleOpenDesktopAddFriend,
-    },
-    ...shortcutItems,
-  ];
   const mobileShortcutItems = shortcutItems;
   const mobileErrorItems = [
     friendsQuery.isError && friendsQuery.error instanceof Error
@@ -1229,7 +1204,7 @@ export function ContactsPage() {
         }}
         shortcutList={
           <ContactShortcutList
-            items={desktopShortcutItems}
+            items={shortcutItems}
             compact
             variant="desktop-flat"
           />
@@ -1336,7 +1311,6 @@ export function ContactsPage() {
               onDecline={(requestId) =>
                 declineFriendRequestMutation.mutate(requestId)
               }
-              onOpenAddFriend={handleOpenDesktopAddFriend}
             />
           ) : desktopSelection?.kind === "starred-friends" ? (
             <DesktopContactsStarredFriendsPane

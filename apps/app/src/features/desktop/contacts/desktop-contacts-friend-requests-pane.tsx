@@ -13,7 +13,6 @@ type DesktopContactsFriendRequestsPaneProps = {
   declinePendingId?: string | null;
   onAccept: (requestId: string) => void;
   onDecline: (requestId: string) => void;
-  onOpenAddFriend: () => void;
 };
 
 export function DesktopContactsFriendRequestsPane({
@@ -26,7 +25,6 @@ export function DesktopContactsFriendRequestsPane({
   declinePendingId = null,
   onAccept,
   onDecline,
-  onOpenAddFriend,
 }: DesktopContactsFriendRequestsPaneProps) {
   const pendingCount = requests.filter(
     (item) => item.status === "pending",
@@ -35,26 +33,15 @@ export function DesktopContactsFriendRequestsPane({
   return (
     <div className="flex h-full min-h-0 flex-col overflow-auto bg-[rgba(245,247,247,0.96)]">
       <div className="border-b border-[color:var(--border-faint)] bg-white/82 px-8 py-6 backdrop-blur-xl">
-        <div className="flex items-start justify-between gap-6">
-          <div className="min-w-0">
-            <div className="text-[22px] font-medium text-[color:var(--text-primary)]">
-              新的朋友
-            </div>
-            <div className="mt-2 text-sm text-[color:var(--text-secondary)]">
-              {pendingCount > 0
-                ? `当前有 ${pendingCount} 条待处理好友申请`
-                : "查看桌面端收到的好友申请和处理结果。"}
-            </div>
+        <div className="min-w-0">
+          <div className="text-[22px] font-medium text-[color:var(--text-primary)]">
+            新的朋友
           </div>
-
-          <Button
-            variant="secondary"
-            size="lg"
-            onClick={onOpenAddFriend}
-            className="rounded-[12px] border-[color:var(--border-faint)] bg-white px-5 shadow-none hover:bg-[color:var(--surface-console)]"
-          >
-            添加朋友
-          </Button>
+          <div className="mt-2 text-sm text-[color:var(--text-secondary)]">
+            {pendingCount > 0
+              ? `当前有 ${pendingCount} 条待处理好友申请`
+              : "查看桌面端收到的好友申请和处理结果。"}
+          </div>
         </div>
       </div>
 
@@ -169,12 +156,7 @@ export function DesktopContactsFriendRequestsPane({
           <div className="flex h-full items-center justify-center">
             <EmptyState
               title="暂时没有新的好友请求"
-              description="去添加朋友里搜索角色，或者等待世界里的相遇事件触发新的申请。"
-              action={
-                <Button variant="secondary" onClick={onOpenAddFriend}>
-                  去添加朋友
-                </Button>
-              }
+              description="等待世界里的相遇事件触发新的申请。"
             />
           </div>
         )}
