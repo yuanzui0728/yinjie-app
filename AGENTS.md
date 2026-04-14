@@ -88,6 +88,7 @@
 - `group/$groupId/members/remove`：群成员移除页，承载群成员微信式减号选择移除
 - `notes-page.tsx`：收藏笔记兼容编辑页，桌面端在主窗口内兜底承接收藏笔记编辑
 - `moments-page.tsx`：保留独立朋友圈页能力，当前主要作为发现页内二级能力的兼容承载
+- `friend-moments-page.tsx`：桌面端好友朋友圈独立页，对齐微信电脑版，从通讯录 / 资料页 / 聊天信息等入口进入单个好友的朋友圈时间线
 - `chat-room-page` · `group-chat-page` · `character-detail-page` · `friend-requests-page` · `create-group-page`
 
 ## 数据库实体（29个，物理表保持兼容）

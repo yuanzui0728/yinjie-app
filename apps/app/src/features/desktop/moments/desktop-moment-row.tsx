@@ -14,6 +14,7 @@ import { formatTimestamp } from "../../../lib/format";
 
 type DesktopMomentRowProps = {
   active: boolean;
+  authorActionAriaLabel?: string;
   commentDraft: string;
   commentLoading: boolean;
   likeLoading: boolean;
@@ -30,6 +31,7 @@ type DesktopMomentRowProps = {
 
 export function DesktopMomentRow({
   active,
+  authorActionAriaLabel,
   commentDraft,
   commentLoading,
   likeLoading,
@@ -84,7 +86,9 @@ export function DesktopMomentRow({
             onSelectAuthor();
           }}
           className="shrink-0 rounded-[18px]"
-          aria-label={`查看 ${moment.authorName} 的朋友圈`}
+          aria-label={
+            authorActionAriaLabel ?? `查看 ${moment.authorName} 的朋友圈`
+          }
         >
           <AvatarChip
             name={moment.authorName}
