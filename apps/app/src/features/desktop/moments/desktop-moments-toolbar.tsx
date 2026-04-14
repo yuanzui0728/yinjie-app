@@ -1,5 +1,5 @@
 import { Button, ErrorBlock, InlineNotice, TextField, cn } from "@yinjie/ui";
-import { ArrowUp, PenSquare, RefreshCcw, Search, X } from "lucide-react";
+import { ArrowUp, PenSquare, RefreshCcw, Search } from "lucide-react";
 
 export type DesktopMomentsFeedFilter = "all" | "owner" | "character";
 
@@ -10,10 +10,8 @@ type DesktopMomentsToolbarProps = {
   filteredCountLabel: string;
   likeErrorMessage?: string | null;
   searchText: string;
-  selectedAuthorName?: string | null;
   successNotice?: string;
   onBackToTop: () => void;
-  onClearAuthor: () => void;
   onFilterChange: (nextValue: DesktopMomentsFeedFilter) => void;
   onOpenCompose: () => void;
   onRefresh: () => void;
@@ -33,10 +31,8 @@ export function DesktopMomentsToolbar({
   filteredCountLabel,
   likeErrorMessage,
   searchText,
-  selectedAuthorName,
   successNotice,
   onBackToTop,
-  onClearAuthor,
   onFilterChange,
   onOpenCompose,
   onRefresh,
@@ -57,7 +53,7 @@ export function DesktopMomentsToolbar({
               连续浏览，右侧承接上下文
             </div>
             <div className="mt-1 text-[12px] leading-6 text-[color:var(--text-muted)]">
-              桌面态先聚焦文本动态、点赞、评论和作者时间线。
+              桌面态聚焦连续浏览、互动和进入好友独立朋友圈页。
             </div>
           </div>
 
@@ -93,20 +89,6 @@ export function DesktopMomentsToolbar({
               {option.label}
             </button>
           ))}
-
-          {selectedAuthorName ? (
-            <button
-              type="button"
-              onClick={onClearAuthor}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-[12px] font-medium",
-                activeChipClassName,
-              )}
-            >
-              只看 {selectedAuthorName}
-              <X size={13} />
-            </button>
-          ) : null}
         </div>
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">

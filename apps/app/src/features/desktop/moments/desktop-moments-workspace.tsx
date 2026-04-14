@@ -38,6 +38,10 @@ type DesktopMomentsWorkspaceProps = {
   onCommentSubmit: (momentId: string) => void;
   onCreate: () => void;
   onLike: (momentId: string) => void;
+  onOpenAuthorMoments?: (input: {
+    authorId: string;
+    momentId?: string;
+  }) => void;
   onToggleFavorite: (momentId: string) => void;
   onRefresh: () => void;
   onRouteStateChange?: (state: DesktopMomentsRouteState) => void;
@@ -69,6 +73,7 @@ export function DesktopMomentsWorkspace({
   onCommentSubmit,
   onCreate,
   onLike,
+  onOpenAuthorMoments,
   onToggleFavorite,
   onRefresh,
   onRouteStateChange,
@@ -220,10 +225,18 @@ export function DesktopMomentsWorkspace({
     });
   }, [activeAuthorId, onRouteStateChange, selectedMomentId]);
 
-  function focusAuthor(authorId: string) {
+  function focusAuthor(authorId: string, momentId?: string) {
+    if (onOpenAuthorMoments) {
+      onOpenAuthorMoments({
+        authorId,
+        momentId,
+      });
+      return;
+    }
+
     setActiveFilter("all");
     setActiveAuthorId(authorId);
-    setSelectedMomentId(null);
+    setSelectedMomentId(momentId ?? null);
   }
 
   return (
@@ -237,10 +250,6 @@ export function DesktopMomentsWorkspace({
             filteredCountLabel={filteredCountLabel}
             likeErrorMessage={likeErrorMessage}
             searchText={searchText}
-            selectedAuthorName={
-              activeAuthorSummary?.authorName ??
-              (activeAuthorId ? "当前联系人" : null)
-            }
             successNotice={successNotice}
             onBackToTop={() => {
               scrollViewportRef.current?.scrollTo({
@@ -248,7 +257,6 @@ export function DesktopMomentsWorkspace({
                 behavior: "smooth",
               });
             }}
-            onClearAuthor={() => setActiveAuthorId(null)}
             onFilterChange={setActiveFilter}
             onOpenCompose={() => setShowCompose(true)}
             onRefresh={onRefresh}
@@ -280,8 +288,8 @@ export function DesktopMomentsWorkspace({
                 onToggleFavorite={onToggleFavorite}
                 onOpenCompose={() => setShowCompose(true)}
                 onOpenDetail={(momentId) => setSelectedMomentId(momentId)}
-                onSelectAuthor={(authorId) => {
-                  focusAuthor(authorId);
+                onSelectAuthor={(authorId, momentId) => {
+                  focusAuthor(authorId, momentId);
                 }}
               />
             </div>
