@@ -20,8 +20,12 @@ export function SearchResultCard({
       ? "border-[#d7e5fb] bg-[#f3f7ff] text-[#315b9a]"
       : item.category === "contacts"
         ? "border-[#cfe8d6] bg-[#f2f8f3] text-[#1d6a37]"
+        : item.category === "favorites"
+          ? "border-[#eadbb4] bg-[#fff8e8] text-[#9a6b12]"
         : item.category === "officialAccounts"
           ? "border-[#d8d8d8] bg-[#f5f5f5] text-[color:var(--text-secondary)]"
+          : item.category === "miniPrograms"
+            ? "border-[#d3e7df] bg-[#eff8f4] text-[#226448]"
           : item.category === "moments"
             ? "border-[#d9e7d4] bg-[#f5faf3] text-[#557d37]"
             : "border-[#d6e2db] bg-[#f2f7f4] text-[#3c6a53]";

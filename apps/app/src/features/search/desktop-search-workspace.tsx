@@ -7,6 +7,7 @@ import {
 } from "react";
 import {
   Blocks,
+  Bookmark,
   Clock3,
   MessageSquareText,
   Newspaper,
@@ -33,13 +34,11 @@ import {
 type DesktopSearchWorkspaceProps = {
   activeCategory: SearchCategory;
   error: string | null;
-  favoriteMatches: DesktopSearchQuickLink[];
   groupedResults: SearchResultSection[];
   hasKeyword: boolean;
   history: SearchHistoryItem[];
   loading: boolean;
   matchedCounts: SearchMatchCounts;
-  miniProgramMatches: DesktopSearchQuickLink[];
   onApplyHistory: (keyword: string) => void;
   onClearHistory: () => void;
   onClearKeyword: () => void;
@@ -71,10 +70,22 @@ const landingScopeCards = [
     description: "支持备注名、角色名和标签。",
   },
   {
+    id: "favorites" as const,
+    icon: Bookmark,
+    title: "收藏",
+    description: "聚合消息、笔记和内容收藏。",
+  },
+  {
     id: "officialAccounts" as const,
     icon: Newspaper,
     title: "公众号",
-    description: "先找账号，再落到阅读入口。",
+    description: "支持账号资料和文章命中。",
+  },
+  {
+    id: "miniPrograms" as const,
+    icon: Blocks,
+    title: "小程序",
+    description: "覆盖最近使用和目录里的入口。",
   },
   {
     id: "moments" as const,
@@ -93,13 +104,11 @@ const landingScopeCards = [
 export function DesktopSearchWorkspace({
   activeCategory,
   error,
-  favoriteMatches,
   groupedResults,
   hasKeyword,
   history,
   loading,
   matchedCounts,
-  miniProgramMatches,
   onApplyHistory,
   onClearHistory,
   onClearKeyword,
@@ -118,8 +127,6 @@ export function DesktopSearchWorkspace({
 }: DesktopSearchWorkspaceProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const normalizedKeyword = searchText.trim().toLowerCase();
-  const hasQuickMatches =
-    favoriteMatches.length > 0 || miniProgramMatches.length > 0;
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -131,21 +138,11 @@ export function DesktopSearchWorkspace({
     }
 
     if (activeCategory === "all") {
-      const quickCount = favoriteMatches.length + miniProgramMatches.length;
-      return quickCount
-        ? `关键词“${searchText.trim()}”命中 ${visibleResults.length} 条内容结果，另有 ${quickCount} 项快捷命中。`
-        : `关键词“${searchText.trim()}”命中 ${visibleResults.length} 条内容结果。`;
+      return `关键词“${searchText.trim()}”命中 ${visibleResults.length} 条内容结果。`;
     }
 
     return `当前查看 ${searchCategoryTitles[activeCategory]}，共 ${visibleResults.length} 条结果。`;
-  }, [
-    activeCategory,
-    favoriteMatches.length,
-    hasKeyword,
-    miniProgramMatches.length,
-    searchText,
-    visibleResults.length,
-  ]);
+  }, [activeCategory, hasKeyword, searchText, visibleResults.length]);
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[color:var(--bg-app)]">
@@ -237,7 +234,7 @@ export function DesktopSearchWorkspace({
 
           {!loading && !error && !hasKeyword ? (
             <div className="space-y-6">
-              <div className="grid gap-3 lg:grid-cols-5">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {landingScopeCards.map((item) => {
                   const Icon = item.icon;
                   const count =
@@ -245,8 +242,12 @@ export function DesktopSearchWorkspace({
                       ? scopeCounts.conversations
                       : item.id === "contacts"
                         ? scopeCounts.contacts
+                        : item.id === "favorites"
+                          ? scopeCounts.favorites
                         : item.id === "officialAccounts"
                           ? scopeCounts.officialAccounts
+                          : item.id === "miniPrograms"
+                            ? scopeCounts.miniPrograms
                           : item.id === "moments"
                             ? scopeCounts.moments
                             : scopeCounts.feed;
@@ -360,38 +361,7 @@ export function DesktopSearchWorkspace({
             </div>
           ) : null}
 
-          {!loading &&
-          !error &&
-          hasKeyword &&
-          activeCategory === "all" &&
-          hasQuickMatches ? (
-            <div className="space-y-4">
-              {favoriteMatches.length ? (
-                <DesktopQuickLinksPanel
-                  title="收藏快捷命中"
-                  description="这部分结果优先直达收藏对象。"
-                  emptyText=""
-                  items={favoriteMatches}
-                  onOpen={onOpenQuickLink}
-                />
-              ) : null}
-              {miniProgramMatches.length ? (
-                <DesktopQuickLinksPanel
-                  title="小程序快捷命中"
-                  description="最近使用和目录匹配到的小程序会先收口在这里。"
-                  emptyText=""
-                  items={miniProgramMatches}
-                  onOpen={onOpenQuickLink}
-                />
-              ) : null}
-            </div>
-          ) : null}
-
-          {!loading &&
-          !error &&
-          hasKeyword &&
-          !visibleResults.length &&
-          !hasQuickMatches ? (
+          {!loading && !error && hasKeyword && !visibleResults.length ? (
             <div className="rounded-[20px] border border-dashed border-[color:var(--border-faint)] bg-white/92 px-6 py-10">
               <EmptyState
                 title="没有找到匹配结果"
@@ -402,12 +372,7 @@ export function DesktopSearchWorkspace({
 
           {!loading && !error && hasKeyword ? (
             activeCategory === "all" ? (
-              <div
-                className={cn(
-                  "space-y-6",
-                  hasQuickMatches ? "mt-6" : undefined,
-                )}
-              >
+              <div className="space-y-6">
                 {groupedResults.map((section) => {
                   const previewResults = section.results.slice(0, 6);
                   const hasMore =

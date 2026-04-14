@@ -133,7 +133,7 @@ export function MobileSearchWorkspace({
               type="search"
               value={searchText}
               onChange={(event) => setSearchText(event.target.value)}
-              placeholder="搜索聊天记录、联系人、公众号和内容"
+              placeholder="搜索聊天记录、联系人、收藏、公众号和小程序"
               className="h-9 w-full rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-canvas-elevated)] pl-9 pr-11 text-[13px] text-[color:var(--text-primary)] outline-none transition-[background-color,border-color] placeholder:text-[color:var(--text-dim)] focus:border-[rgba(7,193,96,0.18)] focus:bg-white"
             />
             {searchText ? (
@@ -288,9 +288,14 @@ export function MobileSearchWorkspace({
                   value={`${scopeCounts.conversations}`}
                 />
                 <ScopeStat label="联系人" value={`${scopeCounts.contacts}`} />
+                <ScopeStat label="收藏" value={`${scopeCounts.favorites}`} />
                 <ScopeStat
                   label="公众号"
                   value={`${scopeCounts.officialAccounts}`}
+                />
+                <ScopeStat
+                  label="小程序"
+                  value={`${scopeCounts.miniPrograms}`}
                 />
                 <ScopeStat label="朋友圈" value={`${scopeCounts.moments}`} />
                 <ScopeStat label="广场动态" value={`${scopeCounts.feed}`} />

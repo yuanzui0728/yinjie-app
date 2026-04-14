@@ -37,14 +37,12 @@ export function SearchPage() {
   );
   const [history, setHistory] = useState(() => loadSearchHistory());
   const {
-    favoriteMatches,
     error,
     filteredResults,
     groupedResults,
     hasKeyword,
     loading,
     matchedCounts,
-    miniProgramMatches,
     recentFavorites,
     recentMiniPrograms,
     scopeCounts,
@@ -177,13 +175,11 @@ export function SearchPage() {
       <DesktopSearchWorkspace
         activeCategory={activeCategory}
         error={error}
-        favoriteMatches={favoriteMatches}
         groupedResults={groupedResults}
         hasKeyword={hasKeyword}
         history={history}
         loading={loading}
         matchedCounts={matchedCounts}
-        miniProgramMatches={miniProgramMatches}
         onApplyHistory={handleApplyHistory}
         onClearHistory={handleClearHistory}
         onClearKeyword={() => setSearchText("")}
