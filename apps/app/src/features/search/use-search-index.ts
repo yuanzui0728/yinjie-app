@@ -7,6 +7,7 @@ import {
   getFriends,
   getGroupMessages,
   getMoments,
+  getOfficialAccountArticles,
   listCharacters,
   listOfficialAccounts,
 } from "@yinjie/contracts";
@@ -94,6 +95,10 @@ export function useSearchIndex(
     () => conversationsQuery.data ?? [],
     [conversationsQuery.data],
   );
+  const officialAccounts = useMemo(
+    () => officialAccountsQuery.data ?? [],
+    [officialAccountsQuery.data],
+  );
   const conversationsSearchKey = useMemo(
     () =>
       conversations
@@ -103,6 +108,13 @@ export function useSearchIndex(
         )
         .join("|"),
     [conversations],
+  );
+  const officialAccountsSearchKey = useMemo(
+    () =>
+      officialAccounts
+        .map((item) => `${item.id}:${item.lastPublishedAt ?? "none"}`)
+        .join("|"),
+    [officialAccounts],
   );
 
   const messageSearchIndexQuery = useQuery({
@@ -135,6 +147,30 @@ export function useSearchIndex(
       return settledResults.flatMap((result) =>
         result.status === "fulfilled" ? result.value : [],
       ) as SearchMessageRow[];
+    },
+  });
+  const officialAccountArticlesQuery = useQuery({
+    queryKey: [
+      "app-search-official-account-articles",
+      baseUrl,
+      officialAccountsSearchKey,
+    ],
+    enabled: Boolean(normalizedSearchText) && officialAccounts.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const settledResults = await Promise.allSettled(
+        officialAccounts.map(async (account) => {
+          const articles = await getOfficialAccountArticles(
+            account.id,
+            baseUrl,
+          );
+          return articles.map((article) => ({ account, article }));
+        }),
+      );
+
+      return settledResults.flatMap((result) =>
+        result.status === "fulfilled" ? result.value : [],
+      );
     },
   });
 
@@ -277,34 +313,58 @@ export function useSearchIndex(
       },
     );
 
-    const officialAccountResults: SearchResultItem[] = (
-      officialAccountsQuery.data ?? []
-    ).map((account) => ({
-      id: `official-${account.id}`,
+    const officialAccountResults: SearchResultItem[] = officialAccounts.map(
+      (account) => ({
+        id: `official-${account.id}`,
+        category: "officialAccounts",
+        title: account.name,
+        description:
+          account.recentArticle?.title ||
+          account.description ||
+          "查看公众号资料与最近文章。",
+        meta: `${account.accountType === "service" ? "服务号" : "订阅号"} · @${
+          account.handle
+        }`,
+        keywords: [
+          account.name,
+          account.handle,
+          account.description,
+          account.recentArticle?.title,
+          account.recentArticle?.summary,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase(),
+        to: `/official-accounts/${account.id}`,
+        badge: account.accountType === "service" ? "服务号" : "订阅号",
+        avatarName: account.name,
+        avatarSrc: account.avatar,
+        sortTime: parseTimestamp(account.lastPublishedAt) ?? 0,
+      }),
+    );
+    const officialAccountArticleResults: SearchResultItem[] = (
+      officialAccountArticlesQuery.data ?? []
+    ).map(({ account, article }) => ({
+      id: `official-article-${article.id}`,
       category: "officialAccounts",
-      title: account.name,
-      description:
-        account.recentArticle?.title ||
-        account.description ||
-        "查看公众号资料与最近文章。",
-      meta: `${account.accountType === "service" ? "服务号" : "订阅号"} · @${
-        account.handle
-      }`,
+      title: article.title,
+      description: article.summary || `来自 ${account.name} 的公众号文章`,
+      meta: `公众号文章 · ${account.name} · ${formatTimestamp(article.publishedAt)}`,
       keywords: [
         account.name,
         account.handle,
-        account.description,
-        account.recentArticle?.title,
-        account.recentArticle?.summary,
+        article.title,
+        article.summary,
+        article.authorName,
       ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase(),
-      to: `/official-accounts/${account.id}`,
-      badge: account.accountType === "service" ? "服务号" : "订阅号",
+      to: `/official-accounts/articles/${article.id}`,
+      badge: "公众号文章",
       avatarName: account.name,
       avatarSrc: account.avatar,
-      sortTime: parseTimestamp(account.lastPublishedAt) ?? 0,
+      sortTime: parseTimestamp(article.publishedAt) ?? 0,
     }));
 
     const momentResults: SearchResultItem[] = (momentsQuery.data ?? []).map(
@@ -363,6 +423,7 @@ export function useSearchIndex(
       ...globalMessageResults,
       ...contactResults,
       ...officialAccountResults,
+      ...officialAccountArticleResults,
       ...momentResults,
       ...feedResults,
     ];
@@ -375,7 +436,8 @@ export function useSearchIndex(
     messageSearchIndexQuery.data,
     momentsQuery.data,
     normalizedSearchText,
-    officialAccountsQuery.data,
+    officialAccountArticlesQuery.data,
+    officialAccounts,
     isDesktopLayout,
   ]);
 
@@ -425,6 +487,7 @@ export function useSearchIndex(
     extractErrorMessage(friendsQuery.error) ||
     extractErrorMessage(charactersQuery.error) ||
     extractErrorMessage(officialAccountsQuery.error) ||
+    extractErrorMessage(officialAccountArticlesQuery.error) ||
     extractErrorMessage(momentsQuery.error) ||
     extractErrorMessage(feedQuery.error) ||
     extractErrorMessage(messageSearchIndexQuery.error);
