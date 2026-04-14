@@ -8,7 +8,9 @@ import { AvatarChip } from "../../components/avatar-chip";
 import {
   createFriendDirectoryItems,
   createWorldCharacterDirectoryItems,
+  getFriendDisplayName,
   matchesCharacterSearch,
+  matchesFriendSearch,
   type FriendDirectoryItem,
   type WorldCharacterDirectoryItem,
 } from "../contacts/contact-utils";
@@ -230,7 +232,7 @@ export function DesktopSearchDropdownPanel({
     }
 
     return createFriendDirectoryItems(friendsQuery.data ?? [])
-      .filter((item) => matchesFriendDirectorySearch(item, normalizedKeyword))
+      .filter((item) => matchesFriendSearch(item, normalizedKeyword))
       .slice(0, 4);
   }, [friendsQuery.data, normalizedKeyword]);
 
@@ -335,11 +337,11 @@ export function DesktopSearchDropdownPanel({
                     {friendMatches.map((item) => (
                       <SearchLauncherCharacterRow
                         key={`friend-${item.character.id}`}
-                        avatarName={item.character.name}
+                        avatarName={getFriendDisplayName(item)}
                         avatarSrc={item.character.avatar}
                         badge="联系人"
                         description={buildFriendSuggestionDescription(item)}
-                        title={item.friendship.remarkName?.trim() || item.character.name}
+                        title={getFriendDisplayName(item)}
                         onClick={() => {
                           onClose?.();
                           void navigate({
@@ -502,30 +504,9 @@ function SearchLauncherCharacterRow({
   );
 }
 
-function matchesFriendDirectorySearch(
-  item: FriendDirectoryItem,
-  normalizedSearchText: string,
-) {
-  if (matchesCharacterSearch(item.character, normalizedSearchText)) {
-    return true;
-  }
-
-  const haystacks = [
-    item.friendship.remarkName ?? "",
-    item.friendship.region ?? "",
-    item.friendship.source ?? "",
-    item.friendship.tags?.join(" ") ?? "",
-  ];
-
-  return haystacks.some((value) =>
-    value.toLowerCase().includes(normalizedSearchText),
-  );
-}
-
 function buildFriendSuggestionDescription(item: FriendDirectoryItem) {
-  const remarkName = item.friendship.remarkName?.trim();
-  if (remarkName && remarkName !== item.character.name) {
-    return `角色名 ${item.character.name}`;
+  if (getFriendDisplayName(item) !== item.character.name) {
+    return `昵称：${item.character.name}`;
   }
 
   const tags = item.friendship.tags?.filter(Boolean).join("、");
