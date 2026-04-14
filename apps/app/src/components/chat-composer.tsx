@@ -856,8 +856,8 @@ export function ChatComposer({
       return;
     }
 
-    const minHeight = desktopEditorExpanded ? 176 : 40;
-    const maxHeight = desktopEditorExpanded ? 288 : 88;
+    const minHeight = desktopEditorExpanded ? 196 : 88;
+    const maxHeight = desktopEditorExpanded ? 320 : 132;
     input.style.height = "0px";
     input.style.height = `${Math.min(
       Math.max(input.scrollHeight, minHeight),
@@ -2650,8 +2650,8 @@ export function ChatComposer({
       <div
         className={
           isDesktop
-            ? "relative border-t border-black/6 bg-[#f3f3f3] px-4 py-3"
-            : "border-t border-[color:var(--border-subtle)] bg-[color:var(--bg-canvas)] px-2.5 pb-2 pt-1.5"
+            ? "relative border-t border-black/6 bg-[#ededed] px-3.5 py-3"
+            : "border-t border-black/6 bg-[#f7f7f7] px-2 pb-2 pt-1"
         }
         style={{
           paddingBottom: keyboardOpen
@@ -2866,15 +2866,19 @@ export function ChatComposer({
         ) : null}
         <div
           ref={isDesktop ? desktopStickerRef : undefined}
-          className={`relative ${isDesktop ? "rounded-[14px] border border-black/6 bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)]" : "space-y-1"}`}
+          className={`relative ${
+            isDesktop
+              ? "overflow-hidden rounded-[16px] border border-black/8 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.06)]"
+              : "space-y-1.5"
+          }`}
         >
           {isDesktop ? (
             <>
-              <div className="relative px-4 pb-3 pt-3">
+              <div className="relative px-4 pb-2.5 pt-3.5">
                 <button
                   type="button"
                   onClick={toggleDesktopEditorExpanded}
-                  className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-[8px] text-[color:var(--text-secondary)] transition hover:bg-[#f4f4f4] hover:text-[color:var(--text-primary)]"
+                  className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-[9px] text-[color:var(--text-secondary)] transition hover:bg-[#f4f4f4] hover:text-[color:var(--text-primary)]"
                   aria-label={desktopEditorExpanded ? "收起输入框" : "展开输入框"}
                   title={desktopEditorExpanded ? "收起输入框" : "展开输入框"}
                 >
@@ -2886,7 +2890,7 @@ export function ChatComposer({
                 </button>
                 <textarea
                   ref={desktopInputRef}
-                  rows={desktopEditorExpanded ? 8 : 1}
+                  rows={desktopEditorExpanded ? 9 : 3}
                   value={value}
                   onChange={(event) => {
                     onChange(event.target.value);
@@ -2914,13 +2918,13 @@ export function ChatComposer({
                   onKeyDown={handleDesktopInputKeyDown}
                   placeholder={placeholder}
                   className={cn(
-                    "min-h-[40px] w-full resize-none bg-transparent pr-9 text-[14px] leading-6 text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-dim)]",
-                    desktopEditorExpanded ? "max-h-[288px]" : "max-h-[88px]",
+                    "min-h-[88px] w-full resize-none bg-transparent pr-9 text-[14px] leading-6 text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-dim)]",
+                    desktopEditorExpanded ? "max-h-[320px]" : "max-h-[132px]",
                   )}
                 />
               </div>
 
-              <div className="flex items-center justify-between border-t border-black/6 px-3 py-2.5">
+              <div className="flex items-center justify-between border-t border-black/6 bg-[#fafafa] px-3.5 py-2.5">
                 <div className="flex items-center gap-0.5">
                   <DesktopToolbarButton
                     label="表情"
@@ -2998,8 +3002,8 @@ export function ChatComposer({
                     />
                   ) : null}
                 </div>
-                <div className="flex items-center gap-2.5">
-                  <div className="text-[11px] text-[color:var(--text-dim)]">
+                <div className="flex items-center gap-2 border-l border-black/6 pl-3">
+                  <div className="rounded-full bg-white px-2.5 py-1 text-[11px] text-[color:var(--text-dim)] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
                     {desktopEditorExpanded
                       ? "Ctrl/Cmd + Enter 发送"
                       : sendMessageShortcut === "enter"
@@ -3011,7 +3015,7 @@ export function ChatComposer({
                     disabled={composerPending || !value.trim()}
                     variant="primary"
                     className={cn(
-                      "h-[32px] min-w-[72px] rounded-[8px] px-4 text-[13px] font-medium shadow-none",
+                      "h-[34px] min-w-[76px] rounded-[9px] px-4 text-[13px] font-medium shadow-none",
                       value.trim()
                         ? "bg-[#07c160] text-white hover:bg-[#06ad56]"
                         : "bg-[#e8e8e8] text-[#9a9a9a] hover:bg-[#e8e8e8]",
@@ -3023,7 +3027,7 @@ export function ChatComposer({
               </div>
             </>
           ) : (
-            <div className="flex items-end gap-1.5">
+            <div className="flex items-end gap-1.5 rounded-[18px] bg-[#f7f7f7]">
               {showSpeechEntry ? (
                 <button
                   type="button"
@@ -3031,7 +3035,12 @@ export function ChatComposer({
                   disabled={
                     speech.status === "processing" || mobileSpeechPressing
                   }
-                  className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full bg-white/72 text-[#606266] transition active:bg-white disabled:opacity-45"
+                  className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#606266] transition disabled:opacity-45",
+                    mobileComposerMode === "speech"
+                      ? "bg-white text-[#111827] shadow-[0_1px_2px_rgba(15,23,42,0.08)]"
+                      : "bg-transparent active:bg-white/90",
+                  )}
                   aria-label={
                     mobileComposerMode === "speech"
                       ? "切换到键盘输入"
@@ -3062,7 +3071,7 @@ export function ChatComposer({
                   }
                   title={speechDisabledReason ?? undefined}
                   className={cn(
-                    "flex min-h-[34px] min-w-0 flex-1 select-none items-center justify-center rounded-[17px] border border-[color:var(--border-subtle)] bg-white px-3.5 py-1.5 text-[13px] transition touch-none",
+                    "flex min-h-[38px] min-w-0 flex-1 select-none items-center justify-center rounded-[20px] border border-black/8 bg-white px-3.5 py-2 text-[13px] transition touch-none shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]",
                     mobileSpeechPressing
                       ? mobileSpeechCancelIntent
                         ? "border-[#ff4d4f]/45 bg-[#fff5f5] text-[#ff4d4f]"
@@ -3083,7 +3092,7 @@ export function ChatComposer({
                       : "按住说话"}
                 </button>
               ) : (
-                <div className="flex min-w-0 flex-1 items-end rounded-[17px] border border-[color:var(--border-subtle)] bg-white px-2.5 py-0.5">
+                <div className="flex min-w-0 flex-1 items-end rounded-[20px] border border-black/8 bg-white px-3 py-0.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)]">
                   <textarea
                     ref={mobileTextareaRef}
                     rows={1}
@@ -3096,16 +3105,14 @@ export function ChatComposer({
                       );
                     }}
                     onFocus={() => {
-                      setPlusPanelOpen(false);
-                      setStickerPanelOpen(false);
-                      setMobileInputMode("text");
+                      setMobileComposerMode("text");
                       syncInputCursor();
                     }}
                     onClick={syncInputCursor}
                     onKeyUp={syncInputCursor}
                     onSelect={syncInputCursor}
                     placeholder={placeholder}
-                    className="min-h-[32px] max-h-[96px] flex-1 resize-none bg-transparent py-1 text-[14px] leading-[19px] text-[#111827] outline-none placeholder:text-[#a3a3a3]"
+                    className="min-h-[34px] max-h-[96px] flex-1 resize-none bg-transparent py-1.5 text-[15px] leading-[20px] text-[#111827] outline-none placeholder:text-[#a3a3a3]"
                   />
                 </div>
               )}
@@ -3114,8 +3121,10 @@ export function ChatComposer({
                 type="button"
                 onClick={toggleStickerPanel}
                 className={cn(
-                  "flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full bg-white/72 text-[#606266] transition active:bg-white",
-                  mobileComposerMode === "sticker" ? "bg-white text-[#111827]" : "",
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#606266] transition",
+                  mobileComposerMode === "sticker"
+                    ? "bg-white text-[#111827] shadow-[0_1px_2px_rgba(15,23,42,0.08)]"
+                    : "bg-transparent active:bg-white/90",
                 )}
                 aria-label={
                   mobileComposerMode === "sticker" ? "切换到键盘输入" : "表情"
@@ -3133,7 +3142,7 @@ export function ChatComposer({
                   type="button"
                   onClick={onSubmit}
                   disabled={composerPending}
-                  className="flex h-8 min-w-[52px] shrink-0 items-center justify-center rounded-[15px] bg-[#07c160] px-3 text-[13px] font-medium text-white disabled:opacity-45"
+                  className="flex h-9 min-w-[58px] shrink-0 items-center justify-center rounded-[10px] bg-[#07c160] px-3 text-[13px] font-medium text-white shadow-[0_2px_6px_rgba(7,193,96,0.18)] disabled:opacity-45"
                 >
                   发送
                 </button>
@@ -3143,8 +3152,10 @@ export function ChatComposer({
                   onClick={togglePlusPanel}
                   disabled={!onSendAttachment || attachmentBusy}
                   className={cn(
-                    "flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full bg-white/72 text-[#606266] transition active:bg-white disabled:opacity-45",
-                    mobileComposerMode === "plus" ? "bg-white text-[#111827]" : "",
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#606266] transition disabled:opacity-45",
+                    mobileComposerMode === "plus"
+                      ? "bg-white text-[#111827] shadow-[0_1px_2px_rgba(15,23,42,0.08)]"
+                      : "bg-transparent active:bg-white/90",
                   )}
                   aria-label="更多功能"
                 >
@@ -3160,7 +3171,15 @@ export function ChatComposer({
               variant={variant}
               activePackId={activeStickerPackId}
               recentItems={recentStickers}
-              onClose={() => setStickerPanelOpen(false)}
+              onClose={() => {
+                if (isDesktop) {
+                  setStickerPanelOpen(false);
+                  return;
+                }
+
+                setMobileComposerMode("text");
+                focusInput();
+              }}
               onPackChange={setActiveStickerPackId}
               onRecentItemsChange={(items) => setRecentStickers(items)}
               onError={setAttachmentError}
@@ -3254,7 +3273,12 @@ export function ChatComposer({
           </InlineNotice>
         ) : null}
         {composerPending ? (
-          <div className="mt-1 flex items-center gap-1.5 px-0.5 text-[10px] text-[color:var(--text-muted)]">
+          <div
+            className={cn(
+              "mt-1 flex items-center gap-1.5 px-0.5 text-[10px] text-[color:var(--text-muted)]",
+              isDesktop ? "justify-end pr-1" : "",
+            )}
+          >
             <SendHorizontal size={10} />
             <span>正在发送...</span>
           </div>
@@ -5054,8 +5078,8 @@ function ReplyPreviewBar({
     <div
       className={`flex items-start justify-between gap-2.5 ${
         isDesktop
-          ? "mb-3 rounded-[10px] border border-black/6 bg-[#f7f7f7] px-4 py-2.5"
-          : "mb-2.5 rounded-[11px] border border-[rgba(7,193,96,0.12)] border-l-[2px] border-l-[#07c160] bg-[rgba(255,255,255,0.96)] px-2.5 py-1.5 shadow-none"
+          ? "mb-2.5 rounded-[12px] border border-[rgba(7,193,96,0.14)] border-l-[3px] border-l-[#07c160] bg-[#f8fbf8] px-3.5 py-2.5"
+          : "mb-1.5 rounded-[12px] border border-[rgba(7,193,96,0.14)] border-l-[3px] border-l-[#07c160] bg-white px-3 py-1.5 shadow-none"
       }`}
     >
       <div className="min-w-0 flex-1">
@@ -5096,7 +5120,7 @@ function ReplyPreviewBar({
           onClick={onClose}
           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[color:var(--text-secondary)] transition ${
             isDesktop
-              ? "h-7 w-7 rounded-[7px] hover:bg-white hover:text-[color:var(--text-primary)]"
+              ? "h-7 w-7 rounded-[8px] hover:bg-white hover:text-[color:var(--text-primary)]"
               : "h-6.5 w-6.5 active:bg-black/[0.05]"
           }`}
           aria-label="取消回复"
