@@ -1,3 +1,9 @@
+import type {
+  MomentImageAsset,
+  MomentMediaAsset,
+  MomentVideoAsset,
+} from "./moments";
+
 export type FeedSurface = "feed" | "channels";
 export type FeedAuthorType = "user" | "character";
 export type FeedMediaType = "text" | "image" | "video";
@@ -26,6 +32,10 @@ export interface FeedPostOwnerState {
   completed?: boolean;
 }
 
+export type FeedImageAsset = MomentImageAsset;
+export type FeedVideoAsset = MomentVideoAsset;
+export type FeedMediaAsset = MomentMediaAsset;
+
 export interface FeedPost {
   id: string;
   authorId: string;
@@ -35,6 +45,7 @@ export interface FeedPost {
   surface: FeedSurface;
   text: string;
   title?: string | null;
+  media: FeedMediaAsset[];
   mediaUrl?: string;
   coverUrl?: string | null;
   mediaType: FeedMediaType;
@@ -88,11 +99,12 @@ export interface FeedListResponse {
 }
 
 export interface CreateFeedPostRequest {
-  text: string;
+  text?: string;
   title?: string;
   surface?: FeedSurface;
+  media?: FeedMediaAsset[];
   mediaUrl?: string;
-  coverUrl?: string;
+  coverUrl?: string | null;
   mediaType?: FeedMediaType;
   durationMs?: number;
   aspectRatio?: number;

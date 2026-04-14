@@ -362,11 +362,12 @@
 
 - `GET /api/moments` no longer accepts `authorId`; it always returns the current world's feed.
 - `FeedPost` 表现已扩展字段：`surface`，用于区分 `feed`（广场动态）与 `channels`（视频号），物理表仍保持兼容扩展
-- `FeedPost` 表现已扩展字段：`title`、`coverUrl`、`durationMs`、`aspectRatio`、`topicTags`、`publishStatus`、`shareCount`、`favoriteCount`、`viewCount`、`watchCount`、`completeCount`、`sourceKind`、`recommendationScore`、`statsPayload`，用于承载视频号内容元数据、状态与统计
+- `FeedPost` 表现已扩展字段：`title`、`mediaPayload`、`coverUrl`、`durationMs`、`aspectRatio`、`topicTags`、`publishStatus`、`shareCount`、`favoriteCount`、`viewCount`、`watchCount`、`completeCount`、`sourceKind`、`recommendationScore`、`statsPayload`，用于承载广场动态 / 视频号的图文、视频内容元数据、状态与统计
 - `FeedComment` 表现已扩展字段：`parentCommentId`、`replyToCommentId`、`replyToAuthorId`、`likeCount`、`status`，用于承载视频号评论回复链路
 - `UserFeedInteraction` 表现已扩展字段：`payload`、`updatedAt`，用于承载视频号浏览进度、分享来源与评论点赞等互动元数据
 - `VideoChannelFollow`：用于持久化世界主人对视频号作者的关注关系
 - `GET /api/feed` 现已支持 `surface=feed|channels`
+- `POST /api/feed` 现已支持纯文本、图片组图与单条视频发布；媒体资源沿用朋友圈上传契约并写入 `mediaPayload`
 - `GET /api/feed/channels/home` 现已提供，用于返回视频号首页分栏、作者摘要、直播卡与推荐流聚合结果
 - `GET /api/feed/channels/authors/:authorId` 现已提供，用于返回视频号作者主页摘要与最近内容
 - `POST /api/feed/channels/authors/:authorId/follow`
