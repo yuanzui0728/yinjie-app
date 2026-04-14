@@ -747,6 +747,12 @@ export function StickerPanel({
     activeSectionId === "custom" &&
     searching &&
     manageSearchPauseHintVisible;
+  const showDesktopManageStoragePreview =
+    !isMobile &&
+    activeSectionId === "custom" &&
+    trimmedKeyword.length === 0 &&
+    customManageMode &&
+    Boolean(focusedManageSticker);
   const showDesktopManageButton =
     !isMobile &&
     activeSectionId === "custom" &&
@@ -2060,6 +2066,32 @@ export function StickerPanel({
                       <span>{Math.round(customStorageRatio * 100)}%</span>
                     </div>
                   </div>
+                  {showDesktopManageStoragePreview ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] text-[color:var(--text-secondary)]">
+                      <span
+                        className={`max-w-[180px] truncate rounded-full px-2 py-1 ${
+                          manageFocusFlashKey === focusedManageDeleteKey
+                            ? "bg-[rgba(160,90,10,0.14)] text-[#9a5a0a] shadow-[0_1px_2px_rgba(15,23,42,0.06)]"
+                            : "bg-white/88"
+                        }`}
+                      >
+                        当前删除：
+                        {focusedManageSticker?.label ??
+                          focusedManageSticker?.stickerId}
+                      </span>
+                      {focusedManageStickerPosition ? (
+                        <span className="rounded-full bg-white/88 px-2 py-1">
+                          第 {focusedManageStickerPosition}/
+                          {manageableCustomItems.length} 张
+                        </span>
+                      ) : null}
+                      {nextManageDeleteOutcomeLabel ? (
+                        <span className="rounded-full bg-[rgba(160,90,10,0.12)] px-2 py-1 text-[#9a5a0a]">
+                          {nextManageDeleteOutcomeLabel}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <div className="mt-3 flex items-center gap-2">
                     {catalog.customStickerCount === 0 ? (
                       <>
