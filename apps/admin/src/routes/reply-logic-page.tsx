@@ -569,14 +569,6 @@ export function ReplyLogicPage() {
                 </Card>
               ) : null}
 
-              <Card className="bg-[color:var(--surface-console)]">
-                <SectionHeading>运行时常量</SectionHeading>
-                <SnapshotPanel
-                  className="mt-4"
-                  title="当前生效运行时摘要"
-                  value={formatRuntimeConstants(overview.constants)}
-                />
-              </Card>
             </div>
 
             <div id="reply-logic-inspector" className="space-y-6">
