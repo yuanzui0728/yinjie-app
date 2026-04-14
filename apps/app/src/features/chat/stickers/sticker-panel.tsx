@@ -717,6 +717,9 @@ export function StickerPanel({
   const pausedManageResumeLabel = pausedManageFocusLabel
     ? `恢复后回到：${pausedManageFocusLabel}`
     : "恢复后回到上次删除位置";
+  const pausedManageCapacityLabel = customStickerLibraryFull
+    ? "当前仍是满库"
+    : `当前剩余 ${customSlotsRemaining} 个空位`;
   const showSearchSectionJumpHint =
     !isMobile &&
     searching &&
@@ -1611,7 +1614,11 @@ export function StickerPanel({
                     : clearSearch
                 }
                 className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[color:var(--surface-console)] text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-card-hover)]"
-                aria-label="清空表情搜索"
+                aria-label={
+                  showManageSearchPauseHint
+                    ? "清空表情搜索并继续删除管理"
+                    : "清空表情搜索"
+                }
               >
                 <X size={12} />
               </button>
@@ -1619,11 +1626,21 @@ export function StickerPanel({
           </label>
           {showManageSearchPauseHint ? (
             <div className="px-1 pt-2">
-              <div className="flex items-center justify-between gap-3 rounded-[14px] border border-[rgba(160,90,10,0.18)] bg-[rgba(255,251,235,0.94)] px-3 py-2 text-[11px] text-[color:var(--text-secondary)]">
-                <span>搜索中已暂停删除管理，清空搜索后可继续删除。</span>
-                <span className="rounded-full bg-white/88 px-2 py-1 text-[10px] text-[#9a5a0a]">
-                  {pausedManageResumeLabel}
-                </span>
+              <div className="flex items-start justify-between gap-3 rounded-[14px] border border-[rgba(160,90,10,0.18)] bg-[rgba(255,251,235,0.94)] px-3 py-2 text-[11px] text-[color:var(--text-secondary)]">
+                <div className="min-w-0 flex-1">
+                  <div>搜索中已暂停删除管理，清空搜索后可继续删除。</div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px]">
+                    <span className="rounded-full bg-white/88 px-2 py-1 text-[#9a5a0a]">
+                      {pausedManageResumeLabel}
+                    </span>
+                    <span className="rounded-full bg-white/88 px-2 py-1">
+                      {pausedManageCapacityLabel}
+                    </span>
+                    <span className="rounded-full bg-white/88 px-2 py-1">
+                      Esc 继续管理
+                    </span>
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={clearSearchAndResumeManage}
