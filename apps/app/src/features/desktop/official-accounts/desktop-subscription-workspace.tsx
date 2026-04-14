@@ -7,9 +7,11 @@ import {
   markOfficialAccountArticleRead,
   markOfficialAccountDeliveryRead,
 } from "@yinjie/contracts";
-import { ErrorBlock, LoadingBlock } from "@yinjie/ui";
+import { Smartphone } from "lucide-react";
+import { Button, ErrorBlock, LoadingBlock } from "@yinjie/ui";
 import { EmptyState } from "../../../components/empty-state";
 import { OfficialArticleViewer } from "../../../components/official-article-viewer";
+import { buildDesktopMobileOfficialHandoffHash } from "./desktop-mobile-official-handoff-route-state";
 import { useAppRuntimeConfig } from "../../../runtime/runtime-config-store";
 
 export function DesktopSubscriptionWorkspace({
@@ -161,6 +163,21 @@ export function DesktopSubscriptionWorkspace({
     onOpenArticle?.(articleId);
   }
 
+  function handleOpenMobileHandoff() {
+    void navigate({
+      to: "/desktop/mobile",
+      hash: buildDesktopMobileOfficialHandoffHash({
+        surface: "subscription",
+        accountId: activeDelivery?.account.id,
+        articleId: activeArticleId ?? undefined,
+        accountName:
+          activeDelivery?.account.name ?? articleQuery.data?.account.name,
+        articleTitle: articleQuery.data?.title,
+        accountType: "subscription",
+      }),
+    });
+  }
+
   return (
     <div className="flex h-full min-h-0 bg-[color:var(--bg-app)]">
       <section className="flex w-[360px] shrink-0 flex-col border-r border-[color:var(--border-faint)] bg-[rgba(242,246,245,0.78)]">
@@ -173,6 +190,18 @@ export function DesktopSubscriptionWorkspace({
           </div>
           <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
             已关注订阅号的最近推送会集中收口在这里，按微信式聚合流浏览。
+          </div>
+          <div className="mt-4">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleOpenMobileHandoff}
+              className="rounded-xl border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] shadow-none hover:bg-[color:var(--surface-console)]"
+            >
+              <Smartphone size={14} />
+              到手机继续
+            </Button>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2">
             <SidebarMetricCard label="未读推送" value={`${unreadCount} 条`} />
