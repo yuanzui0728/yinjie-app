@@ -170,18 +170,20 @@ const rootActions: Record<RootAction["key"], RootAction> = {
   },
 } as const;
 
-const ROOT_ACTION_PAGE_KEYS: RootAction["key"][][] = [
-  [
-    "album",
-    "camera",
-    "video-call",
-    "location",
-    "red-packet",
-    "transfer",
-    "favorite",
-    "contact",
-  ],
-  ["file", "voice-call"],
+const PRIMARY_ROOT_ACTION_ORDER: RootAction["key"][] = [
+  "album",
+  "camera",
+  "file",
+  "favorite",
+  "contact",
+  "location",
+  "video-call",
+  "voice-call",
+];
+
+const RESERVED_ROOT_ACTION_ORDER: RootAction["key"][] = [
+  "red-packet",
+  "transfer",
 ];
 
 export function MobileChatPlusPanel({
@@ -273,9 +275,10 @@ export function MobileChatPlusPanel({
     }
   }, [activeView]);
 
-  const rootActionPages = ROOT_ACTION_PAGE_KEYS.map((page) =>
-    buildRootActionPage(page),
-  );
+  const rootActionPages = buildRootActionPages({
+    hasVoiceCall: Boolean(onStartVoiceCall),
+    hasVideoCall: Boolean(onStartVideoCall),
+  });
 
   if (!open) {
     return null;
@@ -685,4 +688,46 @@ function buildRootActionPage(keys: readonly RootAction["key"][]) {
     keys.map((key) => rootActions[key]),
     ROOT_ACTIONS_PER_PAGE,
   );
+}
+
+function buildRootActionPages(input: {
+  hasVoiceCall: boolean;
+  hasVideoCall: boolean;
+}) {
+  const enabledPrimaryKeys = PRIMARY_ROOT_ACTION_ORDER.filter((key) =>
+    isRootActionEnabled(key, input),
+  );
+  const disabledPrimaryKeys = PRIMARY_ROOT_ACTION_ORDER.filter(
+    (key) => !isRootActionEnabled(key, input),
+  );
+  const orderedKeys = [
+    ...enabledPrimaryKeys,
+    ...disabledPrimaryKeys,
+    ...RESERVED_ROOT_ACTION_ORDER,
+  ];
+
+  const pages: RootAction["key"][][] = [];
+  for (let index = 0; index < orderedKeys.length; index += ROOT_ACTIONS_PER_PAGE) {
+    pages.push(orderedKeys.slice(index, index + ROOT_ACTIONS_PER_PAGE));
+  }
+
+  return pages.map((page) => buildRootActionPage(page));
+}
+
+function isRootActionEnabled(
+  key: RootAction["key"],
+  input: {
+    hasVoiceCall: boolean;
+    hasVideoCall: boolean;
+  },
+) {
+  if (key === "voice-call") {
+    return input.hasVoiceCall;
+  }
+
+  if (key === "video-call") {
+    return input.hasVideoCall;
+  }
+
+  return !(rootActions[key].disabled ?? false);
 }
