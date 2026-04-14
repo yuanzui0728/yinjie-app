@@ -14,6 +14,8 @@ import { TabPageTopBar } from "../components/tab-page-top-bar";
 import {
   buildContactSections,
   createFriendDirectoryItems,
+  getFriendDisplayName,
+  matchesFriendSearch,
   type FriendDirectoryItem,
 } from "../features/contacts/contact-utils";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
@@ -144,13 +146,9 @@ export function CreateGroupPage() {
       return sortedFriendItems;
     }
 
-    return sortedFriendItems.filter((item) => {
-      return [
-        item.character.name,
-        item.friendship.remarkName ?? "",
-        item.character.relationship ?? "",
-      ].some((value) => value.toLowerCase().includes(keyword));
-    });
+    return sortedFriendItems.filter((item) =>
+      matchesFriendSearch(item, keyword),
+    );
   }, [searchTerm, sortedFriendItems]);
 
   const filteredSections = useMemo(
@@ -387,7 +385,11 @@ export function CreateGroupPage() {
                       checked={selectedIds.includes(item.character.id)}
                       disabled={createMutation.isPending}
                       name={getFriendDisplayName(item)}
-                      relationship={item.character.relationship}
+                      relationship={
+                        getFriendDisplayName(item) !== item.character.name
+                          ? `昵称：${item.character.name}`
+                          : item.character.relationship
+                      }
                       src={item.character.avatar}
                       withDivider={index > 0}
                       onClick={() => toggleSelection(item.character.id)}
@@ -491,12 +493,6 @@ function buildDefaultGroupName(
   }
 
   return names.join("、");
-}
-
-function getFriendDisplayName(
-  item: Pick<FriendListItem, "friendship" | "character">,
-) {
-  return item.friendship.remarkName?.trim() || item.character.name;
 }
 
 function MobileCreateGroupStatusCard({

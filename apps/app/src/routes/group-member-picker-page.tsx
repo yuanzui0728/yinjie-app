@@ -9,13 +9,22 @@ import {
   removeGroupMember,
 } from "@yinjie/contracts";
 import { ArrowLeft, Check, Search, X } from "lucide-react";
-import { AppPage, Button, ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
+import {
+  AppPage,
+  Button,
+  ErrorBlock,
+  InlineNotice,
+  LoadingBlock,
+  cn,
+} from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import {
   buildContactSections,
   createFriendDirectoryItems,
+  getFriendDisplayName,
+  matchesFriendSearch,
 } from "../features/contacts/contact-utils";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { isMissingGroupError } from "../lib/group-route-fallback";
@@ -71,7 +80,10 @@ function GroupMemberPickerPage({
   });
 
   useEffect(() => {
-    if (groupQuery.isLoading || !isMissingGroupError(groupQuery.error, groupId)) {
+    if (
+      groupQuery.isLoading ||
+      !isMissingGroupError(groupQuery.error, groupId)
+    ) {
       return;
     }
 
@@ -91,8 +103,11 @@ function GroupMemberPickerPage({
         ),
       ).map((item) => ({
         id: item.character.id,
-        name: item.friendship.remarkName?.trim() || item.character.name,
-        subtitle: item.character.relationship || "世界联系人",
+        name: getFriendDisplayName(item),
+        subtitle:
+          getFriendDisplayName(item) !== item.character.name
+            ? `昵称：${item.character.name}`
+            : item.character.relationship || "世界联系人",
         avatar: item.character.avatar ?? undefined,
         indexLabel: item.indexLabel,
       }));
@@ -116,12 +131,31 @@ function GroupMemberPickerPage({
       return allCandidateItems;
     }
 
+    if (mode === "add") {
+      return createFriendDirectoryItems(
+        (friendsQuery.data ?? []).filter(
+          (item) =>
+            !memberIds.has(item.character.id) &&
+            matchesFriendSearch(item, normalizedKeyword),
+        ),
+      ).map((item) => ({
+        id: item.character.id,
+        name: getFriendDisplayName(item),
+        subtitle:
+          getFriendDisplayName(item) !== item.character.name
+            ? `昵称：${item.character.name}`
+            : item.character.relationship || "世界联系人",
+        avatar: item.character.avatar ?? undefined,
+        indexLabel: item.indexLabel,
+      }));
+    }
+
     return allCandidateItems.filter((item) =>
       [item.name, item.subtitle].some((value) =>
         value.toLowerCase().includes(normalizedKeyword),
       ),
     );
-  }, [allCandidateItems, keyword]);
+  }, [allCandidateItems, friendsQuery.data, keyword, memberIds, mode]);
 
   const candidateSections = useMemo(() => {
     return buildContactSections(
@@ -243,7 +277,9 @@ function GroupMemberPickerPage({
               <div className="mt-1 text-[12px] text-[color:var(--text-muted)]">
                 {groupQuery.data?.name
                   ? `${groupQuery.data.name} · ${
-                      mode === "add" ? "选择联系人加入当前群聊" : "选择成员移出当前群聊"
+                      mode === "add"
+                        ? "选择联系人加入当前群聊"
+                        : "选择成员移出当前群聊"
                     }`
                   : mode === "add"
                     ? "选择联系人加入当前群聊。"
@@ -297,7 +333,8 @@ function GroupMemberPickerPage({
                 </label>
 
                 <div className="mt-3 text-[12px] text-[color:var(--text-muted)]">
-                  已选择 {selectedIds.length} 位{mode === "add" ? "联系人" : "成员"}
+                  已选择 {selectedIds.length} 位
+                  {mode === "add" ? "联系人" : "成员"}
                 </div>
               </div>
 
@@ -362,7 +399,8 @@ function GroupMemberPickerPage({
                   {mode === "add" ? "待添加成员" : "待移除成员"}
                 </div>
                 <div className="mt-2 text-[15px] font-medium text-[color:var(--text-primary)]">
-                  已选择 {selectedIds.length} 位{mode === "add" ? "联系人" : "成员"}
+                  已选择 {selectedIds.length} 位
+                  {mode === "add" ? "联系人" : "成员"}
                 </div>
               </div>
 
@@ -703,8 +741,12 @@ function CandidateRow({
           : checked
             ? "bg-[rgba(7,193,96,0.06)]"
             : "bg-[color:var(--bg-canvas-elevated)]",
-        !isDesktop && withDivider ? "border-t border-[color:var(--border-faint)]" : "",
-        !isDesktop && !disabled ? "hover:bg-[color:var(--surface-card-hover)]" : "",
+        !isDesktop && withDivider
+          ? "border-t border-[color:var(--border-faint)]"
+          : "",
+        !isDesktop && !disabled
+          ? "hover:bg-[color:var(--surface-card-hover)]"
+          : "",
       )}
     >
       <AvatarChip name={name} src={src} size={isDesktop ? "md" : "wechat"} />
