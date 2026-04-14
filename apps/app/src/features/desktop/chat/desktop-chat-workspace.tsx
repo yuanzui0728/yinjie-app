@@ -1224,6 +1224,7 @@ export function DesktopChatWorkspace({
                   entry={entry}
                   activeConversationId={activeConversation?.id}
                   selectedServiceAccountId={selectedServiceAccountId}
+                  selectedOfficialArticleId={selectedOfficialArticleId}
                   subscriptionInboxActive={subscriptionInboxActive}
                   localMessageActionState={localMessageActionState}
                   conversationContextMenuId={
@@ -1565,6 +1566,7 @@ function DesktopMessageEntryCard({
   entry,
   activeConversationId,
   selectedServiceAccountId,
+  selectedOfficialArticleId,
   subscriptionInboxActive,
   localMessageActionState,
   conversationContextMenuId,
@@ -1573,6 +1575,7 @@ function DesktopMessageEntryCard({
   entry: DesktopMessageEntry;
   activeConversationId?: string;
   selectedServiceAccountId?: string;
+  selectedOfficialArticleId?: string;
   subscriptionInboxActive: boolean;
   localMessageActionState: ReturnType<typeof useLocalChatMessageActionState>;
   conversationContextMenuId?: string;
@@ -1590,7 +1593,15 @@ function DesktopMessageEntryCard({
         variant="desktop"
         active={subscriptionInboxActive}
         onClick={() => {
-          void navigate({ to: "/chat/subscription-inbox" });
+          void navigate({
+            to: "/chat/subscription-inbox",
+            hash:
+              subscriptionInboxActive && selectedOfficialArticleId
+                ? buildDesktopOfficialMessageRouteHash({
+                    articleId: selectedOfficialArticleId,
+                  })
+                : undefined,
+          });
         }}
       />
     );
@@ -1606,6 +1617,13 @@ function DesktopMessageEntryCard({
           void navigate({
             to: "/official-accounts/service/$accountId",
             params: { accountId: entry.conversation.accountId },
+            hash:
+              entry.conversation.accountId === selectedServiceAccountId &&
+              selectedOfficialArticleId
+                ? buildDesktopOfficialMessageRouteHash({
+                    articleId: selectedOfficialArticleId,
+                  })
+                : undefined,
           });
         }}
       />
