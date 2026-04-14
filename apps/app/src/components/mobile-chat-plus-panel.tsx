@@ -13,6 +13,7 @@ import {
   FileText,
   Gift,
   ImagePlus,
+  Keyboard,
   MapPin,
   Phone,
   Star,
@@ -36,6 +37,7 @@ import { AvatarChip } from "./avatar-chip";
 type MobileChatPlusPanelProps = {
   open: boolean;
   busy?: boolean;
+  onClose?: () => void;
   onStartVoiceCall?: () => void;
   onStartVideoCall?: () => void;
   onPickAlbum: () => void;
@@ -189,6 +191,7 @@ const RESERVED_ROOT_ACTION_ORDER: RootAction["key"][] = [
 export function MobileChatPlusPanel({
   open,
   busy = false,
+  onClose,
   onStartVoiceCall,
   onStartVideoCall,
   onPickAlbum,
@@ -292,6 +295,7 @@ export function MobileChatPlusPanel({
     <div className="mt-1.5 min-h-[232px] overflow-hidden rounded-[18px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] shadow-none">
       {activeView === "root" ? (
         <div className="pb-4 pt-3">
+          <PanelHeader title="更多功能" onClose={onClose} />
           <div
             ref={rootPagerRef}
             className="relative flex snap-x snap-mandatory overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
@@ -511,7 +515,11 @@ export function MobileChatPlusPanel({
 
       {activeView === "contacts" ? (
         <div className="pb-3.5">
-          <PanelHeader title="选择名片" onBack={() => setActiveView("root")} />
+          <PanelHeader
+            title="选择名片"
+            onBack={() => setActiveView("root")}
+            onClose={onClose}
+          />
           {friendsQuery.isLoading ? (
             <LoadingBlock
               className="px-4 py-6 text-left"
@@ -569,7 +577,11 @@ export function MobileChatPlusPanel({
 
       {activeView === "favorites" ? (
         <div className="pb-3.5">
-          <PanelHeader title="发送收藏" onBack={() => setActiveView("root")} />
+          <PanelHeader
+            title="发送收藏"
+            onBack={() => setActiveView("root")}
+            onClose={onClose}
+          />
           {favoritesQuery.isLoading && !favoriteRecords.length ? (
             <LoadingBlock
               className="px-4 py-6 text-left"
@@ -627,7 +639,11 @@ export function MobileChatPlusPanel({
 
       {activeView === "locations" ? (
         <div className="pb-3.5">
-          <PanelHeader title="选择位置" onBack={() => setActiveView("root")} />
+          <PanelHeader
+            title="选择位置"
+            onBack={() => setActiveView("root")}
+            onClose={onClose}
+          />
           <div className="mx-2.5 overflow-hidden rounded-[14px] border border-[color:var(--border-subtle)] bg-white">
             {CHAT_LOCATION_SCENES.map((scene) => (
               <button
@@ -657,18 +673,38 @@ export function MobileChatPlusPanel({
   );
 }
 
-function PanelHeader({ title, onBack }: { title: string; onBack: () => void }) {
+function PanelHeader({
+  title,
+  onBack,
+  onClose,
+}: {
+  title: string;
+  onBack?: () => void;
+  onClose?: () => void;
+}) {
   return (
     <div className="relative flex items-center justify-center px-4 pb-1.5 pt-2.5">
-      <button
-        type="button"
-        onClick={onBack}
-        className="absolute left-3 flex h-7 w-7 items-center justify-center rounded-[8px] text-[color:var(--text-secondary)] transition active:bg-[color:var(--surface-card-hover)]"
-        aria-label="返回"
-      >
-        <ChevronLeft size={16} />
-      </button>
+      {onBack ? (
+        <button
+          type="button"
+          onClick={onBack}
+          className="absolute left-3 flex h-7 w-7 items-center justify-center rounded-[8px] text-[color:var(--text-secondary)] transition active:bg-[color:var(--surface-card-hover)]"
+          aria-label="返回"
+        >
+          <ChevronLeft size={16} />
+        </button>
+      ) : null}
       <div className="text-[13px] font-medium text-[#111827]">{title}</div>
+      {onClose ? (
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute right-3 flex h-7 w-7 items-center justify-center rounded-[8px] text-[color:var(--text-secondary)] transition active:bg-[color:var(--surface-card-hover)]"
+          aria-label="切换到键盘输入"
+        >
+          <Keyboard size={16} />
+        </button>
+      ) : null}
     </div>
   );
 }
