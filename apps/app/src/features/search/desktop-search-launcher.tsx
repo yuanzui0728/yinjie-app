@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ChevronRight, Clock3, CornerDownLeft, Search } from "lucide-react";
@@ -48,6 +55,11 @@ type DesktopSearchDropdownPanelProps = {
   speechDisplayText: string;
   speechError: string | null;
   speechStatus: SpeechInputStatus;
+};
+
+type SearchLauncherActionItem = {
+  id: string;
+  onSelect: () => void;
 };
 
 export function useDesktopSearchLauncher({
@@ -283,14 +295,182 @@ export function DesktopSearchDropdownPanel({
     worldCharacterMatches.length > 0 ||
     favoriteMatches.length > 0 ||
     miniProgramMatches.length > 0;
+  const [activeActionId, setActiveActionId] =
+    useState<string>("launcher-search");
 
-  function handleOpenQuickLink(item: DesktopSearchQuickLink) {
-    onClose?.();
-    void navigate({
-      to: item.to as never,
-      search: item.search as never,
+  const handleOpenQuickLink = useCallback(
+    (item: DesktopSearchQuickLink) => {
+      onClose?.();
+      void navigate({
+        to: item.to as never,
+        search: item.search as never,
+      });
+    },
+    [navigate, onClose],
+  );
+
+  const actionItems = useMemo<SearchLauncherActionItem[]>(() => {
+    const items: SearchLauncherActionItem[] = [
+      {
+        id: "launcher-search",
+        onSelect: () => onOpenSearch(keyword),
+      },
+    ];
+
+    if (trimmedKeyword) {
+      friendMatches.forEach((item) => {
+        items.push({
+          id: `friend-${item.character.id}`,
+          onSelect: () => {
+            onClose?.();
+            void navigate({
+              to: "/character/$characterId",
+              params: { characterId: item.character.id },
+            });
+          },
+        });
+      });
+
+      worldCharacterMatches.forEach((item) => {
+        items.push({
+          id: `world-character-${item.character.id}`,
+          onSelect: () => {
+            onClose?.();
+            void navigate({
+              to: "/character/$characterId",
+              params: { characterId: item.character.id },
+            });
+          },
+        });
+      });
+
+      favoriteMatches.forEach((item) => {
+        items.push({
+          id: item.id,
+          onSelect: () => handleOpenQuickLink(item),
+        });
+      });
+
+      miniProgramMatches.forEach((item) => {
+        items.push({
+          id: item.id,
+          onSelect: () => handleOpenQuickLink(item),
+        });
+      });
+    } else {
+      recentMiniPrograms.forEach((item) => {
+        items.push({
+          id: item.id,
+          onSelect: () => handleOpenQuickLink(item),
+        });
+      });
+
+      recentFavorites.forEach((item) => {
+        items.push({
+          id: item.id,
+          onSelect: () => handleOpenQuickLink(item),
+        });
+      });
+
+      history.forEach((item) => {
+        items.push({
+          id: `history-${item.keyword}`,
+          onSelect: () => onOpenSearch(item.keyword),
+        });
+      });
+    }
+
+    return items;
+  }, [
+    favoriteMatches,
+    friendMatches,
+    handleOpenQuickLink,
+    history,
+    keyword,
+    miniProgramMatches,
+    navigate,
+    onClose,
+    onOpenSearch,
+    recentFavorites,
+    recentMiniPrograms,
+    trimmedKeyword,
+    worldCharacterMatches,
+  ]);
+
+  useEffect(() => {
+    setActiveActionId((current) => {
+      if (actionItems.some((item) => item.id === current)) {
+        return current;
+      }
+
+      return actionItems[0]?.id ?? "launcher-search";
     });
-  }
+  }, [actionItems]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) {
+        return;
+      }
+
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose?.();
+        return;
+      }
+
+      if (!actionItems.length) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          onOpenSearch(keyword);
+        }
+        return;
+      }
+
+      const currentIndex = actionItems.findIndex(
+        (item) => item.id === activeActionId,
+      );
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        const nextIndex =
+          currentIndex >= 0 ? (currentIndex + 1) % actionItems.length : 0;
+        setActiveActionId(actionItems[nextIndex]?.id ?? "launcher-search");
+        return;
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        const nextIndex =
+          currentIndex >= 0
+            ? (currentIndex - 1 + actionItems.length) % actionItems.length
+            : actionItems.length - 1;
+        setActiveActionId(actionItems[nextIndex]?.id ?? "launcher-search");
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        const activeItem =
+          actionItems[currentIndex >= 0 ? currentIndex : 0] ?? null;
+        if (activeItem) {
+          activeItem.onSelect();
+          return;
+        }
+
+        onOpenSearch(keyword);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown, true);
+    };
+  }, [actionItems, activeActionId, keyword, onClose, onOpenSearch]);
 
   return (
     <div
@@ -302,7 +482,13 @@ export function DesktopSearchDropdownPanel({
       <button
         type="button"
         onClick={() => onOpenSearch(keyword)}
-        className="flex w-full min-w-0 items-center gap-3 rounded-[12px] bg-[rgba(7,193,96,0.08)] px-3.5 py-3 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[rgba(7,193,96,0.13)]"
+        onMouseEnter={() => setActiveActionId("launcher-search")}
+        className={cn(
+          "flex w-full min-w-0 items-center gap-3 rounded-[12px] px-3.5 py-3 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
+          activeActionId === "launcher-search"
+            ? "bg-[rgba(7,193,96,0.13)]"
+            : "bg-[rgba(7,193,96,0.08)] hover:bg-[rgba(7,193,96,0.13)]",
+        )}
       >
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-white text-[color:var(--brand-primary)]">
           <Search size={16} />
@@ -375,11 +561,17 @@ export function DesktopSearchDropdownPanel({
                     {friendMatches.map((item) => (
                       <SearchLauncherCharacterRow
                         key={`friend-${item.character.id}`}
+                        active={
+                          activeActionId === `friend-${item.character.id}`
+                        }
                         avatarName={getFriendDisplayName(item)}
                         avatarSrc={item.character.avatar}
                         badge="联系人"
                         description={buildFriendSuggestionDescription(item)}
                         title={getFriendDisplayName(item)}
+                        onMouseEnter={() =>
+                          setActiveActionId(`friend-${item.character.id}`)
+                        }
                         onClick={() => {
                           onClose?.();
                           void navigate({
@@ -402,6 +594,10 @@ export function DesktopSearchDropdownPanel({
                     {worldCharacterMatches.map((item) => (
                       <SearchLauncherCharacterRow
                         key={`world-character-${item.character.id}`}
+                        active={
+                          activeActionId ===
+                          `world-character-${item.character.id}`
+                        }
                         avatarName={item.character.name}
                         avatarSrc={item.character.avatar}
                         badge="可添加"
@@ -411,6 +607,11 @@ export function DesktopSearchDropdownPanel({
                           "打开资料卡后可发起好友申请"
                         }
                         title={item.character.name}
+                        onMouseEnter={() =>
+                          setActiveActionId(
+                            `world-character-${item.character.id}`,
+                          )
+                        }
                         onClick={() => {
                           onClose?.();
                           void navigate({
@@ -433,7 +634,9 @@ export function DesktopSearchDropdownPanel({
                     {favoriteMatches.map((item) => (
                       <SearchLauncherQuickLinkRow
                         key={item.id}
+                        active={activeActionId === item.id}
                         item={item}
+                        onMouseEnter={() => setActiveActionId(item.id)}
                         onClick={() => handleOpenQuickLink(item)}
                       />
                     ))}
@@ -450,7 +653,9 @@ export function DesktopSearchDropdownPanel({
                     {miniProgramMatches.map((item) => (
                       <SearchLauncherQuickLinkRow
                         key={item.id}
+                        active={activeActionId === item.id}
                         item={item}
+                        onMouseEnter={() => setActiveActionId(item.id)}
                         onClick={() => handleOpenQuickLink(item)}
                       />
                     ))}
@@ -499,7 +704,9 @@ export function DesktopSearchDropdownPanel({
                   {recentMiniPrograms.map((item) => (
                     <SearchLauncherQuickLinkRow
                       key={item.id}
+                      active={activeActionId === item.id}
                       item={item}
+                      onMouseEnter={() => setActiveActionId(item.id)}
                       onClick={() => handleOpenQuickLink(item)}
                     />
                   ))}
@@ -522,7 +729,9 @@ export function DesktopSearchDropdownPanel({
                   {recentFavorites.map((item) => (
                     <SearchLauncherQuickLinkRow
                       key={item.id}
+                      active={activeActionId === item.id}
                       item={item}
+                      onMouseEnter={() => setActiveActionId(item.id)}
                       onClick={() => handleOpenQuickLink(item)}
                     />
                   ))}
@@ -541,7 +750,15 @@ export function DesktopSearchDropdownPanel({
                 key={item.keyword}
                 type="button"
                 onClick={() => onOpenSearch(item.keyword)}
-                className="flex w-full items-center gap-2.5 rounded-[12px] px-3 py-2.5 text-left text-sm text-[color:var(--text-secondary)] transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]"
+                onMouseEnter={() =>
+                  setActiveActionId(`history-${item.keyword}`)
+                }
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-[12px] px-3 py-2.5 text-left text-sm transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
+                  activeActionId === `history-${item.keyword}`
+                    ? "bg-[color:var(--surface-console)] text-[color:var(--text-primary)]"
+                    : "text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]",
+                )}
               >
                 <Clock3
                   size={14}
@@ -583,17 +800,27 @@ function SearchLauncherSection({
 }
 
 function SearchLauncherQuickLinkRow({
+  active = false,
   item,
+  onMouseEnter,
   onClick,
 }: {
+  active?: boolean;
   item: DesktopSearchQuickLink;
+  onMouseEnter?: () => void;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-[12px] border border-[color:var(--border-faint)] bg-white px-3 py-2.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[color:var(--surface-console)]"
+      onMouseEnter={onMouseEnter}
+      className={cn(
+        "flex w-full items-center gap-3 rounded-[12px] border border-[color:var(--border-faint)] px-3 py-2.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
+        active
+          ? "bg-[color:var(--surface-console)]"
+          : "bg-white hover:bg-[color:var(--surface-console)]",
+      )}
     >
       <AvatarChip
         name={item.avatarName ?? item.title}
@@ -625,17 +852,21 @@ function SearchLauncherQuickLinkRow({
 }
 
 function SearchLauncherCharacterRow({
+  active = false,
   avatarName,
   avatarSrc,
   badge,
   description,
+  onMouseEnter,
   onClick,
   title,
 }: {
+  active?: boolean;
   avatarName: string;
   avatarSrc?: string | null;
   badge: string;
   description: string;
+  onMouseEnter?: () => void;
   onClick: () => void;
   title: string;
 }) {
@@ -643,7 +874,13 @@ function SearchLauncherCharacterRow({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-3 rounded-[12px] border border-[color:var(--border-faint)] bg-white px-3 py-2.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)] hover:bg-[color:var(--surface-console)]"
+      onMouseEnter={onMouseEnter}
+      className={cn(
+        "flex w-full items-center gap-3 rounded-[12px] border border-[color:var(--border-faint)] px-3 py-2.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
+        active
+          ? "bg-[color:var(--surface-console)]"
+          : "bg-white hover:bg-[color:var(--surface-console)]",
+      )}
     >
       <AvatarChip name={avatarName} src={avatarSrc} size="sm" />
       <div className="min-w-0 flex-1">

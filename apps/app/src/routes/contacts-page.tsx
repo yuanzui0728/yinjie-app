@@ -812,6 +812,10 @@ export function ContactsPage() {
   }
 
   function handleDesktopSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.defaultPrevented) {
+      return;
+    }
+
     if (event.key !== "Enter") {
       return;
     }
