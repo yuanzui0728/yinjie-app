@@ -806,17 +806,22 @@ function DesktopChannelCommentsPanel({
       replies: repliesByRoot.get(rootComment.id) ?? [],
     }));
   }, [comments]);
+  const threadIdsWithReplies = useMemo(
+    () =>
+      commentThreads
+        .filter(({ replies }) => replies.length > 0)
+        .map(({ rootComment }) => rootComment.id),
+    [commentThreads],
+  );
   const [collapsedThreadIds, setCollapsedThreadIds] = useState<string[]>([]);
 
   useEffect(() => {
     setCollapsedThreadIds((current) =>
       current.filter((threadId) =>
-        commentThreads.some(({ replies, rootComment }) =>
-          rootComment.id === threadId && replies.length > 0,
-        ),
+        threadIdsWithReplies.includes(threadId),
       ),
     );
-  }, [commentThreads]);
+  }, [threadIdsWithReplies]);
 
   useEffect(() => {
     if (!replyTarget) {
@@ -849,6 +854,27 @@ function DesktopChannelCommentsPanel({
       {!commentsLoading && !comments.length ? (
         <div className="rounded-[14px] border border-dashed border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-4 py-4 text-xs leading-6 text-[color:var(--text-muted)]">
           这条内容还没有评论，你可以先开口。
+        </div>
+      ) : null}
+      {threadIdsWithReplies.length ? (
+        <div className="flex items-center justify-between rounded-[12px] border border-[color:var(--border-faint)] bg-white px-3 py-2 text-[11px] text-[color:var(--text-secondary)]">
+          <span>共 {threadIdsWithReplies.length} 个可折叠线程</span>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCollapsedThreadIds([])}
+              className="rounded-full border border-[color:var(--border-faint)] px-2.5 py-1 transition hover:bg-[color:var(--surface-console)]"
+            >
+              全部展开
+            </button>
+            <button
+              type="button"
+              onClick={() => setCollapsedThreadIds(threadIdsWithReplies)}
+              className="rounded-full border border-[color:var(--border-faint)] px-2.5 py-1 transition hover:bg-[color:var(--surface-console)]"
+            >
+              全部收起
+            </button>
+          </div>
         </div>
       ) : null}
       {commentThreads.length ? (
