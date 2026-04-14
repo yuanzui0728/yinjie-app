@@ -11,13 +11,13 @@ type DesktopFeedListProps = {
   posts: FeedPostListItem[];
   selectedPostId: string | null;
   isPostFavorite: (postId: string) => boolean;
+  onSelectAuthor: (authorId: string) => void;
   onCommentChange: (postId: string, value: string) => void;
   onCommentSubmit: (postId: string) => void;
   onLike: (postId: string) => void;
   onToggleFavorite: (postId: string) => void;
   onOpenCompose: () => void;
   onOpenDetail: (postId: string) => void;
-  onSelectAuthor: (authorId: string) => void;
 };
 
 export function DesktopFeedList({
@@ -28,13 +28,13 @@ export function DesktopFeedList({
   posts,
   selectedPostId,
   isPostFavorite,
+  onSelectAuthor,
   onCommentChange,
   onCommentSubmit,
   onLike,
   onToggleFavorite,
   onOpenCompose,
   onOpenDetail,
-  onSelectAuthor,
 }: DesktopFeedListProps) {
   return (
     <>
@@ -56,11 +56,11 @@ export function DesktopFeedList({
               favorite={isPostFavorite(post.id)}
               likeLoading={likePendingPostId === post.id}
               post={post}
+              onSelectAuthor={() => onSelectAuthor(post.authorId)}
               onCommentChange={(value) => onCommentChange(post.id, value)}
               onCommentSubmit={() => onCommentSubmit(post.id)}
               onLike={() => onLike(post.id)}
               onOpenDetail={() => onOpenDetail(post.id)}
-              onSelectAuthor={() => onSelectAuthor(post.authorId)}
               onToggleFavorite={() => onToggleFavorite(post.id)}
             />
           ))}

@@ -99,9 +99,11 @@ export function DesktopFeedSidebar({
   );
 
   useEffect(() => {
-    if (mode === "author") {
-      authorScrollViewportRef.current?.scrollTo({ top: 0 });
+    if (mode !== "author") {
+      return;
     }
+
+    authorScrollViewportRef.current?.scrollTo({ top: 0 });
   }, [activeAuthorSummary?.authorId, mode]);
 
   if (mode === "detail" && selectedPostId) {
@@ -116,17 +118,11 @@ export function DesktopFeedSidebar({
           loading={detailLoading}
           post={selectedPost}
           onClose={onCloseDetail}
-          onCommentChange={(value) => onCommentChange(selectedPostId, value)}
+          onCommentChange={(value: string) =>
+            onCommentChange(selectedPostId, value)
+          }
           onCommentSubmit={() => onCommentSubmit(selectedPostId)}
           onLike={() => onLike(selectedPostId)}
-          onSelectAuthor={() => {
-            const authorId = selectedPost?.authorId;
-            if (!authorId) {
-              return;
-            }
-
-            onSelectAuthor(authorId);
-          }}
           onToggleFavorite={() => onToggleFavorite(selectedPostId)}
         />
       </aside>
