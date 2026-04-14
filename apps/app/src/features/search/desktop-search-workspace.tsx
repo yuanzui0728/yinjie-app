@@ -1205,7 +1205,7 @@ export function DesktopSearchWorkspace({
             <DesktopSearchStatusCard
               description={transitionHint}
               status="done"
-              title="定位反馈"
+              title="搜索定位"
             />
           ) : null}
 
@@ -1213,7 +1213,7 @@ export function DesktopSearchWorkspace({
             <DesktopSearchStatusCard
               description="聊天记录结果还在继续补全，稍后会自动刷新更多命中。"
               status="pending"
-              title="搜索状态"
+              title="搜索进度"
             />
           ) : null}
           {!loading && !error && hasKeyword ? (
@@ -1922,7 +1922,7 @@ function DesktopSearchContextBar({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-[rgba(7,193,96,0.10)] px-2.5 py-1 text-[10px] font-medium text-[color:var(--brand-primary)]">
-                当前搜索
+                搜索上下文
               </span>
               <span className="rounded-full bg-[color:var(--surface-console)] px-2.5 py-1 text-[10px] text-[color:var(--text-muted)]">
                 {categoryTitle}
@@ -1941,7 +1941,7 @@ function DesktopSearchContextBar({
                   focusRegionToneClassName,
                 )}
               >
-                当前焦点在 {focusRegionLabel}
+                当前位于 {focusRegionLabel}
               </span>
             </div>
             <div className="mt-3 text-sm font-medium text-[color:var(--text-primary)]">

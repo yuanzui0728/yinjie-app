@@ -1220,7 +1220,7 @@ export function DesktopSearchDropdownPanel({
                   ? "pending"
                   : "done"
           }
-          title="语音输入"
+          title="搜索输入"
         />
       ) : null}
 
@@ -1705,11 +1705,11 @@ function SearchLauncherFocusStrip({
   const description =
     layer === "input"
       ? keyword
-        ? `当前停留在搜索框，按 Tab 进入结果层，按 Enter 执行搜索“${keyword}”，按 Esc 关闭下拉。`
-        : "当前停留在搜索框，继续输入关键词，或按 Tab 进入结果层；按 Enter 执行搜索，按 Esc 关闭下拉。"
+        ? `当前位于搜索框，按 Tab 进入结果层，按 Enter 执行搜索“${keyword}”，按 Esc 关闭下拉。`
+        : "当前位于搜索框，继续输入关键词，或按 Tab 进入结果层；按 Enter 执行搜索，按 Esc 关闭下拉。"
       : region === "history"
-        ? "当前停留在最近搜索，按 Tab / ↑ ↓ 切换当前项，按 Enter 打开当前项，按 Shift+Tab 或 Esc 回搜索框。"
-        : `当前停留在${panelTitle}，按 Tab / ↑ ↓ 切换当前项，按 Enter 打开当前项，按 Shift+Tab 或 Esc 回搜索框。`;
+        ? "当前位于最近搜索，按 Tab / ↑ ↓ 切换当前项，按 Enter 打开当前项，按 Shift+Tab 或 Esc 回搜索框。"
+        : `当前位于${panelTitle}，按 Tab / ↑ ↓ 切换当前项，按 Enter 打开当前项，按 Shift+Tab 或 Esc 回搜索框。`;
   const keyboardHint =
     layer === "input"
       ? "Tab 进入结果层 · Enter 执行搜索 · Esc 关闭"
@@ -1719,7 +1719,7 @@ function SearchLauncherFocusStrip({
     <section className="mt-2 rounded-[16px] border border-[rgba(7,193,96,0.14)] bg-[rgba(247,250,250,0.94)] px-3.5 py-3">
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded-full bg-[rgba(7,193,96,0.10)] px-2.5 py-1 text-[10px] font-medium text-[color:var(--brand-primary)]">
-          当前定位
+          搜索上下文
         </span>
         <span
           className={cn(
