@@ -21,6 +21,8 @@ import { EmptyState } from "../../../components/empty-state";
 import {
   buildContactSections,
   createFriendDirectoryItems,
+  getFriendDisplayName,
+  matchesFriendSearch,
   type FriendDirectoryItem,
 } from "../../contacts/contact-utils";
 import { useAppRuntimeConfig } from "../../../runtime/runtime-config-store";
@@ -130,11 +132,7 @@ export function DesktopCreateGroupDialog({
         return true;
       }
 
-      return [
-        item.character.name,
-        item.friendship.remarkName ?? "",
-        item.character.relationship ?? "",
-      ].some((value) => value.toLowerCase().includes(keyword));
+      return matchesFriendSearch(item, keyword);
     });
   }, [searchTerm, sortedFriendItems]);
   const pinnedSourceFriend = useMemo(
@@ -1191,12 +1189,6 @@ function buildDefaultGroupName(
   }
 
   return names.join("、");
-}
-
-function getFriendDisplayName(
-  item: Pick<FriendListItem, "friendship" | "character">,
-) {
-  return item.friendship.remarkName?.trim() || item.character.name;
 }
 
 function findFriendIndexByJumpKey(
