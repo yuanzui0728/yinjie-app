@@ -8,7 +8,7 @@ import {
   markOfficialAccountDeliveryRead,
 } from "@yinjie/contracts";
 import { Smartphone } from "lucide-react";
-import { Button, ErrorBlock, LoadingBlock } from "@yinjie/ui";
+import { Button, ErrorBlock, LoadingBlock, cn } from "@yinjie/ui";
 import { EmptyState } from "../../../components/empty-state";
 import { OfficialArticleViewer } from "../../../components/official-article-viewer";
 import { buildDesktopMobileOfficialHandoffHash } from "./desktop-mobile-official-handoff-route-state";
@@ -58,6 +58,11 @@ export function DesktopSubscriptionWorkspace({
       feedItems.find((delivery) => delivery.articleId === activeArticleId) ?? null,
     [activeArticleId, feedItems],
   );
+  const hasReaderSurface =
+    Boolean(activeArticleId) ||
+    articleQuery.isLoading ||
+    articleQuery.isError ||
+    markArticleReadMutation.isError;
   const unreadCount = inboxQuery.data?.summary?.unreadCount ?? 0;
   const groupCount = inboxQuery.data?.groups.length ?? 0;
   const lastDeliveredLabel = inboxQuery.data?.summary?.lastDeliveredAt
@@ -275,14 +280,27 @@ export function DesktopSubscriptionWorkspace({
         </div>
       </section>
 
-      <section className="min-w-0 flex-1 overflow-auto bg-[rgba(255,255,255,0.62)] p-6">
-        {articleQuery.isLoading ? <LoadingBlock label="正在读取文章..." /> : null}
+      <section
+        className={cn(
+          "min-w-0 flex-1 overflow-auto",
+          hasReaderSurface ? "bg-white" : "bg-[rgba(255,255,255,0.62)] p-6",
+        )}
+      >
+        {articleQuery.isLoading ? (
+          <div className="mx-auto max-w-[780px] px-8 py-10">
+            <LoadingBlock label="正在读取文章..." />
+          </div>
+        ) : null}
         {articleQuery.isError && articleQuery.error instanceof Error ? (
-          <ErrorBlock message={articleQuery.error.message} />
+          <div className="mx-auto max-w-[780px] px-8 py-10">
+            <ErrorBlock message={articleQuery.error.message} />
+          </div>
         ) : null}
         {markArticleReadMutation.isError &&
         markArticleReadMutation.error instanceof Error ? (
-          <ErrorBlock message={markArticleReadMutation.error.message} />
+          <div className="mx-auto max-w-[780px] px-8 pt-8">
+            <ErrorBlock message={markArticleReadMutation.error.message} />
+          </div>
         ) : null}
 
         {articleQuery.data ? (
