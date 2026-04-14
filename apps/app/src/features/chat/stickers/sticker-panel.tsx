@@ -562,10 +562,11 @@ export function StickerPanel({
     catalog.customStickerCount > 1;
   const showSearchKeyboardHint =
     !isMobile && searching && !searchPending && activeItems.length > 0;
-  const firstSearchResultKey =
-    !isMobile && searching && !searchPending
-      ? (activeStickerKeys[0] ?? null)
-      : null;
+  const firstSearchResultItem =
+    searching && !searchPending ? (activeItems[0] ?? null) : null;
+  const firstSearchResultKey = firstSearchResultItem
+    ? getStickerIdentity(firstSearchResultItem.sticker)
+    : null;
   const highlightedSearchSectionIndex = highlightedSearchSection
     ? searchSectionNavigation.findIndex(
         (section) => section.id === highlightedSearchSection.id,
@@ -621,6 +622,18 @@ export function StickerPanel({
     searching &&
     !searchPending &&
     searchSectionNavigation.length > 1;
+  const mobileSearchPreview = isMobile
+    ? firstSearchResultItem
+      ? {
+          label:
+            firstSearchResultItem.sticker.label ??
+            firstSearchResultItem.sticker.stickerId,
+          totalCount: activeItems.length,
+          sectionCount: searchSections.length,
+          sourceLabel: recommendedSearchSection?.label ?? "搜索结果",
+        }
+      : null
+    : null;
   const showCustomManageHint =
     !isMobile &&
     activeSectionId === "custom" &&
@@ -1944,6 +1957,25 @@ export function StickerPanel({
           ) : activeItems.length ? (
             searching ? (
               <div className={isMobile ? "space-y-3" : "space-y-4"}>
+                {mobileSearchPreview ? (
+                  <div className="rounded-[14px] border border-[rgba(160,90,10,0.16)] bg-[rgba(255,251,235,0.94)] px-3 py-2.5 text-[11px] text-[color:var(--text-secondary)]">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-[#9a5a0a]">
+                        首推来自 {mobileSearchPreview.sourceLabel}
+                      </span>
+                      <span className="rounded-full bg-white px-2 py-1 text-[10px] text-[color:var(--text-secondary)]">
+                        {mobileSearchPreview.totalCount} 项
+                      </span>
+                    </div>
+                    <div className="pt-1 leading-4">
+                      默认先看 {mobileSearchPreview.label}
+                      {mobileSearchPreview.sectionCount > 1
+                        ? `，共 ${mobileSearchPreview.sectionCount} 组来源`
+                        : ""}
+                      。
+                    </div>
+                  </div>
+                ) : null}
                 {searchSections.map((section) => {
                   const sectionState = searchSectionStateMap.get(
                     section.id,
@@ -1978,6 +2010,11 @@ export function StickerPanel({
                           >
                             {section.label}
                           </span>
+                          {isMobile && sectionState.containsRecommended ? (
+                            <span className="rounded-full bg-white px-2 py-1 text-[10px] text-[#9a5a0a]">
+                              首推
+                            </span>
+                          ) : null}
                           {!isMobile && sectionState.containsHighlighted ? (
                             <span className="rounded-full bg-[rgba(160,90,10,0.14)] px-2 py-1 text-[10px] font-medium text-[#9a5a0a]">
                               当前高亮
