@@ -58,6 +58,11 @@ const ChannelsPage = lazy(async () => {
   return { default: mod.ChannelsPage };
 });
 
+const ChannelAuthorPage = lazy(async () => {
+  const mod = await import("./routes/channel-author-page");
+  return { default: mod.ChannelAuthorPage };
+});
+
 const SearchPage = lazy(async () => {
   const mod = await import("./routes/search-page");
   return { default: mod.SearchPage };
@@ -438,6 +443,13 @@ const channelsRoute = createRoute({
   getParentRoute: () => tabsRoute,
   path: "/channels",
   component: ChannelsPage,
+});
+
+const channelAuthorRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/channels/authors/$authorId",
+  beforeLoad: requireWorldReady,
+  component: ChannelAuthorPage,
 });
 
 const searchRoute = createRoute({
@@ -856,6 +868,7 @@ const routeTree = rootRoute.addChildren([
     contactsRoute,
     profileRoute,
   ]),
+  channelAuthorRoute,
   subscriptionInboxRoute,
   chatRoomRoute,
   chatDetailsRoute,

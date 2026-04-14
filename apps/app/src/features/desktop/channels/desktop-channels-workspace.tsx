@@ -444,20 +444,31 @@ export function DesktopChannelsWorkspace({
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-3">
-                        <AvatarChip
-                          name={selectedPost.authorName}
-                          src={selectedPost.authorAvatar}
-                          size="wechat"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-base font-semibold text-[color:var(--text-primary)]">
-                            {selectedPost.authorName}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void navigate({
+                              to: "/channels/authors/$authorId",
+                              params: { authorId: selectedPost.authorId },
+                            })
+                          }
+                          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                        >
+                          <AvatarChip
+                            name={selectedPost.authorName}
+                            src={selectedPost.authorAvatar}
+                            size="wechat"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-base font-semibold text-[color:var(--text-primary)]">
+                              {selectedPost.authorName}
+                            </div>
+                            <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                              {formatTimestamp(selectedPost.createdAt)} ·{" "}
+                              {formatChannelMeta(selectedPost)}
+                            </div>
                           </div>
-                          <div className="mt-1 text-xs text-[color:var(--text-muted)]">
-                            {formatTimestamp(selectedPost.createdAt)} ·{" "}
-                            {formatChannelMeta(selectedPost)}
-                          </div>
-                        </div>
+                        </button>
                         <Button
                           variant={selectedPost.ownerState?.isFollowingAuthor ? "secondary" : "primary"}
                           size="sm"
