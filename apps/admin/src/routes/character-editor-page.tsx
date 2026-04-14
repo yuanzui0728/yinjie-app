@@ -193,7 +193,7 @@ export function CharacterEditorPage() {
         profile: {
           ...(current.profile ?? emptyCharacterDraft.profile!),
           basePrompt: str(raw.basePrompt) || current.profile?.basePrompt,
-          memorySummary: str(raw.memorySummary) || current.profile?.memorySummary ?? "",
+          memorySummary: str(raw.memorySummary) || (current.profile?.memorySummary ?? ""),
           traits: {
             ...(current.profile?.traits ?? emptyCharacterDraft.profile!.traits),
             speechPatterns: strList(raw.speechPatterns).length ? strList(raw.speechPatterns) : (current.profile?.traits.speechPatterns ?? []),
