@@ -33,6 +33,13 @@ export type SearchResultSection = {
   results: SearchResultItem[];
 };
 
+export type SearchMessageGroup = {
+  id: string;
+  header: SearchResultItem;
+  messages: SearchResultItem[];
+  sortTime: number;
+};
+
 export type SearchScopeCounts = {
   conversations: number;
   contacts: number;

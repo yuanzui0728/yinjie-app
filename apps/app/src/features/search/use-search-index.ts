@@ -34,6 +34,7 @@ import { getFriendDisplayName } from "../contacts/contact-utils";
 import {
   emptySearchScopeCounts,
   type SearchCategory,
+  type SearchMessageGroup,
   type SearchResultItem,
 } from "./search-types";
 import { useDesktopSearchQuickLinks } from "./desktop-search-quick-links";
@@ -42,6 +43,7 @@ import {
   buildSearchPreview,
   filterSearchResults,
   groupSearchResults,
+  sortSearchResults,
   normalizeSearchKeyword,
 } from "./search-utils";
 
@@ -457,6 +459,84 @@ export function useSearchIndex(
     isDesktopLayout,
   ]);
 
+  const messageGroups = useMemo<SearchMessageGroup[]>(() => {
+    if (!normalizedSearchText) {
+      return [] as SearchMessageGroup[];
+    }
+
+    const matchedConversationResults = filterSearchResults(
+      indexedResults.filter(
+        (item) =>
+          item.category === "messages" &&
+          item.id.startsWith("conversation-"),
+      ),
+      normalizedSearchText,
+      "messages",
+    );
+    const conversationResultById = new Map(
+      matchedConversationResults.map((item) => [
+        item.id.replace(/^conversation-/, ""),
+        item,
+      ]),
+    );
+    const messageResults = filterSearchResults(
+      indexedResults.filter(
+        (item) =>
+          item.category === "messages" && item.id.startsWith("message-"),
+      ),
+      normalizedSearchText,
+      "messages",
+    );
+    const groupedMessages = new Map<string, SearchResultItem[]>();
+
+    for (const item of messageResults) {
+      const conversationId = resolveMessageConversationId(item.to);
+      if (!conversationId) {
+        continue;
+      }
+
+      const current = groupedMessages.get(conversationId);
+      if (current) {
+        current.push(item);
+        continue;
+      }
+
+      groupedMessages.set(conversationId, [item]);
+    }
+
+    return Array.from(groupedMessages.entries())
+      .map(([conversationId, messages]) => {
+        const header = conversationResultById.get(conversationId);
+        if (!header) {
+          return null;
+        }
+
+        return {
+          id: `message-group-${conversationId}`,
+          header,
+          messages: [...messages]
+            .sort((left, right) => right.sortTime - left.sortTime)
+            .slice(0, 3),
+          sortTime: Math.max(
+            header.sortTime,
+            messages[0]?.sortTime ?? header.sortTime,
+          ),
+        };
+      })
+      .filter((item): item is SearchMessageGroup => Boolean(item))
+      .sort((left, right) => {
+        if (left.sortTime !== right.sortTime) {
+          return right.sortTime - left.sortTime;
+        }
+
+        return sortSearchResults(
+          left.header,
+          right.header,
+          normalizedSearchText,
+        );
+      });
+  }, [indexedResults, normalizedSearchText]);
+
   const allMatchedResults = useMemo(
     () => filterSearchResults(indexedResults, normalizedSearchText, "all"),
     [indexedResults, normalizedSearchText],
@@ -526,6 +606,7 @@ export function useSearchIndex(
     hasKeyword: Boolean(normalizedSearchText),
     loading,
     matchedCounts,
+    messageGroups,
     normalizedSearchText,
     recentFavorites,
     recentMiniPrograms,
@@ -553,4 +634,9 @@ function extractErrorMessage(error: unknown) {
   }
 
   return null;
+}
+
+function resolveMessageConversationId(to: string) {
+  const match = to.match(/\/(?:chat|group)\/([^/?#]+)/);
+  return match?.[1] ?? null;
 }
