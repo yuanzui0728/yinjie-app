@@ -2244,7 +2244,11 @@ function StickerButton({
       onMouseEnter={onHover}
       className={
         compact
-          ? `group relative flex flex-col items-center justify-center rounded-[11px] border border-[color:var(--border-subtle)] bg-white p-2 transition-[transform,opacity,filter,background-color] duration-150 ease-out active:bg-[color:var(--surface-card-hover)] ${
+          ? `group relative flex flex-col items-center justify-center rounded-[11px] border p-2 transition-[transform,opacity,filter,box-shadow,background-color] duration-150 ease-out active:bg-[color:var(--surface-card-hover)] ${
+              searchRecommended
+                ? "border-[rgba(160,90,10,0.28)] bg-[rgba(255,248,220,0.92)] shadow-[0_6px_14px_rgba(160,90,10,0.12)]"
+                : "border-[color:var(--border-subtle)] bg-white"
+            } ${
               deleting
                 ? "pointer-events-none scale-[0.84] opacity-0 saturate-50"
                 : ""
@@ -2272,8 +2276,14 @@ function StickerButton({
             }`
       }
     >
-      {searchRecommended && !compact ? (
-        <span className="absolute left-1.5 top-1.5 z-10 rounded-full bg-[rgba(160,90,10,0.14)] px-2 py-0.5 text-[10px] font-medium text-[#9a5a0a] shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
+      {searchRecommended ? (
+        <span
+          className={
+            compact
+              ? "absolute left-1 top-1 z-10 rounded-full bg-[rgba(160,90,10,0.14)] px-1.5 py-0.5 text-[9px] font-medium text-[#9a5a0a] shadow-[0_1px_2px_rgba(15,23,42,0.06)]"
+              : "absolute left-1.5 top-1.5 z-10 rounded-full bg-[rgba(160,90,10,0.14)] px-2 py-0.5 text-[10px] font-medium text-[#9a5a0a] shadow-[0_1px_2px_rgba(15,23,42,0.06)]"
+          }
+        >
           首推
         </span>
       ) : null}
