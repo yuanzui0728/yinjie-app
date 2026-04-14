@@ -1,16 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  ChevronRight,
-  Copy,
-  MessageCircleMore,
-  Phone,
-  Share2,
-  Star,
-  Video,
-} from "lucide-react";
+import { ArrowLeft, ChevronRight, Star } from "lucide-react";
 import {
   blockCharacter,
   deleteFriend,
@@ -47,9 +38,7 @@ import { buildDesktopFriendMomentsRouteHash } from "../features/desktop/moments/
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { isPersistedGroupConversation } from "../lib/conversation-route";
 import { formatTimestamp } from "../lib/format";
-import {
-  shareWithNativeShell,
-} from "../runtime/mobile-bridge";
+import { shareWithNativeShell } from "../runtime/mobile-bridge";
 import { isNativeMobileShareSurface } from "../runtime/mobile-share-surface";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../store/world-owner-store";
@@ -74,8 +63,8 @@ export function CharacterDetailPage() {
     tone: "success" | "info" | "warning";
     message: string;
   } | null>(null);
-  const [dangerSheetAction, setDangerSheetAction] = useState<
-    "block" | "delete" | null
+  const [mobileSheetAction, setMobileSheetAction] = useState<
+    "call" | "block" | "delete" | null
   >(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const { entryNotice, guardVideoEntry, resetEntryGuard } =
@@ -179,19 +168,14 @@ export function CharacterDetailPage() {
 
   useEffect(() => {
     setNotice(null);
-    setDangerSheetAction(null);
+    setMobileSheetAction(null);
     setIsEditingProfile(false);
     resetEntryGuard();
     setProfileForm({
       remarkName: friendship?.remarkName ?? "",
       tags: friendship?.tags?.join("，") ?? "",
     });
-  }, [
-    characterId,
-    friendship?.remarkName,
-    friendship?.tags,
-    resetEntryGuard,
-  ]);
+  }, [characterId, friendship?.remarkName, friendship?.tags, resetEntryGuard]);
 
   const startChatMutation = useMutation({
     mutationFn: async () => {
@@ -292,7 +276,8 @@ export function CharacterDetailPage() {
   const pinMutation = useMutation({
     mutationFn: async (pinned: boolean) => {
       const conversationId =
-        selectedConversation && !isPersistedGroupConversation(selectedConversation)
+        selectedConversation &&
+        !isPersistedGroupConversation(selectedConversation)
           ? selectedConversation.id
           : (await getOrCreateConversation({ characterId }, baseUrl)).id;
 
@@ -311,7 +296,8 @@ export function CharacterDetailPage() {
   const muteMutation = useMutation({
     mutationFn: async (muted: boolean) => {
       const conversationId =
-        selectedConversation && !isPersistedGroupConversation(selectedConversation)
+        selectedConversation &&
+        !isPersistedGroupConversation(selectedConversation)
           ? selectedConversation.id
           : (await getOrCreateConversation({ characterId }, baseUrl)).id;
 
@@ -498,7 +484,7 @@ export function CharacterDetailPage() {
       return;
     }
 
-    setDangerSheetAction("block");
+    setMobileSheetAction("block");
   };
   const handleDeleteFriendAction = () => {
     if (isDesktopLayout) {
@@ -510,7 +496,7 @@ export function CharacterDetailPage() {
       return;
     }
 
-    setDangerSheetAction("delete");
+    setMobileSheetAction("delete");
   };
   const handleAddToContacts = () => {
     if (hasPendingFriendRequest) {
@@ -553,30 +539,65 @@ export function CharacterDetailPage() {
       params: { characterId: character.id },
     });
   };
-  const dangerSheetConfig =
-    dangerSheetAction === "block"
+  const mobileSheetConfig =
+    mobileSheetAction === "call"
       ? {
-          title: isBlocked ? "移出黑名单" : "加入黑名单",
-          description: isBlocked
-            ? "移出后将恢复正常联系与互动。"
-            : "加入黑名单后，将不再接收这个角色的互动。",
-          confirmLabel: isBlocked ? "移出黑名单" : "加入黑名单",
-          confirmDescription: isBlocked
-            ? "恢复正常联系"
-            : "后续互动会被拦截",
-          confirmDanger: !isBlocked,
-          onConfirm: () => blockMutation.mutate(isBlocked),
+          title: "音视频通话",
+          description: "选择要发起的通话方式。",
+          actions: [
+            {
+              key: "voice",
+              label: openCallMutation.isPending
+                ? "正在接通语音..."
+                : "语音通话",
+              description: "进入语音通话",
+              disabled: openCallMutation.isPending,
+              onClick: handleVoiceCall,
+            },
+            {
+              key: "video",
+              label: openCallMutation.isPending
+                ? "正在接通视频..."
+                : "视频通话",
+              description: "进入视频通话",
+              disabled: openCallMutation.isPending,
+              onClick: handleVideoCall,
+            },
+          ],
         }
-      : dangerSheetAction === "delete"
+      : mobileSheetAction === "block"
         ? {
-            title: "删除联系人",
-            description: "删除后会从通讯录移除这个联系人。",
-            confirmLabel: "删除联系人",
-            confirmDescription: "此操作不可恢复",
-            confirmDanger: true,
-            onConfirm: () => deleteFriendMutation.mutate(),
+            title: isBlocked ? "移出黑名单" : "加入黑名单",
+            description: isBlocked
+              ? "移出后将恢复正常联系与互动。"
+              : "加入黑名单后，将不再接收这个角色的互动。",
+            actions: [
+              {
+                key: "confirm",
+                label: isBlocked ? "移出黑名单" : "加入黑名单",
+                description: isBlocked ? "恢复正常联系" : "后续互动会被拦截",
+                danger: !isBlocked,
+                disabled: blockMutation.isPending,
+                onClick: () => blockMutation.mutate(isBlocked),
+              },
+            ],
           }
-        : null;
+        : mobileSheetAction === "delete"
+          ? {
+              title: "删除联系人",
+              description: "删除后会从通讯录移除这个联系人。",
+              actions: [
+                {
+                  key: "confirm",
+                  label: "删除联系人",
+                  description: "此操作不可恢复",
+                  danger: true,
+                  disabled: deleteFriendMutation.isPending,
+                  onClick: () => deleteFriendMutation.mutate(),
+                },
+              ],
+            }
+          : null;
 
   if (isDesktopLayout && character && friendship) {
     return (
@@ -746,12 +767,7 @@ export function CharacterDetailPage() {
   }
 
   return (
-    <AppPage
-      className={cn(
-        "min-h-full space-y-0 px-0 py-0 text-[color:var(--text-primary)]",
-        isDesktopLayout ? "bg-[#ededed]" : "bg-[color:var(--bg-canvas)]",
-      )}
-    >
+    <AppPage className="min-h-full space-y-0 bg-[#ededed] px-0 py-0 text-[color:var(--text-primary)]">
       <header className="sticky top-0 z-20 border-b border-[color:var(--border-faint)] bg-[rgba(247,247,247,0.95)] px-2 py-2 backdrop-blur-xl">
         <div className="relative flex min-h-10 items-center gap-1.5">
           <button
@@ -772,18 +788,7 @@ export function CharacterDetailPage() {
               </div>
             ) : null}
           </div>
-          {character ? (
-            <button
-              type="button"
-              onClick={() => void handleShareCharacterCard()}
-              className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[color:var(--text-primary)] transition active:bg-black/5"
-              aria-label={nativeMobileShareSupported ? "分享名片" : "复制名片"}
-            >
-              {nativeMobileShareSupported ? <Share2 size={17} /> : <Copy size={17} />}
-            </button>
-          ) : (
-            <div className="ml-auto h-9 w-9 shrink-0" aria-hidden="true" />
-          )}
+          <div className="ml-auto h-9 w-9 shrink-0" aria-hidden="true" />
         </div>
       </header>
 
@@ -859,505 +864,599 @@ export function CharacterDetailPage() {
       ) : null}
 
       {character ? (
-        <div
-          className={cn(
-            "space-y-1.5 px-3 pb-6 pt-2.5",
-            isDesktopLayout ? "mx-auto w-full max-w-[720px]" : undefined,
-          )}
-        >
-          {notice ? (
-            <InlineNotice
-              tone={notice.tone}
-              className={
-                isDesktopLayout
-                  ? undefined
-                  : "rounded-[11px] px-2.5 py-1.5 text-[10px] leading-4 shadow-none"
-              }
-            >
-              {notice.message}
-            </InlineNotice>
-          ) : null}
-          {entryNotice ? (
-            <DigitalHumanEntryNotice
-              tone={entryNotice.tone}
-              message={entryNotice.message}
-              onDismiss={() => {
-                resetEntryGuard();
-              }}
-              onContinue={() => {
-                resetEntryGuard();
-                openCallMutation.mutate("video");
-              }}
-              onSwitchToVoice={() => {
-                resetEntryGuard();
-                openCallMutation.mutate("voice");
-              }}
-              continueLabel={
-                openCallMutation.isPending
-                  ? "正在接通视频..."
-                  : entryNotice.continueLabel
-              }
-              voiceLabel={
-                openCallMutation.isPending
-                  ? "正在接通语音..."
-                  : entryNotice.voiceLabel
-              }
-              compact={!isDesktopLayout}
-            />
-          ) : null}
-          {friendsQuery.isError && friendsQuery.error instanceof Error ? (
-            isDesktopLayout ? (
-              <ErrorBlock message={friendsQuery.error.message} />
-            ) : (
-              <MobileCharacterErrorNotice>
-                {friendsQuery.error.message}
-              </MobileCharacterErrorNotice>
-            )
-          ) : null}
-          {friendRequestsQuery.isError &&
-          friendRequestsQuery.error instanceof Error ? (
-            isDesktopLayout ? (
-              <ErrorBlock message={friendRequestsQuery.error.message} />
-            ) : (
-              <MobileCharacterErrorNotice>
-                {friendRequestsQuery.error.message}
-              </MobileCharacterErrorNotice>
-            )
-          ) : null}
-          {blockedQuery.isError && blockedQuery.error instanceof Error ? (
-            isDesktopLayout ? (
-              <ErrorBlock message={blockedQuery.error.message} />
-            ) : (
-              <MobileCharacterErrorNotice>
-                {blockedQuery.error.message}
-              </MobileCharacterErrorNotice>
-            )
-          ) : null}
-          {startChatMutation.isError &&
-          startChatMutation.error instanceof Error ? (
-            isDesktopLayout ? (
-              <ErrorBlock message={startChatMutation.error.message} />
-            ) : (
-              <MobileCharacterErrorNotice>
-                {startChatMutation.error.message}
-              </MobileCharacterErrorNotice>
-            )
-          ) : null}
-          {openCallMutation.isError &&
-          openCallMutation.error instanceof Error ? (
-            isDesktopLayout ? (
-              <ErrorBlock message={openCallMutation.error.message} />
-            ) : (
-              <MobileCharacterErrorNotice>
-                {openCallMutation.error.message}
-              </MobileCharacterErrorNotice>
-            )
-          ) : null}
-          {sendFriendRequestMutation.isError &&
-          sendFriendRequestMutation.error instanceof Error ? (
-            isDesktopLayout ? (
-              <ErrorBlock message={sendFriendRequestMutation.error.message} />
-            ) : (
-              <MobileCharacterErrorNotice>
-                {sendFriendRequestMutation.error.message}
-              </MobileCharacterErrorNotice>
-            )
-          ) : null}
-          {setStarredMutation.isError &&
-          setStarredMutation.error instanceof Error ? (
-            isDesktopLayout ? (
-              <ErrorBlock message={setStarredMutation.error.message} />
-            ) : (
-              <MobileCharacterErrorNotice>
-                {setStarredMutation.error.message}
-              </MobileCharacterErrorNotice>
-            )
-          ) : null}
-          {updateProfileMutation.isError &&
-          updateProfileMutation.error instanceof Error ? (
-            isDesktopLayout ? (
-              <ErrorBlock message={updateProfileMutation.error.message} />
-            ) : (
-              <MobileCharacterErrorNotice>
-                {updateProfileMutation.error.message}
-              </MobileCharacterErrorNotice>
-            )
-          ) : null}
-          {blockMutation.isError && blockMutation.error instanceof Error ? (
-            isDesktopLayout ? (
-              <ErrorBlock message={blockMutation.error.message} />
-            ) : (
-              <MobileCharacterErrorNotice>
-                {blockMutation.error.message}
-              </MobileCharacterErrorNotice>
-            )
-          ) : null}
-          {deleteFriendMutation.isError &&
-          deleteFriendMutation.error instanceof Error ? (
-            isDesktopLayout ? (
-              <ErrorBlock message={deleteFriendMutation.error.message} />
-            ) : (
-              <MobileCharacterErrorNotice>
-                {deleteFriendMutation.error.message}
-              </MobileCharacterErrorNotice>
-            )
-          ) : null}
-
-          <section
+        <>
+          <div
             className={cn(
-              "overflow-hidden border bg-white",
+              "space-y-2.5 px-3 pb-28 pt-2",
               isDesktopLayout
-                ? "rounded-[18px] border-black/5"
-                : "mt-2 -mx-3 rounded-none border-x-0 border-[color:var(--border-faint)]",
+                ? "mx-auto w-full max-w-[720px] pb-8 pt-3"
+                : undefined,
             )}
           >
-            <div className="flex items-start gap-4 px-4 py-4">
-              <AvatarChip
-                name={character.name}
-                src={character.avatar}
-                size={isDesktopLayout ? "xl" : "lg"}
+            {notice ? (
+              <InlineNotice
+                tone={notice.tone}
+                className={
+                  isDesktopLayout
+                    ? undefined
+                    : "rounded-[11px] px-2.5 py-1.5 text-[10px] leading-4 shadow-none"
+                }
+              >
+                {notice.message}
+              </InlineNotice>
+            ) : null}
+            {entryNotice ? (
+              <DigitalHumanEntryNotice
+                tone={entryNotice.tone}
+                message={entryNotice.message}
+                onDismiss={() => {
+                  resetEntryGuard();
+                }}
+                onContinue={() => {
+                  resetEntryGuard();
+                  openCallMutation.mutate("video");
+                }}
+                onSwitchToVoice={() => {
+                  resetEntryGuard();
+                  openCallMutation.mutate("voice");
+                }}
+                continueLabel={
+                  openCallMutation.isPending
+                    ? "正在接通视频..."
+                    : entryNotice.continueLabel
+                }
+                voiceLabel={
+                  openCallMutation.isPending
+                    ? "正在接通语音..."
+                    : entryNotice.voiceLabel
+                }
+                compact={!isDesktopLayout}
               />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+            ) : null}
+            {friendsQuery.isError && friendsQuery.error instanceof Error ? (
+              isDesktopLayout ? (
+                <ErrorBlock message={friendsQuery.error.message} />
+              ) : (
+                <MobileCharacterErrorNotice>
+                  {friendsQuery.error.message}
+                </MobileCharacterErrorNotice>
+              )
+            ) : null}
+            {friendRequestsQuery.isError &&
+            friendRequestsQuery.error instanceof Error ? (
+              isDesktopLayout ? (
+                <ErrorBlock message={friendRequestsQuery.error.message} />
+              ) : (
+                <MobileCharacterErrorNotice>
+                  {friendRequestsQuery.error.message}
+                </MobileCharacterErrorNotice>
+              )
+            ) : null}
+            {blockedQuery.isError && blockedQuery.error instanceof Error ? (
+              isDesktopLayout ? (
+                <ErrorBlock message={blockedQuery.error.message} />
+              ) : (
+                <MobileCharacterErrorNotice>
+                  {blockedQuery.error.message}
+                </MobileCharacterErrorNotice>
+              )
+            ) : null}
+            {startChatMutation.isError &&
+            startChatMutation.error instanceof Error ? (
+              isDesktopLayout ? (
+                <ErrorBlock message={startChatMutation.error.message} />
+              ) : (
+                <MobileCharacterErrorNotice>
+                  {startChatMutation.error.message}
+                </MobileCharacterErrorNotice>
+              )
+            ) : null}
+            {openCallMutation.isError &&
+            openCallMutation.error instanceof Error ? (
+              isDesktopLayout ? (
+                <ErrorBlock message={openCallMutation.error.message} />
+              ) : (
+                <MobileCharacterErrorNotice>
+                  {openCallMutation.error.message}
+                </MobileCharacterErrorNotice>
+              )
+            ) : null}
+            {sendFriendRequestMutation.isError &&
+            sendFriendRequestMutation.error instanceof Error ? (
+              isDesktopLayout ? (
+                <ErrorBlock message={sendFriendRequestMutation.error.message} />
+              ) : (
+                <MobileCharacterErrorNotice>
+                  {sendFriendRequestMutation.error.message}
+                </MobileCharacterErrorNotice>
+              )
+            ) : null}
+            {setStarredMutation.isError &&
+            setStarredMutation.error instanceof Error ? (
+              isDesktopLayout ? (
+                <ErrorBlock message={setStarredMutation.error.message} />
+              ) : (
+                <MobileCharacterErrorNotice>
+                  {setStarredMutation.error.message}
+                </MobileCharacterErrorNotice>
+              )
+            ) : null}
+            {updateProfileMutation.isError &&
+            updateProfileMutation.error instanceof Error ? (
+              isDesktopLayout ? (
+                <ErrorBlock message={updateProfileMutation.error.message} />
+              ) : (
+                <MobileCharacterErrorNotice>
+                  {updateProfileMutation.error.message}
+                </MobileCharacterErrorNotice>
+              )
+            ) : null}
+            {blockMutation.isError && blockMutation.error instanceof Error ? (
+              isDesktopLayout ? (
+                <ErrorBlock message={blockMutation.error.message} />
+              ) : (
+                <MobileCharacterErrorNotice>
+                  {blockMutation.error.message}
+                </MobileCharacterErrorNotice>
+              )
+            ) : null}
+            {deleteFriendMutation.isError &&
+            deleteFriendMutation.error instanceof Error ? (
+              isDesktopLayout ? (
+                <ErrorBlock message={deleteFriendMutation.error.message} />
+              ) : (
+                <MobileCharacterErrorNotice>
+                  {deleteFriendMutation.error.message}
+                </MobileCharacterErrorNotice>
+              )
+            ) : null}
+
+            <section
+              className={cn(
+                "overflow-hidden bg-white",
+                isDesktopLayout
+                  ? "rounded-[18px] border border-black/5"
+                  : "-mx-3 border-y border-[color:var(--border-faint)]",
+              )}
+            >
+              <div className="flex items-start justify-between gap-4 px-4 py-4">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        "truncate font-medium text-[color:var(--text-primary)]",
+                        isDesktopLayout ? "text-[24px]" : "text-[22px]",
+                      )}
+                    >
+                      {displayName}
+                    </div>
+                    {friendship?.isStarred ? (
+                      <Star
+                        size={16}
+                        className="shrink-0 text-[#d4a72c]"
+                        fill="currentColor"
+                      />
+                    ) : null}
+                  </div>
                   <div
                     className={cn(
-                      "truncate font-medium text-[color:var(--text-primary)]",
-                      isDesktopLayout ? "text-[24px]" : "text-[22px]",
+                      "mt-1 text-[color:var(--text-secondary)]",
+                      isDesktopLayout ? "text-sm" : "text-[13px]",
                     )}
                   >
-                    {displayName}
+                    {remarkName
+                      ? `昵称：${character.name}`
+                      : character.relationship || "世界联系人"}
                   </div>
-                  {friendship?.isStarred ? (
-                    <Star
-                      size={16}
-                      className="shrink-0 text-[#d4a72c]"
-                      fill="currentColor"
-                    />
-                  ) : null}
+                  <div
+                    className={cn(
+                      "mt-1 text-[color:var(--text-muted)]",
+                      isDesktopLayout ? "text-sm" : "text-[12px]",
+                    )}
+                  >
+                    隐界号：yinjie_{character.id.slice(0, 8)}
+                  </div>
+                  <div
+                    className={cn(
+                      "mt-1 text-[color:var(--text-muted)]",
+                      isDesktopLayout ? "text-sm" : "text-[12px]",
+                    )}
+                  >
+                    {isFriend
+                      ? `地区：${friendship?.region?.trim() || "未设置"}`
+                      : `身份：${character.relationship || "世界角色"}`}
+                  </div>
                 </div>
-                <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
-                  {remarkName
-                    ? `昵称：${character.name}`
-                    : character.relationship}
-                </div>
-                <div
-                  className={cn(
-                    "mt-1 text-[color:var(--text-muted)]",
-                    isDesktopLayout ? "text-sm" : "text-[12px]",
-                  )}
-                >
-                  隐界号：yinjie_{character.id.slice(0, 8)}
-                </div>
+                <AvatarChip
+                  name={character.name}
+                  src={character.avatar}
+                  size={isDesktopLayout ? "xl" : "wechat"}
+                />
+              </div>
+              <div className="border-t border-[color:var(--border-faint)] px-4 py-3">
                 <div
                   className={cn(
                     "text-[color:var(--text-secondary)]",
                     isDesktopLayout
-                      ? "mt-3 text-sm leading-6"
-                      : "mt-2 text-[13px] leading-5",
+                      ? "text-sm leading-6"
+                      : "text-[13px] leading-6",
                   )}
                 >
                   {signature}
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
 
-          <section
-            className={cn(
-              "overflow-hidden border",
-              isDesktopLayout
-                ? "rounded-[18px] border-black/5 bg-black/5"
-                : "-mx-3 rounded-none border-x-0 border-[color:var(--border-faint)] bg-[color:var(--bg-canvas-elevated)]",
-            )}
-          >
-            <div
-              className={cn(
-                "grid gap-px",
-                isFriend ? "grid-cols-3" : "grid-cols-2",
-              )}
+            {isDesktopLayout ? (
+              <section className="overflow-hidden rounded-[18px] border border-black/5 bg-white p-4">
+                <div
+                  className={cn(
+                    "grid gap-2",
+                    isFriend ? "grid-cols-2" : "grid-cols-1",
+                  )}
+                >
+                  {isFriend ? (
+                    <>
+                      <Button
+                        variant="primary"
+                        onClick={() => {
+                          setNotice(null);
+                          startChatMutation.mutate();
+                        }}
+                        className="h-11 rounded-[12px] bg-[#07c160] text-[15px] text-white shadow-none hover:bg-[#06ad56]"
+                        disabled={startChatMutation.isPending}
+                      >
+                        {startChatMutation.isPending ? "正在打开..." : "发消息"}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setNotice(null);
+                          handleVoiceCall();
+                        }}
+                        className="h-11 rounded-[12px] border-[color:var(--border-faint)] bg-white text-[15px] text-[color:var(--text-primary)] shadow-none hover:bg-[#f5f7f7]"
+                        disabled={openCallMutation.isPending}
+                      >
+                        {openCallMutation.isPending
+                          ? "正在接通..."
+                          : "语音通话"}
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      onClick={() => {
+                        setNotice(null);
+                        handleAddToContacts();
+                      }}
+                      className="h-11 rounded-[12px] bg-[#07c160] text-[15px] text-white shadow-none hover:bg-[#06ad56]"
+                      disabled={
+                        sendFriendRequestMutation.isPending &&
+                        !hasPendingFriendRequest
+                      }
+                    >
+                      {hasPendingFriendRequest
+                        ? "查看好友申请"
+                        : sendFriendRequestMutation.isPending
+                          ? "发送中..."
+                          : "添加到通讯录"}
+                    </Button>
+                  )}
+                </div>
+              </section>
+            ) : null}
+
+            <ProfileSection
+              title="资料"
+              flatOnMobile={!isDesktopLayout}
+              compact={!isDesktopLayout}
             >
-              <ActionPanelButton
-                icon={<MessageCircleMore size={18} />}
-                label={startChatMutation.isPending ? "正在打开..." : "发消息"}
-                onClick={() => startChatMutation.mutate()}
-                disabled={startChatMutation.isPending}
+              {isFriend ? (
+                <ProfileRow
+                  label="设置备注和标签"
+                  value={buildRemarkSummary(
+                    friendship?.remarkName,
+                    friendship?.tags,
+                  )}
+                  onClick={() => setIsEditingProfile((current) => !current)}
+                  compact={!isDesktopLayout}
+                />
+              ) : null}
+              {isFriend && isEditingProfile ? (
+                <div className="border-t border-[color:var(--border-faint)] bg-[#f7f7f7] px-4 py-3">
+                  <div className="space-y-3">
+                    <DetailInputField
+                      label="备注"
+                      value={profileForm.remarkName}
+                      placeholder="给朋友设置备注名"
+                      onChange={(value) =>
+                        setProfileForm((current) => ({
+                          ...current,
+                          remarkName: value,
+                        }))
+                      }
+                      compact={!isDesktopLayout}
+                    />
+                    <DetailInputField
+                      label="标签"
+                      value={profileForm.tags}
+                      placeholder="用逗号分隔，例如：同事，策展"
+                      onChange={(value) =>
+                        setProfileForm((current) => ({
+                          ...current,
+                          tags: value,
+                        }))
+                      }
+                      compact={!isDesktopLayout}
+                    />
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setIsEditingProfile(false);
+                        setProfileForm({
+                          remarkName: friendship?.remarkName ?? "",
+                          tags: friendship?.tags?.join("，") ?? "",
+                        });
+                      }}
+                      className="h-9 flex-1 rounded-[10px] border-[color:var(--border-faint)] bg-white px-3 text-[13px] shadow-none hover:bg-[#f5f7f7]"
+                      disabled={updateProfileMutation.isPending}
+                    >
+                      取消
+                    </Button>
+                    <Button
+                      variant="primary"
+                      onClick={() => void handleSaveProfile()}
+                      className="h-9 flex-1 rounded-[10px] bg-[#07c160] px-3 text-[13px] text-white shadow-none hover:bg-[#06ad56]"
+                      disabled={updateProfileMutation.isPending}
+                    >
+                      {updateProfileMutation.isPending ? "保存中..." : "保存"}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+              <ProfileRow
+                label="地区"
+                value={
+                  isFriend
+                    ? friendship?.region?.trim() || "未设置"
+                    : character.relationship || "世界角色"
+                }
+                compact={!isDesktopLayout}
+              />
+              <ProfileRow
+                label="来源"
+                value={
+                  isFriend
+                    ? friendship?.source?.trim() || "未设置"
+                    : "世界内自然认识"
+                }
                 compact={!isDesktopLayout}
               />
               {isFriend ? (
-                <>
-                  <ActionPanelButton
-                    icon={<Phone size={18} />}
-                    label={
-                      openCallMutation.isPending ? "正在接通..." : "语音通话"
-                    }
-                    onClick={handleVoiceCall}
-                    disabled={openCallMutation.isPending}
-                    compact={!isDesktopLayout}
-                  />
-                  <ActionPanelButton
-                    icon={<Video size={18} />}
-                    label={
-                      openCallMutation.isPending ? "正在接通..." : "视频通话"
-                    }
-                    onClick={handleVideoCall}
-                    disabled={openCallMutation.isPending}
-                    compact={!isDesktopLayout}
-                  />
-                </>
-              ) : (
-                <ActionPanelButton
-                  icon={<ChevronRight size={18} />}
-                  label={
-                    hasPendingFriendRequest
-                      ? isDesktopLayout
-                        ? "查看好友申请"
-                        : "通过好友申请"
-                      : sendFriendRequestMutation.isPending
-                        ? "发送中..."
-                        : "添加到通讯录"
-                  }
-                  onClick={handleAddToContacts}
-                  disabled={
-                    isDesktopLayout
-                      ? !characterId
-                      : sendFriendRequestMutation.isPending
-                  }
+                <ProfileRow
+                  label="标签"
+                  value={tagSummary}
                   compact={!isDesktopLayout}
                 />
-              )}
-            </div>
-          </section>
-
-          <ProfileSection
-            title={isFriend ? "资料设置" : "基本资料"}
-            flatOnMobile={!isDesktopLayout}
-            compact={!isDesktopLayout}
-          >
-            {isFriend ? (
+              ) : null}
               <ProfileRow
-                label="设置备注和标签"
-                value={buildRemarkSummary(
-                  friendship?.remarkName,
-                  friendship?.tags,
-                )}
-                onClick={() => setIsEditingProfile((current) => !current)}
-                compact={!isDesktopLayout}
-              />
-            ) : null}
-            {isFriend && isEditingProfile ? (
-              <div className="border-t border-[color:var(--border-faint)] bg-[color:var(--bg-canvas)] px-4 py-2.5">
-                <div className="space-y-3">
-                  <DetailInputField
-                    label="备注"
-                    value={profileForm.remarkName}
-                    placeholder="给朋友设置备注名"
-                    onChange={(value) =>
-                      setProfileForm((current) => ({
-                        ...current,
-                        remarkName: value,
-                      }))
-                    }
-                    compact={!isDesktopLayout}
-                  />
-                  <DetailInputField
-                    label="标签"
-                    value={profileForm.tags}
-                    placeholder="用逗号分隔，例如：同事，策展"
-                    onChange={(value) =>
-                      setProfileForm((current) => ({
-                        ...current,
-                        tags: value,
-                      }))
-                    }
-                    compact={!isDesktopLayout}
-                  />
-                </div>
-                <div className="mt-3.5 flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      setIsEditingProfile(false);
-                      setProfileForm({
-                        remarkName: friendship?.remarkName ?? "",
-                        tags: friendship?.tags?.join("，") ?? "",
-                      });
-                    }}
-                    className="h-8 flex-1 rounded-[10px] border-[color:var(--border-faint)] bg-white px-3 text-[12px] shadow-none hover:bg-[#f5f7f7]"
-                    disabled={updateProfileMutation.isPending}
-                  >
-                    取消
-                  </Button>
-                  <Button
-                    variant="primary"
-                    onClick={() => void handleSaveProfile()}
-                    className="h-8 flex-1 rounded-[10px] bg-[#07c160] px-3 text-[12px] text-white shadow-none hover:bg-[#06ad56]"
-                    disabled={updateProfileMutation.isPending}
-                  >
-                    {updateProfileMutation.isPending ? "保存中..." : "保存"}
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-            <ProfileRow
-              label="地区"
-              value={
-                isFriend
-                  ? friendship?.region?.trim() || "未设置"
-                  : character.relationship || "世界角色"
-              }
-              compact={!isDesktopLayout}
-            />
-            <ProfileRow
-              label="来源"
-              value={
-                isFriend
-                  ? friendship?.source?.trim() || "未设置"
-                  : "世界内自然认识"
-              }
-              compact={!isDesktopLayout}
-            />
-            <ProfileRow
-              label="标签"
-              value={isFriend ? tagSummary : "未设置"}
-              compact={!isDesktopLayout}
-            />
-            <ProfileRow
-              label="个性签名"
-              value={signature}
-              multiline
-              compact={!isDesktopLayout}
-            />
-            <ProfileRow
-              label="最近互动"
-              value={
-                isFriend
-                  ? formatTimestamp(
-                      friendship?.lastInteractedAt ?? character.lastActiveAt,
-                    )
-                  : formatTimestamp(character.lastActiveAt)
-              }
-              compact={!isDesktopLayout}
-            />
-            <ProfileRow
-              label="朋友圈"
-              value={
-                !isFriend
-                  ? "加为好友后可查看"
-                  : "查看这位好友最近的朋友圈"
-              }
-              onClick={isFriend ? handleOpenMoments : undefined}
-              compact={!isDesktopLayout}
-            />
-          </ProfileSection>
-
-          <ProfileSection
-            title="更多信息"
-            flatOnMobile={!isDesktopLayout}
-            compact={!isDesktopLayout}
-          >
-            <ProfileRow label="当前状态" value={activitySummary} compact={!isDesktopLayout} />
-            <ProfileRow
-              label="擅长领域"
-              value={expertiseSummary}
-              multiline
-              compact={!isDesktopLayout}
-            />
-            <ProfileRow label="语气风格" value={toneSummary} compact={!isDesktopLayout} />
-            <div className="border-t border-[color:var(--border-faint)] px-4 py-3">
-              <div
-                className={cn(
-                  "text-[color:var(--text-muted)]",
-                  isDesktopLayout
-                    ? "text-xs uppercase tracking-[0.16em]"
-                    : "text-[11px]",
-                )}
-              >
-                角色简介
-              </div>
-              <div
-                className={cn(
-                  "mt-2 text-[color:var(--text-secondary)]",
-                  isDesktopLayout ? "text-sm leading-7" : "text-[13px] leading-6",
-                )}
-              >
-                {character.bio?.trim() || "暂时没有更多介绍。"}
-              </div>
-            </div>
-          </ProfileSection>
-
-          <ProfileSection
-            title="关系管理"
-            flatOnMobile={!isDesktopLayout}
-            compact={!isDesktopLayout}
-          >
-            {isFriend ? (
-              <ProfileSwitchRow
-                label="设为星标朋友"
-                checked={friendship?.isStarred ?? false}
-                onToggle={() =>
-                  setStarredMutation.mutate(!(friendship?.isStarred ?? false))
-                }
-                disabled={setStarredMutation.isPending}
-                compact={!isDesktopLayout}
-              />
-            ) : null}
-            <ProfileRow
-              label={isBlocked ? "移出黑名单" : "加入黑名单"}
-              value={
-                blockMutation.isPending
-                  ? "正在更新..."
-                  : isBlocked
-                    ? "恢复正常联系"
-                    : "不再接收对方互动"
-              }
-              danger
-              onClick={handleBlockAction}
-              disabled={blockMutation.isPending}
-              compact={!isDesktopLayout}
-            />
-            {isFriend ? (
-              <ProfileRow
-                label="删除联系人"
+                label="朋友圈"
                 value={
-                  deleteFriendMutation.isPending
-                    ? "正在删除..."
-                    : "从通讯录移除"
+                  isFriend ? "查看这位好友最近的朋友圈" : "加为好友后可查看"
+                }
+                onClick={isFriend ? handleOpenMoments : undefined}
+                compact={!isDesktopLayout}
+              />
+              <ProfileRow
+                label="推荐给朋友"
+                value={
+                  nativeMobileShareSupported
+                    ? "打开系统分享面板"
+                    : "复制这张隐界名片"
+                }
+                onClick={() => void handleShareCharacterCard()}
+                compact={!isDesktopLayout}
+              />
+            </ProfileSection>
+
+            <ProfileSection
+              title="更多资料"
+              flatOnMobile={!isDesktopLayout}
+              compact={!isDesktopLayout}
+            >
+              <ProfileRow
+                label="最近互动"
+                value={
+                  isFriend
+                    ? formatTimestamp(
+                        friendship?.lastInteractedAt ?? character.lastActiveAt,
+                      )
+                    : formatTimestamp(character.lastActiveAt)
+                }
+                compact={!isDesktopLayout}
+              />
+              {commonGroups.length ? (
+                <ProfileRow
+                  label="共同群聊"
+                  value={`${commonGroups.length} 个`}
+                  onClick={() => {
+                    const firstGroup = commonGroups[0];
+                    if (!firstGroup) {
+                      return;
+                    }
+
+                    void navigate({
+                      to: "/group/$groupId",
+                      params: { groupId: firstGroup.id },
+                    });
+                  }}
+                  compact={!isDesktopLayout}
+                />
+              ) : null}
+              <ProfileRow
+                label="当前状态"
+                value={activitySummary}
+                compact={!isDesktopLayout}
+              />
+              <ProfileRow
+                label="擅长领域"
+                value={expertiseSummary}
+                multiline
+                compact={!isDesktopLayout}
+              />
+              <ProfileRow
+                label="语气风格"
+                value={toneSummary}
+                compact={!isDesktopLayout}
+              />
+              <div className="border-t border-[color:var(--border-faint)] px-4 py-3">
+                <div
+                  className={cn(
+                    "text-[color:var(--text-muted)]",
+                    isDesktopLayout
+                      ? "text-xs uppercase tracking-[0.16em]"
+                      : "text-[11px]",
+                  )}
+                >
+                  角色简介
+                </div>
+                <div
+                  className={cn(
+                    "mt-2 text-[color:var(--text-secondary)]",
+                    isDesktopLayout
+                      ? "text-sm leading-7"
+                      : "text-[13px] leading-6",
+                  )}
+                >
+                  {character.bio?.trim() || "暂时没有更多介绍。"}
+                </div>
+              </div>
+            </ProfileSection>
+
+            <ProfileSection
+              title={isFriend ? "朋友权限" : "关系管理"}
+              flatOnMobile={!isDesktopLayout}
+              compact={!isDesktopLayout}
+            >
+              {isFriend ? (
+                <ProfileSwitchRow
+                  label="设为星标朋友"
+                  checked={friendship?.isStarred ?? false}
+                  onToggle={() =>
+                    setStarredMutation.mutate(!(friendship?.isStarred ?? false))
+                  }
+                  disabled={setStarredMutation.isPending}
+                  compact={!isDesktopLayout}
+                />
+              ) : null}
+              <ProfileRow
+                label={isBlocked ? "移出黑名单" : "加入黑名单"}
+                value={
+                  blockMutation.isPending
+                    ? "正在更新..."
+                    : isBlocked
+                      ? "恢复正常联系"
+                      : "不再接收对方互动"
                 }
                 danger
-                onClick={handleDeleteFriendAction}
-                disabled={deleteFriendMutation.isPending}
+                onClick={handleBlockAction}
+                disabled={blockMutation.isPending}
                 compact={!isDesktopLayout}
               />
-            ) : null}
-          </ProfileSection>
+              {isFriend ? (
+                <ProfileRow
+                  label="删除联系人"
+                  value={
+                    deleteFriendMutation.isPending
+                      ? "正在删除..."
+                      : "从通讯录移除"
+                  }
+                  danger
+                  onClick={handleDeleteFriendAction}
+                  disabled={deleteFriendMutation.isPending}
+                  compact={!isDesktopLayout}
+                />
+              ) : null}
+            </ProfileSection>
+          </div>
 
           {!isDesktopLayout ? (
-            <MobileDetailsActionSheet
-              open={dangerSheetConfig !== null}
-              title={dangerSheetConfig?.title ?? ""}
-              description={dangerSheetConfig?.description}
-              onClose={() => setDangerSheetAction(null)}
-              actions={
-                dangerSheetConfig
-                  ? [
-                      {
-                        key: "confirm",
-                        label: dangerSheetConfig.confirmLabel,
-                        description: dangerSheetConfig.confirmDescription,
-                        danger: dangerSheetConfig.confirmDanger,
-                        disabled:
-                          blockMutation.isPending || deleteFriendMutation.isPending,
-                        onClick: () => {
-                          setDangerSheetAction(null);
-                          dangerSheetConfig.onConfirm();
-                        },
-                      },
-                    ]
-                  : []
-              }
-            />
+            <>
+              <div className="sticky bottom-0 z-20 border-t border-[color:var(--border-faint)] bg-[rgba(247,247,247,0.96)] px-4 pb-[calc(env(safe-area-inset-bottom,0px)+12px)] pt-3 backdrop-blur-xl">
+                <div
+                  className={cn(
+                    "grid gap-2",
+                    isFriend ? "grid-cols-2" : "grid-cols-1",
+                  )}
+                >
+                  {isFriend ? (
+                    <>
+                      <MobileProfileActionButton
+                        primary
+                        label={
+                          startChatMutation.isPending ? "正在打开..." : "发消息"
+                        }
+                        disabled={startChatMutation.isPending}
+                        onClick={() => {
+                          setNotice(null);
+                          startChatMutation.mutate();
+                        }}
+                      />
+                      <MobileProfileActionButton
+                        label={
+                          openCallMutation.isPending
+                            ? "正在接通..."
+                            : "音视频通话"
+                        }
+                        disabled={openCallMutation.isPending}
+                        onClick={() => {
+                          setNotice(null);
+                          setMobileSheetAction("call");
+                        }}
+                      />
+                    </>
+                  ) : (
+                    <MobileProfileActionButton
+                      primary
+                      label={
+                        hasPendingFriendRequest
+                          ? "查看好友申请"
+                          : sendFriendRequestMutation.isPending
+                            ? "发送中..."
+                            : "添加到通讯录"
+                      }
+                      disabled={
+                        sendFriendRequestMutation.isPending &&
+                        !hasPendingFriendRequest
+                      }
+                      onClick={() => {
+                        setNotice(null);
+                        handleAddToContacts();
+                      }}
+                    />
+                  )}
+                </div>
+              </div>
+              <MobileDetailsActionSheet
+                open={mobileSheetConfig !== null}
+                title={mobileSheetConfig?.title ?? ""}
+                description={mobileSheetConfig?.description}
+                onClose={() => setMobileSheetAction(null)}
+                actions={
+                  mobileSheetConfig?.actions.map((action) => ({
+                    ...action,
+                    onClick: () => {
+                      setMobileSheetAction(null);
+                      action.onClick();
+                    },
+                  })) ?? []
+                }
+              />
+            </>
           ) : null}
-        </div>
+        </>
       ) : null}
     </AppPage>
   );
@@ -1424,18 +1523,16 @@ function MobileCharacterErrorNotice({ children }: { children: ReactNode }) {
   );
 }
 
-function ActionPanelButton({
-  icon,
+function MobileProfileActionButton({
   label,
   onClick,
   disabled = false,
-  compact = false,
+  primary = false,
 }: {
-  icon: ReactNode;
   label: string;
   onClick: () => void;
   disabled?: boolean;
-  compact?: boolean;
+  primary?: boolean;
 }) {
   return (
     <button
@@ -1443,12 +1540,13 @@ function ActionPanelButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex flex-col items-center justify-center bg-white text-[color:var(--text-primary)] transition active:bg-[color:var(--surface-console)] disabled:opacity-45",
-        compact ? "min-h-[70px] gap-1.5" : "min-h-[78px] gap-2",
+        "flex min-h-11 items-center justify-center rounded-[11px] border px-4 text-[15px] font-medium transition disabled:opacity-45",
+        primary
+          ? "border-[#07c160] bg-[#07c160] text-white active:bg-[#06ad56]"
+          : "border-[color:var(--border-faint)] bg-white text-[color:var(--text-primary)] active:bg-[#f2f3f5]",
       )}
     >
-      <span className="text-[color:var(--text-secondary)]">{icon}</span>
-      <span className={compact ? "text-[13px]" : "text-sm"}>{label}</span>
+      {label}
     </button>
   );
 }
@@ -1484,7 +1582,9 @@ function ProfileSection({
       >
         {title}
       </div>
-      <div className="border-t border-[color:var(--border-faint)]">{children}</div>
+      <div className="border-t border-[color:var(--border-faint)]">
+        {children}
+      </div>
     </section>
   );
 }
@@ -1607,7 +1707,9 @@ function ProfileSwitchRow({
       </span>
       <span
         className={cn(
-          compact ? "relative h-7 w-11 rounded-full transition-colors" : "relative h-8 w-13 rounded-full transition-colors",
+          compact
+            ? "relative h-7 w-11 rounded-full transition-colors"
+            : "relative h-8 w-13 rounded-full transition-colors",
           checked ? "bg-[#07c160]" : "bg-[#d5d5d5]",
         )}
       >
@@ -1616,7 +1718,11 @@ function ProfileSwitchRow({
             compact
               ? "absolute left-1 top-1 h-5 w-5 rounded-full bg-white shadow-sm transition-transform"
               : "absolute left-1 top-1 h-6 w-6 rounded-full bg-white shadow-sm transition-transform",
-            checked ? (compact ? "translate-x-4" : "translate-x-6") : "translate-x-0",
+            checked
+              ? compact
+                ? "translate-x-4"
+                : "translate-x-6"
+              : "translate-x-0",
           )}
         />
       </span>

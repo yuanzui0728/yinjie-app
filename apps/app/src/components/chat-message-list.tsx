@@ -3187,7 +3187,11 @@ function resolveCharacterAvatarAction(
     return "desktop-popover" as const;
   }
 
-  if (selectionMode || message.senderType !== "character" || !message.senderId?.trim()) {
+  if (
+    selectionMode ||
+    message.senderType !== "character" ||
+    !message.senderId?.trim()
+  ) {
     return null;
   }
 
