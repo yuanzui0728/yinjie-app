@@ -877,6 +877,28 @@ export function StickerPanel({
         : customStickerLibraryFull
           ? "自定义表情已满，请先删除几个再继续添加"
           : undefined;
+  const searchInputPlaceholder =
+    !isMobile && activeSectionId === "custom"
+      ? showManageSearchPauseHint
+        ? customUploadResumed
+          ? "搜索表情，Esc 继续管理或直接继续添加"
+          : "搜索表情，Esc 继续管理"
+        : customManageMode && trimmedKeyword.length === 0
+          ? "搜索表情，输入后会暂停删除管理"
+          : "搜索表情"
+      : "搜索表情";
+  const searchInputTitle =
+    !isMobile && activeSectionId === "custom"
+      ? showManageSearchPauseHint
+        ? customUploadResumed
+          ? "当前搜索已暂停删除管理，并且已经腾出空位，可按 Esc 继续管理或直接继续添加。"
+          : "当前搜索已暂停删除管理，可按 Esc 或清空搜索恢复。"
+        : customManageMode && trimmedKeyword.length === 0
+          ? "输入关键词后会暂时暂停删除管理，清空搜索后会回到当前删除位置。"
+          : customStickerLibraryFull
+            ? "自定义表情已满，可先搜索已有表情，也可以切到管理删除后继续添加。"
+            : undefined
+      : undefined;
   const openCustomManageMode = () => {
     setCustomSortMode("added");
     setCustomDeleteFeedback(null);
@@ -1674,7 +1696,8 @@ export function StickerPanel({
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
               onKeyDown={handleSearchInputKeyDown}
-              placeholder="搜索表情"
+              placeholder={searchInputPlaceholder}
+              title={searchInputTitle}
               className="w-full border-none bg-transparent text-[13px] text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-muted)]"
             />
             {trimmedKeyword.length > 0 ? (
