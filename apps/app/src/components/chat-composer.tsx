@@ -614,6 +614,20 @@ export function ChatComposer({
     closeMobileSpeechSheet();
   };
 
+  const returnMobileComposerToText = useCallback(
+    (options?: { focusInput?: boolean }) => {
+      if (isDesktop) {
+        return;
+      }
+
+      setMobileComposerMode("text");
+      if (options?.focusInput) {
+        focusInput();
+      }
+    },
+    [focusInput, isDesktop, setMobileComposerMode],
+  );
+
   const collapseMobileTransientState = useEffectEvent(() => {
     if (isDesktop) {
       return;
@@ -1174,8 +1188,7 @@ export function ChatComposer({
 
     if (!isDesktop) {
       if (mobileComposerMode === "sticker") {
-        setMobileComposerMode("text");
-        focusInput();
+        returnMobileComposerToText({ focusInput: true });
         return;
       }
 
@@ -1199,7 +1212,7 @@ export function ChatComposer({
     }
 
     if (mobileComposerMode === "plus") {
-      setMobileComposerMode("text");
+      returnMobileComposerToText({ focusInput: true });
       return;
     }
 
@@ -1242,7 +1255,7 @@ export function ChatComposer({
       }),
     );
     if (!isDesktop) {
-      setStickerPanelOpen(false);
+      returnMobileComposerToText();
     }
   };
 
@@ -1253,8 +1266,10 @@ export function ChatComposer({
 
     setAttachmentError(null);
     setMobilePlusNotice(null);
+    if (!isDesktop) {
+      returnMobileComposerToText();
+    }
     if (nativeMobileShellSupported) {
-      setPlusPanelOpen(false);
       void pickAlbumWithNativeShell();
       return;
     }
@@ -1268,8 +1283,10 @@ export function ChatComposer({
 
     setAttachmentError(null);
     setMobilePlusNotice(null);
+    if (!isDesktop) {
+      returnMobileComposerToText();
+    }
     if (nativeMobileShellSupported) {
-      setPlusPanelOpen(false);
       void pickCameraWithNativeShell();
       return;
     }
@@ -1333,8 +1350,10 @@ export function ChatComposer({
 
     setAttachmentError(null);
     setMobilePlusNotice(null);
+    if (!isDesktop) {
+      returnMobileComposerToText();
+    }
     if (nativeMobileShellSupported) {
-      setPlusPanelOpen(false);
       void pickFileWithNativeShellAsDraft();
       return;
     }
@@ -1483,7 +1502,7 @@ export function ChatComposer({
       return;
     }
 
-    setPlusPanelOpen(false);
+    returnMobileComposerToText();
     if (action === "camera") {
       pickCamera();
       return;
@@ -1499,7 +1518,7 @@ export function ChatComposer({
         return;
       }
 
-      setPlusPanelOpen(false);
+      returnMobileComposerToText();
       if (action === "camera") {
         pickCamera();
         return;
@@ -2537,7 +2556,11 @@ export function ChatComposer({
         payload,
       );
       await onSendAttachment(uploadReadyPayload);
-      setPlusPanelOpen(false);
+      if (!isDesktop) {
+        returnMobileComposerToText();
+      } else {
+        setPlusPanelOpen(false);
+      }
       return true;
     } catch (attachmentActionError) {
       setAttachmentError(
@@ -2575,7 +2598,11 @@ export function ChatComposer({
           sentCount += 1;
         }
 
-        setPlusPanelOpen(false);
+        if (!isDesktop) {
+          returnMobileComposerToText();
+        } else {
+          setPlusPanelOpen(false);
+        }
         handleCancelAttachmentDraft();
       } catch (attachmentActionError) {
         trimSentImageDraftItems(sentCount);
@@ -2620,7 +2647,11 @@ export function ChatComposer({
 
     try {
       await onSendPresetText(normalized);
-      setPlusPanelOpen(false);
+      if (!isDesktop) {
+        returnMobileComposerToText();
+      } else {
+        setPlusPanelOpen(false);
+      }
       return true;
     } catch (presetTextError) {
       setAttachmentError(
@@ -3266,8 +3297,7 @@ export function ChatComposer({
                   return;
                 }
 
-                setMobileComposerMode("text");
-                focusInput();
+                returnMobileComposerToText({ focusInput: true });
               }}
               onPackChange={setActiveStickerPackId}
               onRecentItemsChange={(items) => setRecentStickers(items)}
@@ -3280,6 +3310,9 @@ export function ChatComposer({
           <MobileChatPlusPanel
             open={plusPanelOpen}
             busy={attachmentBusy}
+            onClose={() => {
+              returnMobileComposerToText({ focusInput: true });
+            }}
             onStartVoiceCall={onStartVoiceCall}
             onStartVideoCall={onStartVideoCall}
             onPickAlbum={pickAlbum}
