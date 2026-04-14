@@ -38,14 +38,11 @@ import {
   Button,
   cn,
   InlineNotice,
-  TextField,
 } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { DesktopChannelsWorkspace } from "../features/desktop/channels/desktop-channels-workspace";
 import {
-  hydrateDesktopFavoritesFromNative,
-  readDesktopFavorites,
   removeDesktopFavorite,
   upsertDesktopFavorite,
 } from "../features/desktop/favorites/desktop-favorites-storage";
@@ -57,6 +54,8 @@ import {
 } from "../runtime/mobile-bridge";
 import { isNativeMobileShareSurface } from "../runtime/mobile-share-surface";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
+
+const EMPTY_CHANNEL_POSTS: FeedPostListItem[] = [];
 
 export function ChannelsPage() {
   const isDesktopLayout = useDesktopLayout();
@@ -70,7 +69,6 @@ export function ChannelsPage() {
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
-  const nativeDesktopFavorites = runtimeConfig.appPlatform === "desktop";
   const nativeMobileShareSupported = isNativeMobileShareSurface({
     isDesktopLayout,
   });
@@ -79,7 +77,6 @@ export function ChannelsPage() {
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>(
     {},
   );
-  const [favoriteSourceIds, setFavoriteSourceIds] = useState<string[]>([]);
   const [mobileCommentSheetPostId, setMobileCommentSheetPostId] = useState<
     string | null
   >(null);
@@ -216,7 +213,7 @@ export function ChannelsPage() {
     },
   });
 
-  const visiblePosts = channelsQuery.data?.posts ?? [];
+  const visiblePosts = channelsQuery.data?.posts ?? EMPTY_CHANNEL_POSTS;
   const mobileCommentSheetPost = useMemo(
     () =>
       visiblePosts.find((post) => post.id === mobileCommentSheetPostId) ?? null,
@@ -313,53 +310,6 @@ export function ChannelsPage() {
   }, [mobileCommentSheetPostId, mobileReplyTarget]);
 
   useEffect(() => {
-    setFavoriteSourceIds(readDesktopFavorites().map((item) => item.sourceId));
-  }, []);
-
-  useEffect(() => {
-    if (!nativeDesktopFavorites) {
-      return;
-    }
-
-    let cancelled = false;
-
-    async function syncFavoriteSourceIds() {
-      const favoriteSourceIds = (await hydrateDesktopFavoritesFromNative()).map(
-        (item) => item.sourceId,
-      );
-      if (cancelled) {
-        return;
-      }
-
-      setFavoriteSourceIds((current) =>
-        JSON.stringify(current) === JSON.stringify(favoriteSourceIds)
-          ? current
-          : favoriteSourceIds,
-      );
-    }
-
-    const handleFocus = () => {
-      void syncFavoriteSourceIds();
-    };
-    const handleVisibilityChange = () => {
-      if (document.visibilityState !== "visible") {
-        return;
-      }
-
-      void syncFavoriteSourceIds();
-    };
-
-    window.addEventListener("focus", handleFocus);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      cancelled = true;
-      window.removeEventListener("focus", handleFocus);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, [nativeDesktopFavorites]);
-
-  useEffect(() => {
     if (!notice) {
       return;
     }
@@ -429,9 +379,10 @@ export function ChannelsPage() {
     const sourceId = `channels-${post.id}`;
     const routeHash = buildDesktopChannelsRouteHash(post.id);
     const alreadyFavorited = Boolean(post.ownerState?.hasFavorited);
-    const nextFavorites = alreadyFavorited
-      ? removeDesktopFavorite(sourceId)
-      : upsertDesktopFavorite({
+    if (alreadyFavorited) {
+      removeDesktopFavorite(sourceId);
+    } else {
+      upsertDesktopFavorite({
           id: `favorite-${sourceId}`,
           sourceId,
           category: "channels",
@@ -443,8 +394,8 @@ export function ChannelsPage() {
           avatarName: post.authorName,
           avatarSrc: post.authorAvatar,
         });
+    }
 
-    setFavoriteSourceIds(nextFavorites.map((item) => item.sourceId));
     favoriteMutation.mutate({
       postId: post.id,
       favorited: alreadyFavorited,
@@ -460,6 +411,13 @@ export function ChannelsPage() {
 
   function hidePost(postId: string) {
     notInterestedMutation.mutate(postId);
+  }
+
+  function openChannelAuthor(authorId: string) {
+    void navigate({
+      to: "/channels/authors/$authorId",
+      params: { authorId },
+    });
   }
 
   function updateCommentDraft(postId: string, value: string) {
@@ -638,6 +596,7 @@ export function ChannelsPage() {
             posts={visiblePosts}
             routeSelectedPostId={routeSelectedPostId}
             onLike={(postId) => likeMutation.mutate(postId)}
+            onOpenAuthor={(post) => openChannelAuthor(post.authorId)}
             onOpenComments={(post) => {
               setMobileCommentSheetPostId(post.id);
               setMobileReplyTarget(null);
@@ -777,6 +736,7 @@ type MobileChannelsViewportProps = {
   posts: FeedPostListItem[];
   routeSelectedPostId: string | null;
   onLike: (postId: string) => void;
+  onOpenAuthor: (post: FeedPostListItem) => void;
   onOpenComments: (post: FeedPostListItem) => void;
   onNotInterested: (postId: string) => void;
   onShare: (post: FeedPostListItem) => void;
@@ -790,6 +750,7 @@ function MobileChannelsViewport({
   posts,
   routeSelectedPostId,
   onLike,
+  onOpenAuthor,
   onOpenComments,
   onNotInterested,
   onShare,
@@ -878,6 +839,7 @@ function MobileChannelsViewport({
             cardRefs.current.delete(post.id);
           }}
           onLike={() => onLike(post.id)}
+          onOpenAuthor={() => onOpenAuthor(post)}
           onOpenComments={() => onOpenComments(post)}
           onNotInterested={() => onNotInterested(post.id)}
           onShare={() => onShare(post)}
@@ -896,6 +858,7 @@ type MobileChannelsCardProps = {
   post: FeedPostListItem;
   setCardRef: (node: HTMLElement | null) => void;
   onLike: () => void;
+  onOpenAuthor: () => void;
   onOpenComments: () => void;
   onNotInterested: () => void;
   onShare: () => void;
@@ -910,6 +873,7 @@ function MobileChannelsCard({
   post,
   setCardRef,
   onLike,
+  onOpenAuthor,
   onOpenComments,
   onNotInterested,
   onShare,
@@ -1041,19 +1005,25 @@ function MobileChannelsCard({
         <div className="absolute inset-x-0 bottom-0 px-3.5 pb-3.5">
           <div className="max-w-[calc(100%-4.25rem)]">
             <div className="flex items-center gap-2">
-              <AvatarChip
-                name={post.authorName}
-                src={post.authorAvatar}
-                size="wechat"
-              />
-              <div className="min-w-0 flex-1 text-white">
-                <div className="truncate text-[12px] font-medium">
-                  {post.authorName}
+              <button
+                type="button"
+                onClick={onOpenAuthor}
+                className="flex min-w-0 flex-1 items-center gap-2 text-left"
+              >
+                <AvatarChip
+                  name={post.authorName}
+                  src={post.authorAvatar}
+                  size="wechat"
+                />
+                <div className="min-w-0 flex-1 text-white">
+                  <div className="truncate text-[12px] font-medium">
+                    {post.authorName}
+                  </div>
+                  <div className="mt-0.5 text-[9px] text-white/70">
+                    {formatTimestamp(post.createdAt)} · 视频号动态
+                  </div>
                 </div>
-                <div className="mt-0.5 text-[9px] text-white/70">
-                  {formatTimestamp(post.createdAt)} · 视频号动态
-                </div>
-              </div>
+              </button>
               <button
                 type="button"
                 onClick={onToggleFollowAuthor}
