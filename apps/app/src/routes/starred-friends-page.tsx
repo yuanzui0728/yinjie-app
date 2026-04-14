@@ -24,6 +24,7 @@ import {
   getFriendDisplayName,
   matchesFriendSearch,
 } from "../features/contacts/contact-utils";
+import { buildDesktopContactsRouteHash } from "../features/desktop/contacts/desktop-contacts-route-state";
 import { buildDesktopFriendMomentsRouteHash } from "../features/desktop/moments/desktop-friend-moments-route-state";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { navigateBackOrFallback } from "../lib/history-back";
@@ -31,9 +32,22 @@ import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export function StarredFriendsPage() {
   const isDesktopLayout = useDesktopLayout();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isDesktopLayout) {
+      return;
+    }
+
+    void navigate({
+      to: "/tabs/contacts",
+      hash: buildDesktopContactsRouteHash({ pane: "starred-friends" }),
+      replace: true,
+    });
+  }, [isDesktopLayout, navigate]);
 
   if (isDesktopLayout) {
-    return <DesktopStarredFriendsPage />;
+    return null;
   }
 
   return <MobileStarredFriendsPage />;
@@ -204,278 +218,6 @@ function MobileStarredFriendsPage() {
             ))}
           </section>
         ) : null}
-      </div>
-    </AppPage>
-  );
-}
-
-function DesktopStarredFriendsPage() {
-  const navigate = useNavigate();
-  const runtimeConfig = useAppRuntimeConfig();
-  const baseUrl = runtimeConfig.apiBaseUrl;
-  const [searchText, setSearchText] = useState("");
-  const [notice, setNotice] = useState<string | null>(null);
-  const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(
-    null,
-  );
-
-  const friendsQuery = useQuery({
-    queryKey: ["app-friends", baseUrl],
-    queryFn: () => getFriends(baseUrl),
-  });
-
-  const startChatMutation = useMutation({
-    mutationFn: (characterId: string) =>
-      getOrCreateConversation({ characterId }, baseUrl),
-    onSuccess: (conversation) => {
-      if (!conversation) {
-        return;
-      }
-
-      void navigate({
-        to: "/chat/$conversationId",
-        params: { conversationId: conversation.id },
-      });
-    },
-  });
-  const setStarredMutation = useMutation({
-    mutationFn: ({
-      characterId,
-      starred,
-    }: {
-      characterId: string;
-      starred: boolean;
-    }) => setFriendStarred(characterId, { starred }, baseUrl),
-    onSuccess: async (_, variables) => {
-      setNotice(variables.starred ? "已设为星标朋友。" : "已取消星标朋友。");
-      await friendsQuery.refetch();
-    },
-  });
-
-  const starredFriends = useMemo(
-    () =>
-      (friendsQuery.data ?? [])
-        .filter((item) => item.friendship.isStarred)
-        .sort(compareStarredFriends),
-    [friendsQuery.data],
-  );
-  const normalizedSearchText = searchText.trim().toLowerCase();
-  const filteredFriends = useMemo(() => {
-    if (!normalizedSearchText) {
-      return starredFriends;
-    }
-
-    return starredFriends.filter((item) =>
-      matchesFriendSearch(item, normalizedSearchText),
-    );
-  }, [normalizedSearchText, starredFriends]);
-  const selectedFriend = useMemo(
-    () =>
-      filteredFriends.find(
-        (item) => item.character.id === selectedCharacterId,
-      ) ?? null,
-    [filteredFriends, selectedCharacterId],
-  );
-
-  useEffect(() => {
-    if (selectedFriend) {
-      return;
-    }
-
-    setSelectedCharacterId(filteredFriends[0]?.character.id ?? null);
-  }, [filteredFriends, selectedFriend]);
-
-  return (
-    <AppPage className="h-full min-h-0 space-y-0 bg-[color:var(--bg-app)] px-0 py-0">
-      <div className="flex h-full min-h-0">
-        <section className="flex w-[340px] shrink-0 flex-col border-r border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.88)]">
-          <div className="border-b border-[color:var(--border-faint)] bg-white/78 px-4 py-4 backdrop-blur-xl">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-base font-medium text-[color:var(--text-primary)]">
-                  星标朋友
-                </div>
-                <div className="mt-1 text-xs text-[color:var(--text-muted)]">
-                  {starredFriends.length} 位联系人
-                </div>
-              </div>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                className="rounded-full border-[color:var(--border-faint)] bg-white shadow-none hover:bg-[color:var(--surface-console)]"
-                onClick={() => {
-                  void navigate({ to: "/tabs/contacts" });
-                }}
-              >
-                返回通讯录
-              </Button>
-            </div>
-
-            <label className="mt-3 flex items-center gap-2 rounded-[16px] border border-[color:var(--border-faint)] bg-white px-3 py-2.5 text-sm text-[color:var(--text-dim)] shadow-none">
-              <Search size={15} className="shrink-0" />
-              <input
-                type="search"
-                value={searchText}
-                onChange={(event) => setSearchText(event.target.value)}
-                placeholder="搜索星标朋友"
-                className="min-w-0 flex-1 bg-transparent text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-dim)]"
-              />
-            </label>
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-auto bg-[rgba(242,246,245,0.76)] pb-4">
-            {notice ? (
-              <div className="px-3 pt-3">
-                <InlineNotice tone="success">{notice}</InlineNotice>
-              </div>
-            ) : null}
-            {friendsQuery.isLoading ? (
-              <LoadingBlock
-                className="px-4 py-6 text-left"
-                label="正在读取星标朋友..."
-              />
-            ) : null}
-            {friendsQuery.isError && friendsQuery.error instanceof Error ? (
-              <div className="px-3 pt-3">
-                <ErrorBlock message={friendsQuery.error.message} />
-              </div>
-            ) : null}
-            {startChatMutation.isError &&
-            startChatMutation.error instanceof Error ? (
-              <div className="px-3 pt-3">
-                <ErrorBlock message={startChatMutation.error.message} />
-              </div>
-            ) : null}
-            {setStarredMutation.isError &&
-            setStarredMutation.error instanceof Error ? (
-              <div className="px-3 pt-3">
-                <ErrorBlock message={setStarredMutation.error.message} />
-              </div>
-            ) : null}
-
-            {!friendsQuery.isLoading &&
-            !friendsQuery.isError &&
-            !filteredFriends.length ? (
-              <div className="px-3 pt-3">
-                <EmptyState
-                  title={
-                    normalizedSearchText
-                      ? "没有找到匹配的星标朋友"
-                      : "还没有星标朋友"
-                  }
-                  description={
-                    normalizedSearchText
-                      ? "换个关键词再试试。"
-                      : "去联系人资料页把常联系的好友设为星标朋友。"
-                  }
-                />
-              </div>
-            ) : null}
-
-            {filteredFriends.length ? (
-              <section className="mx-3 mt-3 overflow-hidden rounded-[18px] border border-[color:var(--border-faint)] bg-white shadow-[var(--shadow-section)]">
-                {filteredFriends.map((item, index) => (
-                  <button
-                    key={item.character.id}
-                    type="button"
-                    onClick={() => setSelectedCharacterId(item.character.id)}
-                    onDoubleClick={() =>
-                      startChatMutation.mutate(item.character.id)
-                    }
-                    className={cn(
-                      "flex w-full items-center gap-3 bg-white px-4 py-3.5 text-left transition-colors hover:bg-[color:var(--surface-console)]",
-                      index > 0
-                        ? "border-t border-[color:var(--border-faint)]"
-                        : undefined,
-                      selectedCharacterId === item.character.id
-                        ? "bg-[rgba(7,193,96,0.07)] shadow-[inset_3px_0_0_0_var(--brand-primary)]"
-                        : undefined,
-                    )}
-                  >
-                    <AvatarChip
-                      name={getFriendDisplayName(item)}
-                      src={item.character.avatar}
-                      size="wechat"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-[16px] text-[color:var(--text-primary)]">
-                        {getFriendDisplayName(item)}
-                      </div>
-                      <div className="mt-0.5 truncate text-xs text-[color:var(--text-muted)]">
-                        {startChatMutation.isPending &&
-                        startChatMutation.variables === item.character.id
-                          ? "正在打开会话..."
-                          : getFriendDisplayName(item) !== item.character.name
-                            ? `昵称：${item.character.name}`
-                            : item.character.currentStatus?.trim() ||
-                              `${item.character.relationship} · 亲密度 ${item.friendship.intimacyLevel}`}
-                      </div>
-                    </div>
-                    <Star
-                      size={16}
-                      className="shrink-0 text-[#d4a72c]"
-                      fill="currentColor"
-                    />
-                  </button>
-                ))}
-              </section>
-            ) : null}
-          </div>
-        </section>
-
-        <section className="min-w-0 flex-1">
-          <ContactDetailPane
-            character={selectedFriend?.character ?? null}
-            friendship={selectedFriend?.friendship ?? null}
-            onStartChat={
-              selectedFriend
-                ? () => startChatMutation.mutate(selectedFriend.character.id)
-                : undefined
-            }
-            chatPending={
-              startChatMutation.variables === selectedFriend?.character.id
-            }
-            isStarred={selectedFriend?.friendship.isStarred ?? false}
-            starPending={
-              setStarredMutation.isPending &&
-              setStarredMutation.variables?.characterId ===
-                selectedFriend?.character.id
-            }
-            onToggleStarred={
-              selectedFriend
-                ? () =>
-                    setStarredMutation.mutate({
-                      characterId: selectedFriend.character.id,
-                      starred: !selectedFriend.friendship.isStarred,
-                    })
-                : undefined
-            }
-            onOpenProfile={() => {
-              if (!selectedFriend) {
-                return;
-              }
-
-              void navigate({
-                to: "/character/$characterId",
-                params: { characterId: selectedFriend.character.id },
-              });
-            }}
-            onOpenMoments={
-              selectedFriend
-                ? () => {
-                    void navigate({
-                      to: "/desktop/friend-moments/$characterId",
-                      params: { characterId: selectedFriend.character.id },
-                      hash: buildDesktopFriendMomentsRouteHash({
-                        source: "starred-friends",
-                      }),
-                    });
-                  }
-                : undefined
-            }
-          />
-        </section>
       </div>
     </AppPage>
   );

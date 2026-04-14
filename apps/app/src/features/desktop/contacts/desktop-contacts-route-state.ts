@@ -1,4 +1,9 @@
-export type DesktopContactsPane = "friend" | "world-character" | "new-friends";
+export type DesktopContactsPane =
+  | "friend"
+  | "world-character"
+  | "new-friends"
+  | "starred-friends"
+  | "groups";
 
 export type DesktopContactsRouteState = {
   pane: DesktopContactsPane;
@@ -16,6 +21,8 @@ const desktopContactsPanes = new Set<DesktopContactsPane>([
   "friend",
   "world-character",
   "new-friends",
+  "starred-friends",
+  "groups",
 ]);
 
 export function parseDesktopContactsRouteState(
