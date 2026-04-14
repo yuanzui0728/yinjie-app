@@ -66,6 +66,21 @@ type DesktopSearchWorkspaceProps = {
   visibleResults: SearchResultItem[];
 };
 
+const desktopSearchFocusRingClassName =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(7,193,96,0.22)] focus-visible:ring-offset-2 focus-visible:ring-offset-white";
+const desktopSearchCardFocusClassName = cn(
+  desktopSearchFocusRingClassName,
+  "focus-visible:-translate-y-0.5 focus-visible:shadow-[0_18px_44px_rgba(7,193,96,0.12)]",
+);
+const desktopSearchRowFocusClassName = cn(
+  desktopSearchFocusRingClassName,
+  "focus-visible:shadow-[0_12px_28px_rgba(7,193,96,0.10)]",
+);
+const desktopSearchChipFocusClassName = cn(
+  desktopSearchFocusRingClassName,
+  "focus-visible:shadow-[0_10px_24px_rgba(7,193,96,0.08)]",
+);
+
 const landingScopeCards = [
   {
     id: "messages" as const,
@@ -551,6 +566,7 @@ export function DesktopSearchWorkspace({
                       }
                       className={cn(
                         "inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-sm transition",
+                        desktopSearchChipFocusClassName,
                         activeCategory === item.id
                           ? "border-[rgba(7,193,96,0.16)] bg-white text-[color:var(--text-primary)] shadow-[0_8px_18px_rgba(15,23,42,0.04)]"
                           : "border-white/70 bg-white/70 text-[color:var(--text-secondary)] hover:bg-white hover:text-[color:var(--text-primary)]",
@@ -1019,6 +1035,7 @@ function DesktopSearchActionButton({
       onClick={onClick}
       className={cn(
         "inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[11px] transition",
+        desktopSearchChipFocusClassName,
         toneClassName,
         className,
       )}
@@ -1041,17 +1058,17 @@ function DesktopSearchOpenCue({
 }) {
   const toneClassName =
     tone === "gold"
-      ? "border-[rgba(180,132,23,0.14)] bg-[rgba(180,132,23,0.08)] text-[#9a6b12] group-hover:bg-[rgba(180,132,23,0.12)]"
+      ? "border-[rgba(180,132,23,0.14)] bg-[rgba(180,132,23,0.08)] text-[#9a6b12] group-hover:bg-[rgba(180,132,23,0.12)] group-focus-visible:bg-[rgba(180,132,23,0.12)]"
       : tone === "teal"
-        ? "border-[rgba(15,118,110,0.16)] bg-[rgba(15,118,110,0.08)] text-[#226448] group-hover:bg-[rgba(15,118,110,0.12)]"
+        ? "border-[rgba(15,118,110,0.16)] bg-[rgba(15,118,110,0.08)] text-[#226448] group-hover:bg-[rgba(15,118,110,0.12)] group-focus-visible:bg-[rgba(15,118,110,0.12)]"
         : tone === "olive"
-          ? "border-[rgba(134,181,96,0.18)] bg-[rgba(134,181,96,0.10)] text-[#587d38] group-hover:bg-[rgba(134,181,96,0.14)]"
-          : "border-[rgba(7,193,96,0.16)] bg-[rgba(7,193,96,0.08)] text-[color:var(--brand-primary)] group-hover:bg-[rgba(7,193,96,0.12)]";
+          ? "border-[rgba(134,181,96,0.18)] bg-[rgba(134,181,96,0.10)] text-[#587d38] group-hover:bg-[rgba(134,181,96,0.14)] group-focus-visible:bg-[rgba(134,181,96,0.14)]"
+          : "border-[rgba(7,193,96,0.16)] bg-[rgba(7,193,96,0.08)] text-[color:var(--brand-primary)] group-hover:bg-[rgba(7,193,96,0.12)] group-focus-visible:bg-[rgba(7,193,96,0.12)]";
 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border transition-[transform,background-color,border-color,color] group-hover:translate-x-0.5",
+        "inline-flex items-center gap-1 rounded-full border transition-[transform,background-color,border-color,color] group-hover:translate-x-0.5 group-focus-visible:translate-x-0.5",
         compact ? "px-2 py-1 text-[10px]" : "px-2.5 py-1 text-[11px]",
         toneClassName,
         className,
@@ -1189,6 +1206,7 @@ function DesktopSearchScopeCard({
       onClick={onClick}
       className={cn(
         "group overflow-hidden rounded-[20px] border p-5 text-left transition hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(15,23,42,0.08)]",
+        desktopSearchCardFocusClassName,
         toneClassName,
       )}
     >
@@ -1328,6 +1346,7 @@ function DesktopSearchContextBar({
                   onClick={() => onSelectSection?.(item.category)}
                   className={cn(
                     "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-2 text-xs transition",
+                    desktopSearchChipFocusClassName,
                     activeSection === item.category
                       ? "border-[rgba(7,193,96,0.16)] bg-[rgba(7,193,96,0.08)] text-[color:var(--brand-primary)]"
                       : "border-[rgba(15,23,42,0.06)] bg-white text-[color:var(--text-secondary)] hover:bg-[rgba(7,193,96,0.04)] hover:text-[color:var(--text-primary)]",
@@ -1653,6 +1672,7 @@ function DesktopSearchFeatureCard({
       onClick={() => onOpen(item)}
       className={cn(
         "group overflow-hidden rounded-[20px] border p-5 text-left transition hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(15,23,42,0.08)]",
+        desktopSearchCardFocusClassName,
         toneClassName,
       )}
     >
@@ -1734,7 +1754,10 @@ function DesktopQuickLinkRow({
     <button
       type="button"
       onClick={() => onOpen(item)}
-      className="group flex w-full items-center gap-3 rounded-[14px] bg-white px-3 py-3 text-left transition hover:bg-[rgba(7,193,96,0.04)]"
+      className={cn(
+        "group flex w-full items-center gap-3 rounded-[14px] bg-white px-3 py-3 text-left transition hover:bg-[rgba(7,193,96,0.04)]",
+        desktopSearchRowFocusClassName,
+      )}
     >
       <AvatarChip
         name={item.avatarName ?? item.title}
@@ -1776,7 +1799,10 @@ function DesktopSearchMessageGroupCard({
       <button
         type="button"
         onClick={() => onOpen(group.header)}
-        className="group flex w-full items-center gap-3 px-4 py-4 text-left transition hover:bg-white"
+        className={cn(
+          "group flex w-full items-center gap-3 px-4 py-4 text-left transition hover:bg-white",
+          desktopSearchRowFocusClassName,
+        )}
       >
         <AvatarChip
           name={group.header.avatarName ?? group.header.title}
@@ -1811,7 +1837,10 @@ function DesktopSearchMessageGroupCard({
               key={item.id}
               type="button"
               onClick={() => onOpen(item)}
-              className="group flex w-full items-start gap-3 rounded-[14px] border border-[rgba(15,23,42,0.04)] bg-white px-3 py-3 text-left transition hover:bg-[rgba(7,193,96,0.04)] hover:shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
+              className={cn(
+                "group flex w-full items-start gap-3 rounded-[14px] border border-[rgba(15,23,42,0.04)] bg-white px-3 py-3 text-left transition hover:bg-[rgba(7,193,96,0.04)] hover:shadow-[0_10px_24px_rgba(15,23,42,0.04)]",
+                desktopSearchRowFocusClassName,
+              )}
             >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[rgba(7,193,96,0.10)] text-[#15803d]">
                 <MessageSquareText size={15} />
@@ -1847,7 +1876,10 @@ function DesktopSearchOfficialAccountGroupCard({
       <button
         type="button"
         onClick={() => onOpen(group.header)}
-        className="group flex w-full items-center gap-3 px-4 py-4 text-left transition hover:bg-white"
+        className={cn(
+          "group flex w-full items-center gap-3 px-4 py-4 text-left transition hover:bg-white",
+          desktopSearchRowFocusClassName,
+        )}
       >
         <AvatarChip
           name={group.header.avatarName ?? group.header.title}
@@ -1885,7 +1917,10 @@ function DesktopSearchOfficialAccountGroupCard({
               key={item.id}
               type="button"
               onClick={() => onOpen(item)}
-              className="group flex w-full items-start gap-3 rounded-[14px] border border-[rgba(15,23,42,0.04)] bg-white px-3 py-3 text-left transition hover:bg-[rgba(7,193,96,0.04)] hover:shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
+              className={cn(
+                "group flex w-full items-start gap-3 rounded-[14px] border border-[rgba(15,23,42,0.04)] bg-white px-3 py-3 text-left transition hover:bg-[rgba(7,193,96,0.04)] hover:shadow-[0_10px_24px_rgba(15,23,42,0.04)]",
+                desktopSearchRowFocusClassName,
+              )}
             >
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[rgba(7,193,96,0.10)] text-[#15803d]">
                 <Newspaper size={15} />
@@ -1936,6 +1971,7 @@ function DesktopSearchContentCard({
       onClick={() => onOpen(item)}
       className={cn(
         "group overflow-hidden rounded-[20px] border p-5 text-left transition hover:-translate-y-0.5 hover:shadow-[0_20px_48px_rgba(15,23,42,0.08)]",
+        desktopSearchCardFocusClassName,
         toneClassName,
       )}
     >
@@ -2009,7 +2045,10 @@ function DesktopSearchResultRow({
     <button
       type="button"
       onClick={() => onOpen(item)}
-      className="group flex w-full items-center gap-3 rounded-[16px] border border-[rgba(15,23,42,0.04)] bg-white px-3.5 py-3 text-left transition hover:bg-[rgba(7,193,96,0.04)] hover:shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
+      className={cn(
+        "group flex w-full items-center gap-3 rounded-[16px] border border-[rgba(15,23,42,0.04)] bg-white px-3.5 py-3 text-left transition hover:bg-[rgba(7,193,96,0.04)] hover:shadow-[0_10px_24px_rgba(15,23,42,0.04)]",
+        desktopSearchRowFocusClassName,
+      )}
     >
       <AvatarChip
         name={item.avatarName ?? item.title}
