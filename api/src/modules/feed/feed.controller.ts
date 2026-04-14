@@ -8,6 +8,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { FeedService } from './feed.service';
+import type { MomentMediaAsset } from '../moments/moment-media.types';
 
 @Controller('feed')
 export class FeedController {
@@ -55,11 +56,12 @@ export class FeedController {
   createPost(
     @Body()
     body: {
-      text: string;
+      text?: string;
       title?: string;
+      media?: MomentMediaAsset[];
       mediaType?: 'text' | 'image' | 'video';
       mediaUrl?: string;
-      coverUrl?: string;
+      coverUrl?: string | null;
       durationMs?: number;
       aspectRatio?: number;
       topicTags?: string[];
@@ -68,6 +70,7 @@ export class FeedController {
   ) {
     return this.feedService.createOwnerPost(body.text, {
       title: body.title,
+      media: body.media,
       mediaType: body.mediaType,
       mediaUrl: body.mediaUrl,
       coverUrl: body.coverUrl,
@@ -94,10 +97,7 @@ export class FeedController {
   }
 
   @Post(':id/comment')
-  addComment(
-    @Param('id') postId: string,
-    @Body() body: { text: string },
-  ) {
+  addComment(@Param('id') postId: string, @Body() body: { text: string }) {
     return this.feedService.addOwnerComment(postId, body.text);
   }
 
@@ -143,10 +143,7 @@ export class FeedController {
   }
 
   @Post('comments/:id/reply')
-  replyComment(
-    @Param('id') commentId: string,
-    @Body() body: { text: string },
-  ) {
+  replyComment(@Param('id') commentId: string, @Body() body: { text: string }) {
     return this.feedService.replyToComment(commentId, body.text);
   }
 }

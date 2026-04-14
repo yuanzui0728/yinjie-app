@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, MoreThanOrEqual, Repository } from 'typeorm';
 import { FeedPostEntity } from './feed-post.entity';
@@ -9,9 +14,14 @@ import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
 import { CharactersService } from '../characters/characters.service';
 import { WorldOwnerService } from '../auth/world-owner.service';
 import { SocialService } from '../social/social.service';
+import type {
+  MomentMediaAsset,
+  MomentVideoAsset,
+} from '../moments/moment-media.types';
 
 type FeedSurface = 'feed' | 'channels';
 type FeedChannelHomeSection = 'recommended' | 'friends' | 'following' | 'live';
+type FeedMediaType = 'text' | 'image' | 'video';
 type FeedOwnerState = {
   hasLiked: boolean;
   hasFavorited: boolean;
@@ -87,6 +97,9 @@ const CHANNEL_FALLBACK_OPENERS = [
   '这一帧想留给你看',
 ];
 
+const MAX_FEED_IMAGE_COUNT = 9;
+const MAX_FEED_VIDEO_DURATION_MS = 5 * 60 * 1000;
+
 @Injectable()
 export class FeedService {
   private readonly logger = new Logger(FeedService.name);
@@ -123,7 +136,10 @@ export class FeedService {
         : await this.getVisibleFeedPosts(surface);
     const pagedPosts = paginate(visiblePosts, page, limit);
     const [commentsPreviewMap, ownerStateMap] = await Promise.all([
-      this.buildCommentsPreviewMap(pagedPosts.map((post) => post.id), owner.id),
+      this.buildCommentsPreviewMap(
+        pagedPosts.map((post) => post.id),
+        owner.id,
+      ),
       this.buildOwnerStateMap(pagedPosts, owner.id),
     ]);
 
@@ -149,30 +165,41 @@ export class FeedService {
     const page = input?.page ?? 1;
     const limit = input?.limit ?? 20;
 
-    const allVisiblePosts = await this.getVisibleChannelPosts(owner.id, 'recommended');
+    const allVisiblePosts = await this.getVisibleChannelPosts(
+      owner.id,
+      'recommended',
+    );
     const postsForSection =
       section === 'recommended'
         ? allVisiblePosts
         : await this.getVisibleChannelPosts(owner.id, section);
     const pagedPosts = paginate(postsForSection, page, limit);
 
-    const [commentsPreviewMap, ownerStateMap, authors, liveEntries, sectionCounts] =
-      await Promise.all([
-        this.buildCommentsPreviewMap(pagedPosts.map((post) => post.id), owner.id),
-        this.buildOwnerStateMap(pagedPosts, owner.id),
-        this.buildChannelAuthorSummaries(allVisiblePosts, owner.id),
-        this.buildLiveEntries(allVisiblePosts),
-        this.buildChannelSectionCounts(allVisiblePosts, owner.id),
-      ]);
+    const [
+      commentsPreviewMap,
+      ownerStateMap,
+      authors,
+      liveEntries,
+      sectionCounts,
+    ] = await Promise.all([
+      this.buildCommentsPreviewMap(
+        pagedPosts.map((post) => post.id),
+        owner.id,
+      ),
+      this.buildOwnerStateMap(pagedPosts, owner.id),
+      this.buildChannelAuthorSummaries(allVisiblePosts, owner.id),
+      this.buildLiveEntries(allVisiblePosts),
+      this.buildChannelSectionCounts(allVisiblePosts, owner.id),
+    ]);
 
     return {
-      sections: (Object.keys(CHANNEL_HOME_SECTION_LABELS) as FeedChannelHomeSection[]).map(
-        (key) => ({
-          key,
-          label: CHANNEL_HOME_SECTION_LABELS[key],
-          count: sectionCounts[key] ?? 0,
-        }),
-      ),
+      sections: (
+        Object.keys(CHANNEL_HOME_SECTION_LABELS) as FeedChannelHomeSection[]
+      ).map((key) => ({
+        key,
+        label: CHANNEL_HOME_SECTION_LABELS[key],
+        count: sectionCounts[key] ?? 0,
+      })),
       activeSection: section,
       posts: pagedPosts.map((post) => ({
         ...this.serializePost(post, ownerStateMap.get(post.id)),
@@ -186,13 +213,15 @@ export class FeedService {
 
   async getChannelAuthorProfile(authorId: string) {
     const owner = await this.worldOwnerService.getOwnerOrThrow();
-    const authorPosts = (await this.getVisibleChannelPosts(owner.id, 'recommended')).filter(
-      (post) => post.authorId === authorId,
-    );
-    const latestPost = authorPosts[0] ?? (await this.postRepo.findOne({
-      where: { authorId, surface: 'channels', publishStatus: 'published' },
-      order: { createdAt: 'DESC' },
-    }));
+    const authorPosts = (
+      await this.getVisibleChannelPosts(owner.id, 'recommended')
+    ).filter((post) => post.authorId === authorId);
+    const latestPost =
+      authorPosts[0] ??
+      (await this.postRepo.findOne({
+        where: { authorId, surface: 'channels', publishStatus: 'published' },
+        order: { createdAt: 'DESC' },
+      }));
 
     if (!latestPost) {
       throw new NotFoundException('Channel author not found');
@@ -261,12 +290,13 @@ export class FeedService {
   }
 
   async createOwnerPost(
-    text: string,
+    text: string | undefined,
     options?: {
       title?: string;
-      mediaType?: 'text' | 'image' | 'video';
+      media?: MomentMediaAsset[];
+      mediaType?: FeedMediaType;
       mediaUrl?: string;
-      coverUrl?: string;
+      coverUrl?: string | null;
       durationMs?: number;
       aspectRatio?: number;
       topicTags?: string[];
@@ -280,6 +310,7 @@ export class FeedService {
       authorName: owner.username?.trim() || 'You',
       authorType: 'user',
       title: options?.title,
+      media: options?.media,
       mediaType: options?.mediaType,
       mediaUrl: options?.mediaUrl,
       coverUrl: options?.coverUrl,
@@ -288,7 +319,7 @@ export class FeedService {
       topicTags: options?.topicTags,
       sourceKind: 'owner_upload',
       surface: options?.surface,
-      text,
+      text: text ?? '',
     });
   }
 
@@ -299,9 +330,10 @@ export class FeedService {
     authorType?: 'user' | 'character';
     text: string;
     title?: string;
-    mediaType?: 'text' | 'image' | 'video';
+    media?: MomentMediaAsset[];
+    mediaType?: FeedMediaType;
     mediaUrl?: string;
-    coverUrl?: string;
+    coverUrl?: string | null;
     durationMs?: number;
     aspectRatio?: number;
     topicTags?: string[];
@@ -311,23 +343,30 @@ export class FeedService {
     viewCount?: number;
     watchCount?: number;
     completeCount?: number;
-    sourceKind?: 'seed' | 'ai_generated' | 'owner_upload' | 'character_generated' | 'live_clip';
+    sourceKind?:
+      | 'seed'
+      | 'ai_generated'
+      | 'owner_upload'
+      | 'character_generated'
+      | 'live_clip';
     recommendationScore?: number;
     statsPayload?: Record<string, unknown> | null;
     surface?: FeedSurface;
   }): Promise<FeedPostEntity> {
+    const normalizedInput = this.normalizeCreatePostInput(input);
     const post = this.postRepo.create({
       authorAvatar: input.authorAvatar,
       authorId: input.authorId,
       authorName: input.authorName,
       authorType: input.authorType ?? 'user',
-      text: input.text.trim(),
-      title: input.title?.trim() || null,
-      mediaType: input.mediaType ?? 'text',
-      mediaUrl: input.mediaUrl?.trim() || undefined,
-      coverUrl: input.coverUrl?.trim() || null,
-      durationMs: input.durationMs ?? null,
-      aspectRatio: input.aspectRatio ?? null,
+      text: normalizedInput.text,
+      title: normalizedInput.title,
+      mediaPayload: this.serializeFeedMedia(normalizedInput.media),
+      mediaType: normalizedInput.mediaType,
+      mediaUrl: normalizedInput.mediaUrl,
+      coverUrl: normalizedInput.coverUrl,
+      durationMs: normalizedInput.durationMs,
+      aspectRatio: normalizedInput.aspectRatio,
       topicTags: normalizeTags(input.topicTags),
       publishStatus: input.publishStatus ?? 'published',
       shareCount: input.shareCount ?? 0,
@@ -343,7 +382,10 @@ export class FeedService {
     return this.postRepo.save(post);
   }
 
-  async addOwnerComment(postId: string, text: string): Promise<ReturnType<FeedService['serializeComment']>> {
+  async addOwnerComment(
+    postId: string,
+    text: string,
+  ): Promise<ReturnType<FeedService['serializeComment']>> {
     const owner = await this.worldOwnerService.getOwnerOrThrow();
     const comment = await this.addComment({
       postId,
@@ -475,7 +517,9 @@ export class FeedService {
 
     const nextPayload = {
       progressSeconds:
-        typeof payload?.progressSeconds === 'number' ? payload.progressSeconds : null,
+        typeof payload?.progressSeconds === 'number'
+          ? payload.progressSeconds
+          : null,
       completed: Boolean(payload?.completed),
     };
 
@@ -489,7 +533,10 @@ export class FeedService {
         }),
       );
       await this.postRepo.increment({ id: postId }, 'viewCount', 1);
-      if (typeof nextPayload.progressSeconds === 'number' && nextPayload.progressSeconds > 0) {
+      if (
+        typeof nextPayload.progressSeconds === 'number' &&
+        nextPayload.progressSeconds > 0
+      ) {
         await this.postRepo.increment({ id: postId }, 'watchCount', 1);
       }
       if (nextPayload.completed) {
@@ -501,7 +548,8 @@ export class FeedService {
     const previousCompleted = Boolean(existing.payload?.completed);
     const previousProgress = Number(existing.payload?.progressSeconds ?? 0);
     existing.payload = {
-      progressSeconds: Math.max(previousProgress, nextPayload.progressSeconds ?? 0) || null,
+      progressSeconds:
+        Math.max(previousProgress, nextPayload.progressSeconds ?? 0) || null,
       completed: previousCompleted || nextPayload.completed,
     };
     await this.interactionRepo.save(existing);
@@ -587,13 +635,18 @@ export class FeedService {
     return this.getChannelAuthorProfile(authorId);
   }
 
-  async generateFeedPostForCharacter(characterId: string): Promise<FeedPostEntity | null> {
+  async generateFeedPostForCharacter(
+    characterId: string,
+  ): Promise<FeedPostEntity | null> {
     const char = await this.characters.findById(characterId);
     const profile = await this.characters.getProfile(characterId);
     if (!char || !profile) return null;
 
     try {
-      const text = await this.ai.generateMoment({ profile, currentTime: new Date() });
+      const text = await this.ai.generateMoment({
+        profile,
+        currentTime: new Date(),
+      });
       if (!text) return null;
       return this.createPost({
         authorAvatar: char.avatar,
@@ -620,7 +673,9 @@ export class FeedService {
     );
     const selectedCharacter = characterId
       ? eligibleCharacters[0]
-      : eligibleCharacters[Math.floor(Math.random() * eligibleCharacters.length)];
+      : eligibleCharacters[
+          Math.floor(Math.random() * eligibleCharacters.length)
+        ];
     if (!selectedCharacter) {
       return null;
     }
@@ -714,7 +769,9 @@ export class FeedService {
   }
 
   async triggerAiReactionForPost(post: FeedPostEntity): Promise<void> {
-    const blockedCharacterIds = new Set(await this.socialService.getBlockedCharacterIds());
+    const blockedCharacterIds = new Set(
+      await this.socialService.getBlockedCharacterIds(),
+    );
     const chars = (await this.characters.findAll()).filter(
       (char) => !blockedCharacterIds.has(char.id),
     );
@@ -815,7 +872,10 @@ export class FeedService {
       comments.map((comment) => comment.id),
       ownerId,
     );
-    const commentMap = new Map<string, ReturnType<FeedService['serializeComment']>[]>();
+    const commentMap = new Map<
+      string,
+      ReturnType<FeedService['serializeComment']>[]
+    >();
 
     for (const comment of comments) {
       const currentComments = commentMap.get(comment.postId) ?? [];
@@ -916,7 +976,10 @@ export class FeedService {
     );
   }
 
-  private async buildChannelAuthorSummaries(posts: FeedPostEntity[], ownerId: string) {
+  private async buildChannelAuthorSummaries(
+    posts: FeedPostEntity[],
+    ownerId: string,
+  ) {
     const followedAuthorIds = new Set(
       (
         await this.followRepo.find({
@@ -1022,8 +1085,10 @@ export class FeedService {
 
     return {
       recommended: posts.length,
-      friends: posts.filter((post) => friendCharacterIds.has(post.authorId)).length,
-      following: posts.filter((post) => followedAuthorIds.has(post.authorId)).length,
+      friends: posts.filter((post) => friendCharacterIds.has(post.authorId))
+        .length,
+      following: posts.filter((post) => followedAuthorIds.has(post.authorId))
+        .length,
       live: posts.filter(
         (post) =>
           post.sourceKind === 'live_clip' ||
@@ -1046,25 +1111,33 @@ export class FeedService {
     ownerId: string,
     section: FeedChannelHomeSection,
   ) {
-    const [posts, blockedCharacterIds, notInterestedPostIds, followedAuthorIds, friendIds] =
-      await Promise.all([
-        this.getVisibleFeedPosts('channels'),
-        this.socialService
-          .getBlockedCharacterIds(ownerId)
-          .then((ids) => new Set(ids)),
-        this.interactionRepo
-          .find({ where: { ownerId, type: 'not_interested' } })
-          .then((items) => new Set(items.map((item) => item.postId))),
-        this.followRepo
-          .find({ where: { ownerId } })
-          .then((items) => new Set(items.map((item) => item.authorId))),
-        this.socialService
-          .getFriendCharacterIds(ownerId)
-          .then((ids) => new Set(ids)),
-      ]);
+    const [
+      posts,
+      blockedCharacterIds,
+      notInterestedPostIds,
+      followedAuthorIds,
+      friendIds,
+    ] = await Promise.all([
+      this.getVisibleFeedPosts('channels'),
+      this.socialService
+        .getBlockedCharacterIds(ownerId)
+        .then((ids) => new Set(ids)),
+      this.interactionRepo
+        .find({ where: { ownerId, type: 'not_interested' } })
+        .then((items) => new Set(items.map((item) => item.postId))),
+      this.followRepo
+        .find({ where: { ownerId } })
+        .then((items) => new Set(items.map((item) => item.authorId))),
+      this.socialService
+        .getFriendCharacterIds(ownerId)
+        .then((ids) => new Set(ids)),
+    ]);
 
     return posts.filter((post) => {
-      if (post.authorType === 'character' && blockedCharacterIds.has(post.authorId)) {
+      if (
+        post.authorType === 'character' &&
+        blockedCharacterIds.has(post.authorId)
+      ) {
         return false;
       }
       if (notInterestedPostIds.has(post.id)) {
@@ -1138,7 +1211,209 @@ export class FeedService {
     return null;
   }
 
+  private normalizeCreatePostInput(input: {
+    text: string;
+    title?: string;
+    media?: MomentMediaAsset[];
+    mediaType?: FeedMediaType;
+    mediaUrl?: string;
+    coverUrl?: string | null;
+    durationMs?: number;
+    aspectRatio?: number;
+  }) {
+    const text = input.text.trim();
+    const explicitMedia = this.normalizeFeedMediaInput(input.media);
+    const media =
+      explicitMedia.length > 0
+        ? explicitMedia
+        : this.buildFeedMediaFromLegacyInput(input);
+    const mediaType = this.inferFeedMediaType(media, input.mediaType);
+
+    if (!text && media.length === 0) {
+      throw new BadRequestException('动态内容和媒体不能同时为空。');
+    }
+
+    this.assertFeedMediaMatchesMediaType(mediaType, media);
+    const primaryMedia = media[0];
+
+    return {
+      text,
+      title: input.title?.trim() || null,
+      media,
+      mediaType,
+      mediaUrl: primaryMedia?.url || undefined,
+      coverUrl:
+        primaryMedia?.kind === 'video'
+          ? (primaryMedia.posterUrl ?? null)
+          : primaryMedia?.kind === 'image'
+            ? (primaryMedia.thumbnailUrl ?? primaryMedia.url)
+            : null,
+      durationMs:
+        primaryMedia?.kind === 'video'
+          ? (primaryMedia.durationMs ?? null)
+          : null,
+      aspectRatio:
+        resolveFeedMediaAspectRatio(primaryMedia) ??
+        normalizeOptionalPositiveFloat(input.aspectRatio) ??
+        null,
+    };
+  }
+
+  private normalizeFeedMediaInput(input: MomentMediaAsset[] | undefined) {
+    if (!Array.isArray(input) || input.length === 0) {
+      return [];
+    }
+
+    return input
+      .map((asset, index) => normalizeFeedMediaAsset(asset, index))
+      .filter((asset) => asset.url);
+  }
+
+  private buildFeedMediaFromLegacyInput(input: {
+    mediaType?: FeedMediaType;
+    mediaUrl?: string;
+    coverUrl?: string | null;
+    durationMs?: number;
+    aspectRatio?: number;
+  }): MomentMediaAsset[] {
+    const mediaUrl = input.mediaUrl?.trim();
+    if (!mediaUrl) {
+      return [];
+    }
+
+    const legacyMediaType =
+      input.mediaType === 'video' || input.mediaType === 'image'
+        ? input.mediaType
+        : 'image';
+    const approximateDimensions = buildApproximateFeedMediaDimensions(
+      input.aspectRatio,
+    );
+
+    if (legacyMediaType === 'video') {
+      return [
+        {
+          id: 'feed-video-legacy',
+          kind: 'video',
+          url: mediaUrl,
+          posterUrl: input.coverUrl?.trim() || undefined,
+          mimeType: 'video/mp4',
+          fileName: 'feed-video',
+          size: 0,
+          width: approximateDimensions?.width,
+          height: approximateDimensions?.height,
+          durationMs: normalizeOptionalPositiveInteger(input.durationMs),
+        },
+      ];
+    }
+
+    return [
+      {
+        id: 'feed-image-legacy',
+        kind: 'image',
+        url: mediaUrl,
+        thumbnailUrl: input.coverUrl?.trim() || mediaUrl,
+        mimeType: 'image/jpeg',
+        fileName: 'feed-image',
+        size: 0,
+        width: approximateDimensions?.width,
+        height: approximateDimensions?.height,
+      },
+    ];
+  }
+
+  private inferFeedMediaType(
+    media: MomentMediaAsset[],
+    fallback?: FeedMediaType,
+  ): FeedMediaType {
+    if (media[0]?.kind === 'video') {
+      return 'video';
+    }
+
+    if (media.length > 0) {
+      return 'image';
+    }
+
+    return fallback === 'image' || fallback === 'video' ? fallback : 'text';
+  }
+
+  private assertFeedMediaMatchesMediaType(
+    mediaType: FeedMediaType,
+    media: MomentMediaAsset[],
+  ) {
+    if (mediaType === 'text') {
+      if (media.length > 0) {
+        throw new BadRequestException('纯文本动态不能附带图片或视频。');
+      }
+      return;
+    }
+
+    if (mediaType === 'video') {
+      if (media.length !== 1 || media[0]?.kind !== 'video') {
+        throw new BadRequestException('视频动态必须且只能包含 1 条视频。');
+      }
+
+      const video = media[0] as MomentVideoAsset;
+      if (video.durationMs && video.durationMs > MAX_FEED_VIDEO_DURATION_MS) {
+        throw new BadRequestException('视频时长不能超过 5 分钟。');
+      }
+      return;
+    }
+
+    if (media.length < 1 || media.length > MAX_FEED_IMAGE_COUNT) {
+      throw new BadRequestException(
+        `图片动态最多支持 ${MAX_FEED_IMAGE_COUNT} 张图片。`,
+      );
+    }
+
+    if (media.some((asset) => asset.kind !== 'image')) {
+      throw new BadRequestException('图片动态当前只支持图片资源。');
+    }
+  }
+
+  private serializeFeedMedia(media: MomentMediaAsset[]) {
+    return media.length ? JSON.stringify(media) : undefined;
+  }
+
+  private parseFeedMediaPayload(payload?: string | null): MomentMediaAsset[] {
+    if (!payload?.trim()) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(payload);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+
+      return parsed
+        .map((asset, index) =>
+          normalizeFeedMediaAsset(asset as MomentMediaAsset, index),
+        )
+        .filter((asset) => asset.url);
+    } catch {
+      return [];
+    }
+  }
+
+  private resolveFeedPostMedia(post: FeedPostEntity) {
+    const media = this.parseFeedMediaPayload(post.mediaPayload);
+    if (media.length > 0) {
+      return media;
+    }
+
+    return this.buildFeedMediaFromLegacyInput({
+      mediaType: post.mediaType as FeedMediaType,
+      mediaUrl: post.mediaUrl,
+      coverUrl: post.coverUrl,
+      durationMs: post.durationMs ?? undefined,
+      aspectRatio: post.aspectRatio ?? undefined,
+    });
+  }
+
   private serializePost(post: FeedPostEntity, ownerState?: FeedOwnerState) {
+    const media = this.resolveFeedPostMedia(post);
+    const primaryMedia = media[0];
+
     return {
       id: post.id,
       authorId: post.authorId,
@@ -1148,13 +1423,33 @@ export class FeedService {
       surface: post.surface as FeedSurface,
       text: post.text,
       title: post.title ?? null,
-      mediaUrl: post.mediaUrl,
-      coverUrl: post.coverUrl ?? null,
-      mediaType: post.mediaType as 'text' | 'image' | 'video',
-      durationMs: post.durationMs ?? null,
-      aspectRatio: post.aspectRatio ?? null,
+      media,
+      mediaUrl: post.mediaUrl ?? primaryMedia?.url,
+      coverUrl:
+        post.coverUrl ??
+        (primaryMedia?.kind === 'video'
+          ? (primaryMedia.posterUrl ?? null)
+          : primaryMedia?.kind === 'image'
+            ? (primaryMedia.thumbnailUrl ?? primaryMedia.url)
+            : null) ??
+        null,
+      mediaType: this.inferFeedMediaType(
+        media,
+        post.mediaType as FeedMediaType,
+      ),
+      durationMs:
+        post.durationMs ??
+        (primaryMedia?.kind === 'video'
+          ? (primaryMedia.durationMs ?? null)
+          : null),
+      aspectRatio:
+        post.aspectRatio ?? resolveFeedMediaAspectRatio(primaryMedia) ?? null,
       topicTags: post.topicTags ?? [],
-      publishStatus: post.publishStatus as 'draft' | 'published' | 'hidden' | 'deleted',
+      publishStatus: post.publishStatus as
+        | 'draft'
+        | 'published'
+        | 'hidden'
+        | 'deleted',
       likeCount: post.likeCount,
       commentCount: post.commentCount,
       shareCount: post.shareCount,
@@ -1203,9 +1498,7 @@ export class FeedService {
     ownerId: string;
     postId: string;
     type: string;
-    incrementColumn?:
-      | 'likeCount'
-      | 'favoriteCount';
+    incrementColumn?: 'likeCount' | 'favoriteCount';
     payload?: Record<string, unknown> | null;
   }) {
     await this.assertPostExists(input.postId);
@@ -1229,7 +1522,11 @@ export class FeedService {
     );
 
     if (input.incrementColumn) {
-      await this.postRepo.increment({ id: input.postId }, input.incrementColumn, 1);
+      await this.postRepo.increment(
+        { id: input.postId },
+        input.incrementColumn,
+        1,
+      );
     }
   }
 
@@ -1241,10 +1538,7 @@ export class FeedService {
     return post;
   }
 
-  private async decrementPostCounter(
-    postId: string,
-    key: 'favoriteCount',
-  ) {
+  private async decrementPostCounter(postId: string, key: 'favoriteCount') {
     const post = await this.postRepo.findOneBy({ id: postId });
     if (!post) {
       return;
@@ -1275,6 +1569,89 @@ export class FeedService {
       CHANNEL_DEMO_POSTS[0]
     );
   }
+}
+
+function normalizeFeedMediaAsset(
+  asset: MomentMediaAsset,
+  index: number,
+): MomentMediaAsset {
+  if (asset.kind === 'video') {
+    return {
+      id: asset.id?.trim() || `feed-video-${index + 1}`,
+      kind: 'video',
+      url: asset.url?.trim() || '',
+      posterUrl: asset.posterUrl?.trim() || undefined,
+      mimeType: asset.mimeType?.trim() || 'video/mp4',
+      fileName: asset.fileName?.trim() || `video-${index + 1}`,
+      size: Math.max(0, Math.round(asset.size ?? 0)),
+      width: normalizeOptionalPositiveInteger(asset.width),
+      height: normalizeOptionalPositiveInteger(asset.height),
+      durationMs: normalizeOptionalPositiveInteger(asset.durationMs),
+    };
+  }
+
+  return {
+    id: asset.id?.trim() || `feed-image-${index + 1}`,
+    kind: 'image',
+    url: asset.url?.trim() || '',
+    thumbnailUrl: asset.thumbnailUrl?.trim() || asset.url?.trim() || undefined,
+    mimeType: asset.mimeType?.trim() || 'image/jpeg',
+    fileName: asset.fileName?.trim() || `image-${index + 1}`,
+    size: Math.max(0, Math.round(asset.size ?? 0)),
+    width: normalizeOptionalPositiveInteger(asset.width),
+    height: normalizeOptionalPositiveInteger(asset.height),
+    livePhoto: asset.livePhoto?.enabled
+      ? {
+          enabled: true,
+          motionUrl: asset.livePhoto.motionUrl?.trim() || undefined,
+        }
+      : undefined,
+  };
+}
+
+function normalizeOptionalPositiveInteger(value?: number | null) {
+  if (!value || !Number.isFinite(value) || value <= 0) {
+    return undefined;
+  }
+
+  return Math.round(value);
+}
+
+function normalizeOptionalPositiveFloat(value?: number | null) {
+  if (!value || !Number.isFinite(value) || value <= 0) {
+    return undefined;
+  }
+
+  return value;
+}
+
+function resolveFeedMediaAspectRatio(media?: MomentMediaAsset | null) {
+  if (!media) {
+    return undefined;
+  }
+
+  if (
+    typeof media.width === 'number' &&
+    media.width > 0 &&
+    typeof media.height === 'number' &&
+    media.height > 0
+  ) {
+    return media.width / media.height;
+  }
+
+  return undefined;
+}
+
+function buildApproximateFeedMediaDimensions(aspectRatio?: number | null) {
+  const normalizedAspectRatio = normalizeOptionalPositiveFloat(aspectRatio);
+  if (!normalizedAspectRatio) {
+    return undefined;
+  }
+
+  return {
+    width: Math.max(1, Math.round(normalizedAspectRatio * 1000)),
+    height: 1000,
+  };
 }
 
 function unique(values: string[]) {

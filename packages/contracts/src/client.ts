@@ -48,6 +48,7 @@ import type {
 import type {
   CreateFeedCommentRequest,
   FeedComment,
+  FeedMediaAsset,
   CreateFeedPostRequest,
   FeedChannelAuthorProfile,
   FeedChannelHomeResponse,
@@ -490,6 +491,197 @@ function normalizeMoment(moment: Moment, baseUrl?: string): Moment {
       ? moment.media.map((asset) => normalizeMomentMediaAsset(asset, baseUrl))
       : [],
     contentType: moment.contentType ?? "text",
+  };
+}
+
+function normalizeFeedMediaAsset(
+  asset: FeedMediaAsset,
+  baseUrl?: string,
+): FeedMediaAsset {
+  return normalizeMomentMediaAsset(
+    asset as MomentMediaAsset,
+    baseUrl,
+  ) as FeedMediaAsset;
+}
+
+function resolveFeedMediaType(
+  mediaType: FeedPost["mediaType"] | undefined,
+  media: FeedMediaAsset[],
+): FeedPost["mediaType"] {
+  if (media[0]?.kind === "video") {
+    return "video";
+  }
+
+  if (media.length > 0) {
+    return "image";
+  }
+
+  return mediaType === "image" || mediaType === "video" ? mediaType : "text";
+}
+
+function createFeedMediaFromLegacy(
+  post: Pick<
+    FeedPost,
+    "mediaType" | "mediaUrl" | "coverUrl" | "durationMs" | "aspectRatio"
+  >,
+): FeedMediaAsset[] {
+  const mediaUrl = post.mediaUrl?.trim();
+  if (!mediaUrl) {
+    return [];
+  }
+
+  const aspectRatio =
+    typeof post.aspectRatio === "number" && post.aspectRatio > 0
+      ? post.aspectRatio
+      : undefined;
+  const approximateWidth = aspectRatio
+    ? Math.max(1, Math.round(aspectRatio * 1000))
+    : undefined;
+  const approximateHeight = aspectRatio ? 1000 : undefined;
+
+  if (post.mediaType === "video") {
+    return [
+      {
+        id: "feed-video-legacy",
+        kind: "video",
+        url: mediaUrl,
+        posterUrl: post.coverUrl?.trim() || undefined,
+        mimeType: "video/mp4",
+        fileName: "feed-video",
+        size: 0,
+        width: approximateWidth,
+        height: approximateHeight,
+        durationMs:
+          typeof post.durationMs === "number" && post.durationMs > 0
+            ? post.durationMs
+            : undefined,
+      },
+    ];
+  }
+
+  if (post.mediaType === "image") {
+    return [
+      {
+        id: "feed-image-legacy",
+        kind: "image",
+        url: mediaUrl,
+        thumbnailUrl: post.coverUrl?.trim() || mediaUrl,
+        mimeType: "image/jpeg",
+        fileName: "feed-image",
+        size: 0,
+        width: approximateWidth,
+        height: approximateHeight,
+      },
+    ];
+  }
+
+  return [];
+}
+
+function normalizeFeedPost<T extends FeedPost>(post: T, baseUrl?: string): T {
+  const resolvedMedia =
+    Array.isArray(post.media) && post.media.length > 0
+      ? post.media
+      : createFeedMediaFromLegacy(post);
+  const media = resolvedMedia.map((asset) =>
+    normalizeFeedMediaAsset(asset, baseUrl),
+  );
+  const primaryMedia = media[0];
+  const normalizedMediaUrl =
+    post.mediaUrl?.trim() || primaryMedia?.url
+      ? normalizeAttachmentAssetUrl(
+          post.mediaUrl?.trim() || primaryMedia?.url || "",
+          baseUrl,
+        )
+      : undefined;
+  const normalizedCoverUrl =
+    post.coverUrl?.trim() ||
+    (primaryMedia?.kind === "video"
+      ? primaryMedia.posterUrl
+      : primaryMedia?.kind === "image"
+        ? primaryMedia.thumbnailUrl || primaryMedia.url
+        : undefined)
+      ? normalizeAttachmentAssetUrl(
+          post.coverUrl?.trim() ||
+            (primaryMedia?.kind === "video"
+              ? primaryMedia.posterUrl
+              : primaryMedia?.kind === "image"
+                ? primaryMedia.thumbnailUrl || primaryMedia.url
+                : undefined) ||
+            "",
+          baseUrl,
+        )
+      : null;
+
+  return {
+    ...post,
+    title: post.title ?? null,
+    media,
+    mediaType: resolveFeedMediaType(post.mediaType, media),
+    mediaUrl: normalizedMediaUrl,
+    coverUrl: normalizedCoverUrl,
+    durationMs:
+      typeof post.durationMs === "number"
+        ? post.durationMs
+        : primaryMedia?.kind === "video"
+          ? (primaryMedia.durationMs ?? null)
+          : null,
+    aspectRatio:
+      typeof post.aspectRatio === "number" && Number.isFinite(post.aspectRatio)
+        ? post.aspectRatio
+        : primaryMedia?.width && primaryMedia.height
+          ? primaryMedia.width / primaryMedia.height
+          : null,
+    topicTags: Array.isArray(post.topicTags) ? post.topicTags : [],
+    statsPayload: post.statsPayload ?? null,
+  } as T;
+}
+
+function normalizeFeedListResponse(
+  response: FeedListResponse,
+  baseUrl?: string,
+): FeedListResponse {
+  return {
+    ...response,
+    posts: response.posts.map((post) => normalizeFeedPost(post, baseUrl)),
+  };
+}
+
+function normalizeFeedPostWithComments(
+  post: FeedPostWithComments,
+  baseUrl?: string,
+): FeedPostWithComments {
+  return {
+    ...normalizeFeedPost(post, baseUrl),
+    comments: post.comments,
+  };
+}
+
+function normalizeFeedChannelAuthorProfile(
+  profile: FeedChannelAuthorProfile,
+  baseUrl?: string,
+): FeedChannelAuthorProfile {
+  return {
+    ...profile,
+    recentPosts: profile.recentPosts.map((post) =>
+      normalizeFeedPost(post, baseUrl),
+    ),
+  };
+}
+
+function normalizeFeedChannelHomeResponse(
+  response: FeedChannelHomeResponse,
+  baseUrl?: string,
+): FeedChannelHomeResponse {
+  return {
+    ...response,
+    posts: response.posts.map((post) => normalizeFeedPost(post, baseUrl)),
+    liveEntries: response.liveEntries.map((entry) => ({
+      ...entry,
+      coverUrl: entry.coverUrl
+        ? normalizeAttachmentAssetUrl(entry.coverUrl, baseUrl)
+        : entry.coverUrl,
+    })),
   };
 }
 
@@ -2094,7 +2286,8 @@ export function getMoments(baseUrl?: string) {
     allowDefault: false,
   });
   return requestLegacyApi<Moment[]>("/moments", undefined, baseUrl).then(
-    (moments) => moments.map((moment) => normalizeMoment(moment, resolvedBaseUrl)),
+    (moments) =>
+      moments.map((moment) => normalizeMoment(moment, resolvedBaseUrl)),
   );
 }
 
@@ -2191,6 +2384,9 @@ export function getFeed(
   baseUrl?: string,
   options?: { surface?: FeedSurface },
 ) {
+  const resolvedBaseUrl = resolveCoreApiBaseUrl(baseUrl, {
+    allowDefault: false,
+  });
   const params = new URLSearchParams({
     page: String(page),
     limit: String(limit),
@@ -2204,14 +2400,19 @@ export function getFeed(
     `/feed?${params.toString()}`,
     undefined,
     baseUrl,
-  );
+  ).then((response) => normalizeFeedListResponse(response, resolvedBaseUrl));
 }
 
 export function getFeedPost(id: string, baseUrl?: string) {
-  return requestLegacyApi<FeedPostWithComments>(
+  const resolvedBaseUrl = resolveCoreApiBaseUrl(baseUrl, {
+    allowDefault: false,
+  });
+  return requestLegacyApi<FeedPostWithComments | null>(
     `/feed/${id}`,
     undefined,
     baseUrl,
+  ).then((post) =>
+    post ? normalizeFeedPostWithComments(post, resolvedBaseUrl) : null,
   );
 }
 
@@ -2223,6 +2424,9 @@ export function getChannelHome(
     limit?: number;
   },
 ) {
+  const resolvedBaseUrl = resolveCoreApiBaseUrl(baseUrl, {
+    allowDefault: false,
+  });
   const params = new URLSearchParams();
 
   if (options?.section) {
@@ -2239,14 +2443,21 @@ export function getChannelHome(
     `/feed/channels/home${params.size ? `?${params.toString()}` : ""}`,
     undefined,
     baseUrl,
+  ).then((response) =>
+    normalizeFeedChannelHomeResponse(response, resolvedBaseUrl),
   );
 }
 
 export function getChannelAuthorProfile(authorId: string, baseUrl?: string) {
+  const resolvedBaseUrl = resolveCoreApiBaseUrl(baseUrl, {
+    allowDefault: false,
+  });
   return requestLegacyApi<FeedChannelAuthorProfile>(
     `/feed/channels/authors/${authorId}`,
     undefined,
     baseUrl,
+  ).then((profile) =>
+    normalizeFeedChannelAuthorProfile(profile, resolvedBaseUrl),
   );
 }
 
@@ -2254,6 +2465,9 @@ export function createFeedPost(
   payload: CreateFeedPostRequest,
   baseUrl?: string,
 ) {
+  const resolvedBaseUrl = resolveCoreApiBaseUrl(baseUrl, {
+    allowDefault: false,
+  });
   return requestLegacyApi<FeedPost>(
     "/feed",
     {
@@ -2261,7 +2475,7 @@ export function createFeedPost(
       body: JSON.stringify(payload),
     },
     baseUrl,
-  );
+  ).then((post) => normalizeFeedPost(post, resolvedBaseUrl));
 }
 
 export function addFeedComment(
@@ -2373,22 +2587,32 @@ export function markFeedPostNotInterested(id: string, baseUrl?: string) {
 }
 
 export function followChannelAuthor(authorId: string, baseUrl?: string) {
+  const resolvedBaseUrl = resolveCoreApiBaseUrl(baseUrl, {
+    allowDefault: false,
+  });
   return requestLegacyApi<FeedChannelAuthorProfile>(
     `/feed/channels/authors/${authorId}/follow`,
     {
       method: "POST",
     },
     baseUrl,
+  ).then((profile) =>
+    normalizeFeedChannelAuthorProfile(profile, resolvedBaseUrl),
   );
 }
 
 export function unfollowChannelAuthor(authorId: string, baseUrl?: string) {
+  const resolvedBaseUrl = resolveCoreApiBaseUrl(baseUrl, {
+    allowDefault: false,
+  });
   return requestLegacyApi<FeedChannelAuthorProfile>(
     `/feed/channels/authors/${authorId}/follow`,
     {
       method: "DELETE",
     },
     baseUrl,
+  ).then((profile) =>
+    normalizeFeedChannelAuthorProfile(profile, resolvedBaseUrl),
   );
 }
 
@@ -2403,13 +2627,16 @@ export function likeFeedComment(id: string, baseUrl?: string) {
 }
 
 export function generateChannelPost(baseUrl?: string) {
+  const resolvedBaseUrl = resolveCoreApiBaseUrl(baseUrl, {
+    allowDefault: false,
+  });
   return requestLegacyApi<FeedPost>(
     "/feed/channels/generate",
     {
       method: "POST",
     },
     baseUrl,
-  );
+  ).then((post) => normalizeFeedPost(post, resolvedBaseUrl));
 }
 
 export function listOfficialAccounts(baseUrl?: string) {

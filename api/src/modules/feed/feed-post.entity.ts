@@ -1,4 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+} from 'typeorm';
 
 @Entity('feed_posts')
 export class FeedPostEntity {
@@ -28,6 +33,9 @@ export class FeedPostEntity {
 
   @Column({ nullable: true })
   mediaUrl?: string;
+
+  @Column('text', { nullable: true })
+  mediaPayload?: string;
 
   @Column({ type: 'text', nullable: true })
   coverUrl?: string | null;
