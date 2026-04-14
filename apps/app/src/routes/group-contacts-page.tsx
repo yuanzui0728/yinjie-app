@@ -7,6 +7,7 @@ import { AppPage, Button, ErrorBlock, LoadingBlock, cn } from "@yinjie/ui";
 import { EmptyState } from "../components/empty-state";
 import { GroupAvatarChip } from "../components/group-avatar-chip";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
+import { buildDesktopContactsRouteHash } from "../features/desktop/contacts/desktop-contacts-route-state";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { buildCreateGroupRouteHash } from "../lib/create-group-route-state";
 import { formatConversationTimestamp } from "../lib/format";
@@ -15,9 +16,22 @@ import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 export function GroupContactsPage() {
   const isDesktopLayout = useDesktopLayout();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isDesktopLayout) {
+      return;
+    }
+
+    void navigate({
+      to: "/tabs/contacts",
+      hash: buildDesktopContactsRouteHash({ pane: "groups" }),
+      replace: true,
+    });
+  }, [isDesktopLayout, navigate]);
 
   if (isDesktopLayout) {
-    return <DesktopGroupContactsPage />;
+    return null;
   }
 
   return <MobileGroupContactsPage />;
