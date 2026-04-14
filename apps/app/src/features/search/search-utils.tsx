@@ -11,9 +11,11 @@ import {
 const categoryOrder: Record<SearchResultCategory, number> = {
   messages: 0,
   contacts: 1,
-  officialAccounts: 2,
-  moments: 3,
-  feed: 4,
+  favorites: 2,
+  officialAccounts: 3,
+  miniPrograms: 4,
+  moments: 5,
+  feed: 6,
 };
 
 export function normalizeSearchKeyword(keyword: string) {

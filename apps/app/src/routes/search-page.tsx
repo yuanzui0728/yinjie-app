@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { DesktopSearchWorkspace } from "../features/search/desktop-search-workspace";
-import { useDesktopSearchQuickLinks } from "../features/search/desktop-search-quick-links";
 import {
   clearSearchHistory,
   hydrateSearchHistoryFromNative,
@@ -39,17 +38,15 @@ export function SearchPage() {
   const [history, setHistory] = useState(() => loadSearchHistory());
   const {
     favoriteMatches,
-    miniProgramMatches,
-    recentFavorites,
-    recentMiniPrograms,
-  } = useDesktopSearchQuickLinks(searchText);
-  const {
     error,
     filteredResults,
     groupedResults,
     hasKeyword,
     loading,
     matchedCounts,
+    miniProgramMatches,
+    recentFavorites,
+    recentMiniPrograms,
     scopeCounts,
     searchingMessages,
   } = useSearchIndex(searchText, activeCategory, isDesktopLayout);
@@ -152,6 +149,7 @@ export function SearchPage() {
     handleCommitSearch(searchText);
     void navigate({
       to: item.to as never,
+      search: item.search as never,
       hash: item.hash,
     });
   }

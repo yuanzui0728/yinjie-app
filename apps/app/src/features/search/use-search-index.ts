@@ -36,6 +36,7 @@ import {
   type SearchCategory,
   type SearchResultItem,
 } from "./search-types";
+import { useDesktopSearchQuickLinks } from "./desktop-search-quick-links";
 import {
   buildSearchMatchCounts,
   buildSearchPreview,
@@ -65,6 +66,14 @@ export function useSearchIndex(
   const localMessageActionState = useLocalChatMessageActionState();
   const deferredSearchText = useDeferredValue(searchText);
   const normalizedSearchText = normalizeSearchKeyword(deferredSearchText);
+  const {
+    favoriteMatches,
+    favoriteSearchResults,
+    miniProgramMatches,
+    miniProgramSearchResults,
+    recentFavorites,
+    recentMiniPrograms,
+  } = useDesktopSearchQuickLinks(deferredSearchText, isDesktopLayout);
 
   const conversationsQuery = useQuery({
     queryKey: ["app-conversations", baseUrl],
@@ -427,8 +436,10 @@ export function useSearchIndex(
       ...conversationResults,
       ...globalMessageResults,
       ...contactResults,
+      ...favoriteSearchResults,
       ...officialAccountResults,
       ...officialAccountArticleResults,
+      ...miniProgramSearchResults,
       ...momentResults,
       ...feedResults,
     ];
@@ -437,8 +448,10 @@ export function useSearchIndex(
     conversations,
     feedQuery.data?.posts,
     friendsQuery.data,
+    favoriteSearchResults,
     localMessageActionState,
     messageSearchIndexQuery.data,
+    miniProgramSearchResults,
     momentsQuery.data,
     normalizedSearchText,
     officialAccountArticlesQuery.data,
@@ -446,27 +459,36 @@ export function useSearchIndex(
     isDesktopLayout,
   ]);
 
+  const allMatchedResults = useMemo(
+    () => filterSearchResults(indexedResults, normalizedSearchText, "all"),
+    [indexedResults, normalizedSearchText],
+  );
+
   const filteredResults = useMemo(
     () =>
-      filterSearchResults(indexedResults, normalizedSearchText, activeCategory),
-    [activeCategory, indexedResults, normalizedSearchText],
+      activeCategory === "all"
+        ? allMatchedResults
+        : filterSearchResults(indexedResults, normalizedSearchText, activeCategory),
+    [activeCategory, allMatchedResults, indexedResults, normalizedSearchText],
   );
 
   const groupedResults = useMemo(
-    () => groupSearchResults(filteredResults),
-    [filteredResults],
+    () => groupSearchResults(allMatchedResults),
+    [allMatchedResults],
   );
 
   const matchedCounts = useMemo(
-    () => buildSearchMatchCounts(filteredResults),
-    [filteredResults],
+    () => buildSearchMatchCounts(allMatchedResults),
+    [allMatchedResults],
   );
 
   const scopeCounts = useMemo(
     () => ({
       conversations: conversations.length,
       contacts: (charactersQuery.data ?? []).length,
+      favorites: favoriteSearchResults.length,
       officialAccounts: (officialAccountsQuery.data ?? []).length,
+      miniPrograms: miniProgramSearchResults.length,
       moments: (momentsQuery.data ?? []).length,
       feed: (feedQuery.data?.posts ?? []).length,
     }),
@@ -474,6 +496,8 @@ export function useSearchIndex(
       charactersQuery.data,
       conversations.length,
       feedQuery.data?.posts,
+      favoriteSearchResults.length,
+      miniProgramSearchResults.length,
       momentsQuery.data,
       officialAccountsQuery.data,
     ],
@@ -499,12 +523,16 @@ export function useSearchIndex(
 
   return {
     error,
+    favoriteMatches,
     filteredResults,
     groupedResults,
     hasKeyword: Boolean(normalizedSearchText),
     loading,
     matchedCounts,
+    miniProgramMatches,
     normalizedSearchText,
+    recentFavorites,
+    recentMiniPrograms,
     searchingMessages:
       Boolean(normalizedSearchText) && messageSearchIndexQuery.isLoading,
     scopeCounts: loading ? emptySearchScopeCounts : scopeCounts,
