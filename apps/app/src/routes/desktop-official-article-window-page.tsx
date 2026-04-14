@@ -6,7 +6,7 @@ import {
   getOfficialAccountArticle,
   markOfficialAccountArticleRead,
 } from "@yinjie/contracts";
-import { Button, InlineNotice } from "@yinjie/ui";
+import { Button, InlineNotice, cn } from "@yinjie/ui";
 import { OfficialArticleViewer } from "../components/official-article-viewer";
 import { EmptyState } from "../components/empty-state";
 import { buildOfficialArticleFavoriteRecord } from "../features/desktop/favorites/official-account-favorite-records";
@@ -297,18 +297,17 @@ export function DesktopOfficialArticleWindowPage() {
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 overflow-auto bg-[rgba(255,255,255,0.62)] p-6">
+      <div className={cn("min-h-0 flex-1 overflow-auto bg-white")}>
         {notice ? (
-          <InlineNotice
-            className="mx-auto mb-4 max-w-[840px] text-sm"
-            tone="info"
-          >
-            {notice}
-          </InlineNotice>
+          <div className="mx-auto max-w-[780px] px-8 pt-6">
+            <InlineNotice className="text-sm" tone="info">
+              {notice}
+            </InlineNotice>
+          </div>
         ) : null}
 
         {articleQuery.isLoading ? (
-          <div className="mx-auto max-w-[840px] rounded-[20px] border border-[color:var(--border-faint)] bg-white p-8 shadow-[var(--shadow-card)]">
+          <div className="mx-auto max-w-[780px] px-8 py-10">
             <EmptyState
               title="正在读取文章"
               description="稍等一下，正在同步正文内容。"
@@ -317,7 +316,7 @@ export function DesktopOfficialArticleWindowPage() {
         ) : null}
 
         {articleQuery.isError && articleQuery.error instanceof Error ? (
-          <div className="mx-auto max-w-[840px] rounded-[20px] border border-[color:var(--border-faint)] bg-white p-8 shadow-[var(--shadow-card)]">
+          <div className="mx-auto max-w-[780px] px-8 py-10">
             <EmptyState
               title="文章暂时不可用"
               description={articleQuery.error.message}
