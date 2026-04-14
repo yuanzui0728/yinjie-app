@@ -20,7 +20,10 @@ import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { ContactDetailPane } from "../features/contacts/contact-detail-pane";
-import { matchesCharacterSearch } from "../features/contacts/contact-utils";
+import {
+  getFriendDisplayName,
+  matchesFriendSearch,
+} from "../features/contacts/contact-utils";
 import { buildDesktopFriendMomentsRouteHash } from "../features/desktop/moments/desktop-friend-moments-route-state";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { navigateBackOrFallback } from "../lib/history-back";
@@ -61,7 +64,7 @@ function MobileStarredFriendsPage() {
     }
 
     return starredFriends.filter((item) =>
-      matchesCharacterSearch(item.character, normalizedSearchText),
+      matchesFriendSearch(item, normalizedSearchText),
     );
   }, [normalizedSearchText, starredFriends]);
 
@@ -138,11 +141,17 @@ function MobileStarredFriendsPage() {
           </div>
         ) : null}
 
-        {!friendsQuery.isLoading && !friendsQuery.isError && !filteredFriends.length ? (
+        {!friendsQuery.isLoading &&
+        !friendsQuery.isError &&
+        !filteredFriends.length ? (
           <div className="px-4 pt-4">
             <MobileStarredFriendsStatusCard
               badge={normalizedSearchText ? "暂无结果" : "星标"}
-              title={normalizedSearchText ? "没有找到匹配的星标朋友" : "还没有星标朋友"}
+              title={
+                normalizedSearchText
+                  ? "没有找到匹配的星标朋友"
+                  : "还没有星标朋友"
+              }
               description={
                 normalizedSearchText
                   ? "换个关键词再试试。"
@@ -166,18 +175,25 @@ function MobileStarredFriendsPage() {
                 }}
                 className={cn(
                   "flex w-full items-center gap-3 bg-[color:var(--bg-canvas-elevated)] px-4 py-2.5 text-left transition-colors hover:bg-[color:var(--surface-card-hover)]",
-                  index > 0 ? "border-t border-[color:var(--border-faint)]" : undefined,
+                  index > 0
+                    ? "border-t border-[color:var(--border-faint)]"
+                    : undefined,
                 )}
               >
                 <AvatarChip
-                  name={item.character.name}
+                  name={getFriendDisplayName(item)}
                   src={item.character.avatar}
                   size="wechat"
                 />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[14px] text-[color:var(--text-primary)]">
-                    {item.character.name}
+                    {getFriendDisplayName(item)}
                   </div>
+                  {getFriendDisplayName(item) !== item.character.name ? (
+                    <div className="mt-0.5 truncate text-[11px] text-[color:var(--text-muted)]">
+                      {item.character.name}
+                    </div>
+                  ) : null}
                 </div>
                 <Star
                   size={14}
@@ -250,13 +266,14 @@ function DesktopStarredFriendsPage() {
     }
 
     return starredFriends.filter((item) =>
-      matchesCharacterSearch(item.character, normalizedSearchText),
+      matchesFriendSearch(item, normalizedSearchText),
     );
   }, [normalizedSearchText, starredFriends]);
   const selectedFriend = useMemo(
     () =>
-      filteredFriends.find((item) => item.character.id === selectedCharacterId) ??
-      null,
+      filteredFriends.find(
+        (item) => item.character.id === selectedCharacterId,
+      ) ?? null,
     [filteredFriends, selectedCharacterId],
   );
 
@@ -342,7 +359,11 @@ function DesktopStarredFriendsPage() {
             !filteredFriends.length ? (
               <div className="px-3 pt-3">
                 <EmptyState
-                  title={normalizedSearchText ? "没有找到匹配的星标朋友" : "还没有星标朋友"}
+                  title={
+                    normalizedSearchText
+                      ? "没有找到匹配的星标朋友"
+                      : "还没有星标朋友"
+                  }
                   description={
                     normalizedSearchText
                       ? "换个关键词再试试。"
@@ -373,20 +394,22 @@ function DesktopStarredFriendsPage() {
                     )}
                   >
                     <AvatarChip
-                      name={item.character.name}
+                      name={getFriendDisplayName(item)}
                       src={item.character.avatar}
                       size="wechat"
                     />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[16px] text-[color:var(--text-primary)]">
-                        {item.character.name}
+                        {getFriendDisplayName(item)}
                       </div>
                       <div className="mt-0.5 truncate text-xs text-[color:var(--text-muted)]">
                         {startChatMutation.isPending &&
                         startChatMutation.variables === item.character.id
                           ? "正在打开会话..."
-                          : item.character.currentStatus?.trim() ||
-                            `${item.character.relationship} · 亲密度 ${item.friendship.intimacyLevel}`}
+                          : getFriendDisplayName(item) !== item.character.name
+                            ? `昵称：${item.character.name}`
+                            : item.character.currentStatus?.trim() ||
+                              `${item.character.relationship} · 亲密度 ${item.friendship.intimacyLevel}`}
                       </div>
                     </div>
                     <Star
@@ -410,11 +433,14 @@ function DesktopStarredFriendsPage() {
                 ? () => startChatMutation.mutate(selectedFriend.character.id)
                 : undefined
             }
-            chatPending={startChatMutation.variables === selectedFriend?.character.id}
+            chatPending={
+              startChatMutation.variables === selectedFriend?.character.id
+            }
             isStarred={selectedFriend?.friendship.isStarred ?? false}
             starPending={
               setStarredMutation.isPending &&
-              setStarredMutation.variables?.characterId === selectedFriend?.character.id
+              setStarredMutation.variables?.characterId ===
+                selectedFriend?.character.id
             }
             onToggleStarred={
               selectedFriend
@@ -464,8 +490,8 @@ function compareStarredFriends(left: FriendListItem, right: FriendListItem) {
     return starredAtDelta;
   }
 
-  const nameDiff = left.character.name.localeCompare(
-    right.character.name,
+  const nameDiff = getFriendDisplayName(left).localeCompare(
+    getFriendDisplayName(right),
     "zh-CN",
   );
   if (nameDiff !== 0) {
