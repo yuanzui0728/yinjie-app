@@ -14,6 +14,8 @@ import { AvatarChip } from "../../../components/avatar-chip";
 import { formatTimestamp } from "../../../lib/format";
 
 type DesktopMomentDetailPanelProps = {
+  authorActionAriaLabel?: string;
+  authorActionLabel?: string;
   commentDraft: string;
   commentLoading: boolean;
   likeLoading: boolean;
@@ -29,6 +31,8 @@ type DesktopMomentDetailPanelProps = {
 };
 
 export function DesktopMomentDetailPanel({
+  authorActionAriaLabel,
+  authorActionLabel,
   commentDraft,
   commentLoading,
   likeLoading,
@@ -92,7 +96,9 @@ export function DesktopMomentDetailPanel({
               type="button"
               onClick={onSelectAuthor}
               className="shrink-0 rounded-[18px]"
-              aria-label={`查看 ${moment.authorName} 的朋友圈`}
+              aria-label={
+                authorActionAriaLabel ?? `查看 ${moment.authorName} 的朋友圈`
+              }
             >
               <AvatarChip
                 name={moment.authorName}
@@ -184,7 +190,7 @@ export function DesktopMomentDetailPanel({
               onClick={onSelectAuthor}
               className="border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] shadow-none hover:bg-[color:var(--surface-console)]"
             >
-              查看 TA 的动态
+              {authorActionLabel ?? "打开 TA 的朋友圈"}
             </Button>
           </div>
         </div>

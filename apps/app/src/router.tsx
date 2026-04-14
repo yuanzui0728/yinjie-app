@@ -33,6 +33,11 @@ const MomentsPage = lazy(async () => {
   return { default: mod.MomentsPage };
 });
 
+const FriendMomentsPage = lazy(async () => {
+  const mod = await import("./routes/friend-moments-page");
+  return { default: mod.FriendMomentsPage };
+});
+
 const FeedPage = lazy(async () => {
   const mod = await import("./routes/feed-page");
   return { default: mod.FeedPage };
@@ -380,6 +385,12 @@ const momentsRoute = createRoute({
   getParentRoute: () => tabsRoute,
   path: "/moments",
   component: MomentsPage,
+});
+
+const friendMomentsRoute = createRoute({
+  getParentRoute: () => tabsRoute,
+  path: "/moments/friend/$characterId",
+  component: FriendMomentsPage,
 });
 
 const favoritesRoute = createRoute({
@@ -799,6 +810,7 @@ const routeTree = rootRoute.addChildren([
     chatListRoute,
     favoritesRoute,
     momentsRoute,
+    friendMomentsRoute,
     feedRoute,
     channelsRoute,
     searchRoute,

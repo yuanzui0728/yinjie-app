@@ -1,0 +1,469 @@
+import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useNavigate,
+  useParams,
+  useRouterState,
+} from "@tanstack/react-router";
+import {
+  addMomentComment,
+  createUserMoment,
+  getBlockedCharacters,
+  getCharacter,
+  getFriends,
+  getMoments,
+  toggleMomentLike,
+} from "@yinjie/contracts";
+import { AppPage, Button, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
+import { ArrowLeft } from "lucide-react";
+import {
+  hydrateDesktopFavoritesFromNative,
+  readDesktopFavorites,
+  removeDesktopFavorite,
+  upsertDesktopFavorite,
+} from "../features/desktop/favorites/desktop-favorites-storage";
+import {
+  buildDesktopFriendMomentsPath,
+  buildDesktopFriendMomentsRouteHash,
+  parseDesktopFriendMomentsRouteState,
+} from "../features/desktop/moments/desktop-friend-moments-route-state";
+import { DesktopFriendMomentsWorkspace } from "../features/desktop/moments/desktop-friend-moments-workspace";
+import { TabPageTopBar } from "../components/tab-page-top-bar";
+import { navigateBackOrFallback } from "../lib/history-back";
+import { formatTimestamp } from "../lib/format";
+import { useDesktopLayout } from "../features/shell/use-desktop-layout";
+import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
+import { useWorldOwnerStore } from "../store/world-owner-store";
+
+export function FriendMomentsPage() {
+  const { characterId } = useParams({
+    from: "/tabs/moments/friend/$characterId",
+  });
+  const isDesktopLayout = useDesktopLayout();
+  const navigate = useNavigate();
+  const hash = useRouterState({
+    select: (state) => state.location.hash,
+  });
+  const queryClient = useQueryClient();
+  const ownerId = useWorldOwnerStore((state) => state.id);
+  const ownerAvatar = useWorldOwnerStore((state) => state.avatar);
+  const ownerUsername = useWorldOwnerStore((state) => state.username);
+  const runtimeConfig = useAppRuntimeConfig();
+  const baseUrl = runtimeConfig.apiBaseUrl;
+  const nativeDesktopFavorites = runtimeConfig.appPlatform === "desktop";
+  const [text, setText] = useState("");
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>(
+    {},
+  );
+  const [showCompose, setShowCompose] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [favoriteSourceIds, setFavoriteSourceIds] = useState<string[]>([]);
+  const routeState = parseDesktopFriendMomentsRouteState(hash);
+  const routeSelectedMomentId = routeState.momentId ?? null;
+
+  const characterQuery = useQuery({
+    queryKey: ["app-character", baseUrl, characterId],
+    queryFn: () => getCharacter(characterId, baseUrl),
+  });
+  const friendsQuery = useQuery({
+    queryKey: ["app-friends", baseUrl],
+    queryFn: () => getFriends(baseUrl),
+  });
+  const momentsQuery = useQuery({
+    queryKey: ["app-moments", baseUrl],
+    queryFn: () => getMoments(baseUrl),
+  });
+  const blockedQuery = useQuery({
+    queryKey: ["app-moments-blocked-characters", baseUrl],
+    queryFn: () => getBlockedCharacters(baseUrl),
+    enabled: Boolean(ownerId),
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      createUserMoment(
+        {
+          text: text.trim(),
+        },
+        baseUrl,
+      ),
+    onSuccess: async () => {
+      setText("");
+      setShowCompose(false);
+      setNotice("朋友圈已发布，仅好友可见。");
+      await queryClient.invalidateQueries({
+        queryKey: ["app-moments", baseUrl],
+      });
+    },
+  });
+  const likeMutation = useMutation({
+    mutationFn: (momentId: string) => toggleMomentLike(momentId, baseUrl),
+    onSuccess: async () => {
+      setNotice("朋友圈互动已更新。");
+      await queryClient.invalidateQueries({
+        queryKey: ["app-moments", baseUrl],
+      });
+    },
+  });
+  const commentMutation = useMutation({
+    mutationFn: (momentId: string) => {
+      const text = commentDrafts[momentId]?.trim();
+      if (!text) {
+        throw new Error("请先输入评论内容。");
+      }
+
+      return addMomentComment(
+        momentId,
+        {
+          text,
+        },
+        baseUrl,
+      );
+    },
+    onSuccess: async (_, momentId) => {
+      setCommentDrafts((current) => ({ ...current, [momentId]: "" }));
+      setNotice("朋友圈互动已更新。");
+      await queryClient.invalidateQueries({
+        queryKey: ["app-moments", baseUrl],
+      });
+    },
+  });
+
+  const friendItem = useMemo(
+    () =>
+      (friendsQuery.data ?? []).find((item) => item.character.id === characterId) ??
+      null,
+    [characterId, friendsQuery.data],
+  );
+  const character = characterQuery.data ?? friendItem?.character ?? null;
+  const isFriend = Boolean(friendItem?.friendship);
+  const isBlocked = Boolean(
+    (blockedQuery.data ?? []).some((item) => item.characterId === characterId),
+  );
+  const displayName =
+    friendItem?.friendship.remarkName?.trim() ||
+    character?.name ||
+    "好友朋友圈";
+  const signature =
+    character?.currentStatus?.trim() ||
+    character?.bio?.trim() ||
+    (isFriend ? "这个朋友还没有个性签名。" : "加为好友后可查看这位角色的朋友圈。");
+  const pendingLikeMomentId = likeMutation.isPending
+    ? likeMutation.variables
+    : null;
+  const pendingCommentMomentId = commentMutation.isPending
+    ? commentMutation.variables
+    : null;
+  const blockedCharacterIds = new Set(
+    (blockedQuery.data ?? []).map((item) => item.characterId),
+  );
+  const visibleMoments = (momentsQuery.data ?? []).filter(
+    (moment) =>
+      moment.authorType !== "character" ||
+      !blockedCharacterIds.has(moment.authorId),
+  );
+  const friendMoments = visibleMoments.filter(
+    (moment) => moment.authorId === characterId,
+  );
+
+  useEffect(() => {
+    setText("");
+    setCommentDrafts({});
+    setShowCompose(false);
+    setNotice("");
+  }, [baseUrl, characterId]);
+
+  useEffect(() => {
+    setFavoriteSourceIds(readDesktopFavorites().map((item) => item.sourceId));
+  }, []);
+
+  useEffect(() => {
+    if (!nativeDesktopFavorites) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function syncFavoriteSourceIds() {
+      const favoriteSourceIds = (await hydrateDesktopFavoritesFromNative()).map(
+        (item) => item.sourceId,
+      );
+      if (cancelled) {
+        return;
+      }
+
+      setFavoriteSourceIds((current) =>
+        JSON.stringify(current) === JSON.stringify(favoriteSourceIds)
+          ? current
+          : favoriteSourceIds,
+      );
+    }
+
+    const handleFocus = () => {
+      void syncFavoriteSourceIds();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== "visible") {
+        return;
+      }
+
+      void syncFavoriteSourceIds();
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [nativeDesktopFavorites]);
+
+  useEffect(() => {
+    if (!notice) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setNotice(""), 2400);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  function handleBack() {
+    navigateBackOrFallback(() => {
+      if (routeState.source === "contacts") {
+        void navigate({ to: "/tabs/contacts" });
+        return;
+      }
+
+      if (routeState.source === "character-detail" && characterId) {
+        void navigate({
+          to: "/character/$characterId",
+          params: { characterId },
+        });
+        return;
+      }
+
+      if (
+        routeState.source === "chat-details" ||
+        routeState.source === "avatar-popover"
+      ) {
+        void navigate({ to: "/tabs/chat" });
+        return;
+      }
+
+      void navigate({ to: "/tabs/moments" });
+    });
+  }
+
+  if (!isDesktopLayout) {
+    return (
+      <AppPage className="space-y-0 px-0 py-0">
+        <TabPageTopBar
+          title={displayName}
+          subtitle="好友朋友圈"
+          titleAlign="center"
+          className="mx-0 mb-0 mt-0 border-b border-[color:var(--border-faint)] bg-[rgba(247,247,247,0.94)] px-4 pb-1.5 pt-1.5 text-[color:var(--text-primary)] shadow-none"
+          leftActions={
+            <Button
+              onClick={handleBack}
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-full border-0 bg-transparent text-[color:var(--text-primary)] active:bg-black/[0.05]"
+            >
+              <ArrowLeft size={17} />
+            </Button>
+          }
+        />
+        <div className="space-y-3 px-4 py-4">
+          <InlineNotice tone="info">
+            好友朋友圈独立页当前主要提供给桌面端使用，移动端先回到资料页或朋友圈主页查看。
+          </InlineNotice>
+          {character ? (
+            <div className="rounded-[18px] border border-[color:var(--border-faint)] bg-white p-4">
+              <div className="text-[15px] font-medium text-[color:var(--text-primary)]">
+                {displayName}
+              </div>
+              <div className="mt-2 text-[13px] leading-6 text-[color:var(--text-secondary)]">
+                {signature}
+              </div>
+              <div className="mt-3 text-[12px] text-[color:var(--text-muted)]">
+                {friendMoments.length
+                  ? `当前可见 ${friendMoments.length} 条朋友圈`
+                  : isFriend
+                    ? "当前还没有可展示的朋友圈内容。"
+                    : "先加为好友后再查看。"}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </AppPage>
+    );
+  }
+
+  const errors: string[] = [];
+  if (characterQuery.isError && characterQuery.error instanceof Error) {
+    errors.push(characterQuery.error.message);
+  }
+  if (friendsQuery.isError && friendsQuery.error instanceof Error) {
+    errors.push(friendsQuery.error.message);
+  }
+  if (momentsQuery.isError && momentsQuery.error instanceof Error) {
+    errors.push(momentsQuery.error.message);
+  }
+  if (blockedQuery.isError && blockedQuery.error instanceof Error) {
+    errors.push(blockedQuery.error.message);
+  }
+
+  if (!character && (characterQuery.isLoading || friendsQuery.isLoading)) {
+    return (
+      <div className="flex h-full items-center justify-center bg-[rgba(244,247,246,0.98)] px-6">
+        <LoadingBlock
+          label="正在读取好友朋友圈..."
+          className="w-full max-w-[420px] rounded-[24px] border-[color:var(--border-faint)] bg-white py-10 shadow-[var(--shadow-section)]"
+        />
+      </div>
+    );
+  }
+
+  if (!character) {
+    return (
+      <div className="flex h-full items-center justify-center bg-[rgba(244,247,246,0.98)] px-6">
+        <div className="w-full max-w-[480px] rounded-[24px] border border-[color:var(--border-faint)] bg-white p-6 shadow-[var(--shadow-section)]">
+          <div className="text-[18px] font-semibold text-[color:var(--text-primary)]">
+            无法打开这位好友的朋友圈
+          </div>
+          <div className="mt-2 text-[13px] leading-6 text-[color:var(--text-secondary)]">
+            角色资料不存在，或者当前资料还没有同步完成。
+          </div>
+          {errors.length > 0 ? (
+            <div className="mt-4 space-y-3">
+              {errors.map((message, index) => (
+                <ErrorBlock key={`${message}-${index}`} message={message} />
+              ))}
+            </div>
+          ) : null}
+          <div className="mt-5 flex gap-2">
+            <Button variant="secondary" onClick={handleBack}>
+              返回上一页
+            </Button>
+            <Button variant="primary" onClick={() => void navigate({ to: "/tabs/moments" })}>
+              去朋友圈主页
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <DesktopFriendMomentsWorkspace
+      character={character}
+      commentDrafts={commentDrafts}
+      commentErrorMessage={
+        commentMutation.isError && commentMutation.error instanceof Error
+          ? commentMutation.error.message
+          : null
+      }
+      commentPendingMomentId={pendingCommentMomentId}
+      composeErrorMessage={
+        createMutation.isError && createMutation.error instanceof Error
+          ? createMutation.error.message
+          : null
+      }
+      createPending={createMutation.isPending}
+      displayName={displayName}
+      errors={errors}
+      isBlocked={isBlocked}
+      isFriend={isFriend}
+      isLoading={momentsQuery.isLoading}
+      likeErrorMessage={
+        likeMutation.isError && likeMutation.error instanceof Error
+          ? likeMutation.error.message
+          : null
+      }
+      likePendingMomentId={pendingLikeMomentId}
+      moments={friendMoments}
+      ownerAvatar={ownerAvatar}
+      ownerId={ownerId}
+      ownerUsername={ownerUsername}
+      routeSelectedMomentId={routeSelectedMomentId}
+      showCompose={showCompose}
+      signature={signature}
+      successNotice={notice}
+      text={text}
+      isMomentFavorite={(momentId) =>
+        favoriteSourceIds.includes(`moment-${momentId}`)
+      }
+      setShowCompose={setShowCompose}
+      onBack={handleBack}
+      onCommentChange={(momentId, value) =>
+        setCommentDrafts((current) => ({
+          ...current,
+          [momentId]: value,
+        }))
+      }
+      onCommentSubmit={(momentId) => commentMutation.mutate(momentId)}
+      onCreate={() => createMutation.mutate()}
+      onLike={(momentId) => likeMutation.mutate(momentId)}
+      onOpenMomentsHome={() => {
+        void navigate({ to: "/tabs/moments" });
+      }}
+      onOpenProfile={() => {
+        void navigate({
+          to: "/character/$characterId",
+          params: { characterId },
+        });
+      }}
+      onRouteStateChange={(state) => {
+        const nextHash = buildDesktopFriendMomentsRouteHash({
+          ...state,
+          source: routeState.source,
+        });
+        const normalizedHash = hash.startsWith("#") ? hash.slice(1) : hash;
+
+        if (normalizedHash === (nextHash ?? "")) {
+          return;
+        }
+
+        void navigate({
+          to: "/tabs/moments/friend/$characterId",
+          params: { characterId },
+          hash: nextHash,
+          replace: true,
+        });
+      }}
+      onTextChange={setText}
+      onToggleFavorite={(momentId) => {
+        const moment = friendMoments.find((item) => item.id === momentId);
+        if (!moment) {
+          return;
+        }
+
+        const sourceId = `moment-${moment.id}`;
+        const collected = favoriteSourceIds.includes(sourceId);
+        const nextFavorites = collected
+          ? removeDesktopFavorite(sourceId)
+          : upsertDesktopFavorite({
+              id: `favorite-${sourceId}`,
+              sourceId,
+              category: "moments",
+              title: moment.authorName,
+              description: moment.text,
+              meta: `朋友圈 · ${formatTimestamp(moment.postedAt)}`,
+              to: buildDesktopFriendMomentsPath(characterId, {
+                momentId: moment.id,
+                source: "moments",
+              }),
+              badge: "朋友圈",
+              avatarName: moment.authorName,
+              avatarSrc: moment.authorAvatar,
+            });
+
+        setFavoriteSourceIds(
+          nextFavorites.map((favorite) => favorite.sourceId),
+        );
+      }}
+    />
+  );
+}
