@@ -746,6 +746,11 @@ export function StickerPanel({
     setSearchKeyword("");
     onPackChange("featured");
   };
+  const switchToCustom = () => {
+    setKeyword("");
+    setSearchKeyword("");
+    onPackChange("custom");
+  };
   const openUploadPicker = () => {
     uploadInputRef.current?.click();
   };
@@ -2099,6 +2104,52 @@ export function StickerPanel({
                         ? "最近还没有使用过表情。"
                         : "当前没有可用表情。"}
                 </div>
+                {searching ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={clearSearch}
+                        className="rounded-full bg-[rgba(160,90,10,0.14)] px-3 py-1.5 text-xs font-medium text-[#9a5a0a] transition hover:bg-[rgba(160,90,10,0.18)]"
+                      >
+                        清空重试
+                      </button>
+                      {activeSectionId !== "featured" ? (
+                        <button
+                          type="button"
+                          onClick={switchToFeatured}
+                          className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-console)]"
+                        >
+                          看精选
+                        </button>
+                      ) : null}
+                      {catalog.customStickerCount > 0 &&
+                      activeSectionId !== "custom" ? (
+                        <button
+                          type="button"
+                          onClick={switchToCustom}
+                          className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-console)]"
+                        >
+                          看自定义
+                        </button>
+                      ) : null}
+                      {activeSectionId === "custom" &&
+                      catalog.customStickerCount > 1 &&
+                      customSortMode !== "added" ? (
+                        <button
+                          type="button"
+                          onClick={switchCustomSortToAdded}
+                          className="rounded-full bg-white px-3 py-1.5 text-xs font-medium text-[color:var(--text-secondary)] transition hover:bg-[color:var(--surface-console)]"
+                        >
+                          看最近添加
+                        </button>
+                      ) : null}
+                    </div>
+                    <div className="text-[11px] text-[color:var(--text-muted)]">
+                      试试换个关键词，或者先看看精选 / 自定义里的常用表情
+                    </div>
+                  </div>
+                ) : null}
                 {!searching && activeSectionId === "custom" ? (
                   <div className="flex flex-col items-center gap-2">
                     {customDeleteFeedback?.deletedCount ? (
