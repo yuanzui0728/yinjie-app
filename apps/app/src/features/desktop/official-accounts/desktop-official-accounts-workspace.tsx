@@ -359,6 +359,12 @@ export function DesktopOfficialAccountsWorkspace({
   const feedUnreadCount = filteredFeedItems.filter(
     (item) => item.unread,
   ).length;
+  const nextDisplayMode: DesktopOfficialDisplayMode =
+    displayMode === "feed" ? "accounts" : "feed";
+  const nextDisplayModeLabel =
+    nextDisplayMode === "feed" ? "常看与文章" : "按号查看";
+  const NextDisplayModeIcon =
+    nextDisplayMode === "feed" ? BookOpenText : MessageSquareText;
 
   const followMutation = useMutation({
     mutationFn: () => {
@@ -565,44 +571,22 @@ export function DesktopOfficialAccountsWorkspace({
               type="button"
               variant="secondary"
               size="sm"
+              onClick={() => handleDisplayModeChange(nextDisplayMode)}
+              className="rounded-xl border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] shadow-none hover:bg-[color:var(--surface-console)]"
+            >
+              <NextDisplayModeIcon size={14} />
+              {nextDisplayModeLabel}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
               onClick={openMobileHandoff}
               className="rounded-xl border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] shadow-none hover:bg-[color:var(--surface-console)]"
             >
               <Smartphone size={14} />
               到手机继续
             </Button>
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-[20px] border border-[color:var(--border-faint)] bg-white px-3 py-3 shadow-[0_8px_22px_rgba(15,23,42,0.05)]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="text-[11px] font-medium tracking-[0.08em] text-[color:var(--text-muted)]">
-                展示方式切换
-              </div>
-              <div className="mt-1 text-[12px] text-[color:var(--text-secondary)]">
-                {displayMode === "feed"
-                  ? "当前是常看与文章模式，上面常看的号，下面文章流。"
-                  : "当前是按号查看模式，逐个进入公众号主页。"}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <DesktopOfficialModeButton
-                active={displayMode === "feed"}
-                icon={BookOpenText}
-                label="常看与文章"
-                description="常看的号 + 文章流"
-                onClick={() => handleDisplayModeChange("feed")}
-              />
-              <DesktopOfficialModeButton
-                active={displayMode === "accounts"}
-                icon={MessageSquareText}
-                label="按号查看"
-                description="逐个公众号主页"
-                onClick={() => handleDisplayModeChange("accounts")}
-              />
-            </div>
           </div>
         </div>
 
@@ -1117,60 +1101,6 @@ function DesktopOfficialFeedMode({
         </section>
       </div>
     </div>
-  );
-}
-
-function DesktopOfficialModeButton({
-  active,
-  icon: Icon,
-  label,
-  description,
-  onClick,
-}: {
-  active: boolean;
-  icon: typeof BookOpenText;
-  label: string;
-  description: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={cn(
-        "flex min-w-[132px] items-center gap-2 rounded-[14px] border px-3 py-2 text-left transition",
-        active
-          ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] text-[color:var(--brand-primary)]"
-          : "border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.78)] text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-console)]",
-      )}
-    >
-      <span
-        className={cn(
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-          active
-            ? "bg-[rgba(7,193,96,0.12)]"
-            : "bg-[rgba(15,23,42,0.05)] text-[color:var(--text-muted)]",
-        )}
-      >
-        <Icon size={15} />
-      </span>
-      <span className="min-w-0">
-        <span className="block truncate text-[13px] font-medium leading-none">
-          {label}
-        </span>
-        <span
-          className={cn(
-            "mt-1 block truncate text-[10px] leading-none",
-            active
-              ? "text-[color:var(--brand-primary)]/80"
-              : "text-[color:var(--text-muted)]",
-          )}
-        >
-          {description}
-        </span>
-      </span>
-    </button>
   );
 }
 
