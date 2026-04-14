@@ -576,15 +576,25 @@ export function StickerPanel({
     ],
   );
   const activeTab = tabs.find((tab) => tab.id === activeSectionId) ?? tabs[0];
+  const customUploadResumedSlots = customDeleteFeedback?.slotsRemaining ?? 0;
+  const customUploadResumed = customUploadResumedSlots > 0;
   const panelSubtitle =
     trimmedKeyword.length > 0
       ? activeSectionId === "custom" && manageSearchPauseHintVisible
-        ? `搜索“${trimmedKeyword}” · 删除管理已暂停`
+        ? `${
+            searchPending ? "正在搜索" : "搜索"
+          }“${trimmedKeyword}” · 删除管理已暂停${
+            customUploadResumed
+              ? ` · 已腾出 ${customUploadResumedSlots} 个空位`
+              : ""
+          }`
         : searchPending
           ? `正在搜索“${trimmedKeyword}”`
           : `搜索“${trimmedKeyword}”`
       : activeSectionId === "custom" && customManageMode
-        ? `管理自定义表情 · 已保存 ${catalog.customStickerCount} / ${catalog.maxCustomStickerCount}`
+        ? customUploadResumed
+          ? `管理自定义表情 · 已腾出 ${customUploadResumedSlots} 个空位`
+          : `管理自定义表情 · 已保存 ${catalog.customStickerCount} / ${catalog.maxCustomStickerCount}`
         : activeSectionId === "custom" && customStickerLibraryFull
           ? "自定义表情已满，请先删除几个再继续添加"
           : activeSectionId === "custom"
@@ -778,7 +788,6 @@ export function StickerPanel({
     activeSectionId === "custom" &&
     searching &&
     manageSearchPauseHintVisible;
-  const customUploadResumed = Boolean(customDeleteFeedback?.slotsRemaining);
   const showDesktopManageStoragePreview =
     !isMobile &&
     activeSectionId === "custom" &&
