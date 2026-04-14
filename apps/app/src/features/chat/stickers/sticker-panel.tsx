@@ -1645,7 +1645,7 @@ export function StickerPanel({
                     {highlightedSearchPosition &&
                     highlightedSearchPosition > 1 ? (
                       <span className="rounded-full bg-white/88 px-2 py-1 text-[10px] text-[color:var(--text-secondary)] shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
-                        Home 首推
+                        Home 回默认
                       </span>
                     ) : null}
                     {highlightedSearchPosition &&
@@ -1670,7 +1670,9 @@ export function StickerPanel({
                       </span>
                     ) : null}
                     <span className="rounded-full bg-white px-2 py-1 text-[10px] text-[#9a5a0a] shadow-[0_1px_2px_rgba(15,23,42,0.06)]">
-                      Enter
+                      {highlightedSearchPosition === 1
+                        ? "Enter 发首推"
+                        : "Enter 发当前"}
                     </span>
                   </div>
                 </div>
@@ -1680,10 +1682,10 @@ export function StickerPanel({
                   ↑↓←→ 选择
                 </span>
                 <span className="ml-2 rounded-full bg-white/88 px-2 py-1">
-                  Enter 发送
+                  Enter 发当前
                 </span>
                 <span className="ml-2 rounded-full bg-white/88 px-2 py-1">
-                  Home 首推
+                  Home 回默认
                 </span>
                 <span className="ml-2 rounded-full bg-white/88 px-2 py-1">
                   End 末项
