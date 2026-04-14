@@ -107,5 +107,6 @@ export interface OfficialAccountMessageEntries {
 
 export interface OfficialAccountSubscriptionInbox {
   summary: OfficialAccountSubscriptionInboxSummary | null;
+  feedItems: OfficialAccountDeliveryItem[];
   groups: OfficialAccountSubscriptionInboxGroup[];
 }

@@ -450,6 +450,7 @@ export class OfficialAccountsService {
     if (!subscriptionAccountIds.length) {
       return {
         summary: null,
+        feedItems: [],
         groups: [],
       };
     }
@@ -484,6 +485,7 @@ export class OfficialAccountsService {
     if (!deliveries.length) {
       return {
         summary: null,
+        feedItems: [],
         groups: [],
       };
     }
@@ -493,6 +495,7 @@ export class OfficialAccountsService {
       where: { id: In(articleIds) },
     });
     const articleMap = new Map(articles.map((article) => [article.id, article]));
+    const accountMap = new Map(accounts.map((account) => [account.id, account]));
     const followMap = new Map(follows.map((follow) => [follow.accountId, follow]));
 
     const groups = accounts.flatMap((account) => {
@@ -546,6 +549,23 @@ export class OfficialAccountsService {
             preview: `${latestDelivery.account.name}：${latestDelivery.article.title}`,
           }
         : null,
+      feedItems: deliveries
+        .map((delivery) => {
+          const account = accountMap.get(delivery.accountId);
+          const article = articleMap.get(delivery.articleId);
+          if (!account || !article) {
+            return null;
+          }
+
+          return this.serializeDeliveryItem(
+            delivery,
+            account,
+            followMap.get(account.id) ?? null,
+            article,
+            recentArticles.get(account.id)?.[0],
+          );
+        })
+        .flatMap((delivery) => (delivery ? [delivery] : [])),
       groups,
     };
   }

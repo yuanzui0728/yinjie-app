@@ -40,14 +40,11 @@ export function DesktopSubscriptionWorkspace() {
     },
   });
 
-  const deliveries = useMemo(
-    () => inboxQuery.data?.groups.flatMap((group) => group.deliveries) ?? [],
-    [inboxQuery.data?.groups],
-  );
+  const feedItems = inboxQuery.data?.feedItems ?? [];
   const activeDelivery = useMemo(
     () =>
-      deliveries.find((delivery) => delivery.articleId === activeArticleId) ?? null,
-    [activeArticleId, deliveries],
+      feedItems.find((delivery) => delivery.articleId === activeArticleId) ?? null,
+    [activeArticleId, feedItems],
   );
   const unreadCount = inboxQuery.data?.summary?.unreadCount ?? 0;
   const groupCount = inboxQuery.data?.groups.length ?? 0;
@@ -62,27 +59,27 @@ export function DesktopSubscriptionWorkspace() {
     : "暂无推送";
 
   useEffect(() => {
-    if (!activeArticleId && deliveries[0]?.articleId) {
-      setActiveArticleId(deliveries[0].articleId);
+    if (!activeArticleId && feedItems[0]?.articleId) {
+      setActiveArticleId(feedItems[0].articleId);
       return;
     }
 
     if (
       activeArticleId &&
-      deliveries.length > 0 &&
-      !deliveries.some((delivery) => delivery.articleId === activeArticleId)
+      feedItems.length > 0 &&
+      !feedItems.some((delivery) => delivery.articleId === activeArticleId)
     ) {
-      setActiveArticleId(deliveries[0]?.articleId ?? null);
+      setActiveArticleId(feedItems[0]?.articleId ?? null);
     }
-  }, [activeArticleId, deliveries]);
+  }, [activeArticleId, feedItems]);
 
   useEffect(() => {
-    if (deliveries.length > 0) {
+    if (feedItems.length > 0) {
       return;
     }
 
     setActiveArticleId(null);
-  }, [deliveries.length]);
+  }, [feedItems.length]);
 
   useEffect(() => {
     if (
@@ -150,7 +147,7 @@ export function DesktopSubscriptionWorkspace() {
             <SidebarMetricCard label="未读推送" value={`${unreadCount} 条`} />
             <SidebarMetricCard label="账号分组" value={`${groupCount} 个`} />
             <SidebarMetricCard label="最近更新" value={lastDeliveredLabel} />
-            <SidebarMetricCard label="文章总数" value={`${deliveries.length} 篇`} />
+            <SidebarMetricCard label="文章总数" value={`${feedItems.length} 篇`} />
           </div>
         </div>
 
@@ -164,78 +161,50 @@ export function DesktopSubscriptionWorkspace() {
             <ErrorBlock message={markDeliveryReadMutation.error.message} />
           ) : null}
 
-          {inboxQuery.data?.groups.map((group) => (
-            <section
-              key={group.account.id}
-              className="mb-3 rounded-[18px] border border-[color:var(--border-faint)] bg-white px-4 py-4 shadow-[var(--shadow-section)] last:mb-0"
+          {feedItems.map((delivery) => (
+            <button
+              key={delivery.id}
+              type="button"
+              onClick={() => setActiveArticleId(delivery.articleId)}
+              className={`mb-3 w-full rounded-[18px] border px-4 py-4 text-left shadow-[var(--shadow-section)] transition last:mb-0 ${
+                activeArticleId === delivery.articleId
+                  ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)]"
+                  : "border-[color:var(--border-faint)] bg-white hover:bg-[color:var(--surface-console)]"
+              }`}
             >
-              <button
-                type="button"
-                onClick={() => {
-                  void navigate({
-                    to: "/official-accounts/$accountId",
-                    params: { accountId: group.account.id },
-                  });
-                }}
-                className="text-left"
-              >
-                <div className="text-sm font-medium text-[color:var(--text-primary)]">
-                  {group.account.name}
-                </div>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                  <span className="rounded-full border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] px-2.5 py-1 text-[color:var(--brand-primary)]">
-                    {group.unreadCount > 0
-                      ? `${group.unreadCount} 条未读推送`
-                      : "最近推送"}
-                  </span>
-                  <span className="rounded-full border border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-2.5 py-1 text-[color:var(--text-muted)]">
-                    {group.deliveries.length} 篇
-                  </span>
-                </div>
-              </button>
-
-              <div className="mt-3 space-y-2">
-                {group.deliveries.map((delivery) => (
-                  <button
-                    key={delivery.id}
-                    type="button"
-                    onClick={() => setActiveArticleId(delivery.articleId)}
-                    className={`w-full rounded-[16px] border px-4 py-3 text-left transition ${
-                      activeArticleId === delivery.articleId
-                        ? "border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] shadow-[var(--shadow-section)]"
-                        : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)] hover:bg-white"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-[color:var(--text-primary)]">
-                          {delivery.article.title}
-                        </div>
-                        <div className="mt-1 line-clamp-2 text-xs leading-5 text-[color:var(--text-secondary)]">
-                          {delivery.article.summary}
-                        </div>
-                      </div>
-                      {group.unreadCount > 0 && !delivery.readAt ? (
-                        <div className="rounded-full border border-[color:var(--border-faint)] bg-white px-2.5 py-1 text-[10px] text-[color:var(--text-muted)]">
-                          未读
-                        </div>
-                      ) : null}
-                    </div>
-                    <div className="mt-2 text-[11px] text-[color:var(--text-dim)]">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] text-[color:var(--text-muted)]">
+                    <span className="font-medium text-[color:var(--text-secondary)]">
+                      {delivery.account.name}
+                    </span>
+                    <span>·</span>
+                    <span>
                       {new Date(delivery.deliveredAt).toLocaleDateString("zh-CN", {
                         month: "numeric",
                         day: "numeric",
                         hour: "2-digit",
                         minute: "2-digit",
                       })}
-                    </div>
-                  </button>
-                ))}
+                    </span>
+                  </div>
+                  <div className="mt-2 text-sm font-medium text-[color:var(--text-primary)]">
+                    {delivery.article.title}
+                  </div>
+                  <div className="mt-1 line-clamp-2 text-xs leading-5 text-[color:var(--text-secondary)]">
+                    {delivery.article.summary}
+                  </div>
+                </div>
+                {!delivery.readAt ? (
+                  <div className="rounded-full border border-[color:var(--border-faint)] bg-white px-2.5 py-1 text-[10px] text-[color:var(--text-muted)]">
+                    未读
+                  </div>
+                ) : null}
               </div>
-            </section>
+            </button>
           ))}
 
-          {!inboxQuery.isLoading && !inboxQuery.data?.groups.length ? (
+          {!inboxQuery.isLoading && !feedItems.length ? (
             <div className="rounded-[18px] border border-[color:var(--border-faint)] bg-white p-4 shadow-[var(--shadow-section)]">
               <EmptyState
                 title="还没有订阅号消息"
