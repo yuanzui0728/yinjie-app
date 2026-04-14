@@ -8,7 +8,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   BookText,
   BookUser,
@@ -56,6 +56,11 @@ import {
   ContactShortcutList,
   type ContactShortcutListItem,
 } from "../features/contacts/contact-shortcut-list";
+import { DesktopContactsWorkspace } from "../features/desktop/contacts/desktop-contacts-workspace";
+import {
+  buildDesktopContactsRouteHash,
+  parseDesktopContactsRouteState,
+} from "../features/desktop/contacts/desktop-contacts-route-state";
 import {
   buildContactSections,
   createFriendDirectoryItems,
@@ -93,6 +98,29 @@ type DesktopSelection =
       id: string;
     }
   | null;
+
+function areDesktopSelectionsEqual(
+  left: DesktopSelection,
+  right: DesktopSelection,
+) {
+  if (!left || !right) {
+    return left === right;
+  }
+
+  return left.kind === right.kind && left.id === right.id;
+}
+
+function buildDesktopSelectionFromRouteState(hash: string): DesktopSelection {
+  const routeState = parseDesktopContactsRouteState(hash);
+  if (!routeState.characterId) {
+    return null;
+  }
+
+  return {
+    kind: routeState.pane,
+    id: routeState.characterId,
+  };
+}
 
 type MobileQuickActionItem = {
   key: string;
@@ -136,15 +164,20 @@ export function ContactsPage() {
   const pageRef = useRef<HTMLDivElement | null>(null);
   const isDesktopLayout = useDesktopLayout();
   const navigate = useNavigate();
+  const hash = useRouterState({ select: (state) => state.location.hash });
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
+  const routeState = parseDesktopContactsRouteState(hash);
   const [searchText, setSearchText] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
-  const [showWorldCharacters, setShowWorldCharacters] = useState(false);
+  const [showWorldCharacters, setShowWorldCharacters] = useState(
+    routeState.showWorldCharacters,
+  );
   const [isQuickMenuOpen, setIsQuickMenuOpen] = useState(false);
-  const [desktopSelection, setDesktopSelection] =
-    useState<DesktopSelection>(null);
+  const [desktopSelection, setDesktopSelection] = useState<DesktopSelection>(
+    () => buildDesktopSelectionFromRouteState(hash),
+  );
   const [activeMobileIndexKey, setActiveMobileIndexKey] = useState<
     string | null
   >(null);
@@ -370,9 +403,53 @@ export function ContactsPage() {
     [conversationsQuery.data, selectedFriendItem],
   );
 
+  function commitDesktopRouteState(
+    nextSelection: DesktopSelection,
+    nextShowWorldCharacters: boolean,
+    replace = false,
+  ) {
+    const nextHash = buildDesktopContactsRouteHash({
+      pane: nextSelection?.kind ?? "friend",
+      characterId: nextSelection?.id,
+      showWorldCharacters: nextShowWorldCharacters,
+    });
+    const normalizedHash = hash.startsWith("#") ? hash.slice(1) : hash;
+
+    if ((nextHash ?? "") === normalizedHash) {
+      return;
+    }
+
+    void navigate({
+      to: "/tabs/contacts",
+      hash: nextHash,
+      replace,
+    });
+  }
+
   useEffect(() => {
     startChatResetRef.current = startChatMutation.reset;
   }, [startChatMutation.reset]);
+
+  useEffect(() => {
+    if (!isDesktopLayout) {
+      return;
+    }
+
+    const nextSelection = buildDesktopSelectionFromRouteState(hash);
+    if (!areDesktopSelectionsEqual(desktopSelection, nextSelection)) {
+      setDesktopSelection(nextSelection);
+    }
+
+    if (showWorldCharacters !== routeState.showWorldCharacters) {
+      setShowWorldCharacters(routeState.showWorldCharacters);
+    }
+  }, [
+    desktopSelection,
+    hash,
+    isDesktopLayout,
+    routeState.showWorldCharacters,
+    showWorldCharacters,
+  ]);
 
   const blockMutation = useMutation({
     mutationFn: async ({
@@ -586,27 +663,33 @@ export function ContactsPage() {
     }
 
     if (filteredFriendItems[0]) {
-      setDesktopSelection({
+      const nextSelection = {
         kind: "friend",
         id: filteredFriendItems[0].character.id,
-      });
+      } satisfies DesktopSelection;
+      setDesktopSelection(nextSelection);
+      commitDesktopRouteState(nextSelection, showWorldCharacters, true);
       return;
     }
 
     if (filteredWorldCharacterItems[0]) {
-      setDesktopSelection({
+      const nextSelection = {
         kind: "world-character",
         id: filteredWorldCharacterItems[0].character.id,
-      });
+      } satisfies DesktopSelection;
+      setDesktopSelection(nextSelection);
+      commitDesktopRouteState(nextSelection, true, true);
       return;
     }
 
     setDesktopSelection(null);
+    commitDesktopRouteState(null, showWorldCharacters, true);
   }, [
     desktopSelection,
     filteredFriendItems,
     filteredWorldCharacterItems,
     isDesktopLayout,
+    showWorldCharacters,
   ]);
 
   function handleShortcutNavigate(to: ShortcutRoute) {
@@ -647,22 +730,26 @@ export function ContactsPage() {
     const willExpand = !showWorldCharacters;
     setShowWorldCharacters(willExpand);
 
-    if (isDesktopLayout) {
-      if (willExpand && worldCharacterDirectoryItems[0]) {
-        setDesktopSelection({
-          kind: "world-character",
-          id: worldCharacterDirectoryItems[0].character.id,
-        });
-      } else if (
-        !willExpand &&
-        desktopSelection?.kind === "world-character" &&
-        friendDirectoryItems[0]
-      ) {
-        setDesktopSelection({
-          kind: "friend",
-          id: friendDirectoryItems[0].character.id,
-        });
-      }
+    if (willExpand && worldCharacterDirectoryItems[0]) {
+      const nextSelection = {
+        kind: "world-character",
+        id: worldCharacterDirectoryItems[0].character.id,
+      } satisfies DesktopSelection;
+      setDesktopSelection(nextSelection);
+      commitDesktopRouteState(nextSelection, true);
+    } else if (
+      !willExpand &&
+      desktopSelection?.kind === "world-character" &&
+      friendDirectoryItems[0]
+    ) {
+      const nextSelection = {
+        kind: "friend",
+        id: friendDirectoryItems[0].character.id,
+      } satisfies DesktopSelection;
+      setDesktopSelection(nextSelection);
+      commitDesktopRouteState(nextSelection, false);
+    } else {
+      commitDesktopRouteState(desktopSelection, willExpand);
     }
 
     if (!willExpand || typeof document === "undefined") {
@@ -866,404 +953,226 @@ export function ContactsPage() {
       onRetry?: () => void;
     } => item !== null,
   );
+  const desktopErrors = [
+    friendsQuery.error,
+    charactersQuery.error,
+    friendRequestsQuery.error,
+    savedGroupsQuery.error,
+    blockedCharactersQuery.error,
+    conversationsQuery.error,
+    startChatMutation.error,
+    setStarredMutation.error,
+    blockMutation.error,
+    pinMutation.error,
+    muteMutation.error,
+    deleteFriendMutation.error,
+  ].flatMap((error) =>
+    error instanceof Error && error.message.trim() ? [error.message] : [],
+  );
 
   if (isDesktopLayout) {
     return (
-      <div ref={pageRef} className="h-full min-h-0">
-        <AppPage className="h-full min-h-0 space-y-0 bg-[color:var(--bg-app)] px-0 py-0">
-          <div className="flex h-full min-h-0">
-            <section className="flex w-[340px] shrink-0 flex-col border-r border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.88)]">
-              <div className="border-b border-[color:var(--border-faint)] bg-white/74 px-4 py-4 backdrop-blur-xl">
-                <div className="flex items-center justify-between">
-                  <div className="text-base font-medium text-[color:var(--text-primary)]">
-                    通讯录
-                  </div>
-                  <div className="text-xs text-[color:var(--text-muted)]">
-                    {filteredFriendItems.length}
-                    {filteredWorldCharacterItems.length
-                      ? ` + ${filteredWorldCharacterItems.length}`
-                      : ""}
-                  </div>
-                </div>
-
-                <div
-                  ref={desktopSearchLauncher.containerRef}
-                  className="relative mt-3"
-                >
-                  <label
-                    onClick={() => desktopSearchLauncher.setIsOpen(true)}
-                    className="flex items-center gap-2 rounded-[14px] border border-[color:var(--border-faint)] bg-white px-3 py-2.5 text-sm text-[color:var(--text-dim)] shadow-none"
-                  >
-                    <Search size={15} className="shrink-0" />
-                    <input
-                      type="search"
-                      value={searchText}
-                      onChange={(event) => setSearchText(event.target.value)}
-                      onFocus={() => desktopSearchLauncher.setIsOpen(true)}
-                      onKeyDown={handleDesktopSearchKeyDown}
-                      placeholder="搜索"
-                      className="min-w-0 flex-1 bg-transparent text-sm text-[color:var(--text-primary)] outline-none placeholder:text-[color:var(--text-dim)]"
-                    />
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        desktopSearchLauncher.handleSpeechButtonClick();
-                      }}
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-[color:var(--text-dim)] transition hover:bg-[color:var(--surface-console)] hover:text-[color:var(--text-primary)]"
-                      aria-label={
-                        desktopSearchLauncher.speechListening
-                          ? "结束语音输入"
-                          : "开始语音输入"
-                      }
-                      title={
-                        desktopSearchLauncher.speechSupported
-                          ? desktopSearchLauncher.speechListening
-                            ? "结束语音输入"
-                            : "语音输入"
-                          : "当前浏览器不支持语音输入"
-                      }
-                      disabled={
-                        desktopSearchLauncher.speechButtonDisabled ||
-                        !desktopSearchLauncher.speechSupported
-                      }
+      <DesktopContactsWorkspace
+        directoryCountLabel={`${filteredFriendItems.length}${
+          filteredWorldCharacterItems.length
+            ? ` + ${filteredWorldCharacterItems.length}`
+            : ""
+        }`}
+        searchContainerRef={desktopSearchLauncher.containerRef}
+        searchText={searchText}
+        onSearchTextChange={setSearchText}
+        onSearchOpen={() => desktopSearchLauncher.setIsOpen(true)}
+        onSearchKeyDown={handleDesktopSearchKeyDown}
+        searchPanel={
+          desktopSearchLauncher.isOpen ? (
+            <DesktopSearchDropdownPanel
+              history={desktopSearchLauncher.history}
+              keyword={searchText}
+              onClose={desktopSearchLauncher.close}
+              onOpenSearch={desktopSearchLauncher.openSearch}
+              speechDisplayText={desktopSearchLauncher.speechDisplayText}
+              speechError={desktopSearchLauncher.speechError}
+              speechStatus={desktopSearchLauncher.speechStatus}
+            />
+          ) : null
+        }
+        speechListening={desktopSearchLauncher.speechListening}
+        speechStatus={desktopSearchLauncher.speechStatus}
+        speechSupported={desktopSearchLauncher.speechSupported}
+        speechButtonDisabled={desktopSearchLauncher.speechButtonDisabled}
+        onSpeechButtonClick={(event) => {
+          event.preventDefault();
+          desktopSearchLauncher.handleSpeechButtonClick();
+        }}
+        shortcutList={
+          <ContactShortcutList
+            items={desktopShortcutItems}
+            compact
+            className="bg-white shadow-[var(--shadow-section)]"
+          />
+        }
+        notice={notice}
+        errors={desktopErrors}
+        loading={friendsQuery.isLoading}
+        friendSections={friendSections}
+        activeFriendId={
+          desktopSelection?.kind === "friend" ? desktopSelection.id : null
+        }
+        pendingCharacterId={pendingCharacterId}
+        onSelectFriend={(characterId) => {
+          const nextSelection = {
+            kind: "friend",
+            id: characterId,
+          } satisfies DesktopSelection;
+          setDesktopSelection(nextSelection);
+          commitDesktopRouteState(nextSelection, showWorldCharacters);
+        }}
+        onOpenFriendChat={handleStartChat}
+        emptyState={
+          !friendsQuery.isError ? (
+            <div className="px-3">
+              <EmptyState
+                title={
+                  normalizedSearchText
+                    ? "没有找到匹配的联系人"
+                    : "通讯录还是空的"
+                }
+                description={
+                  normalizedSearchText
+                    ? "换个关键词试试，或者展开世界角色目录继续找人。"
+                    : "先从新的朋友里建立关系，或者去看看世界角色。"
+                }
+                action={
+                  normalizedSearchText ? (
+                    <Button
+                      variant="secondary"
+                      onClick={() => setSearchText("")}
                     >
-                      {desktopSearchLauncher.speechStatus ===
-                        "requesting-permission" ||
-                      desktopSearchLauncher.speechStatus === "processing" ? (
-                        <LoaderCircle size={15} className="animate-spin" />
-                      ) : desktopSearchLauncher.speechListening ? (
-                        <Square size={13} fill="currentColor" />
-                      ) : (
-                        <Mic size={15} />
-                      )}
-                    </button>
-                  </label>
-                  {desktopSearchLauncher.isOpen ? (
-                    <DesktopSearchDropdownPanel
-                      history={desktopSearchLauncher.history}
-                      keyword={searchText}
-                      onClose={desktopSearchLauncher.close}
-                      onOpenSearch={desktopSearchLauncher.openSearch}
-                      speechDisplayText={
-                        desktopSearchLauncher.speechDisplayText
-                      }
-                      speechError={desktopSearchLauncher.speechError}
-                      speechStatus={desktopSearchLauncher.speechStatus}
-                    />
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="px-3 py-3">
-                <ContactShortcutList
-                  items={desktopShortcutItems}
-                  compact
-                  className="bg-white shadow-[var(--shadow-section)]"
-                />
-              </div>
-
-              <div className="min-h-0 flex-1 overflow-auto bg-[rgba(242,246,245,0.76)] pb-4">
-                {notice ? (
-                  <div className="px-3 pb-3">
-                    <InlineNotice
-                      tone="info"
-                      className="border-[color:var(--border-faint)] bg-white text-xs"
+                      清空搜索
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      onClick={handleOpenWorldCharacters}
                     >
-                      {notice}
-                    </InlineNotice>
-                  </div>
-                ) : null}
-                {friendsQuery.isError && friendsQuery.error instanceof Error ? (
-                  <div className="px-3 pb-3">
-                    <ErrorBlock message={friendsQuery.error.message} />
-                  </div>
-                ) : null}
-                {charactersQuery.isError &&
-                charactersQuery.error instanceof Error ? (
-                  <div className="px-3 pb-3">
-                    <ErrorBlock message={charactersQuery.error.message} />
-                  </div>
-                ) : null}
-                {friendRequestsQuery.isError &&
-                friendRequestsQuery.error instanceof Error ? (
-                  <div className="px-3 pb-3">
-                    <ErrorBlock message={friendRequestsQuery.error.message} />
-                  </div>
-                ) : null}
-                {savedGroupsQuery.isError &&
-                savedGroupsQuery.error instanceof Error ? (
-                  <div className="px-3 pb-3">
-                    <ErrorBlock message={savedGroupsQuery.error.message} />
-                  </div>
-                ) : null}
-                {blockedCharactersQuery.isError &&
-                blockedCharactersQuery.error instanceof Error ? (
-                  <div className="px-3 pb-3">
-                    <ErrorBlock
-                      message={blockedCharactersQuery.error.message}
-                    />
-                  </div>
-                ) : null}
-                {conversationsQuery.isError &&
-                conversationsQuery.error instanceof Error ? (
-                  <div className="px-3 pb-3">
-                    <ErrorBlock message={conversationsQuery.error.message} />
-                  </div>
-                ) : null}
-                {startChatMutation.isError &&
-                startChatMutation.error instanceof Error ? (
-                  <div className="px-3 pb-3">
-                    <ErrorBlock message={startChatMutation.error.message} />
-                  </div>
-                ) : null}
-                {setStarredMutation.isError &&
-                setStarredMutation.error instanceof Error ? (
-                  <div className="px-3 pb-3">
-                    <ErrorBlock message={setStarredMutation.error.message} />
-                  </div>
-                ) : null}
-                {blockMutation.isError &&
-                blockMutation.error instanceof Error ? (
-                  <div className="px-3 pb-3">
-                    <ErrorBlock message={blockMutation.error.message} />
-                  </div>
-                ) : null}
-                {pinMutation.isError && pinMutation.error instanceof Error ? (
-                  <div className="px-3 pb-3">
-                    <ErrorBlock message={pinMutation.error.message} />
-                  </div>
-                ) : null}
-                {muteMutation.isError && muteMutation.error instanceof Error ? (
-                  <div className="px-3 pb-3">
-                    <ErrorBlock message={muteMutation.error.message} />
-                  </div>
-                ) : null}
-                {deleteFriendMutation.isError &&
-                deleteFriendMutation.error instanceof Error ? (
-                  <div className="px-3 pb-3">
-                    <ErrorBlock message={deleteFriendMutation.error.message} />
-                  </div>
-                ) : null}
-
-                {friendsQuery.isLoading ? (
-                  <LoadingBlock
-                    className="px-4 py-6 text-left"
-                    label="正在读取联系人..."
-                  />
-                ) : null}
-
-                {!friendsQuery.isLoading && friendSections.length ? (
-                  <div className="mx-3 overflow-hidden rounded-[18px] border border-[color:var(--border-faint)] bg-white shadow-[var(--shadow-section)]">
-                    {friendSections.map((section, sectionIndex) => (
-                      <div
-                        key={section.key}
-                        id={section.anchorId}
-                        className={cn(
-                          sectionIndex > 0
-                            ? "border-t border-[color:var(--border-faint)]"
-                            : undefined,
-                        )}
-                      >
-                        <SectionHeader title={section.title} desktop />
-                        {section.items.map((item, index) => (
-                          <FriendListRow
-                            key={item.character.id}
-                            item={item}
-                            index={index}
-                            desktop
-                            active={
-                              desktopSelection?.kind === "friend" &&
-                              desktopSelection.id === item.character.id
-                            }
-                            pendingCharacterId={pendingCharacterId}
-                            onClick={() =>
-                              setDesktopSelection({
-                                kind: "friend",
-                                id: item.character.id,
-                              })
-                            }
-                            onDoubleClick={() =>
-                              handleStartChat(item.character.id)
-                            }
-                          />
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-
-                {!friendsQuery.isLoading &&
-                !friendsQuery.isError &&
-                !friendSections.length ? (
-                  <div className="px-3">
-                    <EmptyState
-                      title={
-                        normalizedSearchText
-                          ? "没有找到匹配的联系人"
-                          : "通讯录还是空的"
-                      }
-                      description={
-                        normalizedSearchText
-                          ? "换个关键词试试，或者展开世界角色目录继续找人。"
-                          : "先从新的朋友里建立关系，或者去看看世界角色。"
-                      }
-                      action={
-                        normalizedSearchText ? (
-                          <Button
-                            variant="secondary"
-                            onClick={() => setSearchText("")}
-                          >
-                            清空搜索
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="secondary"
-                            onClick={handleOpenWorldCharacters}
-                          >
-                            {isDesktopLayout ? "浏览世界角色" : "查看世界角色"}
-                          </Button>
-                        )
-                      }
-                    />
-                  </div>
-                ) : null}
-
-                {filteredWorldCharacterItems.length ? (
-                  <div
-                    id="world-character-directory"
-                    className="mx-3 mt-3 overflow-hidden rounded-[18px] border border-[color:var(--border-faint)] bg-white shadow-[var(--shadow-section)]"
-                  >
-                    <SectionHeader
-                      title={normalizedSearchText ? "世界角色结果" : "世界角色"}
-                      desktop
-                    />
-                    {filteredWorldCharacterItems.map((item, index) => (
-                      <WorldCharacterRow
-                        key={item.character.id}
-                        item={item}
-                        index={index}
-                        desktop
-                        active={
-                          desktopSelection?.kind === "world-character" &&
-                          desktopSelection.id === item.character.id
-                        }
-                        onClick={() =>
-                          setDesktopSelection({
-                            kind: "world-character",
-                            id: item.character.id,
-                          })
-                        }
-                      />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            </section>
-
-            <section className="min-w-0 flex-1 bg-[rgba(245,247,247,0.96)]">
-              <ContactDetailPane
-                character={
-                  selectedFriendItem?.character ??
-                  selectedWorldCharacterItem?.character ??
-                  null
+                      浏览世界角色
+                    </Button>
+                  )
                 }
-                friendship={selectedFriendItem?.friendship ?? null}
-                commonGroups={commonGroups}
-                onOpenGroup={(groupId) => {
-                  void navigate({ to: "/group/$groupId", params: { groupId } });
-                }}
-                onOpenMoments={
-                  selectedFriendItem
-                    ? handleOpenSelectedFriendMoments
-                    : undefined
-                }
-                onStartChat={
-                  selectedFriendItem
-                    ? () => handleStartChat(selectedFriendItem.character.id)
-                    : undefined
-                }
-                chatPending={
-                  selectedFriendItem?.character.id === pendingCharacterId
-                }
-                isPinned={selectedConversation?.isPinned ?? false}
-                pinPending={
-                  pinMutation.isPending &&
-                  pinMutation.variables?.characterId === selectedCharacterId
-                }
-                onTogglePinned={
-                  selectedFriendItem
-                    ? () =>
-                        pinMutation.mutate({
-                          characterId: selectedFriendItem.character.id,
-                          pinned: !(selectedConversation?.isPinned ?? false),
-                        })
-                    : undefined
-                }
-                isMuted={selectedConversation?.isMuted ?? false}
-                mutePending={
-                  muteMutation.isPending &&
-                  muteMutation.variables?.characterId === selectedCharacterId
-                }
-                onToggleMuted={
-                  selectedFriendItem
-                    ? () =>
-                        muteMutation.mutate({
-                          characterId: selectedFriendItem.character.id,
-                          muted: !(selectedConversation?.isMuted ?? false),
-                        })
-                    : undefined
-                }
-                isStarred={selectedFriendItem?.friendship.isStarred ?? false}
-                starPending={
-                  setStarredMutation.isPending &&
-                  setStarredMutation.variables?.characterId ===
-                    selectedCharacterId
-                }
-                onToggleStarred={
-                  selectedFriendItem
-                    ? () =>
-                        setStarredMutation.mutate({
-                          characterId: selectedFriendItem.character.id,
-                          starred: !selectedFriendItem.friendship.isStarred,
-                        })
-                    : undefined
-                }
-                isBlocked={selectedFriendBlocked}
-                blockPending={
-                  blockMutation.isPending &&
-                  blockMutation.variables?.characterId === selectedCharacterId
-                }
-                onToggleBlock={
-                  selectedFriendItem ? handleToggleBlock : undefined
-                }
-                deletePending={
-                  deleteFriendMutation.isPending &&
-                  deleteFriendMutation.variables === selectedCharacterId
-                }
-                onDeleteFriend={
-                  selectedFriendItem
-                    ? () =>
-                        deleteFriendMutation.mutate(
-                          selectedFriendItem.character.id,
-                        )
-                    : undefined
-                }
-                onOpenProfile={() => {
-                  const characterId =
-                    selectedFriendItem?.character.id ??
-                    selectedWorldCharacterItem?.character.id;
-                  if (!characterId) {
-                    return;
-                  }
-
-                  handleOpenProfile(characterId);
-                }}
               />
-            </section>
-          </div>
-        </AppPage>
-      </div>
+            </div>
+          ) : null
+        }
+        worldCharacterTitle={normalizedSearchText ? "世界角色结果" : "世界角色"}
+        worldCharacterItems={filteredWorldCharacterItems}
+        activeWorldCharacterId={
+          desktopSelection?.kind === "world-character"
+            ? desktopSelection.id
+            : null
+        }
+        onSelectWorldCharacter={(characterId) => {
+          const nextSelection = {
+            kind: "world-character",
+            id: characterId,
+          } satisfies DesktopSelection;
+          setShowWorldCharacters(true);
+          setDesktopSelection(nextSelection);
+          commitDesktopRouteState(nextSelection, true);
+        }}
+        detailContent={
+          <ContactDetailPane
+            character={
+              selectedFriendItem?.character ??
+              selectedWorldCharacterItem?.character ??
+              null
+            }
+            friendship={selectedFriendItem?.friendship ?? null}
+            commonGroups={commonGroups}
+            onOpenGroup={(groupId) => {
+              void navigate({ to: "/group/$groupId", params: { groupId } });
+            }}
+            onOpenMoments={
+              selectedFriendItem ? handleOpenSelectedFriendMoments : undefined
+            }
+            onStartChat={
+              selectedFriendItem
+                ? () => handleStartChat(selectedFriendItem.character.id)
+                : undefined
+            }
+            chatPending={
+              selectedFriendItem?.character.id === pendingCharacterId
+            }
+            isPinned={selectedConversation?.isPinned ?? false}
+            pinPending={
+              pinMutation.isPending &&
+              pinMutation.variables?.characterId === selectedCharacterId
+            }
+            onTogglePinned={
+              selectedFriendItem
+                ? () =>
+                    pinMutation.mutate({
+                      characterId: selectedFriendItem.character.id,
+                      pinned: !(selectedConversation?.isPinned ?? false),
+                    })
+                : undefined
+            }
+            isMuted={selectedConversation?.isMuted ?? false}
+            mutePending={
+              muteMutation.isPending &&
+              muteMutation.variables?.characterId === selectedCharacterId
+            }
+            onToggleMuted={
+              selectedFriendItem
+                ? () =>
+                    muteMutation.mutate({
+                      characterId: selectedFriendItem.character.id,
+                      muted: !(selectedConversation?.isMuted ?? false),
+                    })
+                : undefined
+            }
+            isStarred={selectedFriendItem?.friendship.isStarred ?? false}
+            starPending={
+              setStarredMutation.isPending &&
+              setStarredMutation.variables?.characterId === selectedCharacterId
+            }
+            onToggleStarred={
+              selectedFriendItem
+                ? () =>
+                    setStarredMutation.mutate({
+                      characterId: selectedFriendItem.character.id,
+                      starred: !selectedFriendItem.friendship.isStarred,
+                    })
+                : undefined
+            }
+            isBlocked={selectedFriendBlocked}
+            blockPending={
+              blockMutation.isPending &&
+              blockMutation.variables?.characterId === selectedCharacterId
+            }
+            onToggleBlock={selectedFriendItem ? handleToggleBlock : undefined}
+            deletePending={
+              deleteFriendMutation.isPending &&
+              deleteFriendMutation.variables === selectedCharacterId
+            }
+            onDeleteFriend={
+              selectedFriendItem
+                ? () =>
+                    deleteFriendMutation.mutate(selectedFriendItem.character.id)
+                : undefined
+            }
+            onOpenProfile={() => {
+              const characterId =
+                selectedFriendItem?.character.id ??
+                selectedWorldCharacterItem?.character.id;
+              if (!characterId) {
+                return;
+              }
+
+              handleOpenProfile(characterId);
+            }}
+          />
+        }
+      />
     );
   }
 
