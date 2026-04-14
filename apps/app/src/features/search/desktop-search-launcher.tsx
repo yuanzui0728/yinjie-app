@@ -84,6 +84,13 @@ type SearchLauncherActionItem = {
   onSelect: () => void;
 };
 
+type SearchLauncherOfficialGroup = {
+  article: DesktopSearchQuickLink | null;
+  header: DesktopSearchQuickLink;
+  id: string;
+  sortTime: number;
+};
+
 export function useDesktopSearchLauncher({
   keyword,
   onKeywordChange,
@@ -354,9 +361,9 @@ export function DesktopSearchDropdownPanel({
     () => conversationQuickLinks.slice(0, 4),
     [conversationQuickLinks],
   );
-  const officialQuickLinks = useMemo(() => {
-    return (officialAccountsQuery.data ?? []).flatMap((account) => {
-      const accountLink = {
+  const officialGroups = useMemo<SearchLauncherOfficialGroup[]>(() => {
+    return (officialAccountsQuery.data ?? []).map((account) => {
+      const header = {
         id: `official-account-${account.id}`,
         title: account.name,
         description:
@@ -371,85 +378,52 @@ export function DesktopSearchDropdownPanel({
         avatarName: account.name,
         avatarSrc: account.avatar,
       } satisfies DesktopSearchQuickLink;
+      const article = account.recentArticle
+        ? ({
+            id: `official-article-${account.recentArticle.id}`,
+            title: account.recentArticle.title,
+            description:
+              account.recentArticle.summary || `来自 ${account.name} 的最近文章`,
+            meta: `公众号文章 · ${account.name}`,
+            badge: "公众号文章",
+            to: `/official-accounts/articles/${account.recentArticle.id}`,
+            avatarName: account.name,
+            avatarSrc: account.avatar,
+          } satisfies DesktopSearchQuickLink)
+        : null;
+      const sortTime = Date.parse(
+        account.recentArticle?.publishedAt ?? account.lastPublishedAt ?? "",
+      );
 
-      if (!account.recentArticle) {
-        return [accountLink];
-      }
-
-      return [
-        accountLink,
-        {
-          id: `official-article-${account.recentArticle.id}`,
-          title: account.recentArticle.title,
-          description:
-            account.recentArticle.summary || `来自 ${account.name} 的最近文章`,
-          meta: `公众号文章 · ${account.name}`,
-          badge: "公众号文章",
-          to: `/official-accounts/articles/${account.recentArticle.id}`,
-          avatarName: account.name,
-          avatarSrc: account.avatar,
-        } satisfies DesktopSearchQuickLink,
-      ];
+      return {
+        article,
+        header,
+        id: `official-group-${account.id}`,
+        sortTime: Number.isNaN(sortTime) ? 0 : sortTime,
+      };
     });
   }, [officialAccountsQuery.data]);
   const officialMatches = useMemo(() => {
     if (!normalizedKeyword) {
-      return [] as DesktopSearchQuickLink[];
+      return [] as SearchLauncherOfficialGroup[];
     }
 
-    return officialQuickLinks
-      .filter((item) =>
-        [item.title, item.description, item.meta, item.badge]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedKeyword),
+    return officialGroups
+      .filter(
+        (group) =>
+          matchesLauncherQuickLink(group.header, normalizedKeyword) ||
+          (group.article
+            ? matchesLauncherQuickLink(group.article, normalizedKeyword)
+            : false),
       )
       .slice(0, 4);
-  }, [normalizedKeyword, officialQuickLinks]);
+  }, [normalizedKeyword, officialGroups]);
   const recentOfficials = useMemo(() => {
-    return (officialAccountsQuery.data ?? [])
+    return officialGroups
       .slice()
-      .sort((left, right) => {
-        const rightTime = Date.parse(
-          right.recentArticle?.publishedAt ?? right.lastPublishedAt ?? "",
-        );
-        const leftTime = Date.parse(
-          left.recentArticle?.publishedAt ?? left.lastPublishedAt ?? "",
-        );
-
-        return (Number.isNaN(rightTime) ? 0 : rightTime) -
-          (Number.isNaN(leftTime) ? 0 : leftTime);
-      })
-      .slice(0, 4)
-      .map((account) =>
-        account.recentArticle
-          ? ({
-              id: `recent-official-article-${account.recentArticle.id}`,
-              title: account.recentArticle.title,
-              description:
-                account.recentArticle.summary ||
-                `继续阅读 ${account.name} 的最近文章`,
-              meta: `公众号文章 · ${account.name}`,
-              badge: "公众号文章",
-              to: `/official-accounts/articles/${account.recentArticle.id}`,
-              avatarName: account.name,
-              avatarSrc: account.avatar,
-            } satisfies DesktopSearchQuickLink)
-          : ({
-              id: `recent-official-account-${account.id}`,
-              title: account.name,
-              description: account.description || "打开公众号主页",
-              meta: `${account.accountType === "service" ? "服务号" : "订阅号"} · @${
-                account.handle
-              }`,
-              badge: account.accountType === "service" ? "服务号" : "订阅号",
-              to: `/official-accounts/${account.id}`,
-              avatarName: account.name,
-              avatarSrc: account.avatar,
-            } satisfies DesktopSearchQuickLink),
-      );
-  }, [officialAccountsQuery.data]);
+      .sort((left, right) => right.sortTime - left.sortTime)
+      .slice(0, 4);
+  }, [officialGroups]);
 
   const suggestionsLoading =
     shouldLoadSuggestions &&
@@ -500,11 +474,19 @@ export function DesktopSearchDropdownPanel({
         });
       });
 
-      officialMatches.forEach((item) => {
+      officialMatches.forEach((group) => {
         items.push({
-          id: item.id,
-          onSelect: () => handleOpenQuickLink(item),
+          id: group.header.id,
+          onSelect: () => handleOpenQuickLink(group.header),
         });
+
+        const article = group.article;
+        if (article) {
+          items.push({
+            id: article.id,
+            onSelect: () => handleOpenQuickLink(article),
+          });
+        }
       });
 
       friendMatches.forEach((item) => {
@@ -554,11 +536,19 @@ export function DesktopSearchDropdownPanel({
         });
       });
 
-      recentOfficials.forEach((item) => {
+      recentOfficials.forEach((group) => {
         items.push({
-          id: item.id,
-          onSelect: () => handleOpenQuickLink(item),
+          id: group.header.id,
+          onSelect: () => handleOpenQuickLink(group.header),
         });
+
+        const article = group.article;
+        if (article) {
+          items.push({
+            id: article.id,
+            onSelect: () => handleOpenQuickLink(article),
+          });
+        }
       });
 
       recentMiniPrograms.forEach((item) => {
@@ -786,15 +776,17 @@ export function DesktopSearchDropdownPanel({
                     公众号
                   </div>
                   <div className="mt-1.5 space-y-1.5">
-                    {officialMatches.map((item) => (
-                      <SearchLauncherQuickLinkRow
-                        key={item.id}
-                        active={activeActionId === item.id}
-                        item={item}
+                    {officialMatches.map((group) => (
+                      <SearchLauncherOfficialGroupCard
+                        key={group.id}
+                        activeArticleId={activeActionId}
+                        activeHeaderId={activeActionId}
+                        group={group}
                         keyword={trimmedKeyword}
-                        variant="officialAccounts"
-                        onMouseEnter={() => setActiveActionId(item.id)}
-                        onClick={() => handleOpenQuickLink(item)}
+                        onOpenArticle={(item) => handleOpenQuickLink(item)}
+                        onOpenHeader={(item) => handleOpenQuickLink(item)}
+                        onSelectArticle={(item) => setActiveActionId(item.id)}
+                        onSelectHeader={(item) => setActiveActionId(item.id)}
                       />
                     ))}
                   </div>
@@ -979,15 +971,17 @@ export function DesktopSearchDropdownPanel({
                   最近公众号
                 </div>
                 <div className="mt-1.5 space-y-1.5">
-                  {recentOfficials.map((item) => (
-                    <SearchLauncherQuickLinkRow
-                      key={item.id}
-                      active={activeActionId === item.id}
-                      item={item}
+                  {recentOfficials.map((group) => (
+                    <SearchLauncherOfficialGroupCard
+                      key={group.id}
+                      activeArticleId={activeActionId}
+                      activeHeaderId={activeActionId}
+                      group={group}
                       keyword=""
-                      variant="officialAccounts"
-                      onMouseEnter={() => setActiveActionId(item.id)}
-                      onClick={() => handleOpenQuickLink(item)}
+                      onOpenArticle={(item) => handleOpenQuickLink(item)}
+                      onOpenHeader={(item) => handleOpenQuickLink(item)}
+                      onSelectArticle={(item) => setActiveActionId(item.id)}
+                      onSelectHeader={(item) => setActiveActionId(item.id)}
                     />
                   ))}
                 </div>
@@ -1100,6 +1094,97 @@ function SearchLauncherSection({
         </span>
       </div>
       {children}
+    </section>
+  );
+}
+
+function SearchLauncherOfficialGroupCard({
+  activeArticleId,
+  activeHeaderId,
+  group,
+  keyword,
+  onOpenArticle,
+  onOpenHeader,
+  onSelectArticle,
+  onSelectHeader,
+}: {
+  activeArticleId: string;
+  activeHeaderId: string;
+  group: SearchLauncherOfficialGroup;
+  keyword: string;
+  onOpenArticle: (item: DesktopSearchQuickLink) => void;
+  onOpenHeader: (item: DesktopSearchQuickLink) => void;
+  onSelectArticle: (item: DesktopSearchQuickLink) => void;
+  onSelectHeader: (item: DesktopSearchQuickLink) => void;
+}) {
+  const headerActive = activeHeaderId === group.header.id;
+  const articleActive = group.article ? activeArticleId === group.article.id : false;
+
+  return (
+    <section className="overflow-hidden rounded-[16px] border border-[#dfe7dd] bg-[linear-gradient(180deg,#fbfdfb,white)]">
+      <button
+        type="button"
+        onClick={() => onOpenHeader(group.header)}
+        onMouseEnter={() => onSelectHeader(group.header)}
+        className={cn(
+          "flex w-full items-start gap-3 px-3.5 py-3 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
+          headerActive ? "bg-[rgba(7,193,96,0.06)]" : "hover:bg-[rgba(7,193,96,0.04)]",
+        )}
+      >
+        <AvatarChip
+          name={group.header.avatarName ?? group.header.title}
+          src={group.header.avatarSrc}
+          size="wechat"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm font-medium text-[color:var(--text-primary)]">
+              {renderHighlightedText(group.header.title, keyword)}
+            </span>
+            <span className="rounded-full bg-[rgba(15,23,42,0.06)] px-2 py-0.5 text-[10px] text-[color:var(--text-secondary)]">
+              {group.header.badge}
+            </span>
+          </div>
+          <div className="mt-1 truncate text-[11px] text-[color:var(--text-muted)]">
+            {renderHighlightedText(group.header.meta, keyword)}
+          </div>
+          <div className="mt-2 line-clamp-2 text-[11px] leading-5 text-[color:var(--text-secondary)]">
+            {renderHighlightedText(group.header.description, keyword)}
+          </div>
+        </div>
+        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[rgba(7,193,96,0.10)] text-[#1d6a37]">
+          <Newspaper size={15} />
+        </div>
+      </button>
+
+      {group.article ? (
+        <div className="border-t border-[color:var(--border-faint)] px-3.5 py-2.5">
+          <button
+            type="button"
+            onClick={() => onOpenArticle(group.article!)}
+            onMouseEnter={() => onSelectArticle(group.article!)}
+            className={cn(
+              "flex w-full items-start gap-3 rounded-[12px] px-3 py-2.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
+              articleActive ? "bg-[rgba(7,193,96,0.06)]" : "bg-white hover:bg-[rgba(7,193,96,0.04)]",
+            )}
+          >
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[rgba(7,193,96,0.10)] text-[#1d6a37]">
+              <Newspaper size={15} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm font-medium text-[color:var(--text-primary)]">
+                {renderHighlightedText(group.article.title, keyword)}
+              </div>
+              <div className="mt-1 truncate text-[11px] text-[color:var(--text-muted)]">
+                {renderHighlightedText(group.article.meta, keyword)}
+              </div>
+              <div className="mt-2 line-clamp-2 text-[11px] leading-5 text-[color:var(--text-secondary)]">
+                {renderHighlightedText(group.article.description, keyword)}
+              </div>
+            </div>
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -1367,4 +1452,15 @@ function buildFriendSuggestionDescription(item: FriendDirectoryItem) {
     item.character.currentStatus?.trim() ||
     "打开联系人资料"
   );
+}
+
+function matchesLauncherQuickLink(
+  item: DesktopSearchQuickLink,
+  keyword: string,
+) {
+  return [item.title, item.description, item.meta, item.badge]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .includes(keyword);
 }
