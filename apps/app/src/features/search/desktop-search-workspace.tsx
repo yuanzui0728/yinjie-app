@@ -138,6 +138,9 @@ export function DesktopSearchWorkspace({
   visibleResults,
 }: DesktopSearchWorkspaceProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const categoryTabRefs = useRef<
+    Partial<Record<SearchCategory, HTMLButtonElement | null>>
+  >({});
   const scrollViewportRef = useRef<HTMLDivElement | null>(null);
   const spotlightPanelTimeoutRef = useRef<number | null>(null);
   const transitionHintTimeoutRef = useRef<number | null>(null);
@@ -179,6 +182,16 @@ export function DesktopSearchWorkspace({
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    window.requestAnimationFrame(() => {
+      categoryTabRefs.current[activeCategory]?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "nearest",
+      });
+    });
+  }, [activeCategory]);
 
   useEffect(() => {
     return () => {
@@ -398,6 +411,9 @@ export function DesktopSearchWorkspace({
                   return (
                     <button
                       key={item.id}
+                      ref={(node) => {
+                        categoryTabRefs.current[item.id] = node;
+                      }}
                       type="button"
                       onClick={() =>
                         handleSelectCategory(item.id, { focusInput: true })
