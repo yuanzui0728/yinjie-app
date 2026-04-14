@@ -67,9 +67,7 @@ export function useSearchIndex(
   const deferredSearchText = useDeferredValue(searchText);
   const normalizedSearchText = normalizeSearchKeyword(deferredSearchText);
   const {
-    favoriteMatches,
     favoriteSearchResults,
-    miniProgramMatches,
     miniProgramSearchResults,
     recentFavorites,
     recentMiniPrograms,
@@ -523,13 +521,11 @@ export function useSearchIndex(
 
   return {
     error,
-    favoriteMatches,
     filteredResults,
     groupedResults,
     hasKeyword: Boolean(normalizedSearchText),
     loading,
     matchedCounts,
-    miniProgramMatches,
     normalizedSearchText,
     recentFavorites,
     recentMiniPrograms,
