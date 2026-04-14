@@ -11,9 +11,10 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   Blocks,
   Bookmark,
-  ChevronRight,
   Clock3,
   CornerDownLeft,
+  MessageSquareText,
+  Newspaper,
   Search,
   Sparkles,
   UsersRound,
@@ -768,6 +769,7 @@ export function DesktopSearchDropdownPanel({
                         key={item.id}
                         active={activeActionId === item.id}
                         item={item}
+                        variant="conversations"
                         onMouseEnter={() => setActiveActionId(item.id)}
                         onClick={() => handleOpenQuickLink(item)}
                       />
@@ -787,6 +789,7 @@ export function DesktopSearchDropdownPanel({
                         key={item.id}
                         active={activeActionId === item.id}
                         item={item}
+                        variant="officialAccounts"
                         onMouseEnter={() => setActiveActionId(item.id)}
                         onClick={() => handleOpenQuickLink(item)}
                       />
@@ -953,6 +956,7 @@ export function DesktopSearchDropdownPanel({
                       key={item.id}
                       active={activeActionId === item.id}
                       item={item}
+                      variant="conversations"
                       onMouseEnter={() => setActiveActionId(item.id)}
                       onClick={() => handleOpenQuickLink(item)}
                     />
@@ -972,6 +976,7 @@ export function DesktopSearchDropdownPanel({
                       key={item.id}
                       active={activeActionId === item.id}
                       item={item}
+                      variant="officialAccounts"
                       onMouseEnter={() => setActiveActionId(item.id)}
                       onClick={() => handleOpenQuickLink(item)}
                     />
@@ -1091,49 +1096,81 @@ function SearchLauncherQuickLinkRow({
   item,
   onMouseEnter,
   onClick,
+  variant,
 }: {
   active?: boolean;
   item: DesktopSearchQuickLink;
   onMouseEnter?: () => void;
   onClick: () => void;
+  variant: "conversations" | "officialAccounts";
 }) {
+  const toneClassName =
+    variant === "conversations"
+      ? active
+        ? "border-[#d6e7d6] bg-[linear-gradient(180deg,#f6fbf6,white)]"
+        : "border-[#e3ece3] bg-[linear-gradient(180deg,#fbfdfb,white)] hover:border-[#d6e7d6] hover:bg-[linear-gradient(180deg,#f6fbf6,white)]"
+      : active
+        ? "border-[#dae2d8] bg-[linear-gradient(180deg,#f6faf7,white)]"
+        : "border-[#e4ebe2] bg-[linear-gradient(180deg,#fbfdfb,white)] hover:border-[#dae2d8] hover:bg-[linear-gradient(180deg,#f6faf7,white)]";
+  const badgeClassName =
+    variant === "conversations"
+      ? "bg-[rgba(7,193,96,0.08)] text-[color:var(--brand-primary)]"
+      : item.badge === "公众号文章"
+        ? "bg-[rgba(7,193,96,0.10)] text-[#1d6a37]"
+        : "bg-[rgba(15,23,42,0.06)] text-[color:var(--text-secondary)]";
+  const iconClassName =
+    variant === "conversations"
+      ? "bg-[rgba(7,193,96,0.10)] text-[#15803d]"
+      : "bg-[rgba(7,193,96,0.10)] text-[#1d6a37]";
+
   return (
     <button
       type="button"
       onClick={onClick}
       onMouseEnter={onMouseEnter}
       className={cn(
-        "flex w-full items-center gap-3 rounded-[12px] border border-[color:var(--border-faint)] px-3 py-2.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
-        active
-          ? "bg-[color:var(--surface-console)]"
-          : "bg-white hover:bg-[color:var(--surface-console)]",
+        "flex w-full items-start gap-3 rounded-[14px] border px-3.5 py-3 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
+        toneClassName,
       )}
     >
       <AvatarChip
         name={item.avatarName ?? item.title}
         src={item.avatarSrc}
-        size="sm"
+        size="wechat"
       />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium text-[color:var(--text-primary)]">
             {item.title}
           </span>
-          <span className="rounded-full bg-[rgba(7,193,96,0.08)] px-2 py-0.5 text-[10px] text-[color:var(--brand-primary)]">
+          <span
+            className={cn(
+              "rounded-full px-2 py-0.5 text-[10px]",
+              badgeClassName,
+            )}
+          >
             {item.badge}
           </span>
         </div>
-        <div className="mt-0.5 truncate text-[11px] text-[color:var(--text-muted)]">
+        <div className="mt-1 truncate text-[11px] text-[color:var(--text-muted)]">
           {item.meta}
         </div>
-        <div className="mt-1 truncate text-[11px] text-[color:var(--text-secondary)]">
+        <div className="mt-2 line-clamp-2 text-[11px] leading-5 text-[color:var(--text-secondary)]">
           {item.description}
         </div>
       </div>
-      <ChevronRight
-        size={14}
-        className="shrink-0 text-[color:var(--text-dim)]"
-      />
+      <div
+        className={cn(
+          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+          iconClassName,
+        )}
+      >
+        {variant === "conversations" ? (
+          <MessageSquareText size={15} />
+        ) : (
+          <Newspaper size={15} />
+        )}
+      </div>
     </button>
   );
 }
