@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Bookmark,
   Copy,
+  EyeOff,
   MessageCircleMore,
   Pause,
   Play,
@@ -15,10 +16,17 @@ import {
 } from "lucide-react";
 import {
   addFeedComment,
+  favoriteFeedPost,
+  followChannelAuthor,
   generateChannelPost,
-  getBlockedCharacters,
-  getFeed,
+  getChannelHome,
   likeFeedPost,
+  markFeedPostNotInterested,
+  shareFeedPost,
+  unfavoriteFeedPost,
+  unfollowChannelAuthor,
+  viewFeedPost,
+  type FeedChannelHomeSection,
   type FeedPostListItem,
 } from "@yinjie/contracts";
 import {
@@ -45,7 +53,6 @@ import {
 } from "../runtime/mobile-bridge";
 import { isNativeMobileShareSurface } from "../runtime/mobile-share-surface";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
-import { useWorldOwnerStore } from "../store/world-owner-store";
 
 export function ChannelsPage() {
   const isDesktopLayout = useDesktopLayout();
@@ -58,12 +65,13 @@ export function ChannelsPage() {
   });
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
-  const ownerId = useWorldOwnerStore((state) => state.id);
   const baseUrl = runtimeConfig.apiBaseUrl;
   const nativeDesktopFavorites = runtimeConfig.appPlatform === "desktop";
   const nativeMobileShareSupported = isNativeMobileShareSurface({
     isDesktopLayout,
   });
+  const [activeSection, setActiveSection] =
+    useState<FeedChannelHomeSection>("recommended");
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>(
     {},
   );
@@ -73,13 +81,12 @@ export function ChannelsPage() {
   const routeSelectedPostId = parseDesktopChannelsRouteHash(hash);
 
   const channelsQuery = useQuery({
-    queryKey: ["app-channels", baseUrl],
-    queryFn: () => getFeed(1, 20, baseUrl, { surface: "channels" }),
-  });
-  const blockedQuery = useQuery({
-    queryKey: ["app-channels-blocked-characters", baseUrl],
-    queryFn: () => getBlockedCharacters(baseUrl),
-    enabled: Boolean(ownerId),
+    queryKey: ["app-channels-home", baseUrl, activeSection],
+    queryFn: () =>
+      getChannelHome(baseUrl, {
+        section: activeSection,
+        limit: 20,
+      }),
   });
 
   const likeMutation = useMutation({
@@ -87,7 +94,7 @@ export function ChannelsPage() {
     onSuccess: async () => {
       setNoticeTone("success");
       setNotice("视频号互动已更新。");
-      await queryClient.invalidateQueries({ queryKey: ["app-channels", baseUrl] });
+      await queryClient.invalidateQueries({ queryKey: ["app-channels-home", baseUrl] });
     },
   });
 
@@ -110,7 +117,7 @@ export function ChannelsPage() {
       setCommentDrafts((current) => ({ ...current, [postId]: "" }));
       setNoticeTone("success");
       setNotice("视频号评论已发送。");
-      await queryClient.invalidateQueries({ queryKey: ["app-channels", baseUrl] });
+      await queryClient.invalidateQueries({ queryKey: ["app-channels-home", baseUrl] });
     },
   });
   const generateMutation = useMutation({
@@ -118,32 +125,68 @@ export function ChannelsPage() {
     onSuccess: async () => {
       setNoticeTone("success");
       setNotice("已生成一条新的 AI 视频号内容。");
-      await queryClient.invalidateQueries({ queryKey: ["app-channels", baseUrl] });
+      await queryClient.invalidateQueries({ queryKey: ["app-channels-home", baseUrl] });
+    },
+  });
+  const favoriteMutation = useMutation({
+    mutationFn: (input: { postId: string; favorited: boolean }) =>
+      input.favorited
+        ? unfavoriteFeedPost(input.postId, baseUrl)
+        : favoriteFeedPost(input.postId, baseUrl),
+    onSuccess: async (_, input) => {
+      setNoticeTone("success");
+      setNotice(input.favorited ? "已取消收藏。" : "已收藏这条视频号内容。");
+      await queryClient.invalidateQueries({ queryKey: ["app-channels-home", baseUrl] });
+    },
+  });
+  const followMutation = useMutation({
+    mutationFn: (input: { authorId: string; following: boolean }) =>
+      input.following
+        ? unfollowChannelAuthor(input.authorId, baseUrl)
+        : followChannelAuthor(input.authorId, baseUrl),
+    onSuccess: async (_, input) => {
+      setNoticeTone("success");
+      setNotice(input.following ? "已取消关注。" : "已关注该视频号作者。");
+      await queryClient.invalidateQueries({ queryKey: ["app-channels-home", baseUrl] });
+    },
+  });
+  const notInterestedMutation = useMutation({
+    mutationFn: (postId: string) => markFeedPostNotInterested(postId, baseUrl),
+    onSuccess: async () => {
+      setNoticeTone("success");
+      setNotice("这类内容会减少推荐。");
+      await queryClient.invalidateQueries({ queryKey: ["app-channels-home", baseUrl] });
     },
   });
 
-  const blockedCharacterIds = useMemo(
-    () => new Set((blockedQuery.data ?? []).map((item) => item.characterId)),
-    [blockedQuery.data],
-  );
-  const visiblePosts = useMemo(
+  const visiblePosts = channelsQuery.data?.posts ?? [];
+  const channelSections = useMemo<
+    Array<{ key: FeedChannelHomeSection; label: string; count: number }>
+  >(
     () =>
-      (channelsQuery.data?.posts ?? []).filter(
-        (post) =>
-          post.authorType !== "character" ||
-          !blockedCharacterIds.has(post.authorId),
-      ),
-    [blockedCharacterIds, channelsQuery.data?.posts],
+      channelsQuery.data?.sections ?? [
+        { key: "recommended", label: "推荐", count: 0 },
+        { key: "friends", label: "朋友", count: 0 },
+        { key: "following", label: "关注", count: 0 },
+        { key: "live", label: "直播", count: 0 },
+      ],
+    [channelsQuery.data?.sections],
   );
   const errorMessage =
     (channelsQuery.isError && channelsQuery.error instanceof Error
       ? channelsQuery.error.message
       : null) ??
-    (blockedQuery.isError && blockedQuery.error instanceof Error
-      ? blockedQuery.error.message
-      : null) ??
     (likeMutation.isError && likeMutation.error instanceof Error
       ? likeMutation.error.message
+      : null) ??
+    (favoriteMutation.isError && favoriteMutation.error instanceof Error
+      ? favoriteMutation.error.message
+      : null) ??
+    (followMutation.isError && followMutation.error instanceof Error
+      ? followMutation.error.message
+      : null) ??
+    (notInterestedMutation.isError && notInterestedMutation.error instanceof Error
+      ? notInterestedMutation.error.message
       : null) ??
     (generateMutation.isError && generateMutation.error instanceof Error
       ? generateMutation.error.message
@@ -159,8 +202,8 @@ export function ChannelsPage() {
     : null;
 
   useEffect(() => {
-    setCommentDrafts({});
-    setNotice("");
+      setCommentDrafts({});
+      setNotice("");
   }, [baseUrl]);
 
   useEffect(() => {
@@ -236,6 +279,7 @@ export function ChannelsPage() {
       });
 
       if (shared) {
+        await shareFeedPost(post.id, { channel: "native" }, baseUrl);
         setNoticeTone("success");
         setNotice("已打开系统分享面板。");
         return;
@@ -258,6 +302,7 @@ export function ChannelsPage() {
 
     try {
       await navigator.clipboard.writeText(summaryText);
+      await shareFeedPost(post.id, { channel: "copy" }, baseUrl);
       setNoticeTone("success");
       setNotice(
         nativeMobileShareSupported
@@ -277,7 +322,8 @@ export function ChannelsPage() {
   function toggleFavorite(post: (typeof visiblePosts)[number]) {
     const sourceId = `channels-${post.id}`;
     const routeHash = buildDesktopChannelsRouteHash(post.id);
-    const nextFavorites = favoriteSourceIds.includes(sourceId)
+    const alreadyFavorited = Boolean(post.ownerState?.hasFavorited);
+    const nextFavorites = alreadyFavorited
       ? removeDesktopFavorite(sourceId)
       : upsertDesktopFavorite({
           id: `favorite-${sourceId}`,
@@ -293,6 +339,21 @@ export function ChannelsPage() {
         });
 
     setFavoriteSourceIds(nextFavorites.map((item) => item.sourceId));
+    favoriteMutation.mutate({
+      postId: post.id,
+      favorited: alreadyFavorited,
+    });
+  }
+
+  function toggleFollowAuthor(post: (typeof visiblePosts)[number]) {
+    followMutation.mutate({
+      authorId: post.authorId,
+      following: Boolean(post.ownerState?.isFollowingAuthor),
+    });
+  }
+
+  function hidePost(postId: string) {
+    notInterestedMutation.mutate(postId);
   }
 
   if (isDesktopLayout) {
@@ -307,7 +368,8 @@ export function ChannelsPage() {
         routeSelectedPostId={routeSelectedPostId}
         successNotice={notice}
         isPostFavorite={(postId) =>
-          favoriteSourceIds.includes(`channels-${postId}`)
+          visiblePosts.find((post) => post.id === postId)?.ownerState
+            ?.hasFavorited ?? false
         }
         onCommentChange={(postId, value) =>
           setCommentDrafts((current) => ({
@@ -320,7 +382,11 @@ export function ChannelsPage() {
         onRefresh={() =>
           generateMutation.mutate()
         }
+        onToggleFollowAuthor={toggleFollowAuthor}
         onToggleFavorite={toggleFavorite}
+        onViewPost={(postId) => {
+          void viewFeedPost(postId, { progressSeconds: 3 }, baseUrl);
+        }}
       />
     );
   }
@@ -358,16 +424,23 @@ export function ChannelsPage() {
           </Button>
         }
       >
-        <div className="mt-1.5 flex items-center gap-0.75">
-          <div className="rounded-full bg-[rgba(7,193,96,0.12)] px-1.5 py-0.5 text-[8px] font-medium text-[#07c160]">
-            推荐
-          </div>
-          <div className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-canvas-elevated)] px-1.5 py-0.5 text-[8px] text-[color:var(--text-muted)]">
-            朋友
-          </div>
-          <div className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--bg-canvas-elevated)] px-1.5 py-0.5 text-[8px] text-[color:var(--text-muted)]">
-            直播
-          </div>
+        <div className="mt-1.5 flex items-center gap-1">
+          {channelSections.map((section) => (
+            <button
+              key={section.key}
+              type="button"
+              onClick={() => setActiveSection(section.key)}
+              className={cn(
+                "rounded-full px-2 py-0.5 text-[8px] transition",
+                activeSection === section.key
+                  ? "bg-[rgba(7,193,96,0.12)] font-medium text-[#07c160]"
+                  : "border border-[color:var(--border-subtle)] bg-[color:var(--bg-canvas-elevated)] text-[color:var(--text-muted)]",
+              )}
+            >
+              {section.label}
+              {section.count > 0 ? ` ${section.count}` : ""}
+            </button>
+          ))}
         </div>
       </TabPageTopBar>
 
@@ -399,7 +472,6 @@ export function ChannelsPage() {
                 className="h-8 rounded-full border-[color:var(--border-subtle)] bg-white px-3.5 text-[11px]"
                 onClick={() => {
                   void channelsQuery.refetch();
-                  void blockedQuery.refetch();
                 }}
               >
                 重新加载
@@ -438,7 +510,6 @@ export function ChannelsPage() {
           <MobileChannelsViewport
             commentDrafts={commentDrafts}
             commentPendingPostId={pendingCommentPostId}
-            favoriteSourceIds={favoriteSourceIds}
             likePendingPostId={pendingLikePostId}
             posts={visiblePosts}
             routeSelectedPostId={routeSelectedPostId}
@@ -450,8 +521,13 @@ export function ChannelsPage() {
             }
             onCommentSubmit={(postId) => commentMutation.mutate(postId)}
             onLike={(postId) => likeMutation.mutate(postId)}
+            onNotInterested={hidePost}
             onShare={(post) => void handleSharePost(post)}
+            onToggleFollowAuthor={toggleFollowAuthor}
             onToggleFavorite={toggleFavorite}
+            onVisiblePost={(postId) => {
+              void viewFeedPost(postId, { progressSeconds: 1 }, baseUrl);
+            }}
           />
         ) : null}
       </div>
@@ -533,29 +609,33 @@ function buildDesktopChannelsRouteHash(postId?: string | null) {
 type MobileChannelsViewportProps = {
   commentDrafts: Record<string, string>;
   commentPendingPostId: string | null;
-  favoriteSourceIds: string[];
   likePendingPostId: string | null;
   posts: FeedPostListItem[];
   routeSelectedPostId: string | null;
   onCommentChange: (postId: string, value: string) => void;
   onCommentSubmit: (postId: string) => void;
   onLike: (postId: string) => void;
+  onNotInterested: (postId: string) => void;
   onShare: (post: FeedPostListItem) => void;
+  onToggleFollowAuthor: (post: FeedPostListItem) => void;
   onToggleFavorite: (post: FeedPostListItem) => void;
+  onVisiblePost: (postId: string) => void;
 };
 
 function MobileChannelsViewport({
   commentDrafts,
   commentPendingPostId,
-  favoriteSourceIds,
   likePendingPostId,
   posts,
   routeSelectedPostId,
   onCommentChange,
   onCommentSubmit,
   onLike,
+  onNotInterested,
   onShare,
+  onToggleFollowAuthor,
   onToggleFavorite,
+  onVisiblePost,
 }: MobileChannelsViewportProps) {
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const cardRefs = useRef(new Map<string, HTMLElement>());
@@ -612,6 +692,14 @@ function MobileChannelsViewport({
     });
   }, [routeSelectedPostId, posts]);
 
+  useEffect(() => {
+    if (!activePostId) {
+      return;
+    }
+
+    onVisiblePost(activePostId);
+  }, [activePostId, onVisiblePost]);
+
   return (
     <div className="h-[calc(100dvh-9.6rem)] snap-y snap-mandatory space-y-2 overflow-y-auto overscroll-contain scroll-pb-2 pb-2">
       {posts.map((post) => (
@@ -620,7 +708,7 @@ function MobileChannelsViewport({
           active={activePostId === post.id}
           commentDraft={commentDrafts[post.id] ?? ""}
           commentPending={commentPendingPostId === post.id}
-          favorite={favoriteSourceIds.includes(`channels-${post.id}`)}
+          favorite={Boolean(post.ownerState?.hasFavorited)}
           likePending={likePendingPostId === post.id}
           post={post}
           setCardRef={(node) => {
@@ -634,7 +722,9 @@ function MobileChannelsViewport({
           onCommentChange={(value) => onCommentChange(post.id, value)}
           onCommentSubmit={() => onCommentSubmit(post.id)}
           onLike={() => onLike(post.id)}
+          onNotInterested={() => onNotInterested(post.id)}
           onShare={() => onShare(post)}
+          onToggleFollowAuthor={() => onToggleFollowAuthor(post)}
           onToggleFavorite={() => onToggleFavorite(post)}
         />
       ))}
@@ -653,7 +743,9 @@ type MobileChannelsCardProps = {
   onCommentChange: (value: string) => void;
   onCommentSubmit: () => void;
   onLike: () => void;
+  onNotInterested: () => void;
   onShare: () => void;
+  onToggleFollowAuthor: () => void;
   onToggleFavorite: () => void;
 };
 
@@ -668,7 +760,9 @@ function MobileChannelsCard({
   onCommentChange,
   onCommentSubmit,
   onLike,
+  onNotInterested,
   onShare,
+  onToggleFollowAuthor,
   onToggleFavorite,
 }: MobileChannelsCardProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -793,6 +887,9 @@ function MobileChannelsCard({
             <ActionRailButton label="分享" onClick={onShare}>
               <Share2 size={17} />
             </ActionRailButton>
+            <ActionRailButton label="减少推荐" onClick={onNotInterested}>
+              <EyeOff size={17} />
+            </ActionRailButton>
           </div>
         </div>
 
@@ -812,9 +909,41 @@ function MobileChannelsCard({
                   {formatTimestamp(post.createdAt)} · 视频号动态
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={onToggleFollowAuthor}
+                className={cn(
+                  "rounded-full px-2.5 py-1 text-[10px] font-medium transition",
+                  post.ownerState?.isFollowingAuthor
+                    ? "border border-white/20 bg-white/10 text-white/72"
+                    : "bg-[#07c160] text-white",
+                )}
+              >
+                {post.ownerState?.isFollowingAuthor ? "已关注" : "+关注"}
+              </button>
             </div>
-            <div className="mt-2 text-[12px] leading-[1.35rem] text-white">
+            {post.title ? (
+              <div className="mt-2 text-[13px] font-medium text-white">
+                {post.title}
+              </div>
+            ) : null}
+            <div className="mt-1 text-[12px] leading-[1.35rem] text-white">
               {post.text}
+            </div>
+            {post.topicTags?.length ? (
+              <div className="mt-2 flex flex-wrap gap-1.5 text-[9px] text-white/72">
+                {post.topicTags.slice(0, 3).map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full bg-[rgba(255,255,255,0.12)] px-2 py-1"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+            <div className="mt-2 text-[9px] text-white/65">
+              {formatChannelMeta(post)}
             </div>
             <div className="mt-2 rounded-[16px] bg-[rgba(255,255,255,0.12)] px-2.5 py-2 text-[10px] leading-4 text-white/86 backdrop-blur">
               {post.commentsPreview.length ? (
@@ -898,4 +1027,18 @@ function ActionRailButton({
       <span className="text-[9px]">{label}</span>
     </button>
   );
+}
+
+function formatChannelMeta(post: FeedPostListItem) {
+  const pieces = [`${post.viewCount ?? 0} 播放`];
+
+  if (typeof post.durationMs === "number" && post.durationMs > 0) {
+    pieces.push(`${Math.max(1, Math.round(post.durationMs / 1000))} 秒`);
+  }
+
+  if (post.topicTags?.length) {
+    pieces.push(`#${post.topicTags[0]}`);
+  }
+
+  return pieces.join(" · ");
 }
