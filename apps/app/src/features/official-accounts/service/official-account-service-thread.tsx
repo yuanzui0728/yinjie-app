@@ -17,10 +17,9 @@ import {
   MoreHorizontal,
   Smartphone,
 } from "lucide-react";
-import { Button, ErrorBlock, LoadingBlock, cn } from "@yinjie/ui";
+import { Button, cn } from "@yinjie/ui";
 import { OfficialArticleViewer } from "../../../components/official-article-viewer";
 import { OfficialServiceMessageBubble } from "../../../components/official-service-message-bubble";
-import { EmptyState } from "../../../components/empty-state";
 import { buildDesktopMobileOfficialHandoffHash } from "../../desktop/official-accounts/desktop-mobile-official-handoff-route-state";
 import { useAppRuntimeConfig } from "../../../runtime/runtime-config-store";
 
@@ -356,19 +355,21 @@ export function OfficialAccountServiceThread({
           {selectedArticleId ? (
             <div className="min-h-full bg-white">
               {articleQuery.isLoading ? (
-                <div className="mx-auto max-w-[780px] px-8 py-10">
-                  <LoadingBlock label="正在读取文章..." />
-                </div>
+                <ServiceDesktopStatusPane
+                  title="正在读取文章"
+                  description="稍等一下，正在同步正文内容。"
+                  tone="loading"
+                />
               ) : null}
               {articleQuery.isError && articleQuery.error instanceof Error ? (
-                <div className="mx-auto max-w-[780px] px-8 py-10">
-                  <ErrorBlock message={articleQuery.error.message} />
-                </div>
+                <ServiceDesktopStatusPane
+                  title="文章暂时不可用"
+                  description={articleQuery.error.message}
+                  tone="danger"
+                />
               ) : null}
               {actionErrorMessage ? (
-                <div className="mx-auto max-w-[780px] px-8 pt-8">
-                  <ErrorBlock message={actionErrorMessage} />
-                </div>
+                <ServiceDesktopInlineStatus message={actionErrorMessage} tone="danger" />
               ) : null}
               {articleQuery.data ? (
                 <OfficialArticleViewer
@@ -380,30 +381,30 @@ export function OfficialAccountServiceThread({
                   onOpenArticle={handleOpenDesktopArticle}
                 />
               ) : !articleQuery.isLoading && !articleQuery.isError ? (
-                <div className="mx-auto flex min-h-full max-w-[780px] items-center px-8 py-14">
-                  <EmptyState
-                    title="这篇文章暂时不可用"
-                    description="可以先返回服务号消息，稍后再试。"
-                  />
-                </div>
+                <ServiceDesktopStatusPane
+                  title="这篇文章暂时不可用"
+                  description="可以先返回服务号消息，稍后再试。"
+                />
               ) : null}
             </div>
           ) : (
             <div className="mx-auto flex min-h-full w-full max-w-[760px] flex-col px-4 py-8 sm:px-6 sm:py-10">
               {accountQuery.isLoading || messagesQuery.isLoading ? (
-                <div className="mx-auto w-full max-w-[34rem]">
-                  <LoadingBlock label="正在读取服务号消息..." />
-                </div>
+                <ServiceThreadStatusPane
+                  title="正在读取服务号消息"
+                  description="稍等一下，正在同步通知和文章卡片。"
+                  tone="loading"
+                />
               ) : null}
               {pageErrorMessage ? (
-                <div className="mx-auto w-full max-w-[34rem]">
-                  <ErrorBlock message={pageErrorMessage} />
-                </div>
+                <ServiceThreadStatusPane
+                  title="服务号消息暂时不可用"
+                  description={pageErrorMessage}
+                  tone="danger"
+                />
               ) : null}
               {actionErrorMessage ? (
-                <div className="mx-auto w-full max-w-[34rem]">
-                  <ErrorBlock message={actionErrorMessage} />
-                </div>
+                <ServiceThreadInlineStatus message={actionErrorMessage} tone="danger" />
               ) : null}
 
               {messagesQuery.data?.length ? (
@@ -419,12 +420,10 @@ export function OfficialAccountServiceThread({
                   ))}
                 </div>
               ) : !messagesQuery.isLoading ? (
-                <div className="mx-auto flex min-h-[24rem] w-full max-w-[34rem] items-center justify-center">
-                  <EmptyState
-                    title="还没有服务消息"
-                    description="关注服务号后，通知和文章卡片会出现在这里。"
-                  />
-                </div>
+                <ServiceThreadStatusPane
+                  title="还没有服务消息"
+                  description="关注服务号后，通知和文章卡片会出现在这里。"
+                />
               ) : null}
             </div>
           )}
@@ -529,6 +528,136 @@ export function OfficialAccountServiceThread({
             description="关注服务号后，通知和文章卡片会出现在这里。"
           />
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ServiceDesktopStatusPane({
+  title,
+  description,
+  tone = "default",
+}: {
+  title: string;
+  description: string;
+  tone?: "default" | "danger" | "loading";
+}) {
+  return (
+    <div className="mx-auto flex min-h-full max-w-[720px] items-center px-8 py-14">
+      <div
+        className={cn(
+          "w-full rounded-[22px] border px-8 py-10 text-center shadow-none",
+          tone === "danger"
+            ? "border-[color:var(--border-danger)] bg-[linear-gradient(180deg,rgba(255,245,245,0.96),rgba(254,242,242,0.94))]"
+            : "border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.72)]",
+        )}
+      >
+        {tone === "loading" ? (
+          <div className="flex items-center justify-center gap-1.5">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-black/15" />
+            <span className="h-2 w-2 animate-pulse rounded-full bg-black/25 [animation-delay:120ms]" />
+            <span className="h-2 w-2 animate-pulse rounded-full bg-[#8ecf9d] [animation-delay:240ms]" />
+          </div>
+        ) : null}
+        <div
+          className={cn(
+            "font-medium text-[16px] text-[color:var(--text-primary)]",
+            tone === "loading" ? "mt-4" : undefined,
+          )}
+        >
+          {title}
+        </div>
+        <p className="mx-auto mt-2 max-w-[26rem] text-[13px] leading-7 text-[color:var(--text-secondary)]">
+          {description}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ServiceDesktopInlineStatus({
+  message,
+  tone = "default",
+}: {
+  message: string;
+  tone?: "default" | "danger";
+}) {
+  return (
+    <div className="mx-auto max-w-[720px] px-8 pt-8">
+      <div
+        className={cn(
+          "rounded-[16px] border px-4 py-3 text-[13px] leading-6 shadow-none",
+          tone === "danger"
+            ? "border-[rgba(220,38,38,0.18)] bg-[rgba(255,245,245,0.96)] text-[color:var(--state-danger-text)]"
+            : "border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.72)] text-[color:var(--text-secondary)]",
+        )}
+      >
+        {message}
+      </div>
+    </div>
+  );
+}
+
+function ServiceThreadStatusPane({
+  title,
+  description,
+  tone = "default",
+}: {
+  title: string;
+  description: string;
+  tone?: "default" | "danger" | "loading";
+}) {
+  return (
+    <div className="mx-auto w-full max-w-[34rem]">
+      <div
+        className={cn(
+          "rounded-[22px] border px-6 py-8 text-center shadow-none",
+          tone === "danger"
+            ? "border-[color:var(--border-danger)] bg-[linear-gradient(180deg,rgba(255,245,245,0.96),rgba(254,242,242,0.94))]"
+            : "border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.72)]",
+        )}
+      >
+        {tone === "loading" ? (
+          <div className="flex items-center justify-center gap-1.5">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-black/15" />
+            <span className="h-2 w-2 animate-pulse rounded-full bg-black/25 [animation-delay:120ms]" />
+            <span className="h-2 w-2 animate-pulse rounded-full bg-[#8ecf9d] [animation-delay:240ms]" />
+          </div>
+        ) : null}
+        <div
+          className={cn(
+            "font-medium text-[15px] text-[color:var(--text-primary)]",
+            tone === "loading" ? "mt-4" : undefined,
+          )}
+        >
+          {title}
+        </div>
+        <p className="mx-auto mt-2 max-w-[24rem] text-[13px] leading-7 text-[color:var(--text-secondary)]">
+          {description}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ServiceThreadInlineStatus({
+  message,
+  tone = "default",
+}: {
+  message: string;
+  tone?: "default" | "danger";
+}) {
+  return (
+    <div className="mx-auto w-full max-w-[34rem]">
+      <div
+        className={cn(
+          "rounded-[16px] border px-4 py-3 text-[13px] leading-6 shadow-none",
+          tone === "danger"
+            ? "border-[rgba(220,38,38,0.18)] bg-[rgba(255,245,245,0.96)] text-[color:var(--state-danger-text)]"
+            : "border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.72)] text-[color:var(--text-secondary)]",
+        )}
+      >
+        {message}
       </div>
     </div>
   );
