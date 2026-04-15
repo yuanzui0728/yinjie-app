@@ -612,7 +612,13 @@ export class CharacterBlueprintService {
       chatSample,
       personName,
     );
-    const extractedRaw = await this.ai.extractPersonality(chatSample, personName);
+    const extractedRaw = await this.ai.extractPersonality(chatSample, personName, {
+      surface: 'admin',
+      scene: 'character_factory_extract',
+      scopeType: 'admin_task',
+      scopeLabel: personName,
+      characterId,
+    });
     const extracted = {
       speechPatterns: normalizeStringList(extractedRaw.speechPatterns),
       catchphrases: normalizeStringList(extractedRaw.catchphrases),

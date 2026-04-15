@@ -37,6 +37,16 @@ const ReplyLogicPage = lazy(async () => {
   return { default: mod.ReplyLogicPage };
 });
 
+const TokenUsagePage = lazy(async () => {
+  const mod = await import("./routes/token-usage-page");
+  return { default: mod.TokenUsagePage };
+});
+
+const SetupPage = lazy(async () => {
+  const mod = await import("./routes/setup-page");
+  return { default: mod.SetupPage };
+});
+
 
 const rootRoute = createRootRoute({
   component: RootLayout,
@@ -46,6 +56,12 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: DashboardPage,
+});
+
+const setupRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/setup",
+  component: SetupPage,
 });
 
 const charactersRoute = createRoute({
@@ -84,14 +100,22 @@ const replyLogicRoute = createRoute({
   component: ReplyLogicPage,
 });
 
+const tokenUsageRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/token-usage",
+  component: TokenUsagePage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  setupRoute,
   charactersRoute,
   characterEditorRoute,
   characterFactoryRoute,
   characterRuntimeRoute,
   evalsRoute,
   replyLogicRoute,
+  tokenUsageRoute,
 ]);
 
 export const router = createRouter({

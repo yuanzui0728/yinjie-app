@@ -1,6 +1,6 @@
 import {
   Controller, Get, Post, Patch, Delete,
-  Param, Body, UseGuards,
+  Param, Body, Query, UseGuards,
 } from '@nestjs/common';
 import { AdminGuard } from './admin.guard';
 import { AdminService } from './admin.service';
@@ -8,6 +8,7 @@ import { CharacterEntity } from '../characters/character.entity';
 import { CharacterBlueprintService } from '../characters/character-blueprint.service';
 import { ReplyLogicAdminService } from './reply-logic-admin.service';
 import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
+import { AiUsageLedgerService } from '../analytics/ai-usage-ledger.service';
 
 @Controller('admin')
 @UseGuards(AdminGuard)
@@ -17,6 +18,7 @@ export class AdminController {
     private readonly replyLogicAdminService: ReplyLogicAdminService,
     private readonly characterBlueprintService: CharacterBlueprintService,
     private readonly ai: AiOrchestratorService,
+    private readonly usageLedger: AiUsageLedgerService,
   ) {}
 
   @Get('stats')
@@ -42,6 +44,113 @@ export class AdminController {
   @Get('characters')
   getCharacters() {
     return this.adminService.findAllCharacters();
+  }
+
+  @Get('token-usage/overview')
+  getTokenUsageOverview(
+    @Query()
+    query: {
+      from?: string;
+      to?: string;
+      characterId?: string;
+      conversationId?: string;
+      groupId?: string;
+      scene?: string;
+      model?: string;
+      billingSource?: string;
+      status?: string;
+    },
+  ) {
+    return this.usageLedger.getOverview(query);
+  }
+
+  @Get('token-usage/trend')
+  getTokenUsageTrend(
+    @Query()
+    query: {
+      from?: string;
+      to?: string;
+      grain?: string;
+      characterId?: string;
+      conversationId?: string;
+      groupId?: string;
+      scene?: string;
+      model?: string;
+      billingSource?: string;
+      status?: string;
+    },
+  ) {
+    return this.usageLedger.getTrend(query);
+  }
+
+  @Get('token-usage/breakdown')
+  getTokenUsageBreakdown(
+    @Query()
+    query: {
+      from?: string;
+      to?: string;
+      characterId?: string;
+      conversationId?: string;
+      groupId?: string;
+      scene?: string;
+      model?: string;
+      billingSource?: string;
+      status?: string;
+      limit?: number | string;
+    },
+  ) {
+    return this.usageLedger.getBreakdown(query);
+  }
+
+  @Get('token-usage/records')
+  getTokenUsageRecords(
+    @Query()
+    query: {
+      from?: string;
+      to?: string;
+      characterId?: string;
+      conversationId?: string;
+      groupId?: string;
+      scene?: string;
+      model?: string;
+      billingSource?: string;
+      status?: string;
+      page?: number | string;
+      pageSize?: number | string;
+    },
+  ) {
+    return this.usageLedger.getRecords(query);
+  }
+
+  @Get('token-usage/pricing')
+  getTokenUsagePricing() {
+    return this.usageLedger.getPricingCatalog();
+  }
+
+  @Patch('token-usage/pricing')
+  setTokenUsagePricing(
+    @Body()
+    body: {
+      currency?: 'CNY' | 'USD';
+      items?: Array<{
+        model?: string;
+        inputPer1kTokens?: number;
+        outputPer1kTokens?: number;
+        enabled?: boolean;
+        note?: string;
+      }>;
+    },
+  ) {
+    return this.usageLedger.setPricingCatalog({
+      currency: body.currency === 'USD' ? 'USD' : 'CNY',
+      items: (body.items ?? []).map((item) => ({
+        model: item.model ?? '',
+        inputPer1kTokens: item.inputPer1kTokens ?? 0,
+        outputPer1kTokens: item.outputPer1kTokens ?? 0,
+        enabled: item.enabled !== false,
+        note: item.note,
+      })),
+    });
   }
 
   @Get('characters/presets')

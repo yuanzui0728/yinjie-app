@@ -45,6 +45,7 @@ import { VideoChannelFollowEntity } from './modules/feed/video-channel-follow.en
 import { WorldContextEntity } from './modules/world/world-context.entity';
 import { NarrativeArcEntity } from './modules/narrative/narrative-arc.entity';
 import { AIBehaviorLogEntity } from './modules/analytics/ai-behavior-log.entity';
+import { AiUsageLedgerEntity } from './modules/analytics/ai-usage-ledger.entity';
 import { UserFeedInteractionEntity } from './modules/analytics/user-feed-interaction.entity';
 import { OfficialAccountEntity } from './modules/official-accounts/official-account.entity';
 import { OfficialAccountArticleEntity } from './modules/official-accounts/official-account-article.entity';
@@ -74,7 +75,7 @@ import { prepareDatabasePath, resolveApiPath, resolveRepoPath } from './database
           MomentLikeEntity, FriendshipEntity, FriendRequestEntity, AIRelationshipEntity,
           GroupEntity, GroupMemberEntity, GroupMessageEntity, GroupReplyTaskEntity, ChatCustomStickerEntity,
           FeedPostEntity, FeedCommentEntity, VideoChannelFollowEntity, WorldContextEntity,
-          NarrativeArcEntity, AIBehaviorLogEntity, UserFeedInteractionEntity,
+          NarrativeArcEntity, AIBehaviorLogEntity, AiUsageLedgerEntity, UserFeedInteractionEntity,
           OfficialAccountEntity, OfficialAccountArticleEntity, OfficialAccountDeliveryEntity, OfficialAccountFollowEntity, OfficialAccountServiceMessageEntity,
           ModerationReportEntity,
         ],

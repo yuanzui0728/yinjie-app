@@ -120,6 +120,7 @@ export function RootLayout() {
 const NAV_ITEMS = [
   { to: "/", label: "运行总览", hint: "实例健康、配置和运维操作。" },
   { to: "/characters", label: "角色中心", hint: "查看角色名册、工厂和运行逻辑。" },
+  { to: "/token-usage", label: "Token 用量", hint: "查看 AI 请求、token 花费、估算费用与时间趋势。" },
   { to: "/reply-logic", label: "回复逻辑", hint: "排查真实回复链路和全局规则。" },
   { to: "/evals", label: "评测分析", hint: "集中看 runs、对比和 trace。" },
 ] as const;
@@ -130,6 +131,14 @@ function resolveRouteMeta(pathname: string) {
       eyebrow: "运营控制台",
       title: "实例状态与配置",
       description: "接入检查、推理配置、数字人设置和运维操作统一入口。",
+    };
+  }
+
+  if (pathname === "/setup") {
+    return {
+      eyebrow: "运行设置",
+      title: "运行时与 Provider 初始化",
+      description: "补齐推理 Provider、实例连通性和运行前置条件，确保后台操作与真实生成链路可用。",
     };
   }
 
@@ -162,6 +171,14 @@ function resolveRouteMeta(pathname: string) {
       eyebrow: "角色编辑",
       title: "角色资料编辑",
       description: "按模块整理基础资料、人格设定与行为约束，减少长表单迷路感。",
+    };
+  }
+
+  if (pathname === "/token-usage") {
+    return {
+      eyebrow: "Token 用量",
+      title: "AI 成本与请求账本",
+      description: "集中查看 token 消耗、时间趋势、角色分布、模型价格和请求明细。",
     };
   }
 
