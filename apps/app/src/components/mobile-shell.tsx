@@ -206,6 +206,7 @@ function MobileViewportPane({
       style={{
         paddingTop: "var(--safe-area-inset-top)",
         paddingRight: "var(--safe-area-inset-right)",
+        paddingBottom: "var(--safe-area-inset-bottom)",
         paddingLeft: "var(--safe-area-inset-left)",
       }}
     >
