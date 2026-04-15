@@ -97,7 +97,7 @@
 - `friend-moments-page.tsx`：桌面端好友朋友圈独立页，当前由 `desktop/friend-moments/$characterId` 承载，从通讯录 / 资料页 / 聊天信息等入口进入单个好友的朋友圈时间线
 - `chat-room-page` · `group-chat-page` · `character-detail-page` · `friend-requests-page` · `create-group-page`
 
-## 数据库实体（30个，物理表保持兼容）
+## 数据库实体（31个，物理表保持兼容）
 
 **核心**：User（运行时语义为单例 World Owner） · Character · Conversation · Message · SystemConfig
 
@@ -115,7 +115,9 @@
 
 **公众号**：OfficialAccount · OfficialAccountArticle · OfficialAccountFollow · OfficialAccountDelivery · OfficialAccountServiceMessage
 
-**世界**：WorldContext · NarrativeArc · AIBehaviorLog
+**世界**：WorldContext · NarrativeArc
+
+**分析**：AIBehaviorLog · AIUsageLedger
 
 ## 单用户世界约束（2026-04-08）
 
@@ -273,6 +275,7 @@
 - `character-editor-page.tsx`：角色画像编辑页，维护 prompt、traits、memory 与 reasoning
 - `character-factory-page.tsx`：角色工厂页，查看来源、草稿配方、字段来源、发布映射 diff、已发布版本与版本记录
 - `character-runtime-page.tsx`：角色运行逻辑台，查看单角色回复快照、scheduler 最近执行结果、生活状态、记忆摘要、叙事进度与生活逻辑可观测性，并直接修改运行时字段
+- `token-usage-page.tsx`：AI 用量中心页，查看 token / 费用总览、时间趋势、角色 / 场景 / 模型分布、价格配置与请求明细
 - `evals-page.tsx`：生成评估、trace 与实验对比页
 - `setup-page.tsx`：运行时与 Provider 初始化配置页
 - `reply-logic-page.tsx`：AI 回复逻辑总览页，查看实际链路、effective prompt、上下文窗口、记忆与硬编码常量
@@ -289,6 +292,15 @@
 - `POST /api/admin/reply-logic/group-reply-tasks/:taskId/retry`
 - `POST /api/admin/reply-logic/group-reply-turns/:turnId/retry`
 - `POST /api/admin/reply-logic/conversations/:id/preview`
+
+## 管理后台 Token 用量路由
+
+- `GET /api/admin/token-usage/overview`
+- `GET /api/admin/token-usage/trend`
+- `GET /api/admin/token-usage/breakdown`
+- `GET /api/admin/token-usage/records`
+- `GET /api/admin/token-usage/pricing`
+- `PATCH /api/admin/token-usage/pricing`
 
 ## 管理后台角色工厂路由
 

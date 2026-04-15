@@ -25,7 +25,13 @@ export type AdminInfoRowItem = {
   value: ReactNode;
 };
 
-type AdminWorkbenchLink = "/" | "/setup" | "/characters" | "/evals" | "/reply-logic";
+type AdminWorkbenchLink =
+  | "/"
+  | "/setup"
+  | "/characters"
+  | "/token-usage"
+  | "/evals"
+  | "/reply-logic";
 
 type AdminCalloutTone = "warning" | "success" | "info" | "muted";
 type AdminActionFeedbackTone = "busy" | "success" | "warning" | "info";

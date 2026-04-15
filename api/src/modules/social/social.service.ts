@@ -199,6 +199,16 @@ export class SocialService {
         profile: char.profile,
         conversationHistory: [],
         userMessage: `Write a short friend request greeting after meeting someone in ${scene}. Keep it under 30 words.`,
+        usageContext: {
+          surface: 'app',
+          scene: 'social_greeting_generate',
+          scopeType: 'character',
+          scopeId: char.id,
+          scopeLabel: char.name,
+          ownerId: owner.id,
+          characterId: char.id,
+          characterName: char.name,
+        },
       });
       greeting = result.text;
     } catch {
@@ -238,6 +248,16 @@ export class SocialService {
         profile: char.profile,
         conversationHistory: [],
         userMessage: 'Write a short, warm self-introduction after a random encounter. Keep it under 25 words.',
+        usageContext: {
+          surface: 'app',
+          scene: 'social_greeting_generate',
+          scopeType: 'character',
+          scopeId: char.id,
+          scopeLabel: char.name,
+          ownerId: owner.id,
+          characterId: char.id,
+          characterName: char.name,
+        },
       });
       greeting = result.text;
     } catch {

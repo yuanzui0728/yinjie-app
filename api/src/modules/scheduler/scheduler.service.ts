@@ -891,6 +891,15 @@ export class SchedulerService {
       const text = await this.ai.generateMoment({
         profile: char.profile,
         currentTime: new Date(),
+        usageContext: {
+          surface: 'scheduler',
+          scene: 'moment_post_generate',
+          scopeType: 'character',
+          scopeId: char.id,
+          scopeLabel: char.name,
+          characterId: char.id,
+          characterName: char.name,
+        },
       });
       if (!text) return null;
 

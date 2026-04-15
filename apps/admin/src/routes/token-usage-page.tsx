@@ -1,0 +1,686 @@
+import { useEffect, useMemo, useState } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type {
+  TokenUsageBillingSource,
+  TokenPricingCatalog,
+  TokenPricingCatalogItem,
+  TokenUsageBreakdownItem,
+  TokenUsageQuery,
+  TokenUsageStatus,
+} from "@yinjie/contracts";
+import { Button, Card, ErrorBlock, InlineNotice, LoadingBlock } from "@yinjie/ui";
+import { AdminPageHero, AdminSectionHeader, AdminMetaText } from "../components/admin-workbench";
+import { adminApi } from "../lib/admin-api";
+
+function formatDateInput(value: Date) {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, "0");
+  const day = `${value.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function shiftDate(days: number) {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return formatDateInput(date);
+}
+
+function monthStartInput() {
+  const date = new Date();
+  date.setDate(1);
+  return formatDateInput(date);
+}
+
+function formatInteger(value: number) {
+  return new Intl.NumberFormat("zh-CN", {
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatCost(value: number, currency: "CNY" | "USD") {
+  return new Intl.NumberFormat("zh-CN", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 2,
+  }).format(value || 0);
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function emptyPricingItem(): TokenPricingCatalogItem {
+  return {
+    model: "",
+    inputPer1kTokens: 0,
+    outputPer1kTokens: 0,
+    enabled: true,
+  };
+}
+
+export function TokenUsagePage() {
+  const queryClient = useQueryClient();
+  const [from, setFrom] = useState(() => shiftDate(-6));
+  const [to, setTo] = useState(() => formatDateInput(new Date()));
+  const [grain, setGrain] = useState<"day" | "week" | "month">("day");
+  const [characterId, setCharacterId] = useState("");
+  const [status, setStatus] = useState<"" | TokenUsageStatus>("");
+  const [billingSource, setBillingSource] = useState<"" | TokenUsageBillingSource>("");
+  const [pricingDraft, setPricingDraft] = useState<TokenPricingCatalog | null>(null);
+
+  const listQuery = useMemo<TokenUsageQuery>(
+    () => ({
+      from,
+      to,
+      grain,
+      characterId: characterId || undefined,
+      status: status || undefined,
+      billingSource: billingSource || undefined,
+      limit: 8,
+    }),
+    [billingSource, characterId, from, grain, status, to],
+  );
+
+  const recordsQueryInput = useMemo<TokenUsageQuery>(
+    () => ({
+      ...listQuery,
+      page: 1,
+      pageSize: 20,
+    }),
+    [listQuery],
+  );
+
+  const charactersQuery = useQuery({
+    queryKey: ["admin-token-usage-characters"],
+    queryFn: () => adminApi.getCharacters(),
+  });
+
+  const overviewQuery = useQuery({
+    queryKey: ["admin-token-usage-overview", listQuery],
+    queryFn: () => adminApi.getTokenUsageOverview(listQuery),
+  });
+
+  const trendQuery = useQuery({
+    queryKey: ["admin-token-usage-trend", listQuery],
+    queryFn: () => adminApi.getTokenUsageTrend(listQuery),
+  });
+
+  const breakdownQuery = useQuery({
+    queryKey: ["admin-token-usage-breakdown", listQuery],
+    queryFn: () => adminApi.getTokenUsageBreakdown(listQuery),
+  });
+
+  const recordsQuery = useQuery({
+    queryKey: ["admin-token-usage-records", recordsQueryInput],
+    queryFn: () => adminApi.getTokenUsageRecords(recordsQueryInput),
+  });
+
+  const pricingQuery = useQuery({
+    queryKey: ["admin-token-usage-pricing"],
+    queryFn: () => adminApi.getTokenUsagePricing(),
+  });
+
+  useEffect(() => {
+    if (pricingQuery.data) {
+      setPricingDraft(pricingQuery.data);
+    }
+  }, [pricingQuery.data]);
+
+  const savePricingMutation = useMutation({
+    mutationFn: async () => {
+      if (!pricingDraft) {
+        throw new Error("价格配置暂不可用。");
+      }
+
+      const items = pricingDraft.items
+        .map((item) => ({
+          model: item.model.trim(),
+          inputPer1kTokens: Number(item.inputPer1kTokens) || 0,
+          outputPer1kTokens: Number(item.outputPer1kTokens) || 0,
+          enabled: item.enabled !== false,
+          note: item.note?.trim() || undefined,
+        }))
+        .filter((item) => item.model);
+
+      return adminApi.setTokenUsagePricing({
+        currency: pricingDraft.currency,
+        items,
+      });
+    },
+    onSuccess: async (result) => {
+      setPricingDraft(result);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-token-usage-pricing"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-token-usage-overview"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-token-usage-trend"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-token-usage-breakdown"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-token-usage-records"] }),
+      ]);
+    },
+  });
+
+  const loading =
+    overviewQuery.isLoading ||
+    trendQuery.isLoading ||
+    breakdownQuery.isLoading ||
+    recordsQuery.isLoading ||
+    pricingQuery.isLoading;
+
+  const fatalError =
+    (overviewQuery.error instanceof Error && overviewQuery.error) ||
+    (trendQuery.error instanceof Error && trendQuery.error) ||
+    (breakdownQuery.error instanceof Error && breakdownQuery.error) ||
+    (recordsQuery.error instanceof Error && recordsQuery.error) ||
+    (pricingQuery.error instanceof Error && pricingQuery.error) ||
+    null;
+
+  const overview = overviewQuery.data;
+  const trend = trendQuery.data ?? [];
+  const breakdown = breakdownQuery.data;
+  const records = recordsQuery.data;
+  const currency = overview?.currency ?? pricingDraft?.currency ?? "CNY";
+  const hasConfiguredPricing = Boolean(
+    pricingDraft?.items.some((item) => item.enabled && (item.inputPer1kTokens > 0 || item.outputPer1kTokens > 0)),
+  );
+
+  const maxTrendTokens = useMemo(
+    () => Math.max(...trend.map((item) => item.totalTokens), 1),
+    [trend],
+  );
+
+  if (loading && !overview && !breakdown && !records) {
+    return <LoadingBlock label="正在加载 Token 用量中心..." />;
+  }
+
+  if (fatalError) {
+    return <ErrorBlock message={fatalError.message} />;
+  }
+
+  return (
+    <div className="space-y-6">
+      <AdminPageHero
+        eyebrow="AI 用量"
+        title="Token 用量与成本账本"
+        description="这里会把实例里每次主要 AI 请求记成账本，再按时间、角色、模型和计费来源做聚合，方便你看清哪里最耗 token、哪里成本正在上升。"
+        actions={
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" onClick={() => applyPreset("7d", setFrom, setTo)}>
+              近 7 天
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => applyPreset("30d", setFrom, setTo)}>
+              近 30 天
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => applyPreset("month", setFrom, setTo)}>
+              本月
+            </Button>
+          </div>
+        }
+        metrics={[
+          { label: "总 Token", value: formatInteger(overview?.totalTokens ?? 0) },
+          { label: "输入 Token", value: formatInteger(overview?.promptTokens ?? 0) },
+          { label: "输出 Token", value: formatInteger(overview?.completionTokens ?? 0) },
+          { label: "估算费用", value: formatCost(overview?.estimatedCost ?? 0, currency) },
+        ]}
+      />
+
+      {!hasConfiguredPricing ? (
+        <InlineNotice tone="warning">
+          当前还没有配置模型单价，页面里的“估算费用”会先按 0 计算。补上价格后，新入账请求会开始写入价格快照。
+        </InlineNotice>
+      ) : null}
+
+      {savePricingMutation.isError && savePricingMutation.error instanceof Error ? (
+        <ErrorBlock message={savePricingMutation.error.message} />
+      ) : null}
+
+      <Card className="space-y-5 bg-[color:var(--surface-console)]">
+        <AdminSectionHeader title="筛选条件" />
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+          <FilterField label="开始日期">
+            <input
+              type="date"
+              value={from}
+              onChange={(event) => setFrom(event.target.value)}
+              className={INPUT_CLASS_NAME}
+            />
+          </FilterField>
+          <FilterField label="结束日期">
+            <input
+              type="date"
+              value={to}
+              onChange={(event) => setTo(event.target.value)}
+              className={INPUT_CLASS_NAME}
+            />
+          </FilterField>
+          <FilterField label="聚合粒度">
+            <select value={grain} onChange={(event) => setGrain(event.target.value as "day" | "week" | "month")} className={INPUT_CLASS_NAME}>
+              <option value="day">按天</option>
+              <option value="week">按周</option>
+              <option value="month">按月</option>
+            </select>
+          </FilterField>
+          <FilterField label="角色">
+            <select value={characterId} onChange={(event) => setCharacterId(event.target.value)} className={INPUT_CLASS_NAME}>
+              <option value="">全部角色</option>
+              {(charactersQuery.data ?? []).map((character) => (
+                <option key={character.id} value={character.id}>
+                  {character.name}
+                </option>
+              ))}
+            </select>
+          </FilterField>
+          <FilterField label="请求状态">
+            <select
+              value={status}
+              onChange={(event) => setStatus(event.target.value as "" | TokenUsageStatus)}
+              className={INPUT_CLASS_NAME}
+            >
+              <option value="">全部状态</option>
+              <option value="success">仅成功</option>
+              <option value="failed">仅失败</option>
+            </select>
+          </FilterField>
+          <FilterField label="计费来源">
+            <select
+              value={billingSource}
+              onChange={(event) => setBillingSource(event.target.value as "" | TokenUsageBillingSource)}
+              className={INPUT_CLASS_NAME}
+            >
+              <option value="">全部来源</option>
+              <option value="instance_default">实例默认 Key</option>
+              <option value="owner_custom">世界主人 Key</option>
+            </select>
+          </FilterField>
+        </div>
+      </Card>
+
+      <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
+        <Card className="bg-[color:var(--surface-console)]">
+          <AdminSectionHeader
+            title="时间趋势"
+            actions={
+              <span className="text-xs text-[color:var(--text-muted)]">
+                请求 {formatInteger(overview?.requestCount ?? 0)} 次
+              </span>
+            }
+          />
+          {trend.length ? (
+            <div className="mt-5 space-y-3">
+              {trend.map((point) => (
+                <div key={point.bucketStart} className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-3 text-xs text-[color:var(--text-secondary)]">
+                    <span>{point.label}</span>
+                    <span>
+                      {formatInteger(point.totalTokens)} token · {formatCost(point.estimatedCost, currency)}
+                    </span>
+                  </div>
+                  <div className="h-3 rounded-full bg-[color:var(--surface-primary)]">
+                    <div
+                      className="h-3 rounded-full bg-[linear-gradient(90deg,rgba(249,115,22,0.92),rgba(244,114,182,0.9))]"
+                      style={{ width: `${Math.max(6, (point.totalTokens / maxTrendTokens) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState text="当前筛选条件下还没有可展示的趋势数据。" />
+          )}
+        </Card>
+
+        <Card className="bg-[color:var(--surface-console)]">
+          <AdminSectionHeader title="实例总览" />
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+            <SummaryTile label="成功请求" value={formatInteger(overview?.successCount ?? 0)} />
+            <SummaryTile label="失败请求" value={formatInteger(overview?.failedCount ?? 0)} />
+            <SummaryTile label="活跃角色" value={formatInteger(overview?.activeCharacterCount ?? 0)} />
+            <SummaryTile label="平均单次 Token" value={formatInteger(calculateAverageTokens(overview?.totalTokens ?? 0, overview?.requestCount ?? 0))} />
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-3">
+        <BreakdownCard
+          title="角色排行"
+          items={breakdown?.byCharacter ?? []}
+          currency={currency}
+          emptyText="当前还没有角色维度的账本。"
+        />
+        <BreakdownCard
+          title="场景排行"
+          items={breakdown?.byScene ?? []}
+          currency={currency}
+          emptyText="当前还没有场景维度的账本。"
+        />
+        <BreakdownCard
+          title="模型排行"
+          items={breakdown?.byModel ?? []}
+          currency={currency}
+          emptyText="当前还没有模型维度的账本。"
+        />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.55fr_1fr]">
+        <Card className="bg-[color:var(--surface-console)]">
+          <AdminSectionHeader title="请求明细" />
+          {records?.items.length ? (
+            <div className="mt-5 overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+                  <tr>
+                    <th className="pb-3 pr-4 font-medium">时间</th>
+                    <th className="pb-3 pr-4 font-medium">对象</th>
+                    <th className="pb-3 pr-4 font-medium">场景</th>
+                    <th className="pb-3 pr-4 font-medium">模型</th>
+                    <th className="pb-3 pr-4 font-medium">Token</th>
+                    <th className="pb-3 pr-4 font-medium">费用</th>
+                    <th className="pb-3 font-medium">状态</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[color:var(--border-faint)] text-[color:var(--text-secondary)]">
+                  {records.items.map((record) => (
+                    <tr key={record.id}>
+                      <td className="py-3 pr-4">{formatDateTime(record.occurredAt)}</td>
+                      <td className="py-3 pr-4">
+                        <div className="font-medium text-[color:var(--text-primary)]">{record.targetLabel}</div>
+                        <div className="text-xs text-[color:var(--text-muted)]">{record.characterName || record.scopeType}</div>
+                      </td>
+                      <td className="py-3 pr-4">{formatScene(record.scene)}</td>
+                      <td className="py-3 pr-4">{record.model || "未记录"}</td>
+                      <td className="py-3 pr-4">
+                        <div>{formatInteger(record.totalTokens)}</div>
+                        <div className="text-xs text-[color:var(--text-muted)]">
+                          In {formatInteger(record.promptTokens)} / Out {formatInteger(record.completionTokens)}
+                        </div>
+                      </td>
+                      <td className="py-3 pr-4">{formatCost(record.estimatedCost, record.currency)}</td>
+                      <td className="py-3">
+                        <span
+                          className={
+                            record.status === "success"
+                              ? "rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700"
+                              : "rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700"
+                          }
+                        >
+                          {record.status === "success" ? "成功" : "失败"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState text="当前筛选条件下还没有账本明细。" />
+          )}
+        </Card>
+
+        <Card className="bg-[color:var(--surface-console)]">
+          <AdminSectionHeader
+            title="模型价格"
+            actions={
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  setPricingDraft((current) => ({
+                    currency: current?.currency ?? "CNY",
+                    items: [...(current?.items ?? []), emptyPricingItem()],
+                  }))
+                }
+              >
+                新增模型
+              </Button>
+            }
+          />
+
+          <div className="mt-5 space-y-3">
+            <FilterField label="结算币种">
+              <select
+                value={pricingDraft?.currency ?? "CNY"}
+                onChange={(event) =>
+                  setPricingDraft((current) => ({
+                    currency: event.target.value === "USD" ? "USD" : "CNY",
+                    items: current?.items ?? [],
+                  }))
+                }
+                className={INPUT_CLASS_NAME}
+              >
+                <option value="CNY">CNY</option>
+                <option value="USD">USD</option>
+              </select>
+            </FilterField>
+
+            {(pricingDraft?.items ?? []).length ? (
+              (pricingDraft?.items ?? []).map((item, index) => (
+                <div
+                  key={`${item.model}-${index}`}
+                  className="rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-3"
+                >
+                  <div className="grid gap-3">
+                    <input
+                      value={item.model}
+                      onChange={(event) =>
+                        updatePricingItem(setPricingDraft, index, { model: event.target.value })
+                      }
+                      placeholder="模型名，例如 deepseek-chat"
+                      className={INPUT_CLASS_NAME}
+                    />
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.0001"
+                        value={item.inputPer1kTokens}
+                        onChange={(event) =>
+                          updatePricingItem(setPricingDraft, index, {
+                            inputPer1kTokens: Number(event.target.value) || 0,
+                          })
+                        }
+                        placeholder="输入单价 / 1K token"
+                        className={INPUT_CLASS_NAME}
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.0001"
+                        value={item.outputPer1kTokens}
+                        onChange={(event) =>
+                          updatePricingItem(setPricingDraft, index, {
+                            outputPer1kTokens: Number(event.target.value) || 0,
+                          })
+                        }
+                        placeholder="输出单价 / 1K token"
+                        className={INPUT_CLASS_NAME}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="flex items-center gap-2 text-xs text-[color:var(--text-secondary)]">
+                        <input
+                          type="checkbox"
+                          checked={item.enabled !== false}
+                          onChange={(event) =>
+                            updatePricingItem(setPricingDraft, index, {
+                              enabled: event.target.checked,
+                            })
+                          }
+                        />
+                        启用该模型
+                      </label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setPricingDraft((current) =>
+                            current
+                              ? {
+                                  ...current,
+                                  items: current.items.filter((_, itemIndex) => itemIndex !== index),
+                                }
+                              : current,
+                          )
+                        }
+                      >
+                        删除
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <EmptyState text="还没有配置任何模型价格。" />
+            )}
+          </div>
+
+          <div className="mt-5 flex justify-end">
+            <Button variant="primary" onClick={() => savePricingMutation.mutate()} disabled={savePricingMutation.isPending}>
+              {savePricingMutation.isPending ? "保存中..." : "保存价格配置"}
+            </Button>
+          </div>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function BreakdownCard({
+  title,
+  items,
+  currency,
+  emptyText,
+}: {
+  title: string;
+  items: TokenUsageBreakdownItem[];
+  currency: "CNY" | "USD";
+  emptyText: string;
+}) {
+  const maxTokens = Math.max(...items.map((item) => item.totalTokens), 1);
+
+  return (
+    <Card className="bg-[color:var(--surface-console)]">
+      <AdminSectionHeader title={title} />
+      {items.length ? (
+        <div className="mt-5 space-y-3">
+          {items.map((item) => (
+            <div key={`${title}-${item.key}`} className="space-y-1.5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="font-medium text-[color:var(--text-primary)]">{item.label}</div>
+                  <div className="text-xs text-[color:var(--text-muted)]">
+                    {formatInteger(item.requestCount)} 次请求 · {formatCost(item.estimatedCost, currency)}
+                  </div>
+                </div>
+                <div className="text-sm font-medium text-[color:var(--text-primary)]">
+                  {formatInteger(item.totalTokens)}
+                </div>
+              </div>
+              <div className="h-2 rounded-full bg-[color:var(--surface-primary)]">
+                <div
+                  className="h-2 rounded-full bg-[linear-gradient(90deg,rgba(249,115,22,0.92),rgba(251,191,36,0.92))]"
+                  style={{ width: `${Math.max(8, (item.totalTokens / maxTokens) * 100)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState text={emptyText} />
+      )}
+    </Card>
+  );
+}
+
+function FilterField({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <label className="space-y-2">
+      <AdminMetaText>{label}</AdminMetaText>
+      {children}
+    </label>
+  );
+}
+
+function SummaryTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[18px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] px-4 py-3">
+      <div className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-muted)]">{label}</div>
+      <div className="mt-2 text-xl font-semibold text-[color:var(--text-primary)]">{value}</div>
+    </div>
+  );
+}
+
+function EmptyState({ text }: { text: string }) {
+  return <div className="mt-5 text-sm text-[color:var(--text-muted)]">{text}</div>;
+}
+
+function calculateAverageTokens(totalTokens: number, requestCount: number) {
+  if (!requestCount) {
+    return 0;
+  }
+  return Math.round(totalTokens / requestCount);
+}
+
+function formatScene(scene: string) {
+  const sceneMap: Record<string, string> = {
+    chat_reply: "单聊回复",
+    group_reply: "群聊回复",
+    moment_post_generate: "朋友圈生成",
+    moment_comment_generate: "朋友圈评论",
+    feed_post_generate: "广场动态生成",
+    feed_comment_generate: "动态评论生成",
+    channel_post_generate: "视频号生成",
+    social_greeting_generate: "社交问候",
+    memory_compress: "记忆压缩",
+    character_factory_extract: "角色工厂抽取",
+    quick_character_generate: "快速生成人设",
+    intent_classify: "意图分类",
+  };
+
+  return sceneMap[scene] ?? scene;
+}
+
+function applyPreset(
+  preset: "7d" | "30d" | "month",
+  setFrom: (value: string) => void,
+  setTo: (value: string) => void,
+) {
+  setTo(formatDateInput(new Date()));
+  if (preset === "month") {
+    setFrom(monthStartInput());
+    return;
+  }
+  setFrom(preset === "30d" ? shiftDate(-29) : shiftDate(-6));
+}
+
+function updatePricingItem(
+  setPricingDraft: Dispatch<SetStateAction<TokenPricingCatalog | null>>,
+  index: number,
+  patch: Partial<TokenPricingCatalogItem>,
+) {
+  setPricingDraft((current) => {
+    if (!current) {
+      return current;
+    }
+
+    return {
+      ...current,
+      items: current.items.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, ...patch } : item,
+      ),
+    };
+  });
+}
+
+const INPUT_CLASS_NAME =
+  "w-full rounded-[16px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-input)] px-3 py-2 text-sm text-[color:var(--text-primary)] outline-none transition focus:border-[color:var(--border-brand)]";

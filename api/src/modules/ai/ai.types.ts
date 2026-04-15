@@ -100,6 +100,34 @@ export interface AiKeyOverride {
 }
 
 export type AiProviderAuthFailureSource = 'owner_custom' | 'instance_default';
+export type AiUsageBillingSource = 'owner_custom' | 'instance_default';
+export type AiUsageSurface = 'app' | 'admin' | 'scheduler' | 'system';
+export type AiUsageScopeType =
+  | 'character'
+  | 'conversation'
+  | 'group'
+  | 'world'
+  | 'admin_task';
+
+export interface AiUsageContext {
+  surface: AiUsageSurface;
+  scene: string;
+  scopeType: AiUsageScopeType;
+  scopeId?: string;
+  scopeLabel?: string;
+  ownerId?: string;
+  characterId?: string;
+  characterName?: string;
+  conversationId?: string;
+  groupId?: string;
+}
+
+export interface AiUsageMetrics {
+  promptTokens?: number;
+  completionTokens?: number;
+  totalTokens?: number;
+  raw?: Record<string, unknown> | null;
+}
 
 export class AiProviderAuthError extends Error {
   readonly source: AiProviderAuthFailureSource;
@@ -125,15 +153,20 @@ export interface GenerateReplyOptions {
   otherParticipants?: PersonalityProfile[]; // 群聊中其他 AI
   chatContext?: { currentActivity?: string; lastChatAt?: Date };
   aiKeyOverride?: AiKeyOverride;
+  usageContext?: AiUsageContext;
 }
 
 export interface GenerateReplyResult {
   text: string;
   tokensUsed: number;
+  usage?: AiUsageMetrics;
+  model?: string;
+  billingSource?: AiUsageBillingSource;
 }
 
 export interface GenerateMomentOptions {
   profile: PersonalityProfile;
   currentTime: Date;
   recentTopics?: string[];
+  usageContext?: AiUsageContext;
 }
