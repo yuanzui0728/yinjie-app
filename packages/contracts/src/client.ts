@@ -35,10 +35,13 @@ import type {
   CloudWorldLookupResponse,
   CloudWorldRequestRecord,
   CreateCloudWorldRequest,
+  ResolveWorldAccessRequest,
+  ResolveWorldAccessResponse,
   SendPhoneCodeRequest,
   SendPhoneCodeResponse,
   VerifyPhoneCodeRequest,
   VerifyPhoneCodeResponse,
+  WorldAccessSessionSummary,
 } from "./cloud";
 import type {
   AiModelResponse,
@@ -866,6 +869,33 @@ function buildCloudAuthHeaders(
 export function getMyCloudWorld(accessToken: string, baseUrl?: string) {
   return requestCloudApi<CloudWorldLookupResponse>(
     "/cloud/me/world",
+    buildCloudAuthHeaders(accessToken),
+    baseUrl,
+  );
+}
+
+export function resolveMyCloudWorldAccess(
+  payload: ResolveWorldAccessRequest,
+  accessToken: string,
+  baseUrl?: string,
+) {
+  return requestCloudApi<ResolveWorldAccessResponse>(
+    "/cloud/me/world-access/resolve",
+    buildCloudAuthHeaders(accessToken, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+    baseUrl,
+  );
+}
+
+export function getMyCloudWorldAccessSession(
+  sessionId: string,
+  accessToken: string,
+  baseUrl?: string,
+) {
+  return requestCloudApi<WorldAccessSessionSummary>(
+    `/cloud/me/world-access/sessions/${encodeURIComponent(sessionId)}`,
     buildCloudAuthHeaders(accessToken),
     baseUrl,
   );
