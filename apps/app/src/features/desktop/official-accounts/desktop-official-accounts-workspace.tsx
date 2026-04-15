@@ -11,12 +11,13 @@ import {
   type OfficialAccountSummary,
   unfollowOfficialAccount,
 } from "@yinjie/contracts";
-import { BookOpenText, MessageSquareText } from "lucide-react";
-import { Button, ErrorBlock, LoadingBlock, TextField, cn } from "@yinjie/ui";
+import { BookOpenText, MessageSquareText, Star } from "lucide-react";
+import { Button, TextField, cn } from "@yinjie/ui";
 import { AvatarChip } from "../../../components/avatar-chip";
 import { EmptyState } from "../../../components/empty-state";
 import { OfficialAccountListItem } from "../../../components/official-account-list-item";
 import { OfficialArticleCard } from "../../../components/official-article-card";
+import { formatDesktopMessageTimestamp } from "../../../lib/format";
 import { buildDesktopOfficialMessageRouteHash } from "../chat/desktop-official-message-route-state";
 import {
   buildOfficialAccountFavoriteRecord,
@@ -985,102 +986,131 @@ function DesktopOfficialFeedMode({
   onToggleFavorite: (item: DesktopOfficialFeedItem) => void;
 }) {
   return (
-    <div className="min-h-0 flex-1 overflow-auto bg-[rgba(250,251,250,0.82)] px-5 py-5">
-      <div className="mx-auto max-w-[960px] space-y-5">
-        {loading ? <LoadingBlock label="正在整理公众号内容..." /> : null}
-        {errorMessage ? <ErrorBlock message={errorMessage} /> : null}
-
-        <section className="rounded-[24px] border border-[color:var(--border-faint)] bg-white p-5 shadow-[var(--shadow-section)]">
+    <div className="min-h-0 flex-1 overflow-auto bg-white">
+      <div className="mx-auto max-w-[820px]">
+        <section className="border-b border-[color:var(--border-faint)] px-7 py-5">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <div className="text-[11px] font-medium tracking-[0.12em] text-[color:var(--text-muted)]">
-                常看的号
+              <div className="text-[11px] font-medium tracking-[0.08em] text-[color:var(--text-muted)]">
+                常看与文章
               </div>
-              <div className="mt-1 text-[22px] font-semibold text-[color:var(--text-primary)]">
-                订阅精选
+              <div className="mt-1 text-[18px] font-medium text-[color:var(--text-primary)]">
+                最近常读和最新推送
               </div>
             </div>
-            <div className="text-[12px] text-[color:var(--text-muted)]">
-              优先展示最近常看的公众号
+            <div className="text-[11px] text-[color:var(--text-muted)]">
+              按最近推送排序
             </div>
           </div>
+        </section>
 
-          {frequentAccounts.length ? (
-            <div className="mt-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
-              {frequentAccounts.map((account) => (
-                <button
-                  key={account.id}
-                  type="button"
-                  onClick={() => onOpenAccount(account.id)}
-                  className="flex items-center gap-3 rounded-[18px] border border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.72)] px-4 py-3 text-left transition hover:border-[rgba(7,193,96,0.14)] hover:bg-[rgba(7,193,96,0.05)]"
-                >
-                  <AvatarChip
-                    name={account.name}
-                    src={account.avatar}
-                    size="wechat"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[14px] font-medium text-[color:var(--text-primary)]">
-                      {account.name}
-                    </div>
-                    <div className="mt-0.5 text-[11px] text-[color:var(--text-muted)]">
-                      {account.accountType === "service" ? "服务号" : "订阅号"}
-                    </div>
+        {loading ? (
+          <OfficialWorkspaceStatusPane
+            title="正在整理公众号内容"
+            description="稍等一下，正在准备最近常读和最新推送。"
+            tone="loading"
+            className="mx-7 my-5"
+          />
+        ) : null}
+        {errorMessage ? (
+          <OfficialWorkspaceStatusPane
+            title="公众号内容暂时不可用"
+            description={errorMessage}
+            tone="danger"
+            className="mx-7 my-5"
+          />
+        ) : null}
+
+        {!loading && !errorMessage ? (
+          <>
+            <section className="border-b border-[color:var(--border-faint)] px-7 py-5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-[13px] font-medium text-[color:var(--text-primary)]">
+                  常看公众号
+                </div>
+                <div className="text-[11px] text-[color:var(--text-muted)]">
+                  {frequentAccounts.length} 个
+                </div>
+              </div>
+
+              {frequentAccounts.length ? (
+                <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {frequentAccounts.map((account) => (
+                    <button
+                      key={account.id}
+                      type="button"
+                      onClick={() => onOpenAccount(account.id)}
+                      className="flex items-center gap-3 rounded-[16px] border border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.62)] px-4 py-3 text-left transition hover:bg-white"
+                    >
+                      <AvatarChip
+                        name={account.name}
+                        src={account.avatar}
+                        size="wechat"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[14px] font-medium text-[color:var(--text-primary)]">
+                          {account.name}
+                        </div>
+                        <div className="mt-0.5 text-[11px] text-[color:var(--text-muted)]">
+                          {account.accountType === "service"
+                            ? "服务号"
+                            : "订阅号"}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-4 rounded-[16px] border border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.62)] px-4 py-5 text-center">
+                  <div className="text-[13px] font-medium text-[color:var(--text-primary)]">
+                    还没有常看的公众号
                   </div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="mt-4 rounded-[18px] border border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.72)] p-4">
-              <EmptyState
-                title="还没有常看的公众号"
-                description="关注几个公众号后，这里会优先展示最近常看的号。"
-              />
-            </div>
-          )}
-        </section>
+                  <p className="mx-auto mt-1.5 max-w-[22rem] text-[12px] leading-6 text-[color:var(--text-secondary)]">
+                    关注几个公众号后，这里会优先展示最近常看的号。
+                  </p>
+                </div>
+              )}
+            </section>
 
-        <section className="rounded-[24px] border border-[color:var(--border-faint)] bg-white shadow-[var(--shadow-section)]">
-          <div className="border-b border-[color:var(--border-faint)] px-5 py-4">
-            <div className="text-[11px] font-medium tracking-[0.12em] text-[color:var(--text-muted)]">
-              文章流
-            </div>
-            <div className="mt-1 text-[20px] font-semibold text-[color:var(--text-primary)]">
-              最近内容
-            </div>
-          </div>
+            <section className="pb-4">
+              <div className="border-b border-[color:var(--border-faint)] px-7 py-3">
+                <div className="text-[13px] font-medium text-[color:var(--text-primary)]">
+                  最近内容
+                </div>
+              </div>
 
-          {feedItems.length ? (
-            <div className="divide-y divide-[color:var(--border-faint)]">
-              {feedItems.map((item) => (
-                <DesktopOfficialFeedArticleCard
-                  key={item.id}
-                  item={item}
-                  active={item.article.id === highlightedArticleId}
-                  favorite={favoriteSourceIds.includes(
-                    `official-article-${item.article.id}`,
-                  )}
-                  onOpenAccount={() => onOpenAccount(item.account.id)}
-                  onOpenArticle={() => onOpenArticle(item)}
-                  onToggleFavorite={() => onToggleFavorite(item)}
+              {feedItems.length ? (
+                <div>
+                  {feedItems.map((item) => (
+                    <DesktopOfficialFeedArticleRow
+                      key={item.id}
+                      item={item}
+                      active={item.article.id === highlightedArticleId}
+                      favorite={favoriteSourceIds.includes(
+                        `official-article-${item.article.id}`,
+                      )}
+                      onOpenAccount={() => onOpenAccount(item.account.id)}
+                      onOpenArticle={() => onOpenArticle(item)}
+                      onToggleFavorite={() => onToggleFavorite(item)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <OfficialWorkspaceStatusPane
+                  title="还没有可读文章"
+                  description="可以换个关键词试试，或先关注几个公众号。"
+                  className="mx-7 my-5"
                 />
-              ))}
-            </div>
-          ) : (
-            <div className="px-5 py-8">
-              <EmptyState
-                title="还没有可读文章"
-                description="可以换个关键词试试，或先关注几个公众号。"
-              />
-            </div>
-          )}
-        </section>
+              )}
+            </section>
+          </>
+        ) : null}
       </div>
     </div>
   );
 }
 
-function DesktopOfficialFeedArticleCard({
+function DesktopOfficialFeedArticleRow({
   item,
   active,
   favorite,
@@ -1098,15 +1128,15 @@ function DesktopOfficialFeedArticleCard({
   return (
     <div
       className={cn(
-        "px-5 py-4 transition",
-        active ? "bg-[rgba(7,193,96,0.05)]" : "bg-white",
+        "border-b border-[color:var(--border-faint)] px-7 py-4 transition",
+        active ? "bg-[rgba(7,193,96,0.04)]" : "bg-white hover:bg-[rgba(15,23,42,0.015)]",
       )}
     >
-      <div className="mb-3 flex items-center justify-between gap-3">
+      <div className="flex items-start justify-between gap-3">
         <button
           type="button"
           onClick={onOpenAccount}
-          className="flex min-w-0 items-center gap-3 text-left"
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
         >
           <AvatarChip
             name={item.account.name}
@@ -1127,31 +1157,71 @@ function DesktopOfficialFeedArticleCard({
                 <span>最近更新</span>
               )}
               {item.unread ? (
-                <span className="rounded-full bg-[#fa5151] px-1.5 py-0.5 text-[10px] leading-none text-white">
-                  未读
-                </span>
+                <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-[#fa5151]" />
               ) : null}
             </div>
           </div>
         </button>
-        <div className="text-[11px] text-[color:var(--text-muted)]">
-          {new Date(
-            item.deliveredAt ?? item.article.publishedAt,
-          ).toLocaleDateString("zh-CN", {
-            month: "numeric",
-            day: "numeric",
-          })}
+        <div className="flex items-center gap-2">
+          <div className="text-[10px] text-[color:var(--text-muted)]">
+            {formatDesktopMessageTimestamp(
+              item.deliveredAt ?? item.article.publishedAt,
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onToggleFavorite}
+            className={cn(
+              "inline-flex h-8 w-8 items-center justify-center rounded-full border transition",
+              favorite
+                ? "border-[#d8d1a9] bg-[#fbf7e8] text-[#8a6b11]"
+                : "border-[color:var(--border-faint)] bg-white text-[color:var(--text-muted)] hover:bg-[rgba(247,250,250,0.92)] hover:text-[color:var(--text-primary)]",
+            )}
+            aria-label={favorite ? "取消收藏文章" : "收藏文章"}
+          >
+            <Star size={14} className={favorite ? "fill-current" : ""} />
+          </button>
         </div>
       </div>
 
-      <OfficialArticleCard
-        article={item.article}
-        compact
-        active={active}
-        favorite={favorite}
+      <button
+        type="button"
         onClick={onOpenArticle}
-        onToggleFavorite={onToggleFavorite}
-      />
+        className={cn(
+          "mt-3 flex w-full items-start gap-3 rounded-[18px] border px-4 py-4 text-left transition",
+          active
+            ? "border-[rgba(7,193,96,0.16)] bg-[rgba(7,193,96,0.06)]"
+            : "border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.62)] hover:bg-white",
+        )}
+      >
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-[10px] text-[color:var(--text-muted)]">
+            {item.article.isPinned ? (
+              <span className="rounded-full border border-[rgba(7,193,96,0.14)] bg-[rgba(7,193,96,0.07)] px-1.5 py-0.5 text-[9px] text-[color:var(--brand-primary)]">
+                置顶
+              </span>
+            ) : null}
+            <span>{item.article.authorName}</span>
+          </div>
+          <div className="mt-2 text-[15px] font-medium leading-6 text-[color:var(--text-primary)]">
+            {item.article.title}
+          </div>
+          <div className="mt-1.5 line-clamp-2 text-[12px] leading-6 text-[color:var(--text-secondary)]">
+            {item.article.summary}
+          </div>
+        </div>
+        {item.article.coverImage ? (
+          <img
+            src={item.article.coverImage}
+            alt={item.article.title}
+            className="h-[5.5rem] w-[5.5rem] shrink-0 rounded-[12px] border border-[color:var(--border-faint)] object-cover"
+          />
+        ) : (
+          <div className="flex h-[5.5rem] w-[5.5rem] shrink-0 items-center justify-center rounded-[12px] border border-[color:var(--border-faint)] bg-white text-[11px] text-[color:var(--text-dim)]">
+            文章
+          </div>
+        )}
+      </button>
     </div>
   );
 }
