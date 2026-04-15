@@ -897,46 +897,49 @@ export function DesktopOfficialAccountsWorkspace({
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        <DesktopOfficialProfileRow
-                          label="账号类型"
-                          value={
-                            account.accountType === "service"
-                              ? "服务号"
-                              : "订阅号"
-                          }
-                        />
-                        <DesktopOfficialProfileRow
-                          label="账号状态"
-                          value={account.isFollowing ? "已关注" : "未关注"}
-                        />
-                        <DesktopOfficialProfileRow
-                          label="消息状态"
-                          value={
-                            account.accountType === "service"
-                              ? account.isMuted
-                                ? "已开启消息免打扰"
-                                : "正常接收消息"
-                              : "通过订阅号消息聚合浏览"
-                          }
-                        />
-                        <DesktopOfficialProfileRow
-                          label="最近更新"
-                          value={
-                            account.articles[0]?.publishedAt
-                              ? new Date(
-                                  account.articles[0].publishedAt,
-                                ).toLocaleDateString("zh-CN", {
-                                  month: "numeric",
-                                  day: "numeric",
-                                })
-                              : "暂无更新"
-                          }
-                        />
-                        <DesktopOfficialProfileRow
-                          label="文章数量"
-                          value={`${account.articles.length} 篇`}
-                        />
+                      <div className="space-y-4">
+                        <div className="overflow-hidden rounded-[18px] border border-[color:var(--border-faint)] bg-white">
+                          <DesktopOfficialProfileRow
+                            label="账号类型"
+                            value={
+                              account.accountType === "service"
+                                ? "服务号"
+                                : "订阅号"
+                            }
+                          />
+                          <DesktopOfficialProfileRow
+                            label="账号状态"
+                            value={account.isFollowing ? "已关注" : "未关注"}
+                          />
+                          <DesktopOfficialProfileRow
+                            label="消息状态"
+                            value={
+                              account.accountType === "service"
+                                ? account.isMuted
+                                  ? "已开启消息免打扰"
+                                  : "正常接收消息"
+                                : "通过订阅号消息聚合浏览"
+                            }
+                          />
+                          <DesktopOfficialProfileRow
+                            label="最近更新"
+                            value={
+                              account.articles[0]?.publishedAt
+                                ? new Date(
+                                    account.articles[0].publishedAt,
+                                  ).toLocaleDateString("zh-CN", {
+                                    month: "numeric",
+                                    day: "numeric",
+                                  })
+                                : "暂无更新"
+                            }
+                          />
+                          <DesktopOfficialProfileRow
+                            label="文章数量"
+                            value={`${account.articles.length} 篇`}
+                            last
+                          />
+                        </div>
                         <section className="rounded-[18px] border border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.62)] p-4">
                           <div className="text-sm font-medium text-[color:var(--text-primary)]">
                             账号简介
@@ -1240,23 +1243,27 @@ function DesktopOfficialEntryCard({
   onAction: () => void;
 }) {
   return (
-    <section className="rounded-[18px] border border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.62)] p-4">
-      <div className="text-sm font-medium text-[color:var(--text-primary)]">
-        {title}
+    <section className="rounded-[18px] border border-[color:var(--border-faint)] bg-white px-4 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-medium text-[color:var(--text-primary)]">
+            {title}
+          </div>
+          <div className="mt-1.5 text-sm leading-7 text-[color:var(--text-secondary)]">
+            {description}
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          disabled={actionDisabled}
+          className="shrink-0 rounded-full border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.82)] text-[color:var(--text-secondary)] shadow-none hover:bg-white"
+          onClick={onAction}
+        >
+          {actionLabel}
+        </Button>
       </div>
-      <div className="mt-2 text-sm leading-7 text-[color:var(--text-secondary)]">
-        {description}
-      </div>
-      <Button
-        type="button"
-        variant="secondary"
-        size="sm"
-        disabled={actionDisabled}
-        className="mt-4 rounded-xl border-[color:var(--border-faint)] bg-white text-[color:var(--text-secondary)] shadow-none hover:bg-[color:var(--surface-console)]"
-        onClick={onAction}
-      >
-        {actionLabel}
-      </Button>
     </section>
   );
 }
@@ -1264,12 +1271,19 @@ function DesktopOfficialEntryCard({
 function DesktopOfficialProfileRow({
   label,
   value,
+  last = false,
 }: {
   label: string;
   value: string;
+  last?: boolean;
 }) {
   return (
-    <section className="flex items-center justify-between gap-3 rounded-[18px] border border-[color:var(--border-faint)] bg-[rgba(247,250,250,0.62)] px-4 py-3">
+    <section
+      className={cn(
+        "flex items-center justify-between gap-3 bg-white px-4 py-3",
+        last ? undefined : "border-b border-[color:var(--border-faint)]",
+      )}
+    >
       <div className="text-sm text-[color:var(--text-muted)]">{label}</div>
       <div className="text-sm font-medium text-[color:var(--text-primary)]">
         {value}
