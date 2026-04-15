@@ -37,6 +37,11 @@ const ReplyLogicPage = lazy(async () => {
   return { default: mod.ReplyLogicPage };
 });
 
+const ChatRecordsPage = lazy(async () => {
+  const mod = await import("./routes/chat-records-page");
+  return { default: mod.ChatRecordsPage };
+});
+
 const TokenUsagePage = lazy(async () => {
   const mod = await import("./routes/token-usage-page");
   return { default: mod.TokenUsagePage };
@@ -100,6 +105,12 @@ const replyLogicRoute = createRoute({
   component: ReplyLogicPage,
 });
 
+const chatRecordsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/chat-records",
+  component: ChatRecordsPage,
+});
+
 const tokenUsageRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/token-usage",
@@ -115,6 +126,7 @@ const routeTree = rootRoute.addChildren([
   characterRuntimeRoute,
   evalsRoute,
   replyLogicRoute,
+  chatRecordsRoute,
   tokenUsageRoute,
 ]);
 

@@ -20,9 +20,12 @@ import { SystemConfigModule } from '../config/config.module';
 import { CharactersModule } from '../characters/characters.module';
 import { ChatModule } from '../chat/chat.module';
 import { ReplyLogicAdminService } from './reply-logic-admin.service';
+import { ChatRecordsAdminService } from './chat-records-admin.service';
+import { ChatRecordsAdminController } from './chat-records-admin.controller';
 import { SchedulerModule } from '../scheduler/scheduler.module';
 import { MomentPostEntity } from '../moments/moment-post.entity';
 import { FeedPostEntity } from '../feed/feed-post.entity';
+import { AiUsageLedgerEntity } from '../analytics/ai-usage-ledger.entity';
 
 @Module({
   imports: [
@@ -46,9 +49,15 @@ import { FeedPostEntity } from '../feed/feed-post.entity';
       NarrativeArcEntity,
       MomentPostEntity,
       FeedPostEntity,
+      AiUsageLedgerEntity,
     ]),
   ],
-  providers: [AdminService, ReplyLogicAdminService, AdminGuard],
-  controllers: [AdminController],
+  providers: [
+    AdminService,
+    ReplyLogicAdminService,
+    ChatRecordsAdminService,
+    AdminGuard,
+  ],
+  controllers: [AdminController, ChatRecordsAdminController],
 })
 export class AdminModule {}

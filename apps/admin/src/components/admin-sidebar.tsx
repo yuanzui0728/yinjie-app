@@ -5,14 +5,26 @@ import type { buildDigitalHumanAdminSummary } from "../lib/digital-human-admin-s
 
 type SidebarLink = {
   label: string;
-  to: "/" | "/characters" | "/token-usage" | "/evals" | "/reply-logic";
+  to:
+    | "/"
+    | "/characters"
+    | "/chat-records"
+    | "/token-usage"
+    | "/evals"
+    | "/reply-logic";
   hint: string;
 };
 
 type SidebarIssue = {
   label: string;
   detail: string;
-  to: "/" | "/characters" | "/token-usage" | "/evals" | "/reply-logic";
+  to:
+    | "/"
+    | "/characters"
+    | "/chat-records"
+    | "/token-usage"
+    | "/evals"
+    | "/reply-logic";
 };
 
 type AdminSidebarProps = {
