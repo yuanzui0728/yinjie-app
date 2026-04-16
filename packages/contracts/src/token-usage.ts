@@ -223,3 +223,24 @@ export interface TokenUsageDowngradeInsights {
   untraceableRequestCount: number;
   byModelSwitch: TokenUsageDowngradeModelSwitchItem[];
 }
+
+export interface TokenUsageDowngradeQualityInsights {
+  generatedAt: string;
+  requestCount: number;
+  conversationScopedRequestCount: number;
+  unscopedRequestCount: number;
+  distinctConversationCount: number;
+  reviewedConversationCount: number;
+  resolvedConversationCount: number;
+  importantConversationCount: number;
+  immediateContinuationCount: number;
+  continuedWithin24hCount: number;
+  postDowngradeFailureCount: number;
+  postDowngradeBlockedCount: number;
+  immediateContinuationRate: number | null;
+  continuedWithin24hRate: number | null;
+  postDowngradeFailureRate: number | null;
+  postDowngradeBlockedRate: number | null;
+  reviewCoverageRate: number | null;
+  proxyQualityScore: number | null;
+}
