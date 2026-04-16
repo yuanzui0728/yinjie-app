@@ -91,6 +91,16 @@ type BudgetAwareProviderResult = {
   usageAudit?: {
     errorCode: string;
     errorMessage: string;
+    audit?: {
+      budgetAction: 'downgrade' | 'block';
+      requestedModel?: string | null;
+      appliedModel?: string | null;
+      budgetScope?: 'overall' | 'character';
+      budgetPeriod?: 'daily' | 'monthly';
+      budgetMetric?: 'tokens' | 'cost';
+      budgetUsed?: number;
+      budgetLimit?: number;
+    };
   };
 };
 
@@ -422,6 +432,16 @@ export class AiOrchestratorService {
     usageAudit?: {
       errorCode?: string | null;
       errorMessage?: string | null;
+      audit?: {
+        budgetAction: 'downgrade' | 'block';
+        requestedModel?: string | null;
+        appliedModel?: string | null;
+        budgetScope?: 'overall' | 'character';
+        budgetPeriod?: 'daily' | 'monthly';
+        budgetMetric?: 'tokens' | 'cost';
+        budgetUsed?: number;
+        budgetLimit?: number;
+      };
     },
   ) {
     await this.safeRecordUsage({
@@ -442,6 +462,7 @@ export class AiOrchestratorService {
       apiStyle: provider.apiStyle,
       billingSource,
       usage: result.usage,
+      audit: usageAudit?.audit,
       errorCode: usageAudit?.errorCode ?? null,
       errorMessage: usageAudit?.errorMessage ?? null,
     });
@@ -516,6 +537,16 @@ export class AiOrchestratorService {
         usageAudit: {
           errorCode: 'BUDGET_DOWNGRADED',
           errorMessage: decision.message,
+          audit: {
+            budgetAction: 'downgrade',
+            requestedModel: provider.model,
+            appliedModel: decision.downgradeModel,
+            budgetScope: decision.scope,
+            budgetPeriod: decision.period,
+            budgetMetric: decision.metric,
+            budgetUsed: decision.used,
+            budgetLimit: decision.limit,
+          },
         },
       };
     }
@@ -537,6 +568,16 @@ export class AiOrchestratorService {
       model: provider.model,
       apiStyle: provider.apiStyle,
       billingSource,
+      audit: {
+        budgetAction: 'block',
+        requestedModel: provider.model,
+        appliedModel: provider.model,
+        budgetScope: decision.scope,
+        budgetPeriod: decision.period,
+        budgetMetric: decision.metric,
+        budgetUsed: decision.used,
+        budgetLimit: decision.limit,
+      },
       errorCode: 'BUDGET_BLOCKED',
       errorMessage: decision.message,
     });

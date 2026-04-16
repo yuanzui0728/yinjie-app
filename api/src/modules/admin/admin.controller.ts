@@ -126,6 +126,27 @@ export class AdminController {
     return this.usageLedger.getRecords(query);
   }
 
+  @Get('token-usage/downgrade-insights')
+  getTokenUsageDowngradeInsights(
+    @Query()
+    query: {
+      from?: string;
+      to?: string;
+      grain?: string;
+      characterId?: string;
+      conversationId?: string;
+      groupId?: string;
+      scene?: string;
+      model?: string;
+      billingSource?: string;
+      status?: string;
+      errorCode?: string;
+      limit?: number | string;
+    },
+  ) {
+    return this.usageLedger.getDowngradeInsights(query);
+  }
+
   @Get('token-usage/pricing')
   getTokenUsagePricing() {
     return this.usageLedger.getPricingCatalog();
@@ -222,6 +243,11 @@ export class AdminController {
         note: item.note,
       })),
     });
+  }
+
+  @Get('characters/friend-ids')
+  getCharacterFriendIds() {
+    return this.adminService.getFriendCharacterIds();
   }
 
   @Get('characters/presets')

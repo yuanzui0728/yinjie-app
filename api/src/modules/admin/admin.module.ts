@@ -27,6 +27,7 @@ import { SchedulerModule } from '../scheduler/scheduler.module';
 import { MomentPostEntity } from '../moments/moment-post.entity';
 import { FeedPostEntity } from '../feed/feed-post.entity';
 import { AiUsageLedgerEntity } from '../analytics/ai-usage-ledger.entity';
+import { FriendshipEntity } from '../social/friendship.entity';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { AiUsageLedgerEntity } from '../analytics/ai-usage-ledger.entity';
       FeedPostEntity,
       AiUsageLedgerEntity,
       AdminConversationReviewEntity,
+      FriendshipEntity,
     ]),
   ],
   providers: [

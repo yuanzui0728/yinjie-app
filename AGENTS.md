@@ -315,6 +315,7 @@
 - `GET /api/admin/token-usage/breakdown`
 - `GET /api/admin/token-usage/records`
 - `GET /api/admin/token-usage/downgrade-insights`
+- `GET /api/admin/token-usage/downgrade-insights`
 - `GET /api/admin/token-usage/pricing`
 - `PATCH /api/admin/token-usage/pricing`
 - `GET /api/admin/token-usage/budgets`

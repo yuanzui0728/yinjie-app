@@ -197,3 +197,29 @@ export interface TokenUsageQuery {
   pageSize?: number;
   limit?: number;
 }
+
+export interface TokenUsageDowngradeModelSwitchItem {
+  key: string;
+  requestedModel: string | null;
+  appliedModel: string | null;
+  requestCount: number;
+  successCount: number;
+  estimatedCost: number;
+  estimatedOriginalCost: number;
+  estimatedSavings: number;
+}
+
+export interface TokenUsageDowngradeInsights {
+  currency: "CNY" | "USD";
+  requestCount: number;
+  successCount: number;
+  successRate: number | null;
+  affectedCharacterCount: number;
+  estimatedCost: number;
+  estimatedOriginalCost: number;
+  estimatedSavings: number;
+  savingsRate: number | null;
+  traceableRequestCount: number;
+  untraceableRequestCount: number;
+  byModelSwitch: TokenUsageDowngradeModelSwitchItem[];
+}

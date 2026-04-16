@@ -115,6 +115,17 @@ type UsageMetrics = {
   raw?: Record<string, unknown> | null;
 };
 
+type UsageAuditPayload = {
+  budgetAction?: 'downgrade' | 'block';
+  requestedModel?: string | null;
+  appliedModel?: string | null;
+  budgetScope?: 'overall' | 'character';
+  budgetPeriod?: BudgetPeriod;
+  budgetMetric?: BudgetMetric;
+  budgetUsed?: number | null;
+  budgetLimit?: number | null;
+};
+
 export type AiUsageRecordInput = {
   occurredAt?: Date;
   requestId?: string | null;
@@ -135,6 +146,7 @@ export type AiUsageRecordInput = {
   apiStyle?: string | null;
   billingSource?: LedgerBillingSource | null;
   usage?: UsageMetrics | null;
+  audit?: UsageAuditPayload | null;
   errorCode?: string | null;
   errorMessage?: string | null;
 };
@@ -208,6 +220,17 @@ type BudgetExecutionDecision = {
   message: string;
 };
 
+type DowngradeModelSwitchBucket = {
+  key: string;
+  requestedModel: string | null;
+  appliedModel: string | null;
+  requestCount: number;
+  successCount: number;
+  estimatedCost: number;
+  estimatedOriginalCost: number;
+  estimatedSavings: number;
+};
+
 const PRICING_CONFIG_KEY = 'token_pricing_catalog';
 const BUDGET_CONFIG_KEY = 'token_budget_config';
 const PRICING_CACHE_TTL_MS = 10_000;
@@ -255,6 +278,7 @@ export class AiUsageLedgerService {
       ((promptTokens ?? 0) / 1000) * (pricing?.inputPer1kTokens ?? 0) +
         ((completionTokens ?? 0) / 1000) * (pricing?.outputPer1kTokens ?? 0),
     );
+    const rawUsagePayload = this.mergeRawUsagePayload(input.usage?.raw, input.audit);
 
     const entity = this.repo.create({
       occurredAt: input.occurredAt ?? new Date(),
@@ -282,9 +306,7 @@ export class AiUsageLedgerService {
       outputUnitPrice: pricing?.outputPer1kTokens ?? null,
       estimatedCost,
       currency: catalog.currency,
-      rawUsagePayload: input.usage?.raw
-        ? JSON.stringify(input.usage.raw)
-        : null,
+      rawUsagePayload: rawUsagePayload ? JSON.stringify(rawUsagePayload) : null,
       errorCode: input.errorCode ?? null,
       errorMessage: input.errorMessage
         ? input.errorMessage.slice(0, 1000)
@@ -608,6 +630,113 @@ export class AiUsageLedgerService {
       page: normalized.page,
       pageSize: normalized.pageSize,
       totalPages: Math.max(1, Math.ceil(total / normalized.pageSize)),
+    };
+  }
+
+  async getDowngradeInsights(query: TokenUsageQuery) {
+    const normalized = this.normalizeQuery({
+      ...query,
+      status: 'success',
+      errorCode: 'BUDGET_DOWNGRADED',
+    });
+    const records = await this.repo.find({
+      where: this.buildWhere(normalized),
+      order: { occurredAt: 'DESC' },
+    });
+    const catalog = await this.getPricingCatalog();
+    const currency =
+      (records[0]?.currency as PricingCurrency | undefined) ?? catalog.currency;
+    const characterIds = new Set<string>();
+    const switchMap = new Map<string, DowngradeModelSwitchBucket>();
+    let estimatedCost = 0;
+    let estimatedOriginalCost = 0;
+    let traceableRequestCount = 0;
+
+    records.forEach((record) => {
+      if (record.characterId) {
+        characterIds.add(record.characterId);
+      }
+
+      const audit = this.parseUsageAuditPayload(record.rawUsagePayload);
+      const requestedModel = audit?.requestedModel?.trim() || null;
+      const appliedModel = audit?.appliedModel?.trim() || record.model?.trim() || null;
+      const actualCost = this.normalizeAggregateNumber(record.estimatedCost);
+      const originalCost = requestedModel
+        ? this.estimateCostForModel(
+            catalog,
+            requestedModel,
+            record.promptTokens ?? 0,
+            record.completionTokens ?? 0,
+          )
+        : null;
+      const comparableOriginalCost = originalCost ?? actualCost;
+      const estimatedSavings = Math.max(0, comparableOriginalCost - actualCost);
+
+      estimatedCost += actualCost;
+      estimatedOriginalCost += comparableOriginalCost;
+      if (requestedModel && appliedModel) {
+        traceableRequestCount += 1;
+      }
+
+      const key = `${requestedModel ?? '__unknown__'}=>${appliedModel ?? '__unknown__'}`;
+      const bucket = switchMap.get(key) ?? {
+        key,
+        requestedModel,
+        appliedModel,
+        requestCount: 0,
+        successCount: 0,
+        estimatedCost: 0,
+        estimatedOriginalCost: 0,
+        estimatedSavings: 0,
+      };
+      bucket.requestCount += 1;
+      if (record.status === 'success') {
+        bucket.successCount += 1;
+      }
+      bucket.estimatedCost += actualCost;
+      bucket.estimatedOriginalCost += comparableOriginalCost;
+      bucket.estimatedSavings += estimatedSavings;
+      switchMap.set(key, bucket);
+    });
+
+    const requestCount = records.length;
+    const successCount = records.filter((record) => record.status === 'success').length;
+    const savingsValue = Math.max(0, estimatedOriginalCost - estimatedCost);
+
+    return {
+      currency,
+      requestCount,
+      successCount,
+      successRate: requestCount ? successCount / requestCount : null,
+      affectedCharacterCount: characterIds.size,
+      estimatedCost: this.roundCost(estimatedCost),
+      estimatedOriginalCost: this.roundCost(estimatedOriginalCost),
+      estimatedSavings: this.roundCost(savingsValue),
+      savingsRate:
+        estimatedOriginalCost > 0 ? savingsValue / estimatedOriginalCost : null,
+      traceableRequestCount,
+      untraceableRequestCount: Math.max(0, requestCount - traceableRequestCount),
+      byModelSwitch: Array.from(switchMap.values())
+        .sort((left, right) => {
+          if (right.estimatedSavings !== left.estimatedSavings) {
+            return right.estimatedSavings - left.estimatedSavings;
+          }
+          if (right.requestCount !== left.requestCount) {
+            return right.requestCount - left.requestCount;
+          }
+          return left.key.localeCompare(right.key);
+        })
+        .slice(0, normalized.limit)
+        .map((item) => ({
+          key: item.key,
+          requestedModel: item.requestedModel,
+          appliedModel: item.appliedModel,
+          requestCount: item.requestCount,
+          successCount: item.successCount,
+          estimatedCost: this.roundCost(item.estimatedCost),
+          estimatedOriginalCost: this.roundCost(item.estimatedOriginalCost),
+          estimatedSavings: this.roundCost(item.estimatedSavings),
+        })),
     };
   }
 
@@ -1074,6 +1203,156 @@ export class AiUsageLedgerService {
     };
   }
 
+  private mergeRawUsagePayload(
+    usageRaw?: Record<string, unknown> | null,
+    audit?: UsageAuditPayload | null,
+  ) {
+    const normalizedAudit = this.normalizeUsageAuditPayload(audit);
+    if (!usageRaw && !normalizedAudit) {
+      return null;
+    }
+
+    const payload: Record<string, unknown> = usageRaw ? { ...usageRaw } : {};
+    if (normalizedAudit) {
+      payload.__audit = normalizedAudit;
+    }
+    return payload;
+  }
+
+  private parseUsageAuditPayload(
+    rawUsagePayload?: string | null,
+  ): UsageAuditPayload | null {
+    if (!rawUsagePayload?.trim()) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(rawUsagePayload) as Record<string, unknown>;
+      if (!parsed || typeof parsed !== 'object') {
+        return null;
+      }
+
+      const audit =
+        parsed.__audit && typeof parsed.__audit === 'object'
+          ? (parsed.__audit as Record<string, unknown>)
+          : null;
+      if (!audit) {
+        return null;
+      }
+
+      const requestedModel = this.normalizeString(
+        typeof audit.requestedModel === 'string' ? audit.requestedModel : undefined,
+      );
+      const appliedModel = this.normalizeString(
+        typeof audit.appliedModel === 'string' ? audit.appliedModel : undefined,
+      );
+      const budgetAction =
+        audit.budgetAction === 'block' || audit.budgetAction === 'downgrade'
+          ? audit.budgetAction
+          : undefined;
+      const budgetScope =
+        audit.budgetScope === 'overall' || audit.budgetScope === 'character'
+          ? audit.budgetScope
+          : undefined;
+      const budgetPeriod =
+        audit.budgetPeriod === 'daily' || audit.budgetPeriod === 'monthly'
+          ? audit.budgetPeriod
+          : undefined;
+      const budgetMetric =
+        audit.budgetMetric === 'tokens' || audit.budgetMetric === 'cost'
+          ? audit.budgetMetric
+          : undefined;
+      const budgetUsed = this.normalizeOptionalNumber(audit.budgetUsed);
+      const budgetLimit = this.normalizeOptionalNumber(audit.budgetLimit);
+
+      if (
+        !requestedModel &&
+        !appliedModel &&
+        !budgetAction &&
+        !budgetScope &&
+        !budgetPeriod &&
+        !budgetMetric &&
+        budgetUsed == null &&
+        budgetLimit == null
+      ) {
+        return null;
+      }
+
+      return {
+        budgetAction,
+        requestedModel,
+        appliedModel,
+        budgetScope,
+        budgetPeriod,
+        budgetMetric,
+        budgetUsed,
+        budgetLimit,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private normalizeUsageAuditPayload(
+    audit?: UsageAuditPayload | null,
+  ): Record<string, unknown> | null {
+    if (!audit) {
+      return null;
+    }
+
+    const normalized: Record<string, unknown> = {};
+    const requestedModel = this.normalizeString(audit.requestedModel);
+    const appliedModel = this.normalizeString(audit.appliedModel);
+    const budgetUsed = this.normalizeOptionalNumber(audit.budgetUsed);
+    const budgetLimit = this.normalizeOptionalNumber(audit.budgetLimit);
+
+    if (audit.budgetAction === 'block' || audit.budgetAction === 'downgrade') {
+      normalized.budgetAction = audit.budgetAction;
+    }
+    if (requestedModel) {
+      normalized.requestedModel = requestedModel;
+    }
+    if (appliedModel) {
+      normalized.appliedModel = appliedModel;
+    }
+    if (audit.budgetScope === 'overall' || audit.budgetScope === 'character') {
+      normalized.budgetScope = audit.budgetScope;
+    }
+    if (audit.budgetPeriod === 'daily' || audit.budgetPeriod === 'monthly') {
+      normalized.budgetPeriod = audit.budgetPeriod;
+    }
+    if (audit.budgetMetric === 'tokens' || audit.budgetMetric === 'cost') {
+      normalized.budgetMetric = audit.budgetMetric;
+    }
+    if (budgetUsed != null) {
+      normalized.budgetUsed = budgetUsed;
+    }
+    if (budgetLimit != null) {
+      normalized.budgetLimit = budgetLimit;
+    }
+
+    return Object.keys(normalized).length ? normalized : null;
+  }
+
+  private estimateCostForModel(
+    catalog: TokenPricingCatalog,
+    model: string,
+    promptTokens: number,
+    completionTokens: number,
+  ) {
+    const pricing = this.findPricingItem(catalog, model);
+    if (!pricing) {
+      return null;
+    }
+
+    return (
+      (this.normalizeAggregateNumber(promptTokens) / 1000) *
+        pricing.inputPer1kTokens +
+      (this.normalizeAggregateNumber(completionTokens) / 1000) *
+        pricing.outputPer1kTokens
+    );
+  }
+
   private findPricingItem(
     catalog: TokenPricingCatalog,
     model?: string | null,
@@ -1127,6 +1406,17 @@ export class AiUsageLedgerService {
       return 0;
     }
     return Math.max(0, Number(value));
+  }
+
+  private normalizeOptionalNumber(value: unknown) {
+    if (value == null) {
+      return null;
+    }
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return null;
+    }
+    return parsed;
   }
 
   private normalizeBudgetLimit(value: number | null | undefined) {
