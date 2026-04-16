@@ -1,7 +1,20 @@
-export type RelationshipType = "family" | "friend" | "expert" | "mentor" | "custom" | "self";
-export type CharacterSourceType = "default_seed" | "preset_catalog" | "manual_admin";
+export type RelationshipType =
+  | "family"
+  | "friend"
+  | "expert"
+  | "mentor"
+  | "custom"
+  | "self";
+export type CharacterSourceType =
+  | "default_seed"
+  | "preset_catalog"
+  | "manual_admin";
 export type CharacterDeletionPolicy = "protected" | "archive_allowed";
-export type CharacterPresetGroupKey = "technology_and_product" | "business_and_investing" | "public_expression";
+export type CharacterPresetGroupKey =
+  | "technology_and_product"
+  | "science_and_reasoning"
+  | "business_and_investing"
+  | "public_expression";
 export type ResponseLength = "short" | "medium" | "long";
 export type EmojiUsage = "none" | "occasional" | "frequent";
 
@@ -51,14 +64,14 @@ export interface MemoryLayers {
 }
 
 export interface ScenePrompts {
-  chat?: string;            // 聊天回复
-  moments_post?: string;    // 发朋友圈
+  chat?: string; // 聊天回复
+  moments_post?: string; // 发朋友圈
   moments_comment?: string; // 朋友圈评论/回复
-  feed_post?: string;       // 发 Feed 贴文
-  channel_post?: string;    // 发视频号内容
-  feed_comment?: string;    // Feed 评论反应
-  greeting?: string;        // 好友请求问候 / 摇一摇
-  proactive?: string;       // 主动提醒
+  feed_post?: string; // 发 Feed 贴文
+  channel_post?: string; // 发视频号内容
+  feed_comment?: string; // Feed 评论反应
+  greeting?: string; // 好友请求问候 / 摇一摇
+  proactive?: string; // 主动提醒
 }
 
 export interface PersonalityProfile {
