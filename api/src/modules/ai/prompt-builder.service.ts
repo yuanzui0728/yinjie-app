@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PersonalityProfile, SceneKey } from './ai.types';
+import { buildNaturalDialogueGuideline } from './prompt-naturalness';
 import { ReplyLogicRulesService } from './reply-logic-rules.service';
 import type {
   ReplyLogicPromptTemplates,
@@ -94,13 +95,26 @@ export class PromptBuilderService {
       parts.push(`<scene_prompt>\n${scenePrompt}\n</scene_prompt>`);
     }
 
+    const naturalDialogueGuideline = buildNaturalDialogueGuideline(
+      profile,
+      scene,
+    );
+    if (naturalDialogueGuideline) {
+      parts.push(
+        `<delivery_guardrails>\n${naturalDialogueGuideline}\n</delivery_guardrails>`,
+      );
+    }
+
     // 3. 记忆（动态写入）
     const coreMemory = profile.memory?.coreMemory?.trim();
-    const recentSummary = (profile.memory?.recentSummary || profile.memorySummary)?.trim();
+    const recentSummary = (
+      profile.memory?.recentSummary || profile.memorySummary
+    )?.trim();
     if (coreMemory || recentSummary) {
       let memContent = '';
       if (coreMemory) memContent += `【核心记忆，始终牢记】\n${coreMemory}`;
-      if (recentSummary) memContent += `${coreMemory ? '\n' : ''}【近期摘要】\n${recentSummary}`;
+      if (recentSummary)
+        memContent += `${coreMemory ? '\n' : ''}【近期摘要】\n${recentSummary}`;
       parts.push(`<memory>\n${memContent.trim()}\n</memory>`);
     }
 
@@ -116,9 +130,9 @@ export class PromptBuilderService {
         minute: '2-digit',
       });
       const activityDesc = context.currentActivity
-        ? semanticLabels.activityLabels[
+        ? (semanticLabels.activityLabels[
             context.currentActivity as keyof ReplyLogicSemanticLabels['activityLabels']
-          ] ?? semanticLabels.activityLabels.free
+          ] ?? semanticLabels.activityLabels.free)
         : semanticLabels.activityLabels.free;
       let ctxContent = `- 时间：${timeStr}\n- 当前状态：${activityDesc}`;
       if (context.lastChatAt) {
@@ -326,7 +340,8 @@ export class PromptBuilderService {
 
     let identitySection = `<identity>\n${identityText}`;
     if (profile.identity) {
-      const { occupation, background, motivation, worldview } = profile.identity;
+      const { occupation, background, motivation, worldview } =
+        profile.identity;
       if (occupation) {
         identitySection += `\n职业：${occupation}`;
       }
@@ -352,17 +367,20 @@ export class PromptBuilderService {
       personalitySection += `\n口头禅：${traits.catchphrases.join('、')}`;
     }
     personalitySection += `\n回复长度：${
-      { short: '简短', medium: '适中', long: '详细' }[traits.responseLength] ?? '适中'
+      { short: '简短', medium: '适中', long: '详细' }[traits.responseLength] ??
+      '适中'
     }`;
     personalitySection += `\nEmoji使用：${
-      { none: '不用', occasional: '偶尔', frequent: '频繁' }[traits.emojiUsage] ??
-      '偶尔'
+      { none: '不用', occasional: '偶尔', frequent: '频繁' }[
+        traits.emojiUsage
+      ] ?? '偶尔'
     }`;
     personalitySection += `\n</personality_and_tone>`;
 
     let behaviorSection = '';
     if (profile.behavioralPatterns) {
-      const { workStyle, socialStyle, taboos, quirks } = profile.behavioralPatterns;
+      const { workStyle, socialStyle, taboos, quirks } =
+        profile.behavioralPatterns;
       const parts: string[] = [];
       if (workStyle) {
         parts.push(`工作风格：${workStyle}`);
@@ -451,9 +469,9 @@ export class PromptBuilderService {
         minute: '2-digit',
       });
       const activityDesc = context.currentActivity
-        ? semanticLabels.activityLabels[
+        ? (semanticLabels.activityLabels[
             context.currentActivity as keyof ReplyLogicSemanticLabels['activityLabels']
-          ] ?? semanticLabels.activityLabels.free
+          ] ?? semanticLabels.activityLabels.free)
         : semanticLabels.activityLabels.free;
 
       let timeSinceLastChat = '';
@@ -489,7 +507,15 @@ ${templates.behavioralGuideline}
       relationship: profile.relationship,
       currentTime: new Date().toLocaleString('zh-CN'),
     });
-    const rulesSection = `<rules>\n${rulesBody}\n</rules>`;
+    const naturalDialogueGuideline = buildNaturalDialogueGuideline(
+      profile,
+      'chat',
+    );
+    const rulesSectionParts = [rulesBody];
+    if (naturalDialogueGuideline) {
+      rulesSectionParts.push(`【额外表达约束】\n${naturalDialogueGuideline}`);
+    }
+    const rulesSection = `<rules>\n${rulesSectionParts.join('\n')}\n</rules>`;
 
     return [
       {
