@@ -15,6 +15,7 @@ import type {
   TokenUsageBreakdownItem,
   TokenUsageCharacterBudgetRule,
   TokenUsageCharacterBudgetStatus,
+  TokenUsageDowngradeModelSwitchItem,
   TokenUsageQuery,
   TokenUsageStatus,
 } from "@yinjie/contracts";
@@ -266,6 +267,14 @@ export function TokenUsagePage() {
     [downgradedBaseQuery],
   );
 
+  const downgradeInsightsQueryInput = useMemo<TokenUsageQuery>(
+    () => ({
+      ...downgradedBaseQuery,
+      limit: 6,
+    }),
+    [downgradedBaseQuery],
+  );
+
   const charactersQuery = useQuery({
     queryKey: ["admin-token-usage-characters"],
     queryFn: () => adminApi.getCharacters(),
@@ -331,6 +340,11 @@ export function TokenUsagePage() {
     queryFn: () => adminApi.getTokenUsageRecords(downgradedRecordsQueryInput),
   });
 
+  const downgradeInsightsQuery = useQuery({
+    queryKey: ["admin-token-usage-downgrade-insights", downgradeInsightsQueryInput],
+    queryFn: () => adminApi.getTokenUsageDowngradeInsights(downgradeInsightsQueryInput),
+  });
+
   const pricingQuery = useQuery({
     queryKey: ["admin-token-usage-pricing"],
     queryFn: () => adminApi.getTokenUsagePricing(),
@@ -382,6 +396,7 @@ export function TokenUsagePage() {
         queryClient.invalidateQueries({ queryKey: ["admin-token-usage-trend"] }),
         queryClient.invalidateQueries({ queryKey: ["admin-token-usage-breakdown"] }),
         queryClient.invalidateQueries({ queryKey: ["admin-token-usage-records"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-token-usage-downgrade-insights"] }),
       ]);
     },
   });
@@ -429,6 +444,7 @@ export function TokenUsagePage() {
     downgradedTrendQuery.isLoading ||
     downgradedBreakdownQuery.isLoading ||
     downgradedRecordsQuery.isLoading ||
+    downgradeInsightsQuery.isLoading ||
     pricingQuery.isLoading ||
     budgetQuery.isLoading;
 
@@ -445,6 +461,7 @@ export function TokenUsagePage() {
     (downgradedTrendQuery.error instanceof Error && downgradedTrendQuery.error) ||
     (downgradedBreakdownQuery.error instanceof Error && downgradedBreakdownQuery.error) ||
     (downgradedRecordsQuery.error instanceof Error && downgradedRecordsQuery.error) ||
+    (downgradeInsightsQuery.error instanceof Error && downgradeInsightsQuery.error) ||
     (pricingQuery.error instanceof Error && pricingQuery.error) ||
     (budgetQuery.error instanceof Error && budgetQuery.error) ||
     null;
@@ -461,6 +478,7 @@ export function TokenUsagePage() {
   const downgradedTrend = downgradedTrendQuery.data ?? [];
   const downgradedBreakdown = downgradedBreakdownQuery.data;
   const downgradedRecords = downgradedRecordsQuery.data;
+  const downgradeInsights = downgradeInsightsQuery.data;
   const budgetSummary = budgetQuery.data?.summary;
   const characters = charactersQuery.data ?? [];
   const currency = overview?.currency ?? pricingDraft?.currency ?? budgetSummary?.currency ?? "CNY";
@@ -488,7 +506,16 @@ export function TokenUsagePage() {
     return characters.filter((item) => !used.has(item.id));
   }, [budgetDraft?.characters, characters]);
 
-  if (loading && !overview && !breakdown && !records && !budgetSummary && !blockedOverview && !downgradedOverview) {
+  if (
+    loading &&
+    !overview &&
+    !breakdown &&
+    !records &&
+    !budgetSummary &&
+    !blockedOverview &&
+    !downgradedOverview &&
+    !downgradeInsights
+  ) {
     return <LoadingBlock label="正在加载 Token 用量中心..." />;
   }
 
@@ -503,6 +530,11 @@ export function TokenUsagePage() {
   const downgradedRequestCount = downgradedOverview?.requestCount ?? 0;
   const downgradedLastRecord = downgradedRecords?.items[0] ?? null;
   const downgradedSuccessShare = calculateRatio(downgradedRequestCount, overview?.successCount ?? 0);
+  const downgradeSwitches = downgradeInsights?.byModelSwitch ?? [];
+  const downgradeTraceability = calculateRatio(
+    downgradeInsights?.traceableRequestCount ?? 0,
+    downgradeInsights?.requestCount ?? 0,
+  );
 
   return (
     <div className="space-y-6">
@@ -1143,6 +1175,99 @@ export function TokenUsagePage() {
         )}
       </Card>
 
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.95fr]">
+        <Card className="bg-[color:var(--surface-console)]">
+          <AdminSectionHeader
+            title="Downgrade Effectiveness"
+            actions={
+              <span className="text-xs text-[color:var(--text-muted)]">
+                Tracked {formatInteger(downgradeInsights?.traceableRequestCount ?? 0)} / {formatInteger(downgradeInsights?.requestCount ?? 0)}
+              </span>
+            }
+          />
+
+          <div className="mt-5 space-y-5">
+            {downgradeInsights?.untraceableRequestCount ? (
+              <InlineNotice tone="warning">
+                当前仍有 {formatInteger(downgradeInsights.untraceableRequestCount)} 次降级记录缺少原模型快照，节省金额会按已追踪到的模型切换保守估算。
+              </InlineNotice>
+            ) : null}
+
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <SummaryTile
+                label="Estimated Savings"
+                value={formatCost(downgradeInsights?.estimatedSavings ?? 0, downgradeInsights?.currency ?? currency)}
+              />
+              <SummaryTile
+                label="Savings Rate"
+                value={formatPercent(downgradeInsights?.savingsRate ?? 0)}
+              />
+              <SummaryTile
+                label="Success Rate"
+                value={formatPercent(downgradeInsights?.successRate ?? 0)}
+              />
+              <SummaryTile
+                label="Switch Coverage"
+                value={formatPercent(downgradeTraceability)}
+              />
+            </div>
+
+            {downgradeSwitches.length ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+                    <tr>
+                      <th className="pb-3 pr-4 font-medium">Requested</th>
+                      <th className="pb-3 pr-4 font-medium">Applied</th>
+                      <th className="pb-3 pr-4 font-medium">Requests</th>
+                      <th className="pb-3 pr-4 font-medium">Actual Cost</th>
+                      <th className="pb-3 font-medium">Saved</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[color:var(--border-faint)] text-[color:var(--text-secondary)]">
+                    {downgradeSwitches.map((item) => (
+                      <tr key={`switch-table-${item.key}`}>
+                        <td className="py-3 pr-4">
+                          <div className="font-medium text-[color:var(--text-primary)]">
+                            {item.requestedModel || "Unknown source model"}
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <div className="font-medium text-[color:var(--text-primary)]">
+                            {item.appliedModel || "Unknown applied model"}
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4">{formatInteger(item.requestCount)}</td>
+                        <td className="py-3 pr-4">
+                          {formatCost(item.estimatedCost, downgradeInsights?.currency ?? currency)}
+                        </td>
+                        <td className="py-3">
+                          <div className="font-medium text-[color:var(--text-primary)]">
+                            {formatCost(item.estimatedSavings, downgradeInsights?.currency ?? currency)}
+                          </div>
+                          <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                            Original {formatCost(item.estimatedOriginalCost, downgradeInsights?.currency ?? currency)}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <EmptyState text="No model-switch insight data in the current range." />
+            )}
+          </div>
+        </Card>
+
+        <DowngradeSwitchCard
+          title="Top Model Switches"
+          items={downgradeSwitches}
+          currency={downgradeInsights?.currency ?? currency}
+          emptyText="No model switches to compare yet."
+        />
+      </div>
+
       <div className="grid gap-6 xl:grid-cols-[1.6fr_1fr]">
         <Card className="bg-[color:var(--surface-console)]">
           <AdminSectionHeader
@@ -1724,6 +1849,60 @@ function RequestBreakdownCard({
                 <div
                   className="h-2 rounded-full bg-[linear-gradient(90deg,rgba(244,63,94,0.92),rgba(249,115,22,0.92))]"
                   style={{ width: `${Math.max(8, (item.requestCount / maxRequests) * 100)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <EmptyState text={emptyText} />
+      )}
+    </Card>
+  );
+}
+
+function DowngradeSwitchCard({
+  title,
+  items,
+  currency,
+  emptyText,
+}: {
+  title: string;
+  items: TokenUsageDowngradeModelSwitchItem[];
+  currency: "CNY" | "USD";
+  emptyText: string;
+}) {
+  const maxSavings = Math.max(...items.map((item) => item.estimatedSavings), 1);
+
+  return (
+    <Card className="bg-[color:var(--surface-console)]">
+      <AdminSectionHeader title={title} />
+      {items.length ? (
+        <div className="mt-5 space-y-3">
+          {items.map((item) => (
+            <div key={`${title}-${item.key}`} className="space-y-1.5">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-medium text-[color:var(--text-primary)]">
+                    {(item.requestedModel || "Unknown source model") + " -> " + (item.appliedModel || "Unknown applied model")}
+                  </div>
+                  <div className="text-xs text-[color:var(--text-muted)]">
+                    {formatInteger(item.requestCount)} requests / actual {formatCost(item.estimatedCost, currency)}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-medium text-[color:var(--text-primary)]">
+                    {formatCost(item.estimatedSavings, currency)}
+                  </div>
+                  <div className="text-xs text-[color:var(--text-muted)]">
+                    original {formatCost(item.estimatedOriginalCost, currency)}
+                  </div>
+                </div>
+              </div>
+              <div className="h-2 rounded-full bg-[color:var(--surface-primary)]">
+                <div
+                  className="h-2 rounded-full bg-[linear-gradient(90deg,rgba(14,165,233,0.92),rgba(34,197,94,0.92))]"
+                  style={{ width: `${Math.max(8, (item.estimatedSavings / maxSavings) * 100)}%` }}
                 />
               </div>
             </div>

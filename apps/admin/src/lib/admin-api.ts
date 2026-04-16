@@ -16,6 +16,7 @@ import type {
   TokenUsageBudgetSnapshot,
   TokenPricingCatalog,
   TokenUsageBreakdownResponse,
+  TokenUsageDowngradeInsights,
   TokenUsageOverview,
   TokenUsageQuery,
   TokenUsageRecordListResponse,
@@ -156,6 +157,8 @@ export const adminApi = {
       method: "POST",
       body: JSON.stringify({ description }),
     }),
+  getFriendCharacterIds: () =>
+    adminFetch<string[]>("/characters/friend-ids"),
   listCharacterPresets: () =>
     adminFetch<CharacterPresetSummary[]>("/characters/presets"),
   installCharacterPreset: (presetKey: string) =>
@@ -242,6 +245,8 @@ export const adminApi = {
     adminFetch<TokenUsageBreakdownResponse>(`/token-usage/breakdown${buildQueryString(query)}`),
   getTokenUsageRecords: (query?: TokenUsageQuery) =>
     adminFetch<TokenUsageRecordListResponse>(`/token-usage/records${buildQueryString(query)}`),
+  getTokenUsageDowngradeInsights: (query?: TokenUsageQuery) =>
+    adminFetch<TokenUsageDowngradeInsights>(`/token-usage/downgrade-insights${buildQueryString(query)}`),
   getTokenUsagePricing: () =>
     adminFetch<TokenPricingCatalog>("/token-usage/pricing"),
   setTokenUsagePricing: (payload: TokenPricingCatalog) =>
