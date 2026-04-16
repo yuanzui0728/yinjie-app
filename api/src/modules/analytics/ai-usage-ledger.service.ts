@@ -21,7 +21,7 @@ type LedgerGrain = 'day' | 'week' | 'month';
 type BudgetMetric = 'tokens' | 'cost';
 type BudgetState = 'inactive' | 'normal' | 'warning' | 'exceeded';
 type BudgetPeriod = 'daily' | 'monthly';
-type BudgetEnforcement = 'monitor' | 'block';
+type BudgetEnforcement = 'monitor' | 'downgrade' | 'block';
 
 type TokenPricingCatalogItem = {
   model: string;
@@ -40,6 +40,7 @@ type TokenUsageBudgetRule = {
   enabled: boolean;
   metric: BudgetMetric;
   enforcement: BudgetEnforcement;
+  downgradeModel: string | null;
   dailyLimit: number | null;
   monthlyLimit: number | null;
   warningRatio: number;
@@ -68,6 +69,7 @@ type TokenUsageBudgetStatus = {
   enabled: boolean;
   metric: BudgetMetric;
   enforcement: BudgetEnforcement;
+  downgradeModel: string | null;
   warningRatio: number;
   daily: TokenUsageBudgetPeriodSummary;
   monthly: TokenUsageBudgetPeriodSummary;
@@ -193,7 +195,8 @@ type BudgetUsageAccumulator = {
   monthly: BudgetUsageAggregate;
 };
 
-type BudgetBlockDecision = {
+type BudgetExecutionDecision = {
+  action: 'block' | 'downgrade';
   scope: 'overall' | 'character';
   period: BudgetPeriod;
   metric: BudgetMetric;
@@ -201,6 +204,7 @@ type BudgetBlockDecision = {
   limit: number;
   characterId?: string;
   characterName?: string;
+  downgradeModel?: string;
   message: string;
 };
 
@@ -364,12 +368,13 @@ export class AiUsageLedgerService {
     };
   }
 
-  async getBudgetBlockDecision(input: {
+  async getBudgetExecutionDecision(input: {
     characterId?: string | null;
     characterName?: string | null;
-  }): Promise<BudgetBlockDecision | null> {
+    currentModel?: string | null;
+  }): Promise<BudgetExecutionDecision | null> {
     const config = await this.getBudgetConfig();
-    const overallRule = this.isBlockingBudgetRule(config.overall)
+    const overallRule = this.isActionableBudgetRule(config.overall)
       ? config.overall
       : null;
     const characterRule =
@@ -377,7 +382,7 @@ export class AiUsageLedgerService {
       (config.characters.find(
         (item) =>
           item.characterId === input.characterId &&
-          this.isBlockingBudgetRule(item),
+          this.isActionableBudgetRule(item),
       ) ??
         null);
 
@@ -388,6 +393,7 @@ export class AiUsageLedgerService {
     const now = new Date();
     const dayStart = this.getPeriodStart(now, 'daily');
     const monthStart = this.getPeriodStart(now, 'monthly');
+    const decisions: BudgetExecutionDecision[] = [];
     const [
       overallDailyUsage,
       overallMonthlyUsage,
@@ -409,12 +415,13 @@ export class AiUsageLedgerService {
         daily: overallDailyUsage,
         monthly: overallMonthlyUsage,
       });
-      const overallDecision = this.pickBudgetBlockDecision(
+      const overallDecision = this.pickBudgetExecutionDecision(
         overallStatus,
         'overall',
+        input.currentModel,
       );
       if (overallDecision) {
-        return overallDecision;
+        decisions.push(overallDecision);
       }
     }
 
@@ -428,13 +435,21 @@ export class AiUsageLedgerService {
         daily: characterDailyUsage,
         monthly: characterMonthlyUsage,
       });
-      return this.pickBudgetBlockDecision(characterStatus, 'character', {
-        characterId: input.characterId,
-        characterName: input.characterName?.trim() || input.characterId,
-      });
+      const characterDecision = this.pickBudgetExecutionDecision(
+        characterStatus,
+        'character',
+        input.currentModel,
+        {
+          characterId: input.characterId,
+          characterName: input.characterName?.trim() || input.characterId,
+        },
+      );
+      if (characterDecision) {
+        decisions.push(characterDecision);
+      }
     }
 
-    return null;
+    return this.selectBudgetExecutionDecision(decisions);
   }
 
   async getOverview(query: TokenUsageQuery) {
@@ -666,11 +681,11 @@ export class AiUsageLedgerService {
     };
   }
 
-  private isBlockingBudgetRule(rule?: TokenUsageBudgetRule | null) {
+  private isActionableBudgetRule(rule?: TokenUsageBudgetRule | null) {
     return Boolean(
       rule &&
         rule.enabled &&
-        rule.enforcement === 'block' &&
+        rule.enforcement !== 'monitor' &&
         (rule.dailyLimit != null || rule.monthlyLimit != null),
     );
   }
@@ -709,18 +724,15 @@ export class AiUsageLedgerService {
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
-  private pickBudgetBlockDecision(
+  private pickBudgetExecutionDecision(
     status: TokenUsageBudgetStatus,
     scope: 'overall' | 'character',
+    currentModel?: string | null,
     character?: {
       characterId: string;
       characterName: string;
     },
-  ): BudgetBlockDecision | null {
-    if (status.enforcement !== 'block') {
-      return null;
-    }
-
+  ): BudgetExecutionDecision | null {
     const exceededSummary =
       status.daily.state === 'exceeded'
         ? status.daily
@@ -731,7 +743,7 @@ export class AiUsageLedgerService {
       return null;
     }
 
-    return {
+    const baseDecision = {
       scope,
       period: exceededSummary.period,
       metric: status.metric,
@@ -739,9 +751,62 @@ export class AiUsageLedgerService {
       limit: exceededSummary.limit,
       characterId: character?.characterId,
       characterName: character?.characterName,
-      message: this.buildBudgetBlockMessage(
+    };
+
+    if (status.enforcement === 'block') {
+      return {
+        ...baseDecision,
+        action: 'block',
+        message: this.buildBudgetBlockMessage(
+          scope,
+          exceededSummary.period,
+          character?.characterName,
+        ),
+      };
+    }
+
+    if (status.enforcement !== 'downgrade') {
+      return null;
+    }
+
+    const downgradeModel = status.downgradeModel?.trim();
+    if (!downgradeModel) {
+      return {
+        ...baseDecision,
+        action: 'block',
+        message: this.buildBudgetDowngradeBlockMessage(
+          scope,
+          exceededSummary.period,
+          character?.characterName,
+          'missing_model',
+        ),
+      };
+    }
+
+    if (
+      currentModel?.trim() &&
+      downgradeModel.toLowerCase() === currentModel.trim().toLowerCase()
+    ) {
+      return {
+        ...baseDecision,
+        action: 'block',
+        message: this.buildBudgetDowngradeBlockMessage(
+          scope,
+          exceededSummary.period,
+          character?.characterName,
+          'same_model',
+        ),
+      };
+    }
+
+    return {
+      ...baseDecision,
+      action: 'downgrade',
+      downgradeModel,
+      message: this.buildBudgetDowngradeMessage(
         scope,
         exceededSummary.period,
+        downgradeModel,
         character?.characterName,
       ),
     };
@@ -758,6 +823,58 @@ export class AiUsageLedgerService {
         : `角色「${characterName ?? '未命名角色'}」`;
     const periodLabel = period === 'daily' ? '今日' : '本月';
     return `${scopeLabel}${periodLabel} AI 预算已用完，请稍后再试。`;
+  }
+
+  private selectBudgetExecutionDecision(
+    decisions: BudgetExecutionDecision[],
+  ): BudgetExecutionDecision | null {
+    if (!decisions.length) {
+      return null;
+    }
+
+    const priority = (decision: BudgetExecutionDecision) => {
+      if (decision.action === 'block') {
+        return decision.scope === 'character' ? 4 : 3;
+      }
+      return decision.scope === 'character' ? 2 : 1;
+    };
+
+    return decisions
+      .slice()
+      .sort((left, right) => priority(right) - priority(left))[0];
+  }
+
+  private buildBudgetDowngradeMessage(
+    scope: 'overall' | 'character',
+    period: BudgetPeriod,
+    downgradeModel: string,
+    characterName?: string,
+  ) {
+    const scopeLabel =
+      scope === 'overall'
+        ? '当前实例'
+        : `角色「${characterName ?? '未命名角色'}」`;
+    const periodLabel = period === 'daily' ? '今日' : '本月';
+    return `${scopeLabel}${periodLabel} AI 预算已超限，已自动降级到模型 ${downgradeModel}。`;
+  }
+
+  private buildBudgetDowngradeBlockMessage(
+    scope: 'overall' | 'character',
+    period: BudgetPeriod,
+    characterName: string | undefined,
+    reason: 'missing_model' | 'same_model',
+  ) {
+    const scopeLabel =
+      scope === 'overall'
+        ? '当前实例'
+        : `角色「${characterName ?? '未命名角色'}」`;
+    const periodLabel = period === 'daily' ? '今日' : '本月';
+
+    if (reason === 'same_model') {
+      return `${scopeLabel}${periodLabel} AI 预算已超限，但降级模型与当前模型相同，已阻断请求。`;
+    }
+
+    return `${scopeLabel}${periodLabel} AI 预算已超限，但未配置可用的降级模型，已阻断请求。`;
   }
 
   private normalizeQuery(query: TokenUsageQuery): NormalizedTokenUsageQuery {
@@ -885,6 +1002,7 @@ export class AiUsageLedgerService {
       enabled: payload?.enabled === true,
       metric: payload?.metric === 'cost' ? 'cost' : 'tokens',
       enforcement: this.normalizeBudgetEnforcement(payload?.enforcement),
+      downgradeModel: this.normalizeString(payload?.downgradeModel) ?? null,
       dailyLimit: this.normalizeBudgetLimit(payload?.dailyLimit),
       monthlyLimit: this.normalizeBudgetLimit(payload?.monthlyLimit),
       warningRatio: this.normalizeWarningRatio(payload?.warningRatio),
@@ -1026,7 +1144,13 @@ export class AiUsageLedgerService {
   }
 
   private normalizeBudgetEnforcement(value?: string | null): BudgetEnforcement {
-    return value === 'block' ? 'block' : 'monitor';
+    if (value === 'block') {
+      return 'block';
+    }
+    if (value === 'downgrade') {
+      return 'downgrade';
+    }
+    return 'monitor';
   }
 
   private normalizeString(value?: string | null) {
@@ -1202,6 +1326,7 @@ export class AiUsageLedgerService {
       enabled: rule.enabled,
       metric: rule.metric,
       enforcement: rule.enforcement,
+      downgradeModel: rule.downgradeModel,
       warningRatio: rule.warningRatio,
       daily: this.buildBudgetPeriodSummary('daily', rule, usage.daily),
       monthly: this.buildBudgetPeriodSummary('monthly', rule, usage.monthly),

@@ -169,7 +169,8 @@ export class AdminController {
       overall?: {
         enabled?: boolean;
         metric?: 'tokens' | 'cost';
-        enforcement?: 'monitor' | 'block';
+        enforcement?: 'monitor' | 'downgrade' | 'block';
+        downgradeModel?: string | null;
         dailyLimit?: number | null;
         monthlyLimit?: number | null;
         warningRatio?: number;
@@ -178,7 +179,8 @@ export class AdminController {
         characterId?: string;
         enabled?: boolean;
         metric?: 'tokens' | 'cost';
-        enforcement?: 'monitor' | 'block';
+        enforcement?: 'monitor' | 'downgrade' | 'block';
+        downgradeModel?: string | null;
         dailyLimit?: number | null;
         monthlyLimit?: number | null;
         warningRatio?: number;
@@ -192,7 +194,12 @@ export class AdminController {
             enabled: body.overall.enabled === true,
             metric: body.overall.metric === 'cost' ? 'cost' : 'tokens',
             enforcement:
-              body.overall.enforcement === 'block' ? 'block' : 'monitor',
+              body.overall.enforcement === 'block'
+                ? 'block'
+                : body.overall.enforcement === 'downgrade'
+                  ? 'downgrade'
+                  : 'monitor',
+            downgradeModel: body.overall.downgradeModel?.trim() || null,
             dailyLimit: body.overall.dailyLimit ?? null,
             monthlyLimit: body.overall.monthlyLimit ?? null,
             warningRatio: body.overall.warningRatio ?? 0.8,
@@ -202,7 +209,13 @@ export class AdminController {
         characterId: item.characterId ?? '',
         enabled: item.enabled === true,
         metric: item.metric === 'cost' ? 'cost' : 'tokens',
-        enforcement: item.enforcement === 'block' ? 'block' : 'monitor',
+        enforcement:
+          item.enforcement === 'block'
+            ? 'block'
+            : item.enforcement === 'downgrade'
+              ? 'downgrade'
+              : 'monitor',
+        downgradeModel: item.downgradeModel?.trim() || null,
         dailyLimit: item.dailyLimit ?? null,
         monthlyLimit: item.monthlyLimit ?? null,
         warningRatio: item.warningRatio ?? 0.8,
