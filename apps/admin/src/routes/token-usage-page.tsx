@@ -228,6 +228,44 @@ export function TokenUsagePage() {
     [blockedBaseQuery],
   );
 
+  const downgradedBaseQuery = useMemo<TokenUsageQuery>(
+    () => ({
+      from,
+      to,
+      characterId: characterId || undefined,
+      conversationId: conversationId || undefined,
+      billingSource: billingSource || undefined,
+      status: "success",
+      errorCode: "BUDGET_DOWNGRADED",
+    }),
+    [billingSource, characterId, conversationId, from, to],
+  );
+
+  const downgradedTrendQueryInput = useMemo<TokenUsageQuery>(
+    () => ({
+      ...downgradedBaseQuery,
+      grain,
+    }),
+    [downgradedBaseQuery, grain],
+  );
+
+  const downgradedBreakdownQueryInput = useMemo<TokenUsageQuery>(
+    () => ({
+      ...downgradedBaseQuery,
+      limit: 5,
+    }),
+    [downgradedBaseQuery],
+  );
+
+  const downgradedRecordsQueryInput = useMemo<TokenUsageQuery>(
+    () => ({
+      ...downgradedBaseQuery,
+      page: 1,
+      pageSize: 8,
+    }),
+    [downgradedBaseQuery],
+  );
+
   const charactersQuery = useQuery({
     queryKey: ["admin-token-usage-characters"],
     queryFn: () => adminApi.getCharacters(),
@@ -271,6 +309,26 @@ export function TokenUsagePage() {
   const blockedRecordsQuery = useQuery({
     queryKey: ["admin-token-usage-blocked-records", blockedRecordsQueryInput],
     queryFn: () => adminApi.getTokenUsageRecords(blockedRecordsQueryInput),
+  });
+
+  const downgradedOverviewQuery = useQuery({
+    queryKey: ["admin-token-usage-downgraded-overview", downgradedBaseQuery],
+    queryFn: () => adminApi.getTokenUsageOverview(downgradedBaseQuery),
+  });
+
+  const downgradedTrendQuery = useQuery({
+    queryKey: ["admin-token-usage-downgraded-trend", downgradedTrendQueryInput],
+    queryFn: () => adminApi.getTokenUsageTrend(downgradedTrendQueryInput),
+  });
+
+  const downgradedBreakdownQuery = useQuery({
+    queryKey: ["admin-token-usage-downgraded-breakdown", downgradedBreakdownQueryInput],
+    queryFn: () => adminApi.getTokenUsageBreakdown(downgradedBreakdownQueryInput),
+  });
+
+  const downgradedRecordsQuery = useQuery({
+    queryKey: ["admin-token-usage-downgraded-records", downgradedRecordsQueryInput],
+    queryFn: () => adminApi.getTokenUsageRecords(downgradedRecordsQueryInput),
   });
 
   const pricingQuery = useQuery({
@@ -367,6 +425,10 @@ export function TokenUsagePage() {
     blockedTrendQuery.isLoading ||
     blockedBreakdownQuery.isLoading ||
     blockedRecordsQuery.isLoading ||
+    downgradedOverviewQuery.isLoading ||
+    downgradedTrendQuery.isLoading ||
+    downgradedBreakdownQuery.isLoading ||
+    downgradedRecordsQuery.isLoading ||
     pricingQuery.isLoading ||
     budgetQuery.isLoading;
 
@@ -379,6 +441,10 @@ export function TokenUsagePage() {
     (blockedTrendQuery.error instanceof Error && blockedTrendQuery.error) ||
     (blockedBreakdownQuery.error instanceof Error && blockedBreakdownQuery.error) ||
     (blockedRecordsQuery.error instanceof Error && blockedRecordsQuery.error) ||
+    (downgradedOverviewQuery.error instanceof Error && downgradedOverviewQuery.error) ||
+    (downgradedTrendQuery.error instanceof Error && downgradedTrendQuery.error) ||
+    (downgradedBreakdownQuery.error instanceof Error && downgradedBreakdownQuery.error) ||
+    (downgradedRecordsQuery.error instanceof Error && downgradedRecordsQuery.error) ||
     (pricingQuery.error instanceof Error && pricingQuery.error) ||
     (budgetQuery.error instanceof Error && budgetQuery.error) ||
     null;
@@ -391,6 +457,10 @@ export function TokenUsagePage() {
   const blockedTrend = blockedTrendQuery.data ?? [];
   const blockedBreakdown = blockedBreakdownQuery.data;
   const blockedRecords = blockedRecordsQuery.data;
+  const downgradedOverview = downgradedOverviewQuery.data;
+  const downgradedTrend = downgradedTrendQuery.data ?? [];
+  const downgradedBreakdown = downgradedBreakdownQuery.data;
+  const downgradedRecords = downgradedRecordsQuery.data;
   const budgetSummary = budgetQuery.data?.summary;
   const characters = charactersQuery.data ?? [];
   const currency = overview?.currency ?? pricingDraft?.currency ?? budgetSummary?.currency ?? "CNY";
@@ -408,12 +478,17 @@ export function TokenUsagePage() {
     [blockedTrend],
   );
 
+  const maxDowngradedRequestCount = useMemo(
+    () => Math.max(...downgradedTrend.map((item) => item.requestCount), 1),
+    [downgradedTrend],
+  );
+
   const availableCharacters = useMemo(() => {
     const used = new Set((budgetDraft?.characters ?? []).map((item) => item.characterId));
     return characters.filter((item) => !used.has(item.id));
   }, [budgetDraft?.characters, characters]);
 
-  if (loading && !overview && !breakdown && !records && !budgetSummary && !blockedOverview) {
+  if (loading && !overview && !breakdown && !records && !budgetSummary && !blockedOverview && !downgradedOverview) {
     return <LoadingBlock label="正在加载 Token 用量中心..." />;
   }
 
@@ -425,6 +500,9 @@ export function TokenUsagePage() {
   const blockedRequestCount = blockedOverview?.requestCount ?? 0;
   const blockedLastRecord = blockedRecords?.items[0] ?? null;
   const blockedFailureShare = calculateRatio(blockedRequestCount, overview?.failedCount ?? 0);
+  const downgradedRequestCount = downgradedOverview?.requestCount ?? 0;
+  const downgradedLastRecord = downgradedRecords?.items[0] ?? null;
+  const downgradedSuccessShare = calculateRatio(downgradedRequestCount, overview?.successCount ?? 0);
 
   return (
     <div className="space-y-6">
@@ -481,6 +559,12 @@ export function TokenUsagePage() {
       {blockedRequestCount > 0 ? (
         <InlineNotice tone="warning">
           褰撳墠绛涢€夋椂闂村唴宸叉湁 {formatInteger(blockedRequestCount)} 娆?AI 璇锋眰鍥犻绠楄秴闄愯闃绘柇锛屽彲鍦ㄤ笅鏂圭殑鈥滈绠楅樆鏂棩蹇椻€濋噷鐩存帴鏌ョ湅鍛戒腑瑙掕壊銆佸満鏅拰杩戞湡璁板綍銆?
+        </InlineNotice>
+      ) : null}
+
+      {downgradedRequestCount > 0 ? (
+        <InlineNotice tone="warning">
+          当前筛选时间内已有 {formatInteger(downgradedRequestCount)} 次请求因预算超限自动降级，可在下方的 &quot;Budget Downgrade Log&quot; 里查看命中角色、场景和最近记录。
         </InlineNotice>
       ) : null}
 
@@ -941,6 +1025,120 @@ export function TokenUsagePage() {
         ) : (
           <div className="mt-5">
             <EmptyState text="No recent budget block records yet." />
+          </div>
+        )}
+      </Card>
+
+      <div className="grid gap-6 xl:grid-cols-[1.3fr_0.85fr]">
+        <Card className="bg-[color:var(--surface-console)]">
+          <AdminSectionHeader
+            title="Budget Downgrade Log"
+            actions={
+              <span className="text-xs text-[color:var(--text-muted)]">
+                {formatInteger(downgradedRequestCount)} hits
+              </span>
+            }
+          />
+
+          {downgradedRequestCount ? (
+            <div className="mt-5 space-y-5">
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <SummaryTile label="Downgraded Requests" value={formatInteger(downgradedRequestCount)} />
+                <SummaryTile label="Affected Characters" value={formatInteger(downgradedOverview?.activeCharacterCount ?? 0)} />
+                <SummaryTile label="Share Of Success" value={formatPercent(downgradedSuccessShare)} />
+                <SummaryTile
+                  label="Last Hit"
+                  value={downgradedLastRecord ? formatDateTime(downgradedLastRecord.occurredAt) : "--"}
+                />
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <AdminMetaText>Downgrade Trend</AdminMetaText>
+                  <span className="text-xs text-[color:var(--text-muted)]">
+                    Grouped by {grain === "month" ? "month" : grain === "week" ? "week" : "day"}
+                  </span>
+                </div>
+
+                {downgradedTrend.length ? (
+                  <div className="space-y-3">
+                    {downgradedTrend.map((point) => (
+                      <div key={point.bucketStart} className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-3 text-xs text-[color:var(--text-secondary)]">
+                          <span>{point.label}</span>
+                          <span>{formatInteger(point.requestCount)} downgraded</span>
+                        </div>
+                        <div className="h-3 rounded-full bg-[color:var(--surface-primary)]">
+                          <div
+                            className="h-3 rounded-full bg-[linear-gradient(90deg,rgba(14,165,233,0.92),rgba(59,130,246,0.92))]"
+                            style={{ width: `${Math.max(8, (point.requestCount / maxDowngradedRequestCount) * 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <EmptyState text="No budget downgrade trend data in the current range." />
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-5">
+              <EmptyState text="No budget downgrade records in the current range." />
+            </div>
+          )}
+        </Card>
+
+        <div className="grid gap-6">
+          <RequestBreakdownCard
+            title="Downgraded Characters"
+            items={downgradedBreakdown?.byCharacter ?? []}
+            emptyText="No character-level downgrade records yet."
+          />
+          <RequestBreakdownCard
+            title="Downgraded Scenes"
+            items={downgradedBreakdown?.byScene ?? []}
+            emptyText="No scene-level downgrade records yet."
+          />
+        </div>
+      </div>
+
+      <Card className="bg-[color:var(--surface-console)]">
+        <AdminSectionHeader title="Recent Budget Downgrades" />
+        {downgradedRecords?.items.length ? (
+          <div className="mt-5 overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+                <tr>
+                  <th className="pb-3 pr-4 font-medium">Time</th>
+                  <th className="pb-3 pr-4 font-medium">Target</th>
+                  <th className="pb-3 pr-4 font-medium">Scene</th>
+                  <th className="pb-3 font-medium">Reason</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[color:var(--border-faint)] text-[color:var(--text-secondary)]">
+                {downgradedRecords.items.map((record) => (
+                  <tr key={`downgraded-${record.id}`}>
+                    <td className="py-3 pr-4">{formatDateTime(record.occurredAt)}</td>
+                    <td className="py-3 pr-4">
+                      <div className="font-medium text-[color:var(--text-primary)]">{record.targetLabel}</div>
+                      <div className="text-xs text-[color:var(--text-muted)]">{record.characterName || record.scopeType}</div>
+                    </td>
+                    <td className="py-3 pr-4">{formatScene(record.scene)}</td>
+                    <td className="py-3">
+                      <div className="font-medium text-[color:var(--text-primary)]">{formatErrorCode(record.errorCode)}</div>
+                      <div className="mt-1 text-xs text-[color:var(--text-muted)]">
+                        {record.errorMessage || "Budget downgraded"}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="mt-5">
+            <EmptyState text="No recent budget downgrade records yet." />
           </div>
         )}
       </Card>
