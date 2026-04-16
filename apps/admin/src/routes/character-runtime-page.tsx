@@ -1,9 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "@tanstack/react-router";
-import {
-  getSystemStatus,
-  type ReplyLogicCharacterSnapshot,
-} from "@yinjie/contracts";
+import type { ReplyLogicCharacterSnapshot } from "@yinjie/contracts";
 import {
   Button,
   Card,
@@ -14,14 +11,12 @@ import {
   StatusPill,
 } from "@yinjie/ui";
 import {
-  AdminCallout,
   AdminPageHero,
   AdminRecordCard,
   AdminValueCard as ValueCard,
 } from "../components/admin-workbench";
 import { adminApi } from "../lib/admin-api";
 import { resolveAdminCoreApiBaseUrl } from "../lib/core-api-base";
-import { buildDigitalHumanAdminSummary } from "../lib/digital-human-admin-summary";
 import { CharacterWorkspaceNav } from "../components/character-workspace-nav";
 
 const ACTIVITY_OPTIONS = [
@@ -42,10 +37,7 @@ export function CharacterRuntimePage() {
     queryKey: ["admin-reply-logic-character", baseUrl, characterId],
     queryFn: () => adminApi.getReplyLogicCharacterSnapshot(characterId),
   });
-  const systemStatusQuery = useQuery({
-    queryKey: ["admin-character-runtime-system-status", baseUrl],
-    queryFn: () => getSystemStatus(baseUrl),
-  });
+
 
   if (snapshotQuery.isLoading) {
     return <LoadingBlock label="正在加载角色运行逻辑..." />;
@@ -61,9 +53,6 @@ export function CharacterRuntimePage() {
 
   const snapshot = snapshotQuery.data;
   const character = snapshot.character;
-  const digitalHumanSummary = buildDigitalHumanAdminSummary(
-    systemStatusQuery.data?.digitalHumanGateway,
-  );
 
   return (
     <div className="space-y-6">
@@ -88,15 +77,6 @@ export function CharacterRuntimePage() {
         }
       />
 
-      <AdminCallout
-        tone={digitalHumanSummary.ready ? "success" : "warning"}
-        title={
-          digitalHumanSummary.ready
-            ? "数字人链路已进入可联调状态"
-            : `数字人当前阻塞：${digitalHumanSummary.statusLabel}`
-        }
-        description={`${digitalHumanSummary.description} ${digitalHumanSummary.nextStep}`}
-      />
 
       <div className="space-y-6">
         <Card className="bg-[color:var(--surface-console)]">
