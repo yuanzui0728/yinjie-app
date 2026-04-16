@@ -1333,6 +1333,10 @@ export function listCharacters(baseUrl?: string) {
   return requestLegacyApi<Character[]>("/characters", undefined, baseUrl);
 }
 
+export function listPresetCatalog(baseUrl?: string) {
+  return requestLegacyApi<Character[]>("/characters/preset-catalog", undefined, baseUrl);
+}
+
 export function getCharacter(id: string, baseUrl?: string) {
   return requestLegacyApi<Character>(`/characters/${id}`, undefined, baseUrl);
 }
