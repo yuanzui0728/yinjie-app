@@ -790,6 +790,7 @@ export class AiOrchestratorService {
       profile,
       isGroupChat,
       chatContext,
+      this.resolveSceneKey(options.usageContext?.scene),
     );
     const historyWindow = await this.replyLogicRules.calculateHistoryWindow(
       profile.memory?.forgettingCurve,
@@ -836,14 +837,25 @@ export class AiOrchestratorService {
     profile: PersonalityProfile,
     isGroupChat?: boolean,
     chatContext?: GenerateReplyOptions['chatContext'],
+    sceneKey?: import('./ai.types').SceneKey,
   ) {
-    let systemPrompt =
-      profile.systemPrompt ??
-      (await this.promptBuilder.buildChatSystemPrompt(
+    let systemPrompt: string;
+    if (profile.systemPrompt) {
+      systemPrompt = profile.systemPrompt;
+    } else if (sceneKey && sceneKey !== 'chat') {
+      // 非聊天场景（评论、问候、主动提醒等）走场景化构建
+      systemPrompt = await this.promptBuilder.buildSceneSystemPrompt(
+        profile,
+        sceneKey,
+        chatContext,
+      );
+    } else {
+      systemPrompt = await this.promptBuilder.buildChatSystemPrompt(
         profile,
         isGroupChat,
         chatContext,
-      ));
+      );
+    }
 
     try {
       const worldCtx = await this.worldService.getLatest();
@@ -865,6 +877,23 @@ export class AiOrchestratorService {
     }
 
     return systemPrompt;
+  }
+
+  /** usageContext.scene → SceneKey 映射，用于场景化提示词路由 */
+  private resolveSceneKey(
+    scene?: string,
+  ): import('./ai.types').SceneKey | undefined {
+    const map: Record<string, import('./ai.types').SceneKey> = {
+      chat_reply: 'chat',
+      moment_post_generate: 'moments_post',
+      feed_post_generate: 'feed_post',
+      channel_post_generate: 'channel_post',
+      moment_comment_generate: 'moments_comment',
+      feed_comment_generate: 'feed_comment',
+      social_greeting_generate: 'greeting',
+      proactive: 'proactive',
+    };
+    return scene ? map[scene] : undefined;
   }
 
   async generateReply(
@@ -889,6 +918,7 @@ export class AiOrchestratorService {
       profile,
       isGroupChat,
       chatContext,
+      this.resolveSceneKey(usageContext.scene),
     );
     const historyWindow = await this.replyLogicRules.calculateHistoryWindow(
       profile.memory?.forgettingCurve,
@@ -1011,10 +1041,12 @@ export class AiOrchestratorService {
 
   async generateMoment(options: GenerateMomentOptions): Promise<string> {
     const { profile, currentTime, recentTopics, usageContext } = options;
+    const sceneKey = this.resolveSceneKey(usageContext?.scene) ?? 'moments_post';
     const prompt = await this.promptBuilder.buildMomentPrompt(
       profile,
       currentTime,
       recentTopics,
+      sceneKey,
     );
 
     const runtimeProvider = await this.resolveRuntimeProvider();
@@ -1289,6 +1321,70 @@ export class AiOrchestratorService {
       );
       this.logger.error('compressMemory error', err);
       return profile.memory?.recentSummary ?? profile.memorySummary;
+    }
+  }
+
+  async extractCoreMemory(
+    interactionHistory: string,
+    profile: PersonalityProfile,
+    usageContext?: AiUsageContext,
+  ): Promise<string> {
+    const prompt = await this.promptBuilder.buildCoreMemoryExtractionPrompt(
+      interactionHistory,
+      profile,
+    );
+
+    const runtimeProvider = await this.resolveRuntimeProvider();
+    const resolvedUsageContext: AiUsageContext = {
+      surface: usageContext?.surface ?? 'scheduler',
+      scene: usageContext?.scene ?? 'core_memory_extract',
+      scopeType: usageContext?.scopeType ?? 'character',
+      scopeId: usageContext?.scopeId ?? profile.characterId,
+      scopeLabel: usageContext?.scopeLabel ?? profile.name,
+      ownerId: usageContext?.ownerId,
+      characterId: usageContext?.characterId ?? profile.characterId,
+      characterName: usageContext?.characterName ?? profile.name,
+    };
+    let failureProvider = runtimeProvider;
+
+    try {
+      const budgetedProvider = await this.prepareBudgetAwareProvider(
+        runtimeProvider,
+        'instance_default',
+        resolvedUsageContext,
+      );
+      const provider = budgetedProvider.provider;
+      failureProvider = provider;
+      const client = this.createProviderClient(provider);
+      const response = await client.chat.completions.create({
+        model: provider.model,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 300,
+        temperature: 0.3,
+      });
+
+      const usage = this.normalizeUsageMetrics(response.usage);
+      await this.recordSuccessfulUsage(
+        provider,
+        'instance_default',
+        resolvedUsageContext,
+        {
+          usage,
+          model: response.model ?? provider.model,
+        },
+        budgetedProvider.usageAudit,
+      );
+
+      return sanitizeAiText(response.choices[0]?.message?.content ?? '');
+    } catch (err) {
+      await this.recordFailedUsage(
+        failureProvider,
+        'instance_default',
+        resolvedUsageContext,
+        err,
+      );
+      this.logger.error('extractCoreMemory error', err);
+      return profile.memory?.coreMemory ?? profile.memorySummary ?? '';
     }
   }
 
