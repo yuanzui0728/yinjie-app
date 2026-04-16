@@ -86,6 +86,14 @@ type PreparedReplyRequest = {
   isGroupChat?: boolean;
 };
 
+type BudgetAwareProviderResult = {
+  provider: ResolvedProviderConfig;
+  usageAudit?: {
+    errorCode: string;
+    errorMessage: string;
+  };
+};
+
 @Injectable()
 export class AiOrchestratorService {
   private readonly logger = new Logger(AiOrchestratorService.name);
@@ -411,6 +419,10 @@ export class AiOrchestratorService {
     billingSource: AiUsageBillingSource,
     usageContext: AiUsageContext,
     result: GenerateReplyResult | { usage?: AiUsageMetrics; model?: string },
+    usageAudit?: {
+      errorCode?: string | null;
+      errorMessage?: string | null;
+    },
   ) {
     await this.safeRecordUsage({
       status: 'success',
@@ -430,6 +442,8 @@ export class AiOrchestratorService {
       apiStyle: provider.apiStyle,
       billingSource,
       usage: result.usage,
+      errorCode: usageAudit?.errorCode ?? null,
+      errorMessage: usageAudit?.errorMessage ?? null,
     });
   }
 
@@ -467,20 +481,43 @@ export class AiOrchestratorService {
     });
   }
 
-  private async assertBudgetAvailable(
+  private async prepareBudgetAwareProvider(
     provider: ResolvedProviderConfig,
     billingSource: AiUsageBillingSource,
     usageContext: AiUsageContext,
-  ) {
-    const blocked = await this.usageLedger.getBudgetBlockDecision({
+  ): Promise<BudgetAwareProviderResult> {
+    const decision = await this.usageLedger.getBudgetExecutionDecision({
       characterId: usageContext.characterId,
       characterName:
         usageContext.characterName ??
         usageContext.scopeLabel ??
         undefined,
+      currentModel: provider.model,
     });
-    if (!blocked) {
-      return;
+    if (!decision) {
+      return { provider };
+    }
+
+    if (decision.action === 'downgrade' && decision.downgradeModel) {
+      const downgradedProvider = {
+        ...provider,
+        model: decision.downgradeModel,
+      };
+      this.logger.warn('AI budget exceeded, downgrading model', {
+        scene: usageContext.scene,
+        scope: decision.scope,
+        period: decision.period,
+        fromModel: provider.model,
+        toModel: decision.downgradeModel,
+        characterId: usageContext.characterId ?? null,
+      });
+      return {
+        provider: downgradedProvider,
+        usageAudit: {
+          errorCode: 'BUDGET_DOWNGRADED',
+          errorMessage: decision.message,
+        },
+      };
     }
 
     await this.safeRecordUsage({
@@ -501,9 +538,9 @@ export class AiOrchestratorService {
       apiStyle: provider.apiStyle,
       billingSource,
       errorCode: 'BUDGET_BLOCKED',
-      errorMessage: blocked.message,
+      errorMessage: decision.message,
     });
-    throw new HttpException(blocked.message, HttpStatus.TOO_MANY_REQUESTS);
+    throw new HttpException(decision.message, HttpStatus.TOO_MANY_REQUESTS);
   }
 
   private async requestReplyFromProvider(
@@ -802,8 +839,8 @@ export class AiOrchestratorService {
       aiKeyOverride,
     } = options;
     const usageContext = this.resolveReplyUsageContext(profile, options);
-    const provider = await this.resolveRuntimeProvider(aiKeyOverride);
-    if (!provider.apiKey) {
+    const runtimeProvider = await this.resolveRuntimeProvider(aiKeyOverride);
+    if (!runtimeProvider.apiKey) {
       return this.buildUnavailableReply(profile);
     }
 
@@ -835,7 +872,12 @@ export class AiOrchestratorService {
     const billingSource: AiUsageBillingSource = aiKeyOverride
       ? 'owner_custom'
       : 'instance_default';
-    await this.assertBudgetAvailable(provider, billingSource, usageContext);
+    const budgetedProvider = await this.prepareBudgetAwareProvider(
+      runtimeProvider,
+      billingSource,
+      usageContext,
+    );
+    const provider = budgetedProvider.provider;
 
     try {
       const result = await this.requestReplyFromProvider(provider, request);
@@ -844,6 +886,7 @@ export class AiOrchestratorService {
         billingSource,
         usageContext,
         result,
+        budgetedProvider.usageAudit,
       );
       return {
         ...result,
@@ -862,16 +905,25 @@ export class AiOrchestratorService {
           this.logger.warn(
             `Owner-level AI key failed authentication for ${profile.characterId}; retrying with instance provider.`,
           );
+          let fallbackProvider = defaultProvider;
           try {
+            const budgetedDefaultProvider =
+              await this.prepareBudgetAwareProvider(
+                defaultProvider,
+                'instance_default',
+                usageContext,
+              );
+            fallbackProvider = budgetedDefaultProvider.provider;
             const fallbackResult = await this.requestReplyFromProvider(
-              defaultProvider,
+              fallbackProvider,
               request,
             );
             await this.recordSuccessfulUsage(
-              defaultProvider,
+              fallbackProvider,
               'instance_default',
               usageContext,
               fallbackResult,
+              budgetedDefaultProvider.usageAudit,
             );
             return {
               ...fallbackResult,
@@ -879,7 +931,7 @@ export class AiOrchestratorService {
             };
           } catch (fallbackError) {
             await this.recordFailedUsage(
-              defaultProvider,
+              fallbackProvider,
               'instance_default',
               usageContext,
               fallbackError,
@@ -924,8 +976,7 @@ export class AiOrchestratorService {
       recentTopics,
     );
 
-    const provider = await this.resolveRuntimeProvider();
-    const client = this.createProviderClient(provider);
+    const runtimeProvider = await this.resolveRuntimeProvider();
     const resolvedUsageContext: AiUsageContext = {
       surface: usageContext?.surface ?? 'app',
       scene: usageContext?.scene ?? 'moment_post_generate',
@@ -938,11 +989,13 @@ export class AiOrchestratorService {
       conversationId: usageContext?.conversationId,
       groupId: usageContext?.groupId,
     };
-    await this.assertBudgetAvailable(
-      provider,
+    const budgetedProvider = await this.prepareBudgetAwareProvider(
+      runtimeProvider,
       'instance_default',
       resolvedUsageContext,
     );
+    const provider = budgetedProvider.provider;
+    const client = this.createProviderClient(provider);
 
     try {
       const response = await client.chat.completions.create({
@@ -961,6 +1014,7 @@ export class AiOrchestratorService {
           usage,
           model: response.model ?? provider.model,
         },
+        budgetedProvider.usageAudit,
       );
 
       return sanitizeAiText(response.choices[0]?.message?.content ?? '');
@@ -985,8 +1039,7 @@ export class AiOrchestratorService {
       personName,
     );
 
-    const provider = await this.resolveRuntimeProvider();
-    const client = this.createProviderClient(provider);
+    const runtimeProvider = await this.resolveRuntimeProvider();
     const resolvedUsageContext: AiUsageContext = {
       surface: usageContext?.surface ?? 'admin',
       scene: usageContext?.scene ?? 'character_factory_extract',
@@ -999,11 +1052,13 @@ export class AiOrchestratorService {
       conversationId: usageContext?.conversationId,
       groupId: usageContext?.groupId,
     };
-    await this.assertBudgetAvailable(
-      provider,
+    const budgetedProvider = await this.prepareBudgetAwareProvider(
+      runtimeProvider,
       'instance_default',
       resolvedUsageContext,
     );
+    const provider = budgetedProvider.provider;
+    const client = this.createProviderClient(provider);
 
     try {
       const response = await client.chat.completions.create({
@@ -1023,6 +1078,7 @@ export class AiOrchestratorService {
           usage,
           model: response.model ?? provider.model,
         },
+        budgetedProvider.usageAudit,
       );
 
       const raw = response.choices[0]?.message?.content ?? '{}';
@@ -1070,19 +1126,20 @@ export class AiOrchestratorService {
   "basePrompt": "角色扮演基础提示词（2-4句话，描述角色的说话风格和行为方式）"
 }`;
 
-    const provider = await this.resolveRuntimeProvider();
-    const client = this.createProviderClient(provider);
+    const runtimeProvider = await this.resolveRuntimeProvider();
     const usageContext: AiUsageContext = {
       surface: 'admin',
       scene: 'quick_character_generate',
       scopeType: 'admin_task',
       scopeLabel: description.slice(0, 48) || 'quick-character',
     };
-    await this.assertBudgetAvailable(
-      provider,
+    const budgetedProvider = await this.prepareBudgetAwareProvider(
+      runtimeProvider,
       'instance_default',
       usageContext,
     );
+    const provider = budgetedProvider.provider;
+    const client = this.createProviderClient(provider);
 
     try {
       const response = await client.chat.completions.create({
@@ -1102,6 +1159,7 @@ export class AiOrchestratorService {
           usage,
           model: response.model ?? provider.model,
         },
+        budgetedProvider.usageAudit,
       );
 
       const raw = response.choices[0]?.message?.content ?? '{}';
@@ -1137,26 +1195,30 @@ export class AiOrchestratorService {
       profile,
     );
 
+    const runtimeProvider = await this.resolveRuntimeProvider();
+    const resolvedUsageContext: AiUsageContext = {
+      surface: usageContext?.surface ?? 'app',
+      scene: usageContext?.scene ?? 'memory_compress',
+      scopeType: usageContext?.scopeType ?? 'character',
+      scopeId: usageContext?.scopeId ?? profile.characterId,
+      scopeLabel: usageContext?.scopeLabel ?? profile.name,
+      ownerId: usageContext?.ownerId,
+      characterId: usageContext?.characterId ?? profile.characterId,
+      characterName: usageContext?.characterName ?? profile.name,
+      conversationId: usageContext?.conversationId,
+      groupId: usageContext?.groupId,
+    };
+    let failureProvider = runtimeProvider;
+
     try {
-      const provider = await this.resolveRuntimeProvider();
-      const client = this.createProviderClient(provider);
-      const resolvedUsageContext: AiUsageContext = {
-        surface: usageContext?.surface ?? 'app',
-        scene: usageContext?.scene ?? 'memory_compress',
-        scopeType: usageContext?.scopeType ?? 'character',
-        scopeId: usageContext?.scopeId ?? profile.characterId,
-        scopeLabel: usageContext?.scopeLabel ?? profile.name,
-        ownerId: usageContext?.ownerId,
-        characterId: usageContext?.characterId ?? profile.characterId,
-        characterName: usageContext?.characterName ?? profile.name,
-        conversationId: usageContext?.conversationId,
-        groupId: usageContext?.groupId,
-      };
-      await this.assertBudgetAvailable(
-        provider,
+      const budgetedProvider = await this.prepareBudgetAwareProvider(
+        runtimeProvider,
         'instance_default',
         resolvedUsageContext,
       );
+      const provider = budgetedProvider.provider;
+      failureProvider = provider;
+      const client = this.createProviderClient(provider);
       const response = await client.chat.completions.create({
         model: provider.model,
         messages: [{ role: 'user', content: prompt }],
@@ -1173,26 +1235,15 @@ export class AiOrchestratorService {
           usage,
           model: response.model ?? provider.model,
         },
+        budgetedProvider.usageAudit,
       );
 
       return sanitizeAiText(response.choices[0]?.message?.content ?? '');
     } catch (err) {
-      const provider = await this.resolveRuntimeProvider();
       await this.recordFailedUsage(
-        provider,
+        failureProvider,
         'instance_default',
-        {
-          surface: usageContext?.surface ?? 'app',
-          scene: usageContext?.scene ?? 'memory_compress',
-          scopeType: usageContext?.scopeType ?? 'character',
-          scopeId: usageContext?.scopeId ?? profile.characterId,
-          scopeLabel: usageContext?.scopeLabel ?? profile.name,
-          ownerId: usageContext?.ownerId,
-          characterId: usageContext?.characterId ?? profile.characterId,
-          characterName: usageContext?.characterName ?? profile.name,
-          conversationId: usageContext?.conversationId,
-          groupId: usageContext?.groupId,
-        },
+        resolvedUsageContext,
         err,
       );
       this.logger.error('compressMemory error', err);
@@ -1210,8 +1261,8 @@ export class AiOrchestratorService {
     reason: string;
     requiredDomains: string[];
   }> {
-    const provider = await this.resolveRuntimeProvider();
-    if (!provider.apiKey) {
+    const runtimeProvider = await this.resolveRuntimeProvider();
+    if (!runtimeProvider.apiKey) {
       return { needsGroupChat: false, reason: '', requiredDomains: [] };
     }
 
@@ -1233,12 +1284,16 @@ export class AiOrchestratorService {
       groupId: usageContext?.groupId,
     };
 
+    let failureProvider = runtimeProvider;
+
     try {
-      await this.assertBudgetAvailable(
-        provider,
+      const budgetedProvider = await this.prepareBudgetAwareProvider(
+        runtimeProvider,
         'instance_default',
         resolvedUsageContext,
       );
+      const provider = budgetedProvider.provider;
+      failureProvider = provider;
       const client = this.createProviderClient(provider);
       const response = await client.chat.completions.create({
         model: provider.model,
@@ -1257,6 +1312,7 @@ export class AiOrchestratorService {
           usage,
           model: response.model ?? provider.model,
         },
+        budgetedProvider.usageAudit,
       );
 
       const raw = response.choices[0]?.message?.content ?? '{}';
@@ -1267,7 +1323,7 @@ export class AiOrchestratorService {
       };
     } catch (error) {
       await this.recordFailedUsage(
-        provider,
+        failureProvider,
         'instance_default',
         resolvedUsageContext,
         error,

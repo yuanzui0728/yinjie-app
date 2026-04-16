@@ -17,7 +17,7 @@ export type TokenUsageBudgetMetric = "tokens" | "cost";
 
 export type TokenUsageBudgetState = "inactive" | "normal" | "warning" | "exceeded";
 
-export type TokenUsageBudgetEnforcement = "monitor" | "block";
+export type TokenUsageBudgetEnforcement = "monitor" | "downgrade" | "block";
 
 export interface TokenPricingCatalogItem {
   model: string;
@@ -36,6 +36,7 @@ export interface TokenUsageBudgetRule {
   enabled: boolean;
   metric: TokenUsageBudgetMetric;
   enforcement?: TokenUsageBudgetEnforcement;
+  downgradeModel?: string | null;
   dailyLimit?: number | null;
   monthlyLimit?: number | null;
   warningRatio?: number;
@@ -64,6 +65,7 @@ export interface TokenUsageBudgetStatus {
   enabled: boolean;
   metric: TokenUsageBudgetMetric;
   enforcement: TokenUsageBudgetEnforcement;
+  downgradeModel: string | null;
   warningRatio: number;
   daily: TokenUsageBudgetPeriodSummary;
   monthly: TokenUsageBudgetPeriodSummary;
