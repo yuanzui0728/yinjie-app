@@ -36,6 +36,8 @@ type ImportChangeRecord = NonNullable<
   NonNullable<CharacterEntity['profile']['wechatSyncImport']>['changeHistory']
 >[number];
 
+type ImportChangeDiffRecord = NonNullable<ImportChangeRecord['diffs']>[number];
+
 @Injectable()
 export class WechatSyncAdminService {
   private readonly logger = new Logger(WechatSyncAdminService.name);
@@ -900,10 +902,13 @@ function buildImportChangeRecord(input: {
     input.importMode === 'snapshot_restore'
       ? 'snapshot_restore'
       : 'preview_import';
-  const changedFields = collectSnapshotChangedFields(
+  const diffs = buildSnapshotDiffRecords(
     input.previousSnapshot ?? null,
     input.currentSnapshot,
   );
+  const changedFields = diffs
+    .filter((item) => item.changed)
+    .map((item) => item.label);
 
   return {
     id: randomUUID(),
@@ -921,6 +926,7 @@ function buildImportChangeRecord(input: {
       restoredFromVersion: input.restoredFromVersion ?? null,
     }),
     changedFields,
+    diffs,
   };
 }
 
@@ -956,38 +962,38 @@ function buildImportChangeSummary(input: {
   return `已按当前预览更新为 v${input.currentSnapshot.version}，变更 ${input.changedFields.length} 项：${changedSummary}。`;
 }
 
-function collectSnapshotChangedFields(
+function buildSnapshotDiffRecords(
   previousSnapshot: ImportSnapshotRecord | null,
   currentSnapshot: ImportSnapshotRecord,
 ) {
   return [
-    createSnapshotDiffLabel(
+    createSnapshotDiffRecord(
       '角色名',
       previousSnapshot?.draftCharacter.name ?? '',
       currentSnapshot.draftCharacter.name ||
         currentSnapshot.contact.displayName,
     ),
-    createSnapshotDiffLabel(
+    createSnapshotDiffRecord(
       '关系定位',
       previousSnapshot?.draftCharacter.relationship ?? '',
       currentSnapshot.draftCharacter.relationship,
     ),
-    createSnapshotDiffLabel(
+    createSnapshotDiffRecord(
       '角色简介',
       previousSnapshot?.draftCharacter.bio ?? '',
       currentSnapshot.draftCharacter.bio,
     ),
-    createSnapshotDiffLabel(
+    createSnapshotDiffRecord(
       '领域标签',
       (previousSnapshot?.draftCharacter.expertDomains ?? []).join('、'),
       currentSnapshot.draftCharacter.expertDomains.join('、'),
     ),
-    createSnapshotDiffLabel(
+    createSnapshotDiffRecord(
       '记忆摘要',
       previousSnapshot?.draftCharacter.memorySummary ?? '',
       currentSnapshot.draftCharacter.memorySummary,
     ),
-    createSnapshotDiffLabel(
+    createSnapshotDiffRecord(
       '微信备注/显示名',
       previousSnapshot?.contact.remarkName?.trim() ||
         previousSnapshot?.contact.nickname?.trim() ||
@@ -997,41 +1003,42 @@ function collectSnapshotChangedFields(
         currentSnapshot.contact.nickname?.trim() ||
         currentSnapshot.contact.displayName,
     ),
-    createSnapshotDiffLabel(
+    createSnapshotDiffRecord(
       '地区',
       previousSnapshot?.contact.region ?? '',
       currentSnapshot.contact.region ?? '',
     ),
-    createSnapshotDiffLabel(
+    createSnapshotDiffRecord(
       '联系人标签',
       (previousSnapshot?.contact.tags ?? []).join('、'),
       currentSnapshot.contact.tags.join('、'),
     ),
-    createSnapshotDiffLabel(
+    createSnapshotDiffRecord(
       '聊天摘要',
       previousSnapshot?.contact.chatSummary ?? '',
       currentSnapshot.contact.chatSummary ?? '',
     ),
-  ]
-    .filter((item) => item.changed)
-    .map((item) => item.label);
+  ];
 }
 
-function createSnapshotDiffLabel(
+function createSnapshotDiffRecord(
   label: string,
   previousValue: string,
   nextValue: string,
-) {
+): ImportChangeDiffRecord {
   const normalizedPrevious = normalizeSnapshotDiffValue(previousValue);
   const normalizedNext = normalizeSnapshotDiffValue(nextValue);
   return {
     label,
+    previousValue: normalizedPrevious,
+    nextValue: normalizedNext,
     changed: normalizedPrevious !== normalizedNext,
   };
 }
 
 function normalizeSnapshotDiffValue(value?: string | null) {
-  return typeof value === 'string' ? value.trim() : '';
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  return normalized || '暂无';
 }
 
 function summarizeChangedFieldLabels(labels: string[]) {

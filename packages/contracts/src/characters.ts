@@ -10,6 +10,8 @@ export type CharacterSourceType =
   | "preset_catalog"
   | "manual_admin"
   | "need_generated"
+  | "shake_generated"
+  | "ai_generated"
   | "wechat_import";
 export type CharacterDeletionPolicy = "protected" | "archive_allowed";
 export type CharacterPresetGroupKey =
@@ -184,6 +186,13 @@ export interface WechatSyncImportSnapshot {
 
 export type WechatSyncImportMode = "preview_import" | "snapshot_restore";
 
+export interface WechatSyncImportChangeDiff {
+  label: string;
+  previousValue: string;
+  nextValue: string;
+  changed: boolean;
+}
+
 export interface WechatSyncImportChangeRecord {
   id: string;
   recordedAt: string;
@@ -193,6 +202,7 @@ export interface WechatSyncImportChangeRecord {
   toVersion: number;
   summary: string;
   changedFields: string[];
+  diffs?: WechatSyncImportChangeDiff[];
 }
 
 export interface WechatSyncImportMetadata {

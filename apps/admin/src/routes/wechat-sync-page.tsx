@@ -1990,7 +1990,10 @@ function HistoryDetailPanel({
 
       {importChangeHistory.length ? (
         <div className="mt-4">
-          <ImportChangeHistoryList records={importChangeHistory} />
+          <ImportChangeHistoryList
+            key={item.character.id}
+            records={importChangeHistory}
+          />
         </div>
       ) : currentImportSnapshot ? (
         <div className="mt-4">
@@ -2130,7 +2133,15 @@ function HistoryDetailPanel({
   );
 }
 
-function HistoryDiffCard({ diff }: { diff: HistoryDiffCardValue }) {
+function HistoryDiffCard({
+  diff,
+  currentHeading = "当前线上角色",
+  nextHeading = "当前预览草稿",
+}: {
+  diff: HistoryDiffCardValue;
+  currentHeading?: string;
+  nextHeading?: string;
+}) {
   return (
     <div
       className={`rounded-2xl border px-4 py-3 ${
@@ -2150,7 +2161,7 @@ function HistoryDiffCard({ diff }: { diff: HistoryDiffCardValue }) {
       <div className="mt-3 grid gap-3">
         <div>
           <div className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
-            当前线上角色
+            {currentHeading}
           </div>
           <div className="mt-1 rounded-2xl border border-[color:var(--border-faint)] bg-white/80 px-3 py-2 text-sm leading-6 text-[color:var(--text-secondary)]">
             {diff.currentValue}
@@ -2158,7 +2169,7 @@ function HistoryDiffCard({ diff }: { diff: HistoryDiffCardValue }) {
         </div>
         <div>
           <div className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
-            当前预览草稿
+            {nextHeading}
           </div>
           <div className="mt-1 rounded-2xl border border-[color:var(--border-faint)] bg-white/80 px-3 py-2 text-sm leading-6 text-[color:var(--text-secondary)]">
             {diff.nextValue}
@@ -2174,60 +2185,181 @@ function ImportChangeHistoryList({
 }: {
   records: WechatImportChangeRecordLike[];
 }) {
+  const [search, setSearch] = useState("");
+  const [modeFilter, setModeFilter] = useState<
+    "all" | "preview_import" | "snapshot_restore"
+  >("all");
+  const [expandedRecordId, setExpandedRecordId] = useState<string | null>(null);
+  const deferredSearch = useDeferredValue(search.trim().toLowerCase());
+  const filteredRecords = useMemo(() => {
+    return records.filter((record) => {
+      if (modeFilter !== "all" && record.mode !== modeFilter) {
+        return false;
+      }
+      if (!deferredSearch) {
+        return true;
+      }
+      return buildImportChangeRecordKeyword(record).includes(deferredSearch);
+    });
+  }, [deferredSearch, modeFilter, records]);
+
   return (
     <div>
-      <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
-        变更记录
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div>
+          <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+            变更记录
+          </div>
+          <div className="mt-2 text-sm text-[color:var(--text-secondary)]">
+            共 {records.length} 条，当前命中 {filteredRecords.length} 条。
+          </div>
+        </div>
+        <div className="grid gap-3 xl:min-w-[30rem] xl:grid-cols-[1fr_auto]">
+          <AdminTextField
+            label="筛选变更记录"
+            value={search}
+            onChange={setSearch}
+            placeholder="搜索摘要、版本号、字段名或字段值"
+          />
+          <div className="flex flex-wrap gap-2 xl:justify-end">
+            <Button
+              variant={modeFilter === "all" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => setModeFilter("all")}
+            >
+              全部
+            </Button>
+            <Button
+              variant={
+                modeFilter === "preview_import" ? "primary" : "secondary"
+              }
+              size="sm"
+              onClick={() => setModeFilter("preview_import")}
+            >
+              重新导入
+            </Button>
+            <Button
+              variant={
+                modeFilter === "snapshot_restore" ? "primary" : "secondary"
+              }
+              size="sm"
+              onClick={() => setModeFilter("snapshot_restore")}
+            >
+              历史恢复
+            </Button>
+          </div>
+        </div>
       </div>
+
+      {!filteredRecords.length ? (
+        <AdminEmptyState
+          className="mt-4"
+          title="当前筛选没有匹配的变更记录"
+          description="调整搜索词或筛选类型后，再查看这条角色的导入审计轨迹。"
+        />
+      ) : null}
+
       <div className="mt-3 space-y-3">
-        {records.map((record) => (
-          <Card key={record.id} className="bg-[color:var(--surface-soft)]">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="space-y-2 text-sm text-[color:var(--text-secondary)]">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-base font-semibold text-[color:var(--text-primary)]">
-                    v{record.toVersion}
-                  </span>
-                  <StatusPill
-                    tone={
-                      record.mode === "snapshot_restore" ? "warning" : "muted"
+        {filteredRecords.map((record) => {
+          const expanded = expandedRecordId === record.id;
+          const diffHeadings = buildImportChangeDiffHeadings(record);
+
+          return (
+            <Card key={record.id} className="bg-[color:var(--surface-soft)]">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-2 text-sm text-[color:var(--text-secondary)]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-base font-semibold text-[color:var(--text-primary)]">
+                      v{record.toVersion}
+                    </span>
+                    <StatusPill
+                      tone={
+                        record.mode === "snapshot_restore" ? "warning" : "muted"
+                      }
+                    >
+                      {record.mode === "snapshot_restore"
+                        ? "历史版本恢复"
+                        : "预览重新导入"}
+                    </StatusPill>
+                    <StatusPill
+                      tone={record.changedFields.length ? "warning" : "healthy"}
+                    >
+                      {record.changedFields.length
+                        ? `变更 ${record.changedFields.length} 项`
+                        : "无字段差异"}
+                    </StatusPill>
+                  </div>
+                  <div>记录时间：{formatDateTime(record.recordedAt)}</div>
+                  <div>
+                    版本轨迹：
+                    {buildChangeRecordVersionPath(record)}
+                  </div>
+                  <div className="rounded-2xl border border-[color:var(--border-faint)] bg-white/80 px-3 py-2 leading-6">
+                    {record.summary}
+                  </div>
+                </div>
+                <div className="flex max-w-xl flex-col items-start gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    {record.changedFields.length ? (
+                      record.changedFields.map((field) => (
+                        <StatusPill
+                          key={`${record.id}-${field}`}
+                          tone="warning"
+                        >
+                          {field}
+                        </StatusPill>
+                      ))
+                    ) : (
+                      <StatusPill tone="healthy">无字段差异</StatusPill>
+                    )}
+                  </div>
+                  <Button
+                    variant={expanded ? "primary" : "secondary"}
+                    size="sm"
+                    onClick={() =>
+                      setExpandedRecordId((current) =>
+                        current === record.id ? null : record.id,
+                      )
                     }
                   >
-                    {record.mode === "snapshot_restore"
-                      ? "历史版本恢复"
-                      : "预览重新导入"}
-                  </StatusPill>
-                  <StatusPill
-                    tone={record.changedFields.length ? "warning" : "healthy"}
-                  >
-                    {record.changedFields.length
-                      ? `变更 ${record.changedFields.length} 项`
-                      : "无字段差异"}
-                  </StatusPill>
-                </div>
-                <div>记录时间：{formatDateTime(record.recordedAt)}</div>
-                <div>
-                  版本轨迹：
-                  {buildChangeRecordVersionPath(record)}
-                </div>
-                <div className="rounded-2xl border border-[color:var(--border-faint)] bg-white/80 px-3 py-2 leading-6">
-                  {record.summary}
+                    {expanded ? "收起完整 diff" : "展开完整 diff"}
+                  </Button>
                 </div>
               </div>
-              <div className="flex max-w-xl flex-wrap gap-2">
-                {record.changedFields.length ? (
-                  record.changedFields.map((field) => (
-                    <StatusPill key={`${record.id}-${field}`} tone="warning">
-                      {field}
-                    </StatusPill>
-                  ))
+              {expanded ? (
+                record.diffs?.length ? (
+                  <div className="mt-4 space-y-3">
+                    <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+                      {diffHeadings.title}
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {record.diffs.map((diff) => (
+                        <HistoryDiffCard
+                          key={`${record.id}-${diff.label}`}
+                          diff={{
+                            label: diff.label,
+                            currentValue: diff.previousValue,
+                            nextValue: diff.nextValue,
+                            changed: diff.changed,
+                          }}
+                          currentHeading={diffHeadings.previous}
+                          nextHeading={diffHeadings.next}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 ) : (
-                  <StatusPill tone="healthy">无字段差异</StatusPill>
-                )}
-              </div>
-            </div>
-          </Card>
-        ))}
+                  <AdminCallout
+                    className="mt-4"
+                    title="这条旧记录还没有完整 diff 快照"
+                    tone="muted"
+                    description="这条变更记录创建时系统还未持久化字段级 diff。后续产生的新记录都会在这里直接展开完整对比。"
+                  />
+                )
+              ) : null}
+            </Card>
+          );
+        })}
       </div>
     </div>
   );
@@ -3067,6 +3199,44 @@ function buildChangeRecordVersionPath(record: WechatImportChangeRecordLike) {
     return `${previousVersion} -> 快照 v${record.restoredFromVersion ?? "?"} -> v${record.toVersion}`;
   }
   return `${previousVersion} -> v${record.toVersion}`;
+}
+
+function buildImportChangeRecordKeyword(record: WechatImportChangeRecordLike) {
+  return [
+    record.summary,
+    buildChangeRecordVersionPath(record),
+    record.mode === "snapshot_restore" ? "历史版本恢复" : "预览重新导入",
+    ...record.changedFields,
+    ...(record.diffs ?? []).flatMap((diff) => [
+      diff.label,
+      diff.previousValue,
+      diff.nextValue,
+    ]),
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+function buildImportChangeDiffHeadings(record: WechatImportChangeRecordLike) {
+  if (record.mode === "snapshot_restore") {
+    return {
+      title: "恢复前 / 恢复后完整 diff",
+      previous:
+        record.previousVersion && record.previousVersion > 0
+          ? `恢复前 v${record.previousVersion}`
+          : "恢复前为空",
+      next: `恢复后 v${record.toVersion}`,
+    };
+  }
+
+  return {
+    title: "上一版 / 当前版完整 diff",
+    previous:
+      record.previousVersion && record.previousVersion > 0
+        ? `上一版 v${record.previousVersion}`
+        : "导入前为空",
+    next: `当前版 v${record.toVersion}`,
+  };
 }
 
 function buildContactBundleFromImportSnapshot(

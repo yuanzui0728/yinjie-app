@@ -97,6 +97,13 @@ export interface WechatSyncImportSnapshotValue {
 
 export type WechatSyncImportModeValue = 'preview_import' | 'snapshot_restore';
 
+export interface WechatSyncImportChangeDiffValue {
+  label: string;
+  previousValue: string;
+  nextValue: string;
+  changed: boolean;
+}
+
 export interface WechatSyncImportChangeRecordValue {
   id: string;
   recordedAt: string;
@@ -106,6 +113,7 @@ export interface WechatSyncImportChangeRecordValue {
   toVersion: number;
   summary: string;
   changedFields: string[];
+  diffs?: WechatSyncImportChangeDiffValue[];
 }
 
 export interface WechatSyncImportMetadataValue {
