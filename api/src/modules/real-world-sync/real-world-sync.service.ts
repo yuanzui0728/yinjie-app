@@ -188,10 +188,19 @@ type SignalSeed = {
 type ParsedFeedEntry = {
   sourceName: string;
   sourceUrl: string;
+  publisherUrl?: string | null;
   title: string;
   snippet: string;
   publishedAt?: Date | null;
 };
+
+type WorldNewsBulletinSlot = 'morning' | 'noon' | 'evening';
+
+const WORLD_NEWS_BULLETIN_SLOT_ORDER: WorldNewsBulletinSlot[] = [
+  'morning',
+  'noon',
+  'evening',
+];
 
 const REALITY_LINKED_GENERATION_KINDS = [
   'reality_linked_ai',
@@ -215,6 +224,29 @@ const WORLD_NEWS_RSS_FEEDS: Record<string, string[]> = {
 
 const DEFAULT_WORLD_NEWS_FEED_LABELS = Object.keys(WORLD_NEWS_RSS_FEEDS);
 
+const DEFAULT_GOOGLE_NEWS_SOURCE_NAME = 'Google News';
+
+function readWorldNewsBulletinSlot(
+  post: Pick<MomentPostEntity, 'generationKind' | 'generationMetadata'>,
+): WorldNewsBulletinSlot | null {
+  if (post.generationKind !== WORLD_NEWS_BULLETIN_GENERATION_KIND) {
+    return null;
+  }
+
+  const slot = post.generationMetadata?.slot;
+  return slot === 'morning' || slot === 'noon' || slot === 'evening'
+    ? slot
+    : null;
+}
+
+function sortWorldNewsBulletinSlots(slots: Iterable<WorldNewsBulletinSlot>) {
+  return [...slots].sort(
+    (left, right) =>
+      WORLD_NEWS_BULLETIN_SLOT_ORDER.indexOf(left) -
+      WORLD_NEWS_BULLETIN_SLOT_ORDER.indexOf(right),
+  );
+}
+
 function decodeXmlEntities(value: string) {
   return value
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
@@ -233,11 +265,33 @@ function normalizeFeedText(value: string) {
   return decodeXmlEntities(stripHtml(value)).replace(/\s+/g, ' ').trim();
 }
 
+function normalizeComparableText(value: string) {
+  return normalizeFeedText(value)
+    .toLowerCase()
+    .replace(/[\s"'`‘’“”.,:;!?()[\]{}<>/\\|_+-]+/g, '');
+}
+
 function extractTagValue(block: string, tagName: string) {
   const match = block.match(
     new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i'),
   );
   return match ? normalizeFeedText(match[1]) : '';
+}
+
+function extractSourceTag(block: string, fallbackSourceName: string) {
+  const match = block.match(/<source\b([^>]*)>([\s\S]*?)<\/source>/i);
+  if (!match) {
+    return {
+      sourceName: fallbackSourceName,
+      publisherUrl: null,
+    };
+  }
+
+  const publisherUrlMatch = match[1].match(/\burl=['"]([^'"]+)['"]/i);
+  return {
+    sourceName: normalizeFeedText(match[2]) || fallbackSourceName,
+    publisherUrl: publisherUrlMatch?.[1]?.trim() ?? null,
+  };
 }
 
 function extractAtomLink(block: string) {
@@ -253,6 +307,33 @@ function normalizeFeedDate(value?: string) {
 
   const parsed = new Date(normalized);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function cleanupFeedSnippet(
+  snippet: string,
+  title: string,
+  sourceName: string,
+) {
+  const normalizedSnippet = normalizeFeedText(snippet);
+  if (!normalizedSnippet) {
+    return '';
+  }
+
+  const withoutTitle = normalizedSnippet
+    .replace(new RegExp(`^${escapeRegExp(title)}\\s*`, 'i'), '')
+    .replace(new RegExp(`\\s*${escapeRegExp(sourceName)}$`, 'i'), '')
+    .trim();
+  return withoutTitle || normalizedSnippet;
+}
+
+function cleanupFeedTitle(title: string, sourceName: string) {
+  return title
+    .replace(new RegExp(`\\s+-\\s+${escapeRegExp(sourceName)}$`, 'i'), '')
+    .trim();
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function hasConfiguredRealityLink(
@@ -307,23 +388,36 @@ export class RealWorldSyncService {
     const rules = await this.rulesService.getRules();
     const today = formatSyncDate(new Date());
     const todayStart = startOfDay(new Date());
-    const [characters, recentRuns, recentSignals, activeDigests] =
-      await Promise.all([
-        this.characterRepo.find({ order: { name: 'ASC' } }),
-        this.runRepo.find({
-          order: { createdAt: 'DESC' },
-          take: 20,
-        }),
-        this.signalRepo.find({
-          order: { createdAt: 'DESC' },
-          take: 20,
-        }),
-        this.digestRepo.find({
-          where: { status: 'active' },
-          order: { appliedAt: 'DESC', updatedAt: 'DESC' },
-          take: 20,
-        }),
-      ]);
+    const [
+      characters,
+      recentRuns,
+      recentSignals,
+      activeDigests,
+      todayBulletins,
+    ] = await Promise.all([
+      this.characterRepo.find({ order: { name: 'ASC' } }),
+      this.runRepo.find({
+        order: { createdAt: 'DESC' },
+        take: 20,
+      }),
+      this.signalRepo.find({
+        order: { createdAt: 'DESC' },
+        take: 20,
+      }),
+      this.digestRepo.find({
+        where: { status: 'active' },
+        order: { appliedAt: 'DESC', updatedAt: 'DESC' },
+        take: 20,
+      }),
+      this.momentPostRepo.find({
+        where: {
+          generationKind: WORLD_NEWS_BULLETIN_GENERATION_KIND,
+          postedAt: MoreThanOrEqual(todayStart),
+        },
+        order: { postedAt: 'DESC' },
+        take: 60,
+      }),
+    ]);
     const todaySignals = recentSignals.filter(
       (item) => item.syncDate === today,
     );
@@ -362,22 +456,38 @@ export class RealWorldSyncService {
       order: { postedAt: 'DESC' },
       take: 200,
     });
-    const charactersWithRealityMomentsToday = new Set(
-      realityLinkedMoments
-        .filter((item) => formatSyncDate(item.postedAt) === today)
-        .map((item) => item.authorId),
+    const todayRealityLinkedMoments = realityLinkedMoments.filter(
+      (item) => formatSyncDate(item.postedAt) === today,
     );
+    const charactersWithRealityMomentsToday = new Set(
+      todayRealityLinkedMoments.map((item) => item.authorId),
+    );
+    const todayBulletinSlotsByCharacterId = new Map<
+      string,
+      Set<WorldNewsBulletinSlot>
+    >();
+    for (const post of todayBulletins) {
+      const slot = readWorldNewsBulletinSlot(post);
+      if (!slot) {
+        continue;
+      }
+      if (!todayBulletinSlotsByCharacterId.has(post.authorId)) {
+        todayBulletinSlotsByCharacterId.set(post.authorId, new Set());
+      }
+      todayBulletinSlotsByCharacterId.get(post.authorId)?.add(slot);
+    }
 
     const characterSummaries = (
       await Promise.all(
         characters.map(async (character) => {
           const config = await this.getRealityLinkConfig(character, rules);
-        const activeDigest = activeDigestByCharacterId.get(character.id);
-        const latestRun = latestRunByCharacterId.get(character.id);
+          const activeDigest = activeDigestByCharacterId.get(character.id);
+          const latestRun = latestRunByCharacterId.get(character.id);
           return {
             characterId: character.id,
             characterName: character.name,
             characterAvatar: character.avatar,
+            isWorldNewsDesk: character.sourceKey === WORLD_NEWS_DESK_SOURCE_KEY,
             enabled: config.enabled,
             applyMode: config.applyMode,
             subjectType: config.subjectType,
@@ -391,11 +501,13 @@ export class RealWorldSyncService {
             hasRealityLinkedMomentToday: charactersWithRealityMomentsToday.has(
               character.id,
             ),
+            todayBulletinSlots: sortWorldNewsBulletinSlots(
+              todayBulletinSlotsByCharacterId.get(character.id) ?? [],
+            ),
           };
         }),
       )
-    )
-      .filter((item) => item.enabled || item.hasActiveDigest);
+    ).filter((item) => item.enabled || item.hasActiveDigest);
 
     return {
       rules,
@@ -409,6 +521,7 @@ export class RealWorldSyncService {
         signalsToday: todaySignals.filter((item) => item.status === 'accepted')
           .length,
         realityLinkedMomentsToday,
+        newsBulletinsToday: todayBulletins.length,
       },
       recentRuns: recentRuns.map((item) => this.toRunRecord(item)),
       recentSignals: recentSignals.map((item) => this.toSignalRecord(item)),
@@ -419,7 +532,7 @@ export class RealWorldSyncService {
 
   async getCharacterDetail(characterId: string) {
     const rules = await this.rulesService.getRules();
-    const [character, runs, signals, digests, momentsToday] =
+    const [character, runs, signals, digests, momentsToday, todayBulletins] =
       await Promise.all([
         this.characterRepo.findOneBy({ id: characterId }),
         this.runRepo.find({
@@ -444,6 +557,15 @@ export class RealWorldSyncService {
             postedAt: MoreThanOrEqual(startOfDay(new Date())),
           },
         }),
+        this.momentPostRepo.find({
+          where: {
+            authorId: characterId,
+            generationKind: WORLD_NEWS_BULLETIN_GENERATION_KIND,
+            postedAt: MoreThanOrEqual(startOfDay(new Date())),
+          },
+          order: { postedAt: 'DESC' },
+          take: 8,
+        }),
       ]);
 
     if (!character) {
@@ -453,17 +575,26 @@ export class RealWorldSyncService {
     const config = await this.getRealityLinkConfig(character, rules);
     const activeDigest =
       digests.find((item) => item.status === 'active') ?? null;
+    const todayBulletinSlots = sortWorldNewsBulletinSlots(
+      new Set(
+        todayBulletins
+          .map((post) => readWorldNewsBulletinSlot(post))
+          .filter((slot): slot is WorldNewsBulletinSlot => Boolean(slot)),
+      ),
+    );
 
     return {
       characterId: character.id,
       characterName: character.name,
       characterAvatar: character.avatar,
+      isWorldNewsDesk: character.sourceKey === WORLD_NEWS_DESK_SOURCE_KEY,
       config,
       activeDigest: activeDigest ? this.toDigestRecord(activeDigest) : null,
       recentRuns: runs.map((item) => this.toRunRecord(item)),
       recentSignals: signals.map((item) => this.toSignalRecord(item)),
       recentDigests: digests.map((item) => this.toDigestRecord(item)),
       hasRealityLinkedMomentToday: momentsToday > 0,
+      todayBulletinSlots,
     };
   }
 
@@ -739,6 +870,18 @@ export class RealWorldSyncService {
       if (liveSignals.length > 0) {
         return liveSignals;
       }
+
+      return this.buildMockSignals(character, config, rules, now);
+    }
+
+    if (rules.providerMode === 'google_news_rss') {
+      const liveSignals = await this.buildGoogleNewsSignals(config, rules, now);
+      const hasAcceptedSignals = liveSignals.some(
+        (item) => item.status === 'accepted',
+      );
+      if (hasAcceptedSignals || !rules.googleNews.fallbackToMockOnEmpty) {
+        return liveSignals;
+      }
     }
 
     return this.buildMockSignals(character, config, rules, now);
@@ -804,6 +947,340 @@ export class RealWorldSyncService {
       }));
   }
 
+  private async buildGoogleNewsSignals(
+    config: RealityLinkConfigValue,
+    rules: RealWorldSyncRulesValue,
+    now: Date,
+  ): Promise<SignalSeed[]> {
+    const query = this.renderQuery(config);
+    const feedEntries = await this.fetchFeedEntries(
+      DEFAULT_GOOGLE_NEWS_SOURCE_NAME,
+      this.buildGoogleNewsSearchUrl(query, rules),
+    );
+    if (feedEntries.length === 0) {
+      return [];
+    }
+
+    const acceptedLimit = Math.max(config.maxSignalsPerRun, 1);
+    const maxEntries = Math.max(
+      acceptedLimit,
+      rules.googleNews.maxEntriesPerQuery,
+      1,
+    );
+    const recencyCutoff = new Date(
+      now.getTime() - config.recencyHours * 60 * 60 * 1000,
+    );
+    const dedupe = new Set<string>();
+    const seeds: SignalSeed[] = [];
+    let acceptedCount = 0;
+
+    for (const entry of feedEntries
+      .slice()
+      .sort((left, right) => {
+        const leftTs = left.publishedAt?.getTime() ?? 0;
+        const rightTs = right.publishedAt?.getTime() ?? 0;
+        return rightTs - leftTs;
+      })
+      .slice(0, maxEntries)) {
+      const seed = this.classifyGoogleNewsSignal(
+        entry,
+        config,
+        rules,
+        now,
+        recencyCutoff,
+        dedupe,
+      );
+      if (!seed) {
+        continue;
+      }
+
+      if (seed.status === 'accepted' && acceptedCount >= acceptedLimit) {
+        continue;
+      }
+
+      seeds.push(seed);
+      if (seed.status === 'accepted') {
+        acceptedCount += 1;
+      }
+    }
+
+    return seeds;
+  }
+
+  private buildGoogleNewsSearchUrl(
+    query: string,
+    rules: RealWorldSyncRulesValue,
+  ) {
+    const url = new URL('https://news.google.com/rss/search');
+    url.searchParams.set('q', query);
+    url.searchParams.set('hl', rules.googleNews.editionLanguage);
+    url.searchParams.set('gl', rules.googleNews.editionRegion);
+    url.searchParams.set('ceid', rules.googleNews.editionCeid);
+    return url.toString();
+  }
+
+  private classifyGoogleNewsSignal(
+    entry: ParsedFeedEntry,
+    config: RealityLinkConfigValue,
+    rules: RealWorldSyncRulesValue,
+    now: Date,
+    recencyCutoff: Date,
+    dedupe: Set<string>,
+  ): SignalSeed | null {
+    if (entry.publishedAt && entry.publishedAt < recencyCutoff) {
+      return null;
+    }
+
+    if (
+      this.matchesSourcePattern(
+        entry.sourceName,
+        entry.publisherUrl,
+        config.sourceBlocklist,
+      )
+    ) {
+      return null;
+    }
+
+    const titleKey = normalizeComparableText(entry.title);
+    if (!titleKey) {
+      return null;
+    }
+
+    if (dedupe.has(titleKey)) {
+      return {
+        signalType: this.inferSignalType(entry.title, entry.snippet),
+        sourceName: entry.sourceName,
+        title: entry.title,
+        snippet: entry.snippet,
+        normalizedSummary: `${entry.title} 与已有候选重复，未进入今日摘要。`,
+        credibilityScore: 0.2,
+        relevanceScore: 0.2,
+        identityMatchScore: 0.2,
+        status: 'filtered_duplicate',
+        sourceUrl: entry.sourceUrl,
+        publishedAt: entry.publishedAt ?? now,
+        metadataPayload: {
+          providerMode: 'google_news_rss',
+          publisherUrl: entry.publisherUrl ?? null,
+        },
+      };
+    }
+    dedupe.add(titleKey);
+
+    const allowlistMatched = this.matchesSourcePattern(
+      entry.sourceName,
+      entry.publisherUrl,
+      config.sourceAllowlist,
+    );
+    const identityMatchScore = this.computeIdentityMatchScore(config, entry);
+    const credibilityScore = this.computeGoogleNewsCredibilityScore(
+      entry,
+      allowlistMatched,
+    );
+    const relevanceScore = this.computeGoogleNewsRelevanceScore(
+      entry,
+      now,
+      recencyCutoff,
+      identityMatchScore,
+      allowlistMatched,
+    );
+    const compositeScore =
+      (credibilityScore + relevanceScore + identityMatchScore) / 3;
+
+    let status: RealWorldSignalStatusValue = 'accepted';
+    if (identityMatchScore < 0.55) {
+      status = 'filtered_identity_mismatch';
+    } else if (compositeScore < config.minimumConfidence) {
+      status = 'filtered_low_confidence';
+    }
+
+    return {
+      signalType: this.inferSignalType(entry.title, entry.snippet),
+      sourceName: entry.sourceName,
+      title: entry.title,
+      snippet: entry.snippet,
+      normalizedSummary: `${entry.title}${entry.snippet ? `：${entry.snippet}` : ''}`,
+      credibilityScore,
+      relevanceScore,
+      identityMatchScore,
+      status,
+      sourceUrl: entry.sourceUrl,
+      publishedAt: entry.publishedAt ?? now,
+      metadataPayload: {
+        providerMode: 'google_news_rss',
+        publisherUrl: entry.publisherUrl ?? null,
+        editionLanguage: rules.googleNews.editionLanguage,
+        editionRegion: rules.googleNews.editionRegion,
+        allowlistMatched,
+      },
+    };
+  }
+
+  private matchesSourcePattern(
+    sourceName: string,
+    publisherUrl: string | null | undefined,
+    patterns: string[],
+  ) {
+    if (patterns.length === 0) {
+      return false;
+    }
+
+    const haystacks = [
+      normalizeComparableText(sourceName),
+      normalizeComparableText(publisherUrl ?? ''),
+    ].filter(Boolean);
+    return patterns.some((pattern) => {
+      const normalizedPattern = normalizeComparableText(pattern);
+      return (
+        normalizedPattern.length > 0 &&
+        haystacks.some((haystack) => haystack.includes(normalizedPattern))
+      );
+    });
+  }
+
+  private computeIdentityMatchScore(
+    config: RealityLinkConfigValue,
+    entry: ParsedFeedEntry,
+  ) {
+    const haystack = normalizeComparableText(
+      `${entry.title} ${entry.snippet} ${entry.publisherUrl ?? ''}`,
+    );
+    const candidates = Array.from(
+      new Set(
+        [config.subjectName, ...config.aliases]
+          .flatMap((value) => this.expandIdentityCandidates(value))
+          .map((value) => normalizeComparableText(value))
+          .filter(Boolean),
+      ),
+    );
+    if (candidates.length === 0) {
+      return 0.6;
+    }
+
+    let matchCount = 0;
+    let strongestCandidateLength = 0;
+    for (const candidate of candidates) {
+      if (!haystack.includes(candidate)) {
+        continue;
+      }
+
+      matchCount += 1;
+      strongestCandidateLength = Math.max(
+        strongestCandidateLength,
+        candidate.length,
+      );
+    }
+
+    if (matchCount === 0) {
+      return config.subjectType === 'organization_proxy' ? 0.5 : 0.36;
+    }
+
+    const base = config.subjectType === 'organization_proxy' ? 0.7 : 0.78;
+    return Math.min(
+      0.99,
+      base +
+        Math.min(matchCount, 3) * 0.07 +
+        Math.min(strongestCandidateLength, 12) * 0.006,
+    );
+  }
+
+  private expandIdentityCandidates(value: string) {
+    const normalized = normalizeString(value);
+    if (!normalized) {
+      return [];
+    }
+
+    return Array.from(
+      new Set(
+        [
+          normalized,
+          ...normalized
+            .split(/[\s/()（）,，、;；]+/)
+            .map((item) => item.trim())
+            .filter((item) => item.length >= 2),
+        ].filter(Boolean),
+      ),
+    );
+  }
+
+  private computeGoogleNewsCredibilityScore(
+    entry: ParsedFeedEntry,
+    allowlistMatched: boolean,
+  ) {
+    const sourceFingerprint = normalizeComparableText(
+      `${entry.sourceName} ${entry.publisherUrl ?? ''}`,
+    );
+    let score = 0.72;
+
+    if (allowlistMatched) {
+      score += 0.12;
+    }
+    if (
+      sourceFingerprint.includes('reuters') ||
+      sourceFingerprint.includes('bbc') ||
+      sourceFingerprint.includes('apnews') ||
+      sourceFingerprint.includes('techcrunch') ||
+      sourceFingerprint.includes('theverge')
+    ) {
+      score += 0.08;
+    }
+    if (
+      sourceFingerprint.includes('blog') ||
+      sourceFingerprint.includes('forum') ||
+      sourceFingerprint.includes('rumor')
+    ) {
+      score -= 0.1;
+    }
+
+    return Math.max(0.2, Math.min(0.96, score));
+  }
+
+  private computeGoogleNewsRelevanceScore(
+    entry: ParsedFeedEntry,
+    now: Date,
+    recencyCutoff: Date,
+    identityMatchScore: number,
+    allowlistMatched: boolean,
+  ) {
+    const recencyWindowMs = Math.max(
+      now.getTime() - recencyCutoff.getTime(),
+      1,
+    );
+    const publishedAtTs = entry.publishedAt?.getTime() ?? now.getTime();
+    const ageMs = Math.max(0, now.getTime() - publishedAtTs);
+    const freshnessRatio = Math.max(0, 1 - ageMs / recencyWindowMs);
+
+    let score = 0.45 + freshnessRatio * 0.24 + identityMatchScore * 0.26;
+    if (entry.snippet) {
+      score += 0.04;
+    }
+    if (allowlistMatched) {
+      score += 0.04;
+    }
+
+    return Math.max(0.2, Math.min(0.98, score));
+  }
+
+  private inferSignalType(
+    title: string,
+    snippet: string,
+  ): RealWorldSignalTypeValue {
+    const haystack = `${title} ${snippet}`.toLowerCase();
+    if (/采访|专访|受访|访谈|interview/.test(haystack)) {
+      return 'interview';
+    }
+    if (/发布|上线|推出|launch|release|发布会|新品/.test(haystack)) {
+      return 'product_release';
+    }
+    if (/发文|发帖|tweet|post|公告|声明|宣布/.test(haystack)) {
+      return 'official_post';
+    }
+    if (/出席|现身|演讲|appearance|attend|visit/.test(haystack)) {
+      return 'public_appearance';
+    }
+    return 'news_article';
+  }
+
   private async fetchFeedEntries(sourceName: string, feedUrl: string) {
     try {
       const response = await fetch(feedUrl, {
@@ -827,51 +1304,67 @@ export class RealWorldSyncService {
     const itemBlocks = xml.match(/<item\b[\s\S]*?<\/item>/gi) ?? [];
     if (itemBlocks.length > 0) {
       return itemBlocks.flatMap((block) => {
-          const title = extractTagValue(block, 'title');
-          const sourceUrl = extractTagValue(block, 'link');
-          const snippet =
-            extractTagValue(block, 'description') ||
-            extractTagValue(block, 'content:encoded');
-          if (!title || !sourceUrl) {
-            return [];
-          }
-
-          return [
-            {
-              sourceName,
-              sourceUrl,
-              title,
-              snippet,
-              publishedAt:
-                normalizeFeedDate(extractTagValue(block, 'pubDate')) ??
-                normalizeFeedDate(extractTagValue(block, 'dc:date')),
-            } satisfies ParsedFeedEntry,
-          ];
-        });
-    }
-
-    const entryBlocks = xml.match(/<entry\b[\s\S]*?<\/entry>/gi) ?? [];
-    return entryBlocks.flatMap((block) => {
-        const title = extractTagValue(block, 'title');
-        const sourceUrl = extractAtomLink(block);
-        const snippet =
-          extractTagValue(block, 'summary') || extractTagValue(block, 'content');
+        const source = extractSourceTag(block, sourceName);
+        const title = cleanupFeedTitle(
+          extractTagValue(block, 'title'),
+          source.sourceName,
+        );
+        const sourceUrl = extractTagValue(block, 'link');
+        const snippet = cleanupFeedSnippet(
+          extractTagValue(block, 'description') ||
+            extractTagValue(block, 'content:encoded'),
+          title,
+          source.sourceName,
+        );
         if (!title || !sourceUrl) {
           return [];
         }
 
         return [
           {
-            sourceName,
+            sourceName: source.sourceName,
             sourceUrl,
+            publisherUrl: source.publisherUrl,
             title,
             snippet,
             publishedAt:
-              normalizeFeedDate(extractTagValue(block, 'updated')) ??
-              normalizeFeedDate(extractTagValue(block, 'published')),
+              normalizeFeedDate(extractTagValue(block, 'pubDate')) ??
+              normalizeFeedDate(extractTagValue(block, 'dc:date')),
           } satisfies ParsedFeedEntry,
         ];
       });
+    }
+
+    const entryBlocks = xml.match(/<entry\b[\s\S]*?<\/entry>/gi) ?? [];
+    return entryBlocks.flatMap((block) => {
+      const source = extractSourceTag(block, sourceName);
+      const title = cleanupFeedTitle(
+        extractTagValue(block, 'title'),
+        source.sourceName,
+      );
+      const sourceUrl = extractAtomLink(block);
+      const snippet = cleanupFeedSnippet(
+        extractTagValue(block, 'summary') || extractTagValue(block, 'content'),
+        title,
+        source.sourceName,
+      );
+      if (!title || !sourceUrl) {
+        return [];
+      }
+
+      return [
+        {
+          sourceName: source.sourceName,
+          sourceUrl,
+          publisherUrl: source.publisherUrl,
+          title,
+          snippet,
+          publishedAt:
+            normalizeFeedDate(extractTagValue(block, 'updated')) ??
+            normalizeFeedDate(extractTagValue(block, 'published')),
+        } satisfies ParsedFeedEntry,
+      ];
+    });
   }
 
   private buildMockSignals(
@@ -1017,14 +1510,15 @@ export class RealWorldSyncService {
     now: Date,
   ) {
     const syncDate = formatSyncDate(now);
-    const isWorldNewsDesk =
-      character.sourceKey === WORLD_NEWS_DESK_SOURCE_KEY;
+    const isWorldNewsDesk = character.sourceKey === WORLD_NEWS_DESK_SOURCE_KEY;
     const scenePatchPayload = this.buildScenePatch(character, acceptedSignals);
     const globalOverlay = acceptedSignals.length
       ? isWorldNewsDesk
         ? `今天已确认的新闻线索有：${acceptedSignals
             .map((item) => item.title)
-            .join('；')}。只能围绕这些线索组织早报、午报、晚报和聊天回答，不要补系统未提供的具体事实。`
+            .join(
+              '；',
+            )}。只能围绕这些线索组织早报、午报、晚报和聊天回答，不要补系统未提供的具体事实。`
         : `今天与 ${config.subjectName || character.name} 相关的外部现实锚点集中在：${acceptedSignals
             .map((item) => item.title)
             .join('；')}。表达时带着这层现实背景，但不要变成新闻播报。`
@@ -1100,7 +1594,10 @@ export class RealWorldSyncService {
   ): RealWorldScenePatchPayloadValue {
     if (character.sourceKey === WORLD_NEWS_DESK_SOURCE_KEY) {
       const signalSummary = acceptedSignals
-        .map((item) => `${item.title}${item.sourceName ? `（${item.sourceName}）` : ''}`)
+        .map(
+          (item) =>
+            `${item.title}${item.sourceName ? `（${item.sourceName}）` : ''}`,
+        )
         .join('；');
       return {
         ...DEFAULT_REAL_WORLD_SCENE_PATCH,
@@ -1112,12 +1609,10 @@ export class RealWorldSyncService {
           : '如果今天发朋友圈，明确说明暂时没有抓到足够可信的新鲜新闻，不要编造条目。',
         moments_comment:
           '评论别人朋友圈时，只在你能补充事实、背景或影响时开口，不要把评论区变成播报台。',
-        feed_post:
-          '如果要输出更公开的内容，优先做新闻变量解释，不做情绪站队。',
+        feed_post: '如果要输出更公开的内容，优先做新闻变量解释，不做情绪站队。',
         channel_post:
           '如果在更公开场域说话，优先做“今天最值得跟踪的一个主线”。',
-        feed_comment:
-          '只在你能补一条关键事实或关键变量时评论。',
+        feed_comment: '只在你能补一条关键事实或关键变量时评论。',
         greeting: '',
         proactive: signalSummary
           ? '只有遇到显著重要且与用户关注方向相关的新闻时才主动提醒，不刷存在感。'

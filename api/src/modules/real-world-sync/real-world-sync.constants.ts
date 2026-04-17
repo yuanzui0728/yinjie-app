@@ -19,13 +19,20 @@ export const DEFAULT_REAL_WORLD_SCENE_PATCH: RealWorldScenePatchPayloadValue =
 
 export const DEFAULT_REAL_WORLD_SYNC_RULES: RealWorldSyncRulesValue =
   Object.freeze({
-    providerMode: 'mock',
+    providerMode: 'google_news_rss',
     defaultLocale: 'zh-CN',
     defaultSourceAllowlist: ['官方公告', '主流媒体', '公开采访'],
     defaultSourceBlocklist: [],
     defaultRecencyHours: 48,
     defaultMaxSignalsPerRun: 5,
     defaultMinimumConfidence: 0.65,
+    googleNews: {
+      editionLanguage: 'zh-CN',
+      editionRegion: 'CN',
+      editionCeid: 'CN:zh-Hans',
+      maxEntriesPerQuery: 12,
+      fallbackToMockOnEmpty: true,
+    },
     promptTemplates: {
       signalNormalizationPrompt:
         '将候选新闻和公开动态压缩成可审计的事实卡片，保留来源、时间和角色相关性，不要虚构未出现的细节。',
@@ -44,9 +51,7 @@ function sanitizeString(value: string | undefined, fallback: string) {
 }
 
 function sanitizeStringArray(value: string[] | undefined, fallback: string[]) {
-  const normalized = (value ?? [])
-    .map((item) => item.trim())
-    .filter(Boolean);
+  const normalized = (value ?? []).map((item) => item.trim()).filter(Boolean);
   return normalized.length > 0 ? normalized : [...fallback];
 }
 
@@ -58,12 +63,26 @@ function sanitizePositiveNumber(value: number | undefined, fallback: number) {
   return value;
 }
 
+function sanitizeProviderMode(
+  value: RealWorldSyncRulesValue['providerMode'] | undefined,
+  fallback: RealWorldSyncRulesValue['providerMode'],
+) {
+  return value === 'mock' || value === 'google_news_rss' ? value : fallback;
+}
+
+function sanitizeBoolean(value: boolean | undefined, fallback: boolean) {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
 export function normalizeRealWorldSyncRules(
   input?: Partial<RealWorldSyncRulesValue> | null,
 ): RealWorldSyncRulesValue {
   const defaults = DEFAULT_REAL_WORLD_SYNC_RULES;
   return {
-    providerMode: 'mock',
+    providerMode: sanitizeProviderMode(
+      input?.providerMode,
+      defaults.providerMode,
+    ),
     defaultLocale: sanitizeString(input?.defaultLocale, defaults.defaultLocale),
     defaultSourceAllowlist: sanitizeStringArray(
       input?.defaultSourceAllowlist,
@@ -87,6 +106,28 @@ export function normalizeRealWorldSyncRules(
       input.defaultMinimumConfidence <= 1
         ? input.defaultMinimumConfidence
         : defaults.defaultMinimumConfidence,
+    googleNews: {
+      editionLanguage: sanitizeString(
+        input?.googleNews?.editionLanguage,
+        defaults.googleNews.editionLanguage,
+      ),
+      editionRegion: sanitizeString(
+        input?.googleNews?.editionRegion,
+        defaults.googleNews.editionRegion,
+      ),
+      editionCeid: sanitizeString(
+        input?.googleNews?.editionCeid,
+        defaults.googleNews.editionCeid,
+      ),
+      maxEntriesPerQuery: sanitizePositiveNumber(
+        input?.googleNews?.maxEntriesPerQuery,
+        defaults.googleNews.maxEntriesPerQuery,
+      ),
+      fallbackToMockOnEmpty: sanitizeBoolean(
+        input?.googleNews?.fallbackToMockOnEmpty,
+        defaults.googleNews.fallbackToMockOnEmpty,
+      ),
+    },
     promptTemplates: {
       signalNormalizationPrompt: sanitizeString(
         input?.promptTemplates?.signalNormalizationPrompt,

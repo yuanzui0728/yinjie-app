@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type {
   RealWorldSyncCharacterDetail,
+  RealWorldNewsBulletinSlot,
   RealWorldSyncRules,
 } from "@yinjie/contracts";
 import {
@@ -10,7 +11,6 @@ import {
   Card,
   ErrorBlock,
   LoadingBlock,
-  MetricCard,
   SectionHeading,
   StatusPill,
 } from "@yinjie/ui";
@@ -36,6 +36,11 @@ const APPLY_MODE_LABELS: Record<string, string> = {
   live: "直接生效",
 };
 
+const PROVIDER_MODE_LABELS: Record<string, string> = {
+  google_news_rss: "Google News RSS",
+  mock: "Mock 回退",
+};
+
 const SIGNAL_STATUS_LABELS: Record<string, string> = {
   accepted: "已采纳",
   filtered_low_confidence: "低可信过滤",
@@ -43,6 +48,18 @@ const SIGNAL_STATUS_LABELS: Record<string, string> = {
   filtered_duplicate: "重复过滤",
   manual_excluded: "人工排除",
 };
+
+const BULLETIN_SLOT_LABELS: Record<RealWorldNewsBulletinSlot, string> = {
+  morning: "早报",
+  noon: "午报",
+  evening: "晚报",
+};
+
+const BULLETIN_SLOT_ORDER: RealWorldNewsBulletinSlot[] = [
+  "morning",
+  "noon",
+  "evening",
+];
 
 function listToCsv(items: string[]) {
   return items.join(", ");
@@ -71,6 +88,10 @@ function parseConfidence(value: string, fallback: number) {
   return Math.max(0, Math.min(1, parsed));
 }
 
+function parseBooleanSelect(value: string) {
+  return value === "true";
+}
+
 function formatTime(value?: string | null) {
   if (!value) {
     return "未执行";
@@ -90,6 +111,21 @@ function toneForApplyMode(mode: string) {
 
 function toneForSignalStatus(status: string) {
   return status === "accepted" ? ("healthy" as const) : ("muted" as const);
+}
+
+function sortBulletinSlots(slots: RealWorldNewsBulletinSlot[]) {
+  return [...slots].sort(
+    (left, right) =>
+      BULLETIN_SLOT_ORDER.indexOf(left) - BULLETIN_SLOT_ORDER.indexOf(right),
+  );
+}
+
+function formatBulletinSlots(slots: RealWorldNewsBulletinSlot[]) {
+  const ordered = sortBulletinSlots(slots);
+  if (ordered.length === 0) {
+    return "未发布";
+  }
+  return ordered.map((slot) => BULLETIN_SLOT_LABELS[slot]).join(" / ");
 }
 
 export function RealWorldSyncPage() {
@@ -180,20 +216,23 @@ export function RealWorldSyncPage() {
 
   const overview = overviewQuery.data;
   const detail: RealWorldSyncCharacterDetail | null = detailQuery.data ?? null;
+  const characterNameById = new Map(
+    overview.characters.map((item) => [item.characterId, item.characterName]),
+  );
 
   return (
     <div className="space-y-6">
       <AdminPageHero
         eyebrow="Reality Sync"
         title="真实世界新闻联动与日更提示词"
-        description="每天为角色收集外部现实信号，生成现实摘要、scene patch 和现实发圈锚点，再以 overlay 方式注入聊天与内容生成链路。"
+        description="每天为角色收集外部现实信号，生成现实摘要、scene patch 和现实发圈锚点，再以 overlay 方式注入聊天与内容生成链路。界闻会在此基础上固定执行早报、午报、晚报三段播报。"
         metrics={[
           { label: "已启用角色", value: overview.stats.enabledCharacters },
           { label: "Live 生效角色", value: overview.stats.liveCharacters },
           { label: "今日信号数", value: overview.stats.signalsToday },
           {
-            label: "现实联动发圈",
-            value: overview.stats.realityLinkedMomentsToday,
+            label: "今日新闻简报",
+            value: overview.stats.newsBulletinsToday,
           },
         ]}
         actions={
@@ -259,6 +298,31 @@ export function RealWorldSyncPage() {
               }
             />
             <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <AdminSelectField
+                label="默认采集 Provider"
+                value={rulesDraft.providerMode}
+                onChange={(value) =>
+                  setRulesDraft((current) =>
+                    current
+                      ? {
+                          ...current,
+                          providerMode:
+                            value === "google_news_rss" ? value : "mock",
+                        }
+                      : current,
+                  )
+                }
+                options={[
+                  {
+                    value: "google_news_rss",
+                    label: PROVIDER_MODE_LABELS.google_news_rss,
+                  },
+                  {
+                    value: "mock",
+                    label: PROVIDER_MODE_LABELS.mock,
+                  },
+                ]}
+              />
               <AdminTextField
                 label="默认语言区域"
                 value={rulesDraft.defaultLocale}
@@ -331,8 +395,107 @@ export function RealWorldSyncPage() {
                   )
                 }
               />
+              <AdminTextField
+                label="Google News 语言"
+                value={rulesDraft.googleNews.editionLanguage}
+                onChange={(value) =>
+                  setRulesDraft((current) =>
+                    current
+                      ? {
+                          ...current,
+                          googleNews: {
+                            ...current.googleNews,
+                            editionLanguage: value,
+                          },
+                        }
+                      : current,
+                  )
+                }
+              />
+              <AdminTextField
+                label="Google News 地区"
+                value={rulesDraft.googleNews.editionRegion}
+                onChange={(value) =>
+                  setRulesDraft((current) =>
+                    current
+                      ? {
+                          ...current,
+                          googleNews: {
+                            ...current.googleNews,
+                            editionRegion: value,
+                          },
+                        }
+                      : current,
+                  )
+                }
+              />
+              <AdminTextField
+                label="Google News CEID"
+                value={rulesDraft.googleNews.editionCeid}
+                onChange={(value) =>
+                  setRulesDraft((current) =>
+                    current
+                      ? {
+                          ...current,
+                          googleNews: {
+                            ...current.googleNews,
+                            editionCeid: value,
+                          },
+                        }
+                      : current,
+                  )
+                }
+              />
+              <AdminTextField
+                label="Google News 拉取上限"
+                value={rulesDraft.googleNews.maxEntriesPerQuery}
+                type="number"
+                min={1}
+                onChange={(value) =>
+                  setRulesDraft((current) =>
+                    current
+                      ? {
+                          ...current,
+                          googleNews: {
+                            ...current.googleNews,
+                            maxEntriesPerQuery: parsePositiveNumber(
+                              value,
+                              current.googleNews.maxEntriesPerQuery,
+                            ),
+                          },
+                        }
+                      : current,
+                  )
+                }
+              />
+              <AdminSelectField
+                label="无结果时回退 Mock"
+                value={String(rulesDraft.googleNews.fallbackToMockOnEmpty)}
+                onChange={(value) =>
+                  setRulesDraft((current) =>
+                    current
+                      ? {
+                          ...current,
+                          googleNews: {
+                            ...current.googleNews,
+                            fallbackToMockOnEmpty: parseBooleanSelect(value),
+                          },
+                        }
+                      : current,
+                  )
+                }
+                options={[
+                  { value: "true", label: "开启回退" },
+                  { value: "false", label: "仅保留真实结果" },
+                ]}
+              />
             </div>
             <div className="mt-4 grid gap-4">
+              <AdminCallout
+                title="Provider 行为"
+                tone="info"
+                description={`当前默认 provider 为 ${PROVIDER_MODE_LABELS[rulesDraft.providerMode] ?? rulesDraft.providerMode}。普通公众人物会先按这里采集；界闻角色仍固定优先走专用 RSS 聚合。`}
+              />
               <AdminTextField
                 label="默认白名单来源"
                 value={listToCsv(rulesDraft.defaultSourceAllowlist)}
@@ -438,7 +601,9 @@ export function RealWorldSyncPage() {
               {overview.recentRuns.slice(0, 8).map((run) => (
                 <AdminRecordCard
                   key={run.id}
-                  title={run.characterId}
+                  title={
+                    characterNameById.get(run.characterId) ?? run.characterId
+                  }
                   badges={
                     <StatusPill
                       tone={
@@ -508,6 +673,9 @@ export function RealWorldSyncPage() {
                     title={item.characterName}
                     badges={
                       <>
+                        {item.isWorldNewsDesk ? (
+                          <StatusPill tone="healthy">三段播报角色</StatusPill>
+                        ) : null}
                         <StatusPill tone={toneForApplyMode(item.applyMode)}>
                           {APPLY_MODE_LABELS[item.applyMode] ?? item.applyMode}
                         </StatusPill>
@@ -516,7 +684,11 @@ export function RealWorldSyncPage() {
                         ) : null}
                       </>
                     }
-                    meta={`今日采纳 ${item.todayAcceptedSignalCount} 条 | 今日发圈 ${item.hasRealityLinkedMomentToday ? "已完成" : "未完成"}`}
+                    meta={
+                      item.isWorldNewsDesk
+                        ? `今日采纳 ${item.todayAcceptedSignalCount} 条 | 简报进度 ${formatBulletinSlots(item.todayBulletinSlots)}`
+                        : `今日采纳 ${item.todayAcceptedSignalCount} 条 | 今日发圈 ${item.hasRealityLinkedMomentToday ? "已完成" : "未完成"}`
+                    }
                     description={`主体：${item.subjectName} · 类型：${item.subjectType}`}
                     actions={
                       <>
@@ -595,6 +767,14 @@ export function RealWorldSyncPage() {
                     },
                   ]}
                 />
+
+                {detail.isWorldNewsDesk ? (
+                  <AdminCallout
+                    title="界闻三段播报"
+                    tone="success"
+                    description={`今天已完成：${formatBulletinSlots(detail.todayBulletinSlots)}。调度窗口为 07:30-09:30、11:30-13:30、18:30-21:00，同一时段当天只发一次。`}
+                  />
+                ) : null}
 
                 {detail.activeDigest ? (
                   <>

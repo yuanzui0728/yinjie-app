@@ -5,7 +5,8 @@ import type {
   ScenePrompts,
 } from "./characters";
 
-export type RealWorldSyncProviderMode = "mock";
+export type RealWorldSyncProviderMode = "mock" | "google_news_rss";
+export type RealWorldNewsBulletinSlot = "morning" | "noon" | "evening";
 export type RealWorldSignalStatus =
   | "accepted"
   | "filtered_low_confidence"
@@ -42,6 +43,14 @@ export interface RealWorldSyncPromptTemplates {
   realityMomentPrompt: string;
 }
 
+export interface RealWorldSyncGoogleNewsConfig {
+  editionLanguage: string;
+  editionRegion: string;
+  editionCeid: string;
+  maxEntriesPerQuery: number;
+  fallbackToMockOnEmpty: boolean;
+}
+
 export interface RealWorldSyncRules {
   providerMode: RealWorldSyncProviderMode;
   defaultLocale: string;
@@ -50,6 +59,7 @@ export interface RealWorldSyncRules {
   defaultRecencyHours: number;
   defaultMaxSignalsPerRun: number;
   defaultMinimumConfidence: number;
+  googleNews: RealWorldSyncGoogleNewsConfig;
   promptTemplates: RealWorldSyncPromptTemplates;
 }
 
@@ -111,6 +121,7 @@ export interface RealWorldSyncCharacterSummary {
   characterId: string;
   characterName: string;
   characterAvatar: string;
+  isWorldNewsDesk: boolean;
   enabled: boolean;
   applyMode: RealityLinkApplyMode;
   subjectType: RealityLinkSubjectType;
@@ -121,6 +132,7 @@ export interface RealWorldSyncCharacterSummary {
   latestRunAt?: string | null;
   todayAcceptedSignalCount: number;
   hasRealityLinkedMomentToday: boolean;
+  todayBulletinSlots: RealWorldNewsBulletinSlot[];
 }
 
 export interface RealWorldSyncOverview {
@@ -131,6 +143,7 @@ export interface RealWorldSyncOverview {
     activeDigests: number;
     signalsToday: number;
     realityLinkedMomentsToday: number;
+    newsBulletinsToday: number;
   };
   recentRuns: RealWorldSyncRunRecord[];
   recentSignals: RealWorldSignalRecord[];
@@ -142,12 +155,14 @@ export interface RealWorldSyncCharacterDetail {
   characterId: string;
   characterName: string;
   characterAvatar: string;
+  isWorldNewsDesk: boolean;
   config: RealityLinkConfig;
   activeDigest?: RealWorldDigestRecord | null;
   recentRuns: RealWorldSyncRunRecord[];
   recentSignals: RealWorldSignalRecord[];
   recentDigests: RealWorldDigestRecord[];
   hasRealityLinkedMomentToday: boolean;
+  todayBulletinSlots: RealWorldNewsBulletinSlot[];
 }
 
 export interface RealWorldSyncRunRequest {

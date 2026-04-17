@@ -13,7 +13,7 @@ export type RealityMomentPolicyValue =
   | 'disabled'
   | 'optional'
   | 'force_one_daily';
-export type RealWorldSyncProviderModeValue = 'mock';
+export type RealWorldSyncProviderModeValue = 'mock' | 'google_news_rss';
 export type RealWorldSignalStatusValue =
   | 'accepted'
   | 'filtered_low_confidence'
@@ -72,6 +72,14 @@ export type RealWorldSyncPromptTemplatesValue = {
   realityMomentPrompt: string;
 };
 
+export type RealWorldSyncGoogleNewsConfigValue = {
+  editionLanguage: string;
+  editionRegion: string;
+  editionCeid: string;
+  maxEntriesPerQuery: number;
+  fallbackToMockOnEmpty: boolean;
+};
+
 export type RealWorldSyncRulesValue = {
   providerMode: RealWorldSyncProviderModeValue;
   defaultLocale: string;
@@ -80,6 +88,7 @@ export type RealWorldSyncRulesValue = {
   defaultRecencyHours: number;
   defaultMaxSignalsPerRun: number;
   defaultMinimumConfidence: number;
+  googleNews: RealWorldSyncGoogleNewsConfigValue;
   promptTemplates: RealWorldSyncPromptTemplatesValue;
 };
 
