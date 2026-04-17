@@ -15,6 +15,7 @@ import { AiMessagePart, ChatMessage } from '../ai/ai.types';
 import { WorldOwnerService } from '../auth/world-owner.service';
 import { CharactersService } from '../characters/characters.service';
 import { NarrativeService } from '../narrative/narrative.service';
+import { ActionRuntimeService } from '../action-runtime/action-runtime.service';
 import { ConversationEntity } from './conversation.entity';
 import { GroupEntity } from './group.entity';
 import { GroupMemberEntity } from './group-member.entity';
@@ -114,6 +115,7 @@ export class ChatService {
     private readonly narrativeService: NarrativeService,
     private readonly worldOwnerService: WorldOwnerService,
     private readonly replyLogicRules: ReplyLogicRulesService,
+    private readonly actionRuntime: ActionRuntimeService,
     private readonly customStickersService: CustomStickersService,
     @InjectRepository(ConversationEntity)
     private convRepo: Repository<ConversationEntity>,
@@ -695,49 +697,65 @@ export class ChatService {
       currentActivity: charEntity?.currentActivity,
       lastChatAt: lastMsg?.createdAt,
     };
-    const reply = await this.ai.generateReply({
-      profile,
-      conversationHistory: history,
-      userMessage: normalizedInput.promptText,
-      userMessageParts: normalizedInput.aiParts,
-      chatContext,
-      aiKeyOverride,
-      usageContext: {
-        surface: 'app',
-        scene: 'chat_reply',
-        scopeType: 'conversation',
-        scopeId: convId,
-        scopeLabel: entity.title,
-        ownerId: owner.id,
-        characterId: charId,
-        characterName: profile.name,
+    const actionResult = charEntity
+      ? await this.actionRuntime.handleConversationTurn({
+          conversationId: convId,
+          ownerId: owner.id,
+          character: charEntity,
+          userMessage: normalizedInput.promptText,
+        })
+      : { handled: false };
+
+    const assistantReplyText = actionResult.handled
+      ? actionResult.responseText?.trim() ?? ''
+      : (
+          await this.ai.generateReply({
+            profile,
+            conversationHistory: history,
+            userMessage: normalizedInput.promptText,
+            userMessageParts: normalizedInput.aiParts,
+            chatContext,
+            aiKeyOverride,
+            usageContext: {
+              surface: 'app',
+              scene: 'chat_reply',
+              scopeType: 'conversation',
+              scopeId: convId,
+              scopeLabel: entity.title,
+              ownerId: owner.id,
+              characterId: charId,
+              characterName: profile.name,
+              conversationId: convId,
+            },
+          })
+        ).text;
+
+    if (assistantReplyText) {
+      const aiEntity = this.msgRepo.create({
+        id: `msg_${Date.now()}_ai`,
         conversationId: convId,
-      },
-    });
-    const aiEntity = this.msgRepo.create({
-      id: `msg_${Date.now()}_ai`,
-      conversationId: convId,
-      senderType: 'character',
-      senderId: charId,
-      senderName: profile.name,
-      type: 'text',
-      text: reply.text,
-    });
-    await this.msgRepo.save(aiEntity);
-    await this.touchConversationActivity(
-      entity,
-      aiEntity.createdAt ?? new Date(),
-    );
-    if (this.shouldIncludeAssistantMessageInHistory(reply.text)) {
-      history.push({
-        role: 'assistant',
-        content: reply.text,
-        parts: this.buildTextAiParts(reply.text),
-        characterId: charId,
+        senderType: 'character',
+        senderId: charId,
+        senderName: profile.name,
+        type: 'text',
+        text: assistantReplyText,
       });
+      await this.msgRepo.save(aiEntity);
+      await this.touchConversationActivity(
+        entity,
+        aiEntity.createdAt ?? new Date(),
+      );
+      if (this.shouldIncludeAssistantMessageInHistory(assistantReplyText)) {
+        history.push({
+          role: 'assistant',
+          content: assistantReplyText,
+          parts: this.buildTextAiParts(assistantReplyText),
+          characterId: charId,
+        });
+      }
+      this.conversationHistory.set(convId, history);
+      results.push(this._entityToMessage(aiEntity));
     }
-    this.conversationHistory.set(convId, history);
-    results.push(this._entityToMessage(aiEntity));
 
     const runtimeRules = await this.replyLogicRules.getRules();
     if (

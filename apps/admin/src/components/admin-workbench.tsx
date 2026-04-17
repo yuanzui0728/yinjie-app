@@ -29,6 +29,7 @@ type AdminWorkbenchLink =
   | "/"
   | "/setup"
   | "/characters"
+  | "/action-runtime"
   | "/token-usage"
   | "/evals"
   | "/reply-logic";

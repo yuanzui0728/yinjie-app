@@ -23,7 +23,7 @@
 
 ## 后端模块（`api/src/modules/`）
 
-`ai` · `admin` · `auth` · `characters` · `chat` · `config` · `import` · `moments` · `social` · `moderation` · `feed` · `official-accounts` · `world` · `scheduler` · `events` · `narrative` · `analytics`
+`ai` · `action-runtime` · `admin` · `auth` · `characters` · `chat` · `config` · `import` · `moments` · `social` · `moderation` · `feed` · `official-accounts` · `world` · `scheduler` · `events` · `narrative` · `analytics`
 
 ## 主 App 结构（`apps/app/src/`）
 
@@ -97,7 +97,7 @@
 - `friend-moments-page.tsx`：桌面端好友朋友圈独立页，当前由 `desktop/friend-moments/$characterId` 承载，从通讯录 / 资料页 / 聊天信息等入口进入单个好友的朋友圈时间线
 - `chat-room-page` · `group-chat-page` · `character-detail-page` · `friend-requests-page` · `create-group-page`
 
-## 数据库实体（32个，物理表保持兼容）
+## 数据库实体（34个，物理表保持兼容）
 
 **核心**：User（运行时语义为单例 World Owner） · Character · Conversation · Message · SystemConfig
 
@@ -118,6 +118,8 @@
 **世界**：WorldContext · NarrativeArc
 
 **分析**：AIBehaviorLog · AIUsageLedger
+
+**动作运行时**：ActionConnector · ActionRun
 
 **后台**：AdminConversationReview
 
@@ -283,6 +285,7 @@
 - `evals-page.tsx`：生成评估、trace 与实验对比页
 - `setup-page.tsx`：运行时与 Provider 初始化配置页
 - `reply-logic-page.tsx`：AI 回复逻辑总览页，查看实际链路、effective prompt、上下文窗口、记忆与硬编码常量
+- `action-runtime-page.tsx`：真实世界动作运行时控制台，围绕 self 角色查看动作门控、提示模板、mock 连接器与执行轨迹
 
 ## 管理后台回复逻辑路由
 
@@ -296,6 +299,17 @@
 - `POST /api/admin/reply-logic/group-reply-tasks/:taskId/retry`
 - `POST /api/admin/reply-logic/group-reply-turns/:turnId/retry`
 - `POST /api/admin/reply-logic/conversations/:id/preview`
+
+## 管理后台动作运行时路由
+
+- `GET /api/admin/action-runtime/overview`
+- `GET /api/admin/action-runtime/rules`
+- `PATCH /api/admin/action-runtime/rules`
+- `GET /api/admin/action-runtime/connectors`
+- `PATCH /api/admin/action-runtime/connectors/:id`
+- `GET /api/admin/action-runtime/runs`
+- `GET /api/admin/action-runtime/runs/:id`
+- `POST /api/admin/action-runtime/preview`
 
 ## 管理后台聊天记录路由
 
@@ -340,8 +354,11 @@
 
 ## 管理后台微信同步路由
 
+- `GET /api/admin/wechat-sync/history`
 - `POST /api/admin/wechat-sync/preview`
 - `POST /api/admin/wechat-sync/import`
+- `POST /api/admin/wechat-sync/history/:characterId/retry-friendship`
+- `DELETE /api/admin/wechat-sync/history/:characterId`
 
 ## 系统评测路由
 

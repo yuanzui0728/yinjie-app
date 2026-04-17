@@ -151,6 +151,11 @@ const NAV_ITEMS = [
     hint: "查看 AI 请求、Token 花费、预算预警和价格配置。",
   },
   {
+    to: "/action-runtime",
+    label: "真实世界动作",
+    hint: "查看 self 角色的动作门控、连接器、规则和执行轨迹。",
+  },
+  {
     to: "/evals",
     label: "评测分析",
     hint: "集中查看 runs、compare 和 trace。",
@@ -227,6 +232,14 @@ function resolveRouteMeta(pathname: string) {
       eyebrow: "回复逻辑",
       title: "世界级回复调试台",
       description: "围绕角色、会话和全局规则排查回复链路，而不是在长页面里找模块。",
+    };
+  }
+
+  if (pathname === "/action-runtime") {
+    return {
+      eyebrow: "真实世界动作",
+      title: "self 角色动作运行时",
+      description: "围绕动作识别、澄清、确认、连接器和执行轨迹查看真实世界动作能力。",
     };
   }
 

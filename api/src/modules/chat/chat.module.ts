@@ -32,6 +32,7 @@ import { AuthModule } from '../auth/auth.module';
 import { CharactersModule } from '../characters/characters.module';
 import { NarrativeModule } from '../narrative/narrative.module';
 import { SystemConfigModule } from '../config/config.module';
+import { ActionRuntimeModule } from '../action-runtime/action-runtime.module';
 import { ConversationEntity } from './conversation.entity';
 import { MessageEntity } from './message.entity';
 import { GroupEntity } from './group.entity';
@@ -49,6 +50,7 @@ import { CharacterEntity } from '../characters/character.entity';
     CharactersModule,
     NarrativeModule,
     SystemConfigModule,
+    ActionRuntimeModule,
     TypeOrmModule.forFeature([
       ConversationEntity,
       MessageEntity,

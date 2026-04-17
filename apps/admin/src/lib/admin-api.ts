@@ -1,4 +1,10 @@
 import type {
+  ActionConnectorSummary,
+  ActionRunDetail,
+  ActionRunSummary,
+  ActionRuntimeOverview,
+  ActionRuntimePreviewResult,
+  ActionRuntimeRules,
   Character,
   CharacterBlueprintRevision,
   CharacterPresetSummary,
@@ -150,6 +156,33 @@ export type AdminSystemInfo = {
   dbPath: string;
 };
 
+export type WechatSyncHistoryItem = {
+  character: Character;
+  importedAt?: string | null;
+  friendshipStatus?: string | null;
+  friendshipCreatedAt?: string | null;
+  lastInteractedAt?: string | null;
+  seededMomentCount: number;
+  remarkName?: string | null;
+  region?: string | null;
+  tags: string[];
+};
+
+export type WechatSyncHistoryResponse = {
+  items: WechatSyncHistoryItem[];
+};
+
+export type WechatSyncRetryFriendshipResponse = {
+  characterId: string;
+  friendshipCreated: boolean;
+  friendshipStatus: string;
+};
+
+export type WechatSyncRollbackResponse = {
+  success: true;
+  characterId: string;
+};
+
 export const adminApi = {
   getStats: () => adminFetch<AdminStats>("/stats"),
   getSystem: () => adminFetch<AdminSystemInfo>("/system"),
@@ -171,6 +204,17 @@ export const adminApi = {
     adminFetch<WechatSyncImportResponse>("/wechat-sync/import", {
       method: "POST",
       body: JSON.stringify(payload),
+    }),
+  getWechatSyncHistory: () =>
+    adminFetch<WechatSyncHistoryResponse>("/wechat-sync/history"),
+  retryWechatSyncFriendship: (characterId: string) =>
+    adminFetch<WechatSyncRetryFriendshipResponse>(
+      `/wechat-sync/history/${characterId}/retry-friendship`,
+      { method: "POST" },
+    ),
+  rollbackWechatSyncImport: (characterId: string) =>
+    adminFetch<WechatSyncRollbackResponse>(`/wechat-sync/history/${characterId}`, {
+      method: "DELETE",
     }),
   getFriendCharacterIds: () =>
     adminFetch<string[]>("/characters/friend-ids"),
@@ -220,6 +264,40 @@ export const adminApi = {
     adminFetch<ReplyLogicConstantSummary>("/reply-logic/rules", {
       method: "PATCH",
       body: JSON.stringify(payload),
+    }),
+  getActionRuntimeOverview: () =>
+    adminFetch<ActionRuntimeOverview>("/action-runtime/overview"),
+  getActionRuntimeRules: () =>
+    adminFetch<ActionRuntimeRules>("/action-runtime/rules"),
+  setActionRuntimeRules: (payload: ActionRuntimeRules) =>
+    adminFetch<ActionRuntimeRules>("/action-runtime/rules", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  listActionRuntimeConnectors: () =>
+    adminFetch<ActionConnectorSummary[]>("/action-runtime/connectors"),
+  updateActionRuntimeConnector: (
+    id: string,
+    payload: {
+      displayName?: string;
+      status?: "disabled" | "ready" | "error";
+      endpointConfig?: Record<string, unknown> | null;
+    },
+  ) =>
+    adminFetch<ActionConnectorSummary>(`/action-runtime/connectors/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  listActionRuntimeRuns: (limit?: number) =>
+    adminFetch<ActionRunSummary[]>(
+      `/action-runtime/runs${limit ? `?limit=${encodeURIComponent(String(limit))}` : ""}`,
+    ),
+  getActionRuntimeRun: (id: string) =>
+    adminFetch<ActionRunDetail>(`/action-runtime/runs/${id}`),
+  previewActionRuntime: (message: string) =>
+    adminFetch<ActionRuntimePreviewResult>("/action-runtime/preview", {
+      method: "POST",
+      body: JSON.stringify({ message }),
     }),
   getReplyLogicCharacterSnapshot: (id: string) =>
     adminFetch<ReplyLogicCharacterSnapshot>(`/reply-logic/characters/${id}`),

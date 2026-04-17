@@ -28,9 +28,11 @@ import { MomentPostEntity } from '../moments/moment-post.entity';
 import { FeedPostEntity } from '../feed/feed-post.entity';
 import { FeedModule } from '../feed/feed.module';
 import { AiUsageLedgerEntity } from '../analytics/ai-usage-ledger.entity';
+import { FriendRequestEntity } from '../social/friend-request.entity';
 import { FriendshipEntity } from '../social/friendship.entity';
 import { SocialModule } from '../social/social.module';
 import { WechatSyncAdminService } from './wechat-sync-admin.service';
+import { ActionRuntimeModule } from '../action-runtime/action-runtime.module';
 
 @Module({
   imports: [
@@ -43,6 +45,7 @@ import { WechatSyncAdminService } from './wechat-sync-admin.service';
     SchedulerModule,
     SocialModule,
     FeedModule,
+    ActionRuntimeModule,
     TypeOrmModule.forFeature([
       UserEntity,
       CharacterEntity,
@@ -58,6 +61,7 @@ import { WechatSyncAdminService } from './wechat-sync-admin.service';
       FeedPostEntity,
       AiUsageLedgerEntity,
       AdminConversationReviewEntity,
+      FriendRequestEntity,
       FriendshipEntity,
     ]),
   ],

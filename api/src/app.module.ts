@@ -19,6 +19,7 @@ import { NarrativeModule } from './modules/narrative/narrative.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { CloudRuntimeModule } from './modules/cloud-runtime/cloud-runtime.module';
 import { SystemModule } from './modules/system/system.module';
+import { ActionRuntimeModule } from './modules/action-runtime/action-runtime.module';
 
 // Entities
 import { CharacterEntity } from './modules/characters/character.entity';
@@ -55,6 +56,8 @@ import { OfficialAccountFollowEntity } from './modules/official-accounts/officia
 import { OfficialAccountServiceMessageEntity } from './modules/official-accounts/official-account-service-message.entity';
 import { ModerationReportEntity } from './modules/moderation/moderation-report.entity';
 import { AdminConversationReviewEntity } from './modules/admin/admin-conversation-review.entity';
+import { ActionConnectorEntity } from './modules/action-runtime/action-connector.entity';
+import { ActionRunEntity } from './modules/action-runtime/action-run.entity';
 import { prepareDatabasePath, resolveApiPath, resolveRepoPath } from './database/database-path';
 
 @Module({
@@ -79,7 +82,7 @@ import { prepareDatabasePath, resolveApiPath, resolveRepoPath } from './database
           FeedPostEntity, FeedCommentEntity, VideoChannelFollowEntity, WorldContextEntity,
           NarrativeArcEntity, AIBehaviorLogEntity, AiUsageLedgerEntity, UserFeedInteractionEntity,
           OfficialAccountEntity, OfficialAccountArticleEntity, OfficialAccountDeliveryEntity, OfficialAccountFollowEntity, OfficialAccountServiceMessageEntity,
-          ModerationReportEntity, AdminConversationReviewEntity,
+          ModerationReportEntity, AdminConversationReviewEntity, ActionConnectorEntity, ActionRunEntity,
         ],
         synchronize: true,
       }),
@@ -98,6 +101,7 @@ import { prepareDatabasePath, resolveApiPath, resolveRepoPath } from './database
     SchedulerModule,
     NarrativeModule,
     AdminModule,
+    ActionRuntimeModule,
     CloudRuntimeModule,
     SystemModule,
   ],

@@ -10,6 +10,7 @@ import { ReplyLogicAdminService } from './reply-logic-admin.service';
 import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
 import { AiUsageLedgerService } from '../analytics/ai-usage-ledger.service';
 import { WechatSyncAdminService } from './wechat-sync-admin.service';
+import { ActionRuntimeService } from '../action-runtime/action-runtime.service';
 import type {
   WechatSyncImportRequestValue,
   WechatSyncPreviewRequestValue,
@@ -25,6 +26,7 @@ export class AdminController {
     private readonly ai: AiOrchestratorService,
     private readonly usageLedger: AiUsageLedgerService,
     private readonly wechatSyncAdminService: WechatSyncAdminService,
+    private readonly actionRuntimeService: ActionRuntimeService,
   ) {}
 
   @Get('stats')
@@ -307,6 +309,21 @@ export class AdminController {
     return this.wechatSyncAdminService.import(body);
   }
 
+  @Get('wechat-sync/history')
+  getWechatSyncHistory() {
+    return this.wechatSyncAdminService.getHistory();
+  }
+
+  @Post('wechat-sync/history/:characterId/retry-friendship')
+  retryWechatSyncFriendship(@Param('characterId') characterId: string) {
+    return this.wechatSyncAdminService.retryFriendship(characterId);
+  }
+
+  @Delete('wechat-sync/history/:characterId')
+  rollbackWechatSyncImport(@Param('characterId') characterId: string) {
+    return this.wechatSyncAdminService.rollbackImport(characterId);
+  }
+
   @Post('characters')
   createCharacter(@Body() body: Partial<CharacterEntity>) {
     return this.adminService.createCharacter(body);
@@ -368,6 +385,67 @@ export class AdminController {
       id,
       revisionId,
     );
+  }
+
+  @Get('action-runtime/overview')
+  getActionRuntimeOverview() {
+    return this.actionRuntimeService.getAdminOverview();
+  }
+
+  @Get('action-runtime/rules')
+  getActionRuntimeRules() {
+    return this.actionRuntimeService.getRules();
+  }
+
+  @Patch('action-runtime/rules')
+  setActionRuntimeRules(@Body() body: Record<string, unknown>) {
+    return this.actionRuntimeService.setRules(body);
+  }
+
+  @Get('action-runtime/connectors')
+  listActionRuntimeConnectors() {
+    return this.actionRuntimeService.listConnectors();
+  }
+
+  @Patch('action-runtime/connectors/:id')
+  updateActionRuntimeConnector(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      displayName?: string | null;
+      status?: 'disabled' | 'ready' | 'error' | null;
+      endpointConfig?: Record<string, unknown> | null;
+    },
+  ) {
+    return this.actionRuntimeService.updateConnector(id, {
+      displayName: body.displayName?.trim() || undefined,
+      status:
+        body.status === 'disabled' ||
+        body.status === 'ready' ||
+        body.status === 'error'
+          ? body.status
+          : undefined,
+      endpointConfig: body.endpointConfig,
+    });
+  }
+
+  @Get('action-runtime/runs')
+  listActionRuntimeRuns(@Query('limit') limit?: string | number) {
+    const parsedLimit =
+      typeof limit === 'number' ? limit : Number.parseInt(limit ?? '', 10);
+    return this.actionRuntimeService.listRuns(
+      Number.isFinite(parsedLimit) ? parsedLimit : 20,
+    );
+  }
+
+  @Get('action-runtime/runs/:id')
+  getActionRuntimeRun(@Param('id') id: string) {
+    return this.actionRuntimeService.getRun(id);
+  }
+
+  @Post('action-runtime/preview')
+  previewActionRuntime(@Body() body: { message?: string | null }) {
+    return this.actionRuntimeService.previewMessage(body.message?.trim() ?? '');
   }
 
   @Get('reply-logic/overview')

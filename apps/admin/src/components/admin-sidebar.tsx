@@ -7,6 +7,7 @@ type SidebarLink = {
   label: string;
   to:
     | "/"
+    | "/action-runtime"
     | "/characters"
     | "/chat-records"
     | "/token-usage"
@@ -19,6 +20,7 @@ type SidebarIssue = {
   detail: string;
   to:
     | "/"
+    | "/action-runtime"
     | "/characters"
     | "/chat-records"
     | "/token-usage"
