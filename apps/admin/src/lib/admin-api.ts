@@ -30,6 +30,8 @@ import type {
   ReplyLogicOverview,
   ReplyLogicPreviewRequest,
   ReplyLogicPreviewResult,
+  RealWorldNewsBulletinPublishRequest,
+  RealWorldNewsBulletinPublishResult,
   RealWorldSyncCharacterDetail,
   RealWorldSyncOverview,
   RealWorldSyncRules,
@@ -465,6 +467,16 @@ export const adminApi = {
       method: "POST",
       body: JSON.stringify(payload ?? {}),
     }),
+  publishRealWorldNewsBulletin: (
+    payload?: RealWorldNewsBulletinPublishRequest,
+  ) =>
+    adminFetch<RealWorldNewsBulletinPublishResult>(
+      "/real-world-sync/news-bulletins/publish",
+      {
+        method: "POST",
+        body: JSON.stringify(payload ?? {}),
+      },
+    ),
   getTokenUsageOverview: (query?: TokenUsageQuery) =>
     adminFetch<TokenUsageOverview>(
       `/token-usage/overview${buildQueryString(query)}`,

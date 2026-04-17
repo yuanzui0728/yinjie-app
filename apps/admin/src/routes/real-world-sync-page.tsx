@@ -188,6 +188,27 @@ export function RealWorldSyncPage() {
     },
   });
 
+  const publishBulletinMutation = useMutation({
+    mutationFn: (slot: RealWorldNewsBulletinSlot) =>
+      adminApi.publishRealWorldNewsBulletin({ slot }),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["admin-real-world-sync-overview", baseUrl],
+        }),
+        selectedCharacterId
+          ? queryClient.invalidateQueries({
+              queryKey: [
+                "admin-real-world-sync-character",
+                baseUrl,
+                selectedCharacterId,
+              ],
+            })
+          : Promise.resolve(),
+      ]);
+    },
+  });
+
   const isRulesDirty = useMemo(() => {
     if (!rulesDraft || !overviewQuery.data) {
       return false;
@@ -279,11 +300,26 @@ export function RealWorldSyncPage() {
           description={`成功 ${runMutation.data.successCount} 个，失败 ${runMutation.data.failedCount} 个。`}
         />
       ) : null}
+      {publishBulletinMutation.isSuccess ? (
+        <AdminActionFeedback
+          tone={publishBulletinMutation.data.created ? "success" : "info"}
+          title={
+            publishBulletinMutation.data.created
+              ? "界闻简报已发布"
+              : "界闻简报未重复发布"
+          }
+          description={publishBulletinMutation.data.summary}
+        />
+      ) : null}
       {saveRulesMutation.isError && saveRulesMutation.error instanceof Error ? (
         <ErrorBlock message={saveRulesMutation.error.message} />
       ) : null}
       {runMutation.isError && runMutation.error instanceof Error ? (
         <ErrorBlock message={runMutation.error.message} />
+      ) : null}
+      {publishBulletinMutation.isError &&
+      publishBulletinMutation.error instanceof Error ? (
+        <ErrorBlock message={publishBulletinMutation.error.message} />
       ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
@@ -773,6 +809,26 @@ export function RealWorldSyncPage() {
                     title="界闻三段播报"
                     tone="success"
                     description={`今天已完成：${formatBulletinSlots(detail.todayBulletinSlots)}。调度窗口为 07:30-09:30、11:30-13:30、18:30-21:00，同一时段当天只发一次。`}
+                    actions={
+                      <>
+                        {BULLETIN_SLOT_ORDER.map((slot) => (
+                          <Button
+                            key={slot}
+                            variant="secondary"
+                            size="sm"
+                            disabled={publishBulletinMutation.isPending}
+                            onClick={() =>
+                              publishBulletinMutation.mutate(slot)
+                            }
+                          >
+                            {publishBulletinMutation.isPending &&
+                            publishBulletinMutation.variables === slot
+                              ? `补发${BULLETIN_SLOT_LABELS[slot]}中...`
+                              : `补发${BULLETIN_SLOT_LABELS[slot]}`}
+                          </Button>
+                        ))}
+                      </>
+                    }
                   />
                 ) : null}
 

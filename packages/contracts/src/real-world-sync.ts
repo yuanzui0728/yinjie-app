@@ -168,3 +168,15 @@ export interface RealWorldSyncCharacterDetail {
 export interface RealWorldSyncRunRequest {
   characterId?: string | null;
 }
+
+export interface RealWorldNewsBulletinPublishRequest {
+  slot?: RealWorldNewsBulletinSlot | null;
+}
+
+export interface RealWorldNewsBulletinPublishResult {
+  success: boolean;
+  created: boolean;
+  slot: RealWorldNewsBulletinSlot | null;
+  summary: string;
+  postId?: string | null;
+}

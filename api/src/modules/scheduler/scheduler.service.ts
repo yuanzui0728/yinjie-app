@@ -44,6 +44,14 @@ type NewsBulletinSlot = {
   label: '早报' | '午报' | '晚报';
 };
 
+type PublishWorldNewsBulletinResult = {
+  success: boolean;
+  created: boolean;
+  slot: NewsBulletinSlot | null;
+  summary: string;
+  postId?: string | null;
+};
+
 function renderTemplate(
   template: string,
   variables: Record<string, string | number | undefined | null>,
@@ -148,6 +156,113 @@ export class SchedulerService {
       () => this.handleCheckRealWorldNewsBulletins(),
       'Failed to check real-world news bulletins',
     );
+  }
+
+  async publishWorldNewsDeskBulletin(input?: {
+    slot?: NewsBulletinSlot['key'];
+  }): Promise<PublishWorldNewsBulletinResult> {
+    const slot = input?.slot
+      ? this.resolveNewsBulletinSlotByKey(input.slot)
+      : this.resolveNewsBulletinSlot(new Date());
+    if (!slot) {
+      return {
+        success: false,
+        created: false,
+        slot: null,
+        summary: '当前不在界闻早报、午报或晚报窗口，且未指定补发时段。',
+      };
+    }
+
+    const newsDesk = await this.characterRepo.findOneBy({
+      id: WORLD_NEWS_DESK_CHARACTER_ID,
+    });
+    if (!newsDesk) {
+      return {
+        success: false,
+        created: false,
+        slot,
+        summary: '界闻角色尚未落库，无法补发新闻简报。',
+      };
+    }
+
+    const blockedCharacterIds = new Set(
+      await this.socialService.getBlockedCharacterIds(),
+    );
+    if (blockedCharacterIds.has(newsDesk.id)) {
+      return {
+        success: false,
+        created: false,
+        slot,
+        summary: '界闻当前处于屏蔽状态，跳过新闻简报补发。',
+      };
+    }
+
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const existingPosts = await this.momentPostRepo.find({
+      where: {
+        authorId: newsDesk.id,
+        generationKind: WORLD_NEWS_BULLETIN_GENERATION_KIND,
+        postedAt: Between(start, new Date()),
+      },
+      order: { postedAt: 'DESC' },
+    });
+    if (
+      existingPosts.some((post) => post.generationMetadata?.slot === slot.key)
+    ) {
+      return {
+        success: true,
+        created: false,
+        slot,
+        summary: `界闻今天的${slot.label}已存在，跳过重复补发。`,
+      };
+    }
+
+    const syncResult = await this.realWorldSync.runSync({
+      characterId: newsDesk.id,
+      force: true,
+    });
+    if (!syncResult.success && syncResult.successCount === 0) {
+      return {
+        success: false,
+        created: false,
+        slot,
+        summary: `界闻在${slot.label}前的新闻同步失败，未生成简报。`,
+      };
+    }
+
+    const digestSnapshot = await this.realWorldSync.getActiveDigestSnapshot(
+      newsDesk.id,
+    );
+    const post = await this.generateMomentForChar(newsDesk, {
+      currentTime: this.resolveBulletinReferenceTime(slot.key),
+      generationKind: WORLD_NEWS_BULLETIN_GENERATION_KIND,
+      generationMetadata: {
+        slot: slot.key,
+        slotLabel: slot.label,
+        digestId: digestSnapshot?.digestId ?? null,
+        syncDate: digestSnapshot?.syncDate ?? null,
+        signalIds: digestSnapshot?.signalIds ?? [],
+        signalTitles: digestSnapshot?.signalTitles ?? [],
+        sourceNames: digestSnapshot?.sourceNames ?? [],
+      },
+    });
+    if (!post) {
+      return {
+        success: false,
+        created: false,
+        slot,
+        summary: `界闻已完成${slot.label}同步，但朋友圈生成失败。`,
+      };
+    }
+
+    return {
+      success: true,
+      created: true,
+      slot,
+      postId: post.id,
+      summary: `界闻已发布今天的${slot.label}。`,
+    };
   }
 
   @Cron('0 10,14,19 * * *')
@@ -591,83 +706,15 @@ export class SchedulerService {
   }
 
   private async handleCheckRealWorldNewsBulletins(): Promise<TrackedJobResult> {
-    const slot = this.resolveNewsBulletinSlot(new Date());
-    if (!slot) {
+    const result = await this.publishWorldNewsDeskBulletin();
+    if (!result.slot) {
       return {
-        summary: '当前不在界闻早报、午报或晚报窗口，跳过新闻简报调度。',
-      };
-    }
-
-    const newsDesk = await this.characterRepo.findOneBy({
-      id: WORLD_NEWS_DESK_CHARACTER_ID,
-    });
-    if (!newsDesk) {
-      return {
-        summary: '界闻角色尚未落库，跳过新闻简报调度。',
-      };
-    }
-
-    const blockedCharacterIds = new Set(
-      await this.socialService.getBlockedCharacterIds(),
-    );
-    if (blockedCharacterIds.has(newsDesk.id)) {
-      return {
-        summary: '界闻当前处于屏蔽状态，跳过新闻简报调度。',
-      };
-    }
-
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const existingPosts = await this.momentPostRepo.find({
-      where: {
-        authorId: newsDesk.id,
-        generationKind: WORLD_NEWS_BULLETIN_GENERATION_KIND,
-        postedAt: Between(start, new Date()),
-      },
-      order: { postedAt: 'DESC' },
-    });
-    if (
-      existingPosts.some((post) => post.generationMetadata?.slot === slot.key)
-    ) {
-      return {
-        summary: `界闻今天的${slot.label}已存在，跳过重复播报。`,
-      };
-    }
-
-    const syncResult = await this.realWorldSync.runSync({
-      characterId: newsDesk.id,
-      force: true,
-    });
-    if (!syncResult.success && syncResult.successCount === 0) {
-      return {
-        summary: `界闻在${slot.label}前的新闻同步失败，未生成简报。`,
-      };
-    }
-
-    const digestSnapshot = await this.realWorldSync.getActiveDigestSnapshot(
-      newsDesk.id,
-    );
-    const post = await this.generateMomentForChar(newsDesk, {
-      currentTime: new Date(),
-      generationKind: WORLD_NEWS_BULLETIN_GENERATION_KIND,
-      generationMetadata: {
-        slot: slot.key,
-        slotLabel: slot.label,
-        digestId: digestSnapshot?.digestId ?? null,
-        syncDate: digestSnapshot?.syncDate ?? null,
-        signalIds: digestSnapshot?.signalIds ?? [],
-        signalTitles: digestSnapshot?.signalTitles ?? [],
-        sourceNames: digestSnapshot?.sourceNames ?? [],
-      },
-    });
-    if (!post) {
-      return {
-        summary: `界闻已完成${slot.label}同步，但朋友圈生成失败。`,
+        summary: result.summary,
       };
     }
 
     return {
-      summary: `界闻已发布今天的${slot.label}。`,
+      summary: result.summary,
     };
   }
 
@@ -1139,6 +1186,35 @@ export class SchedulerService {
       return { key: 'evening', label: '晚报' };
     }
     return null;
+  }
+
+  private resolveNewsBulletinSlotByKey(
+    key: NewsBulletinSlot['key'],
+  ): NewsBulletinSlot | null {
+    if (key === 'morning') {
+      return { key, label: '早报' };
+    }
+    if (key === 'noon') {
+      return { key, label: '午报' };
+    }
+    if (key === 'evening') {
+      return { key, label: '晚报' };
+    }
+    return null;
+  }
+
+  private resolveBulletinReferenceTime(key: NewsBulletinSlot['key']) {
+    const value = new Date();
+    if (key === 'morning') {
+      value.setHours(8, 0, 0, 0);
+      return value;
+    }
+    if (key === 'noon') {
+      value.setHours(12, 0, 0, 0);
+      return value;
+    }
+    value.setHours(19, 0, 0, 0);
+    return value;
   }
 
   private async generateMomentForChar(

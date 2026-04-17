@@ -21,6 +21,7 @@ import { ActionRuntimeService } from '../action-runtime/action-runtime.service';
 import { CyberAvatarAdminService } from '../cyber-avatar/cyber-avatar-admin.service';
 import { NeedDiscoveryService } from '../need-discovery/need-discovery.service';
 import { RealWorldSyncService } from '../real-world-sync/real-world-sync.service';
+import { SchedulerService } from '../scheduler/scheduler.service';
 import type { RealWorldSyncRulesValue } from '../real-world-sync/real-world-sync.types';
 import type { NeedDiscoveryConfig } from '../need-discovery/need-discovery.types';
 import type {
@@ -42,6 +43,7 @@ export class AdminController {
     private readonly cyberAvatarAdminService: CyberAvatarAdminService,
     private readonly needDiscoveryService: NeedDiscoveryService,
     private readonly realWorldSyncService: RealWorldSyncService,
+    private readonly schedulerService: SchedulerService,
   ) {}
 
   @Get('stats')
@@ -83,12 +85,20 @@ export class AdminController {
   setRealWorldSyncRules(
     @Body()
     body: {
+      providerMode?: 'mock' | 'google_news_rss';
       defaultLocale?: string;
       defaultSourceAllowlist?: string[];
       defaultSourceBlocklist?: string[];
       defaultRecencyHours?: number;
       defaultMaxSignalsPerRun?: number;
       defaultMinimumConfidence?: number;
+      googleNews?: {
+        editionLanguage?: string;
+        editionRegion?: string;
+        editionCeid?: string;
+        maxEntriesPerQuery?: number;
+        fallbackToMockOnEmpty?: boolean;
+      };
       promptTemplates?: {
         signalNormalizationPrompt?: string;
         dailyDigestPrompt?: string;
@@ -112,6 +122,18 @@ export class AdminController {
     return this.realWorldSyncService.runSync({
       characterId: body.characterId ?? null,
       force: true,
+    });
+  }
+
+  @Post('real-world-sync/news-bulletins/publish')
+  publishWorldNewsBulletin(
+    @Body()
+    body: {
+      slot?: 'morning' | 'noon' | 'evening' | null;
+    },
+  ) {
+    return this.schedulerService.publishWorldNewsDeskBulletin({
+      slot: body.slot ?? undefined,
     });
   }
 
