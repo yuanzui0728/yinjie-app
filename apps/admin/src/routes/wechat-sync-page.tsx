@@ -2253,6 +2253,8 @@ function ImportChangeHistoryList({
     "all" | "preview_import" | "snapshot_restore"
   >("all");
   const [expandedRecordId, setExpandedRecordId] = useState<string | null>(null);
+  const [focusedRecordId, setFocusedRecordId] = useState<string | null>(null);
+  const [copyNotice, setCopyNotice] = useState("");
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
   const filteredRecords = useMemo(() => {
     return records.filter((record) => {
@@ -2266,8 +2268,39 @@ function ImportChangeHistoryList({
     });
   }, [deferredSearch, modeFilter, records]);
 
+  useEffect(() => {
+    if (!copyNotice) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setCopyNotice((current) => (current === copyNotice ? "" : current));
+    }, 2600);
+    return () => window.clearTimeout(timeoutId);
+  }, [copyNotice]);
+
+  useEffect(() => {
+    if (!focusedRecordId) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setFocusedRecordId((current) =>
+        current === focusedRecordId ? null : current,
+      );
+    }, 3200);
+    return () => window.clearTimeout(timeoutId);
+  }, [focusedRecordId]);
+
   return (
     <div>
+      {copyNotice ? (
+        <AdminActionFeedback
+          className="mb-4"
+          tone="success"
+          title="审计报告已复制"
+          description={copyNotice}
+        />
+      ) : null}
+
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
@@ -2338,6 +2371,28 @@ function ImportChangeHistoryList({
             >
               导出当前筛选 Markdown
             </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={async () => {
+                const copied = await copyWechatSyncAuditText(
+                  buildWechatSyncChangeMarkdownReport(
+                    characterName,
+                    filteredRecords,
+                    availableSnapshots,
+                  ),
+                  "复制审计 Markdown",
+                );
+                if (copied) {
+                  setCopyNotice(
+                    `已复制 ${filteredRecords.length} 条当前筛选记录的 Markdown 报告。`,
+                  );
+                }
+              }}
+              disabled={!filteredRecords.length}
+            >
+              复制当前筛选 Markdown
+            </Button>
           </div>
         </div>
       </div>
@@ -2358,9 +2413,17 @@ function ImportChangeHistoryList({
             record,
             availableSnapshots,
           );
+          const focused = focusedRecordId === record.id;
 
           return (
-            <Card key={record.id} className="bg-[color:var(--surface-soft)]">
+            <Card
+              key={record.id}
+              className={`bg-[color:var(--surface-soft)] ${
+                focused
+                  ? "ring-2 ring-emerald-200 shadow-[var(--shadow-soft)]"
+                  : ""
+              }`}
+            >
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="space-y-2 text-sm text-[color:var(--text-secondary)]">
                   <div className="flex flex-wrap items-center gap-2">
@@ -2383,6 +2446,9 @@ function ImportChangeHistoryList({
                         ? `变更 ${record.changedFields.length} 项`
                         : "无字段差异"}
                     </StatusPill>
+                    {focused ? (
+                      <StatusPill tone="healthy">已回放</StatusPill>
+                    ) : null}
                   </div>
                   <div>记录时间：{formatDateTime(record.recordedAt)}</div>
                   <div>
@@ -2449,6 +2515,27 @@ function ImportChangeHistoryList({
                     <Button
                       variant="secondary"
                       size="sm"
+                      onClick={async () => {
+                        const copied = await copyWechatSyncAuditText(
+                          buildWechatSyncChangeMarkdownReport(
+                            characterName,
+                            [record],
+                            availableSnapshots,
+                          ),
+                          "复制审计 Markdown",
+                        );
+                        if (copied) {
+                          setCopyNotice(
+                            `已复制 v${record.toVersion} 的单条 Markdown 审计报告。`,
+                          );
+                        }
+                      }}
+                    >
+                      复制本条 Markdown
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
                       onClick={() =>
                         replaySnapshot &&
                         onLoadSnapshotToManualInput?.(replaySnapshot)
@@ -2460,10 +2547,14 @@ function ImportChangeHistoryList({
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() =>
-                        replaySnapshot &&
-                        onReplaySnapshotPreview?.(replaySnapshot)
-                      }
+                      onClick={() => {
+                        if (!replaySnapshot || !onReplaySnapshotPreview) {
+                          return;
+                        }
+                        setExpandedRecordId(record.id);
+                        setFocusedRecordId(record.id);
+                        onReplaySnapshotPreview(replaySnapshot);
+                      }}
                       disabled={!replaySnapshot || !onReplaySnapshotPreview}
                     >
                       {replaySnapshot ? "回放为此版本预览" : "当前无可回放快照"}
@@ -3580,6 +3671,18 @@ function downloadWechatSyncAuditFile(
   link.click();
   link.remove();
   window.URL.revokeObjectURL(url);
+}
+
+async function copyWechatSyncAuditText(content: string, promptLabel: string) {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  if (typeof navigator !== "undefined" && navigator.clipboard) {
+    await navigator.clipboard.writeText(content);
+    return true;
+  }
+  window.prompt(promptLabel, content);
+  return true;
 }
 
 function escapeMarkdownTableCell(value: string) {
