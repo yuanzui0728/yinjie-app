@@ -1,9 +1,16 @@
 import type {
   AdminCreateGameCatalogRequest,
   AdminGameCatalogDetail,
+  AdminGameCatalogRevision,
   AdminGameCenterCuration,
   AdminGameCatalogItem,
+  AdminGameSubmission,
+  AdminImportGameSubmissionRequest,
+  AdminImportGameSubmissionResult,
+  AdminCreateGameSubmissionRequest,
+  AdminPublishGameCatalogRequest,
   AdminUpdateGameCenterCurationRequest,
+  AdminUpdateGameSubmissionRequest,
   AdminUpdateGameCatalogRequest,
   ActionConnectorDiscoveryResult,
   ActionConnectorSummary,
@@ -266,15 +273,41 @@ export const adminApi = {
   getFriendCharacterIds: () => adminFetch<string[]>("/characters/friend-ids"),
   getGamesCatalog: () => adminFetch<AdminGameCatalogItem[]>("/games"),
   getGameCenterCuration: () => adminFetch<AdminGameCenterCuration>("/games/curation"),
+  getGameCatalogRevisions: (id: string) =>
+    adminFetch<AdminGameCatalogRevision[]>(`/games/${id}/revisions`),
   getGameCatalogItem: (id: string) =>
     adminFetch<AdminGameCatalogDetail>(`/games/${id}`),
+  getGameSubmissions: () => adminFetch<AdminGameSubmission[]>("/games/submissions"),
   createGameCatalogItem: (payload: AdminCreateGameCatalogRequest) =>
     adminFetch<AdminGameCatalogDetail>("/games", {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  createGameSubmission: (payload: AdminCreateGameSubmissionRequest) =>
+    adminFetch<AdminGameSubmission>("/games/submissions", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  importGameSubmission: (
+    id: string,
+    payload: AdminImportGameSubmissionRequest,
+  ) =>
+    adminFetch<AdminImportGameSubmissionResult>(`/games/submissions/${id}/import`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  publishGameCatalogItem: (id: string, payload: AdminPublishGameCatalogRequest) =>
+    adminFetch<AdminGameCatalogDetail>(`/games/${id}/publish`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
   updateGameCenterCuration: (payload: AdminUpdateGameCenterCurationRequest) =>
     adminFetch<AdminGameCenterCuration>("/games/curation", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  updateGameSubmission: (id: string, payload: AdminUpdateGameSubmissionRequest) =>
+    adminFetch<AdminGameSubmission>(`/games/submissions/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     }),

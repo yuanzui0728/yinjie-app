@@ -24,6 +24,8 @@ import {
 } from "@yinjie/ui";
 import { AdminCallout, AdminEmptyState } from "../components/admin-workbench";
 import { GameCurationWorkbench } from "../components/game-curation-workbench";
+import { GameReleaseWorkbench } from "../components/game-release-workbench";
+import { GameSubmissionWorkbench } from "../components/game-submission-workbench";
 import { adminApi } from "../lib/admin-api";
 
 type GameWorkbenchDraft = {
@@ -444,7 +446,7 @@ export function GamesPage() {
 
       <AdminCallout
         title="后台工作台先承接目录、审核和来源编辑"
-        description="上半区维护游戏目录、审核和来源，下半区已经接入首页运营位、榜单和内容卡策展。后续继续补版本管理和角色产游工坊。"
+        description="上半区维护目录、审核和来源，中段接发布版本流，下半区继续承接首页策展和投稿入库。"
         tone="info"
         actions={
           <Button variant="primary" onClick={handleStartCreate}>
@@ -971,10 +973,26 @@ export function GamesPage() {
       </div>
 
       {!gamesQuery.isLoading ? (
-        <GameCurationWorkbench
-          games={gamesQuery.data ?? []}
-          onFeedback={setFeedback}
-        />
+        <>
+          <GameReleaseWorkbench
+            selectedGameId={isCreating ? null : selectedGameId}
+            selectedGame={isCreating ? null : selectedGameQuery.data ?? null}
+            onFeedback={setFeedback}
+          />
+
+          <GameCurationWorkbench
+            games={gamesQuery.data ?? []}
+            onFeedback={setFeedback}
+          />
+
+          <GameSubmissionWorkbench
+            onFeedback={setFeedback}
+            onImportedGame={(gameId) => {
+              setIsCreating(false);
+              setSelectedGameId(gameId);
+            }}
+          />
+        </>
       ) : null}
     </div>
   );

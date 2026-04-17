@@ -86,6 +86,21 @@ export class GameCatalogEntity {
   @Column('integer', { default: 0 })
   sortOrder: number;
 
+  @Column('text', { nullable: true })
+  publishedRevisionId?: string | null;
+
+  @Column('integer', { default: 0 })
+  publishedVersion: number;
+
+  @Column('datetime', { nullable: true })
+  lastPublishedAt?: Date | null;
+
+  @Column('text', { nullable: true })
+  lastPublishedSummary?: string | null;
+
+  @Column('text', { nullable: true })
+  originSubmissionId?: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

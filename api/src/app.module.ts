@@ -50,8 +50,10 @@ import { FeedPostEntity } from './modules/feed/feed-post.entity';
 import { FeedCommentEntity } from './modules/feed/feed-comment.entity';
 import { VideoChannelFollowEntity } from './modules/feed/video-channel-follow.entity';
 import { GameCatalogEntity } from './modules/games/game-catalog.entity';
+import { GameCatalogRevisionEntity } from './modules/games/game-catalog-revision.entity';
 import { GameCenterCurationEntity } from './modules/games/game-center-curation.entity';
 import { GameOwnerStateEntity } from './modules/games/game-owner-state.entity';
+import { GameSubmissionEntity } from './modules/games/game-submission.entity';
 import { WorldContextEntity } from './modules/world/world-context.entity';
 import { NarrativeArcEntity } from './modules/narrative/narrative-arc.entity';
 import { AIBehaviorLogEntity } from './modules/analytics/ai-behavior-log.entity';
@@ -122,8 +124,10 @@ import {
           FeedCommentEntity,
           VideoChannelFollowEntity,
           GameCatalogEntity,
+          GameCatalogRevisionEntity,
           GameCenterCurationEntity,
           GameOwnerStateEntity,
+          GameSubmissionEntity,
           WorldContextEntity,
           NarrativeArcEntity,
           AIBehaviorLogEntity,

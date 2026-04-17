@@ -17,6 +17,16 @@ export class AdminGamesController {
     return this.gamesService.getAdminGameCenterCuration();
   }
 
+  @Get('submissions')
+  getAdminGameSubmissions() {
+    return this.gamesService.getAdminGameSubmissions();
+  }
+
+  @Get(':id/revisions')
+  getAdminCatalogRevisions(@Param('id') id: string) {
+    return this.gamesService.getAdminCatalogRevisions(id);
+  }
+
   @Get(':id')
   getAdminCatalogItem(@Param('id') id: string) {
     return this.gamesService.getAdminCatalogItem(id);
@@ -55,6 +65,56 @@ export class AdminGamesController {
     },
   ) {
     return this.gamesService.createAdminCatalogItem(body);
+  }
+
+  @Post('submissions')
+  createAdminGameSubmission(
+    @Body()
+    body: {
+      sourceKind?: string;
+      proposedGameId?: string;
+      proposedName?: string;
+      slogan?: string;
+      description?: string;
+      studio?: string;
+      category?: string;
+      tone?: string;
+      runtimeMode?: string;
+      productionKind?: string;
+      sourceCharacterId?: string | null;
+      sourceCharacterName?: string | null;
+      submitterName?: string;
+      submitterContact?: string;
+      submissionNote?: string;
+      aiHighlights?: string[] | null;
+      tags?: string[] | null;
+    },
+  ) {
+    return this.gamesService.createAdminGameSubmission(body);
+  }
+
+  @Post('submissions/:id/import')
+  importAdminGameSubmission(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      targetGameId?: string;
+      sortOrder?: number;
+    },
+  ) {
+    return this.gamesService.importAdminGameSubmission(id, body);
+  }
+
+  @Post(':id/publish')
+  publishAdminCatalogItem(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      summary?: string;
+      visibilityScope?: string;
+    },
+  ) {
+    return this.gamesService.publishAdminCatalogItem(id, body);
   }
 
   @Patch('curation')
@@ -103,6 +163,36 @@ export class AdminGamesController {
     },
   ) {
     return this.gamesService.updateAdminGameCenterCuration(body);
+  }
+
+  @Patch('submissions/:id')
+  updateAdminGameSubmission(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      sourceKind?: string;
+      status?: string;
+      proposedGameId?: string;
+      proposedName?: string;
+      slogan?: string;
+      description?: string;
+      studio?: string;
+      category?: string;
+      tone?: string;
+      runtimeMode?: string;
+      productionKind?: string;
+      sourceCharacterId?: string | null;
+      sourceCharacterName?: string | null;
+      submitterName?: string;
+      submitterContact?: string;
+      submissionNote?: string;
+      reviewNote?: string | null;
+      linkedCatalogGameId?: string | null;
+      aiHighlights?: string[] | null;
+      tags?: string[] | null;
+    },
+  ) {
+    return this.gamesService.updateAdminGameSubmission(id, body);
   }
 
   @Patch(':id')

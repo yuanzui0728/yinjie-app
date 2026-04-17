@@ -1,10 +1,11 @@
+import { randomUUID } from 'crypto';
 import {
   BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { WorldOwnerService } from '../auth/world-owner.service';
 import {
   createDefaultGameCenterOwnerState,
@@ -13,8 +14,10 @@ import {
   cloneGameCenterHomeSeed,
 } from './game-center.data';
 import { GameCatalogEntity } from './game-catalog.entity';
+import { GameCatalogRevisionEntity } from './game-catalog-revision.entity';
 import { GameCenterCurationEntity } from './game-center-curation.entity';
 import { GameOwnerStateEntity } from './game-owner-state.entity';
+import { GameSubmissionEntity } from './game-submission.entity';
 
 const MAX_RECENT_GAMES = 6;
 const MAX_PINNED_GAMES = 8;
@@ -27,6 +30,48 @@ type SerializedGameCenterCuration = ReturnType<
   typeof cloneGameCenterCurationSeed
 > & {
   updatedAt: string;
+};
+
+type SerializedGameCatalogSnapshot = {
+  id: string;
+  name: string;
+  slogan: string;
+  description: string;
+  studio: string;
+  heroLabel: string;
+  category: 'featured' | 'party' | 'competitive' | 'relax' | 'strategy';
+  tone: 'forest' | 'gold' | 'ocean' | 'violet' | 'sunset' | 'mint';
+  badge: string;
+  deckLabel: string;
+  estimatedDuration: string;
+  rewardLabel: string;
+  sessionObjective: string;
+  publisherKind: 'platform_official' | 'third_party' | 'character_creator';
+  productionKind:
+    | 'human_authored'
+    | 'ai_assisted'
+    | 'ai_generated'
+    | 'character_generated';
+  runtimeMode:
+    | 'workspace_mock'
+    | 'chat_native'
+    | 'embedded_web'
+    | 'remote_session';
+  reviewStatus:
+    | 'internal_seed'
+    | 'pending_review'
+    | 'approved'
+    | 'rejected'
+    | 'suspended';
+  visibilityScope: 'featured' | 'published' | 'coming_soon' | 'internal';
+  sortOrder: number;
+  sourceCharacterId?: string | null;
+  sourceCharacterName?: string | null;
+  aiHighlights: string[];
+  tags: string[];
+  updateNote: string;
+  playersLabel: string;
+  friendsLabel: string;
 };
 
 type CreateAdminGameInput = {
@@ -59,6 +104,11 @@ type CreateAdminGameInput = {
 };
 
 type UpdateAdminGameInput = Omit<CreateAdminGameInput, 'id'>;
+
+type PublishAdminGameInput = {
+  summary?: string;
+  visibilityScope?: string;
+};
 
 type UpdateAdminGameCenterCurationInput = {
   featuredGameIds?: string[];
@@ -102,6 +152,151 @@ type UpdateAdminGameCenterCurationInput = {
   }>;
 };
 
+type CreateAdminGameSubmissionInput = {
+  sourceKind?: string;
+  proposedGameId?: string;
+  proposedName?: string;
+  slogan?: string;
+  description?: string;
+  studio?: string;
+  category?: string;
+  tone?: string;
+  runtimeMode?: string;
+  productionKind?: string;
+  sourceCharacterId?: string | null;
+  sourceCharacterName?: string | null;
+  submitterName?: string;
+  submitterContact?: string;
+  submissionNote?: string;
+  aiHighlights?: string[] | null;
+  tags?: string[] | null;
+};
+
+type UpdateAdminGameSubmissionInput = {
+  sourceKind?: string;
+  status?: string;
+  proposedGameId?: string;
+  proposedName?: string;
+  slogan?: string;
+  description?: string;
+  studio?: string;
+  category?: string;
+  tone?: string;
+  runtimeMode?: string;
+  productionKind?: string;
+  sourceCharacterId?: string | null;
+  sourceCharacterName?: string | null;
+  submitterName?: string;
+  submitterContact?: string;
+  submissionNote?: string;
+  reviewNote?: string | null;
+  linkedCatalogGameId?: string | null;
+  aiHighlights?: string[] | null;
+  tags?: string[] | null;
+};
+
+type ImportAdminGameSubmissionInput = {
+  targetGameId?: string;
+  sortOrder?: number;
+};
+
+type GameCatalogRevisionChangeSource =
+  | 'draft_created'
+  | 'draft_updated'
+  | 'publish'
+  | 'submission_ingest'
+  | 'seed_backfill';
+
+const GAME_SUBMISSION_SEED: Array<{
+  id: string;
+  sourceKind: 'platform_official' | 'third_party' | 'character_creator';
+  status: 'pending_review' | 'draft_imported' | 'approved' | 'rejected';
+  proposedGameId: string;
+  proposedName: string;
+  slogan: string;
+  description: string;
+  studio: string;
+  category: 'featured' | 'party' | 'competitive' | 'relax' | 'strategy';
+  tone: 'forest' | 'gold' | 'ocean' | 'violet' | 'sunset' | 'mint';
+  runtimeMode: 'workspace_mock' | 'chat_native' | 'embedded_web' | 'remote_session';
+  productionKind:
+    | 'human_authored'
+    | 'ai_assisted'
+    | 'ai_generated'
+    | 'character_generated';
+  sourceCharacterId?: string | null;
+  sourceCharacterName?: string | null;
+  submitterName: string;
+  submitterContact: string;
+  submissionNote: string;
+  reviewNote?: string | null;
+  aiHighlights: string[];
+  tags: string[];
+}> = [
+  {
+    id: 'submission-orbit-theatre',
+    sourceKind: 'third_party',
+    status: 'pending_review',
+    proposedGameId: 'orbit-theatre',
+    proposedName: '轨道剧场',
+    slogan: '让 AI 导演、观众反馈和舞台调度一起推高每一场演出。',
+    description:
+      '一款偏经营与舞台编排的 AI 游戏，玩家需要根据观众画像安排卡司、节奏和舞台冲突。',
+    studio: '北港互动',
+    category: 'strategy',
+    tone: 'ocean',
+    runtimeMode: 'embedded_web',
+    productionKind: 'ai_assisted',
+    submitterName: '北港互动 BD',
+    submitterContact: 'bd@beigang.example',
+    submissionNote: '希望接入隐界的角色社交体系，让观众和演员都能成为可持续回访的 AI 角色。',
+    aiHighlights: ['AI 导演排班', 'AI 观众反馈', 'AI 舞台事故生成'],
+    tags: ['经营', '舞台', '排班'],
+  },
+  {
+    id: 'submission-midnight-signal',
+    sourceKind: 'character_creator',
+    status: 'pending_review',
+    proposedGameId: 'midnight-signal',
+    proposedName: '午夜电台',
+    slogan: '由角色主持的夜间情绪电台，每一晚都能生成新节目的互动冒险。',
+    description:
+      '角色主理人通过固定世界角色连续产出夜间节目，玩家在直播聊天室里决定剧情分叉和听众命运。',
+    studio: '角色工坊',
+    category: 'relax',
+    tone: 'violet',
+    runtimeMode: 'chat_native',
+    productionKind: 'character_generated',
+    sourceCharacterId: 'character-midnight-host',
+    sourceCharacterName: '夜航主持人',
+    submitterName: '夜航主持人',
+    submitterContact: 'world://midnight-host',
+    submissionNote: '角色本人连续生成了 12 期可复玩的夜间电台脚本，希望入库成长期栏目。',
+    aiHighlights: ['角色自主演播', 'AI 听众热线', '连续剧式分支'],
+    tags: ['夜聊', '直播', '剧情'],
+  },
+  {
+    id: 'submission-proto-ferry',
+    sourceKind: 'platform_official',
+    status: 'pending_review',
+    proposedGameId: 'proto-ferry',
+    proposedName: '回声渡船',
+    slogan: '官方孵化中的多人推理船班，AI 负责生成每一班乘客秘密。',
+    description:
+      '平台内测提案，玩家和 AI 乘客共享一班夜渡轮，围绕一桩未解事件进行群体推理与投票。',
+    studio: '隐界游戏实验室',
+    category: 'competitive',
+    tone: 'sunset',
+    runtimeMode: 'workspace_mock',
+    productionKind: 'ai_generated',
+    submitterName: '隐界游戏实验室',
+    submitterContact: 'internal://game-lab',
+    submissionNote: '当前还在验证多人房间节奏，先进入目录草稿池做内部评审。',
+    aiHighlights: ['AI 乘客秘密生成', '房间内实时推理', '剧情证据动态重排'],
+    tags: ['推理', '房间制', '多人'],
+  },
+];
+
 @Injectable()
 export class GamesService {
   constructor(
@@ -109,8 +304,12 @@ export class GamesService {
     private readonly ownerStateRepo: Repository<GameOwnerStateEntity>,
     @InjectRepository(GameCatalogEntity)
     private readonly catalogRepo: Repository<GameCatalogEntity>,
+    @InjectRepository(GameCatalogRevisionEntity)
+    private readonly revisionRepo: Repository<GameCatalogRevisionEntity>,
     @InjectRepository(GameCenterCurationEntity)
     private readonly curationRepo: Repository<GameCenterCurationEntity>,
+    @InjectRepository(GameSubmissionEntity)
+    private readonly submissionRepo: Repository<GameSubmissionEntity>,
     private readonly worldOwnerService: WorldOwnerService,
   ) {}
 
@@ -237,12 +436,28 @@ export class GamesService {
 
   async getAdminCatalog() {
     const entries = await this.listCatalogEntities();
-    return entries.map((entry) => this.serializeAdminCatalogItem(entry));
+    const latestRevisionMap = await this.getLatestCatalogRevisionMap(
+      entries.map((entry) => entry.id),
+    );
+
+    return entries.map((entry) =>
+      this.serializeAdminCatalogItem(
+        entry,
+        latestRevisionMap.get(entry.id)?.id ?? null,
+      ),
+    );
   }
 
   async getAdminCatalogItem(id: string) {
     const entry = await this.getCatalogEntryOrThrow(id);
-    return this.serializeAdminCatalogItem(entry);
+    const latestRevision = await this.getLatestCatalogRevision(id);
+    return this.serializeAdminCatalogItem(entry, latestRevision?.id ?? null);
+  }
+
+  async getAdminCatalogRevisions(id: string) {
+    await this.getCatalogEntryOrThrow(id);
+    const revisions = await this.listCatalogRevisions(id);
+    return revisions.map((revision) => this.toRevisionContract(revision));
   }
 
   async createAdminCatalogItem(input: CreateAdminGameInput) {
@@ -292,10 +507,16 @@ export class GamesService {
       sourceCharacterName: this.normalizeNullableText(input.sourceCharacterName),
       aiHighlightsPayload: this.normalizeStringArray(input.aiHighlights),
       sortOrder,
+      publishedRevisionId: null,
+      publishedVersion: 0,
+      lastPublishedAt: null,
+      lastPublishedSummary: null,
+      originSubmissionId: null,
     });
 
     const saved = await this.catalogRepo.save(entry);
-    return this.serializeAdminCatalogItem(saved);
+    await this.createCatalogRevision(saved, 'draft_created', null, null);
+    return this.getAdminCatalogItem(saved.id);
   }
 
   async updateAdminCatalogItem(id: string, input: UpdateAdminGameInput) {
@@ -401,7 +622,36 @@ export class GamesService {
     }
 
     const saved = await this.catalogRepo.save(entry);
-    return this.serializeAdminCatalogItem(saved);
+    await this.createCatalogRevision(saved, 'draft_updated', null, null);
+    return this.getAdminCatalogItem(saved.id);
+  }
+
+  async publishAdminCatalogItem(id: string, input: PublishAdminGameInput) {
+    const entry = await this.getCatalogEntryOrThrow(id);
+    const nextPublishedVersion = (entry.publishedVersion ?? 0) + 1;
+    const summary = this.normalizeNullableText(input.summary);
+
+    entry.reviewStatus = 'approved';
+    entry.visibilityScope = this.resolvePublishedVisibilityScope(
+      entry.visibilityScope,
+      input.visibilityScope,
+    );
+
+    const revision = await this.createCatalogRevision(
+      entry,
+      'publish',
+      summary,
+      nextPublishedVersion,
+    );
+
+    entry.publishedRevisionId = revision.id;
+    entry.publishedVersion = nextPublishedVersion;
+    entry.lastPublishedAt = revision.createdAt;
+    entry.lastPublishedSummary = summary;
+
+    const saved = await this.catalogRepo.save(entry);
+    await this.markOriginSubmissionPublished(saved);
+    return this.getAdminCatalogItem(saved.id);
   }
 
   async getAdminGameCenterCuration() {
@@ -451,6 +701,233 @@ export class GamesService {
     return this.persistGameCenterCuration(entity, nextState, knownGameIds);
   }
 
+  async getAdminGameSubmissions() {
+    const entries = await this.listSubmissionEntities();
+    return entries.map((entry) => this.serializeGameSubmission(entry));
+  }
+
+  async createAdminGameSubmission(input: CreateAdminGameSubmissionInput) {
+    await this.ensureSubmissionSeeded();
+
+    const entry = this.submissionRepo.create({
+      id: `game-submission-${randomUUID()}`,
+      sourceKind: this.normalizeText(input.sourceKind, 'third_party'),
+      status: 'pending_review',
+      proposedGameId: this.normalizeGameId(input.proposedGameId),
+      proposedName: this.normalizeRequiredText(
+        input.proposedName,
+        'proposedName',
+        '投稿游戏名',
+      ),
+      slogan: this.normalizeText(input.slogan, '待补充一句话卖点'),
+      description: this.normalizeText(input.description, '待补充投稿游戏说明。'),
+      studio: this.normalizeText(input.studio, '待定团队'),
+      category: this.normalizeText(input.category, 'featured'),
+      tone: this.normalizeText(input.tone, 'forest'),
+      runtimeMode: this.normalizeText(input.runtimeMode, 'workspace_mock'),
+      productionKind: this.normalizeText(input.productionKind, 'ai_assisted'),
+      sourceCharacterId: this.normalizeNullableText(input.sourceCharacterId),
+      sourceCharacterName: this.normalizeNullableText(input.sourceCharacterName),
+      submitterName: this.normalizeText(input.submitterName, '匿名投稿'),
+      submitterContact: this.normalizeText(input.submitterContact, '未提供联系方式'),
+      submissionNote: this.normalizeText(
+        input.submissionNote,
+        '等待补充投稿说明与运营诉求。',
+      ),
+      reviewNote: null,
+      linkedCatalogGameId: null,
+      aiHighlightsPayload: this.normalizeStringArray(input.aiHighlights),
+      tagsPayload: this.normalizeStringArray(input.tags),
+    });
+
+    const saved = await this.submissionRepo.save(entry);
+    return this.serializeGameSubmission(saved);
+  }
+
+  async updateAdminGameSubmission(
+    id: string,
+    input: UpdateAdminGameSubmissionInput,
+  ) {
+    const entry = await this.getSubmissionOrThrow(id);
+
+    if (input.sourceKind !== undefined) {
+      entry.sourceKind = this.normalizeText(input.sourceKind, entry.sourceKind);
+    }
+    if (input.status !== undefined) {
+      entry.status = this.normalizeText(input.status, entry.status);
+    }
+    if (input.proposedGameId !== undefined) {
+      entry.proposedGameId = this.normalizeGameId(input.proposedGameId);
+    }
+    if (input.proposedName !== undefined) {
+      entry.proposedName = this.normalizeRequiredText(
+        input.proposedName,
+        'proposedName',
+        '投稿游戏名',
+      );
+    }
+    if (input.slogan !== undefined) {
+      entry.slogan = this.normalizeText(input.slogan, entry.slogan);
+    }
+    if (input.description !== undefined) {
+      entry.description = this.normalizeText(input.description, entry.description);
+    }
+    if (input.studio !== undefined) {
+      entry.studio = this.normalizeText(input.studio, entry.studio);
+    }
+    if (input.category !== undefined) {
+      entry.category = this.normalizeText(input.category, entry.category);
+    }
+    if (input.tone !== undefined) {
+      entry.tone = this.normalizeText(input.tone, entry.tone);
+    }
+    if (input.runtimeMode !== undefined) {
+      entry.runtimeMode = this.normalizeText(input.runtimeMode, entry.runtimeMode);
+    }
+    if (input.productionKind !== undefined) {
+      entry.productionKind = this.normalizeText(
+        input.productionKind,
+        entry.productionKind,
+      );
+    }
+    if (input.sourceCharacterId !== undefined) {
+      entry.sourceCharacterId = this.normalizeNullableText(input.sourceCharacterId);
+    }
+    if (input.sourceCharacterName !== undefined) {
+      entry.sourceCharacterName = this.normalizeNullableText(
+        input.sourceCharacterName,
+      );
+    }
+    if (input.submitterName !== undefined) {
+      entry.submitterName = this.normalizeText(input.submitterName, entry.submitterName);
+    }
+    if (input.submitterContact !== undefined) {
+      entry.submitterContact = this.normalizeText(
+        input.submitterContact,
+        entry.submitterContact,
+      );
+    }
+    if (input.submissionNote !== undefined) {
+      entry.submissionNote = this.normalizeText(
+        input.submissionNote,
+        entry.submissionNote,
+      );
+    }
+    if (input.reviewNote !== undefined) {
+      entry.reviewNote = this.normalizeNullableText(input.reviewNote);
+    }
+    if (input.linkedCatalogGameId !== undefined) {
+      entry.linkedCatalogGameId = this.normalizeNullableText(input.linkedCatalogGameId);
+    }
+    if (input.aiHighlights !== undefined) {
+      entry.aiHighlightsPayload = this.normalizeStringArray(input.aiHighlights);
+    }
+    if (input.tags !== undefined) {
+      entry.tagsPayload = this.normalizeStringArray(input.tags);
+    }
+
+    const saved = await this.submissionRepo.save(entry);
+    return this.serializeGameSubmission(saved);
+  }
+
+  async importAdminGameSubmission(
+    id: string,
+    input: ImportAdminGameSubmissionInput,
+  ) {
+    const submission = await this.getSubmissionOrThrow(id);
+
+    if (submission.status === 'rejected') {
+      throw new BadRequestException('已拒绝的投稿不能导入目录草稿');
+    }
+
+    if (submission.linkedCatalogGameId) {
+      const linkedEntry = await this.catalogRepo.findOne({
+        where: { id: submission.linkedCatalogGameId },
+      });
+      if (linkedEntry) {
+        return {
+          submission: this.serializeGameSubmission(submission),
+          game: await this.getAdminCatalogItem(linkedEntry.id),
+        };
+      }
+    }
+
+    await this.ensureCatalogSeeded();
+
+    const gameId = this.normalizeGameId(
+      input.targetGameId ?? submission.proposedGameId,
+    );
+    const existing = await this.catalogRepo.findOne({ where: { id: gameId } });
+    if (existing) {
+      throw new BadRequestException('目标游戏 ID 已存在');
+    }
+
+    const sortOrder =
+      typeof input.sortOrder === 'number' && Number.isFinite(input.sortOrder)
+        ? input.sortOrder
+        : await this.getNextSortOrder();
+
+    const entry = this.catalogRepo.create({
+      id: gameId,
+      name: submission.proposedName,
+      slogan: submission.slogan,
+      description: submission.description,
+      studio: submission.studio,
+      badge: this.resolveSubmissionBadge(submission.sourceKind),
+      heroLabel: this.resolveSubmissionHeroLabel(submission.sourceKind),
+      category: submission.category,
+      tone: submission.tone,
+      playersLabel: '等待首批测试玩家',
+      friendsLabel:
+        submission.sourceKind === 'character_creator'
+          ? '等待角色粉丝首轮试玩'
+          : '暂无好友试玩',
+      updateNote: this.normalizeText(submission.submissionNote, '投稿入库草稿'),
+      deckLabel: '投稿入库草稿',
+      estimatedDuration: '待补充',
+      rewardLabel: '待补充',
+      sessionObjective: this.normalizeText(
+        submission.description,
+        '待补充这一轮游玩的具体目标。',
+      ),
+      tagsPayload: [...submission.tagsPayload],
+      publisherKind: submission.sourceKind,
+      productionKind: submission.productionKind,
+      runtimeMode: submission.runtimeMode,
+      reviewStatus: 'pending_review',
+      visibilityScope: 'internal',
+      sourceCharacterId: submission.sourceCharacterId ?? null,
+      sourceCharacterName: submission.sourceCharacterName ?? null,
+      aiHighlightsPayload: [...submission.aiHighlightsPayload],
+      sortOrder,
+      publishedRevisionId: null,
+      publishedVersion: 0,
+      lastPublishedAt: null,
+      lastPublishedSummary: null,
+      originSubmissionId: submission.id,
+    });
+
+    const savedEntry = await this.catalogRepo.save(entry);
+    await this.createCatalogRevision(
+      savedEntry,
+      'submission_ingest',
+      `投稿入库：${submission.submitterName}`,
+      null,
+    );
+
+    submission.status = 'draft_imported';
+    submission.linkedCatalogGameId = savedEntry.id;
+    if (!submission.reviewNote) {
+      submission.reviewNote = '已导入目录草稿，等待审核与正式发布。';
+    }
+    const savedSubmission = await this.submissionRepo.save(submission);
+
+    return {
+      submission: this.serializeGameSubmission(savedSubmission),
+      game: await this.getAdminCatalogItem(savedEntry.id),
+    };
+  }
+
   private async ensureCatalogSeeded() {
     const existingIds = new Set(
       (
@@ -491,22 +968,32 @@ export class GamesService {
           sourceCharacterName: game.sourceCharacterName ?? null,
           aiHighlightsPayload: [...game.aiHighlights],
           sortOrder,
+          publishedRevisionId: null,
+          publishedVersion: 0,
+          lastPublishedAt: null,
+          lastPublishedSummary: null,
+          originSubmissionId: null,
         }),
       );
 
     if (missingSeedEntries.length > 0) {
-      await this.catalogRepo.save(missingSeedEntries);
+      const savedEntries = await this.catalogRepo.save(missingSeedEntries);
+      for (const entry of savedEntries) {
+        await this.createCatalogRevision(entry, 'seed_backfill', null, null);
+      }
     }
   }
 
   private async listCatalogEntities() {
     await this.ensureCatalogSeeded();
-    return this.catalogRepo.find({
+    const entries = await this.catalogRepo.find({
       order: {
         sortOrder: 'ASC',
         createdAt: 'ASC',
       },
     });
+    await this.ensureCatalogRevisions(entries);
+    return entries;
   }
 
   private async getCatalogEntryOrThrow(id: string) {
@@ -521,7 +1008,91 @@ export class GamesService {
       throw new NotFoundException('游戏不存在');
     }
 
+    await this.ensureCatalogRevisions([entry]);
     return entry;
+  }
+
+  private async ensureCatalogRevisions(entries: GameCatalogEntity[]) {
+    const gameIds = entries.map((entry) => entry.id);
+    if (gameIds.length === 0) {
+      return;
+    }
+
+    const latestRevisionMap = await this.getLatestCatalogRevisionMap(gameIds);
+    for (const entry of entries) {
+      if (!latestRevisionMap.has(entry.id)) {
+        await this.createCatalogRevision(entry, 'seed_backfill', null, null);
+      }
+    }
+  }
+
+  private async listCatalogRevisions(gameId: string) {
+    return this.revisionRepo.find({
+      where: { gameId },
+      order: {
+        revisionSequence: 'DESC',
+        createdAt: 'DESC',
+      },
+    });
+  }
+
+  private async getLatestCatalogRevision(gameId: string) {
+    const entries = await this.revisionRepo.find({
+      where: { gameId },
+      order: {
+        revisionSequence: 'DESC',
+        createdAt: 'DESC',
+      },
+      take: 1,
+    });
+
+    return entries[0] ?? null;
+  }
+
+  private async getLatestCatalogRevisionMap(gameIds: string[]) {
+    if (gameIds.length === 0) {
+      return new Map<string, GameCatalogRevisionEntity>();
+    }
+
+    const revisions = await this.revisionRepo.find({
+      where: {
+        gameId: In(gameIds),
+      },
+      order: {
+        gameId: 'ASC',
+        revisionSequence: 'DESC',
+        createdAt: 'DESC',
+      },
+    });
+
+    const revisionMap = new Map<string, GameCatalogRevisionEntity>();
+    revisions.forEach((revision) => {
+      if (!revisionMap.has(revision.gameId)) {
+        revisionMap.set(revision.gameId, revision);
+      }
+    });
+
+    return revisionMap;
+  }
+
+  private async createCatalogRevision(
+    entry: GameCatalogEntity,
+    changeSource: GameCatalogRevisionChangeSource,
+    summary: string | null,
+    publishedVersion: number | null,
+  ) {
+    const latestRevision = await this.getLatestCatalogRevision(entry.id);
+    const revision = this.revisionRepo.create({
+      id: `game-revision-${randomUUID()}`,
+      gameId: entry.id,
+      revisionSequence: (latestRevision?.revisionSequence ?? 0) + 1,
+      publishedVersion,
+      summary,
+      changeSource,
+      snapshotPayload: this.serializeGameCatalogSnapshot(entry),
+    });
+
+    return this.revisionRepo.save(revision);
   }
 
   private async ensureCurationEntity() {
@@ -547,6 +1118,68 @@ export class GamesService {
     });
 
     return this.curationRepo.save(created);
+  }
+
+  private async listSubmissionEntities() {
+    await this.ensureSubmissionSeeded();
+    return this.submissionRepo.find({
+      order: {
+        updatedAt: 'DESC',
+        createdAt: 'DESC',
+      },
+    });
+  }
+
+  private async ensureSubmissionSeeded() {
+    const existingIds = new Set(
+      (
+        await this.submissionRepo.find({
+          select: ['id'],
+        })
+      ).map((entry) => entry.id),
+    );
+
+    const missingEntries = GAME_SUBMISSION_SEED.filter(
+      (entry) => !existingIds.has(entry.id),
+    ).map((entry) =>
+      this.submissionRepo.create({
+        id: entry.id,
+        sourceKind: entry.sourceKind,
+        status: entry.status,
+        proposedGameId: entry.proposedGameId,
+        proposedName: entry.proposedName,
+        slogan: entry.slogan,
+        description: entry.description,
+        studio: entry.studio,
+        category: entry.category,
+        tone: entry.tone,
+        runtimeMode: entry.runtimeMode,
+        productionKind: entry.productionKind,
+        sourceCharacterId: entry.sourceCharacterId ?? null,
+        sourceCharacterName: entry.sourceCharacterName ?? null,
+        submitterName: entry.submitterName,
+        submitterContact: entry.submitterContact,
+        submissionNote: entry.submissionNote,
+        reviewNote: entry.reviewNote ?? null,
+        linkedCatalogGameId: null,
+        aiHighlightsPayload: [...entry.aiHighlights],
+        tagsPayload: [...entry.tags],
+      }),
+    );
+
+    if (missingEntries.length > 0) {
+      await this.submissionRepo.save(missingEntries);
+    }
+  }
+
+  private async getSubmissionOrThrow(id: string) {
+    await this.ensureSubmissionSeeded();
+    const entry = await this.submissionRepo.findOne({ where: { id } });
+    if (!entry) {
+      throw new NotFoundException('投稿不存在');
+    }
+
+    return entry;
   }
 
   private async getKnownGameIdSet() {
@@ -937,11 +1570,7 @@ export class GamesService {
           id: typeof shelf?.id === 'string' ? shelf.id : '',
           title: typeof shelf?.title === 'string' ? shelf.title : '',
           description: typeof shelf?.description === 'string' ? shelf.description : '',
-          gameIds: this.sanitizeGameIds(
-            shelf?.gameIds,
-            knownGameIds,
-            [],
-          ),
+          gameIds: this.sanitizeGameIds(shelf?.gameIds, knownGameIds, []),
         }))
         .filter((shelf) => shelf.id && shelf.title && shelf.gameIds.length > 0),
       hotRankings: (Array.isArray(entity.hotRankingsPayload)
@@ -1064,13 +1693,167 @@ export class GamesService {
     };
   }
 
-  private serializeAdminCatalogItem(entry: GameCatalogEntity) {
+  private serializeGameCatalogSnapshot(
+    entry: GameCatalogEntity,
+  ): SerializedGameCatalogSnapshot {
     return {
       ...this.serializeGame(entry),
       sortOrder: entry.sortOrder,
+    };
+  }
+
+  private serializeAdminCatalogItem(
+    entry: GameCatalogEntity,
+    latestRevisionId: string | null,
+  ) {
+    return {
+      ...this.serializeGameCatalogSnapshot(entry),
+      publishedVersion: entry.publishedVersion ?? 0,
+      publishedRevisionId: entry.publishedRevisionId ?? null,
+      hasUnpublishedChanges: latestRevisionId
+        ? latestRevisionId !== (entry.publishedRevisionId ?? null)
+        : false,
+      lastPublishedAt: entry.lastPublishedAt?.toISOString() ?? null,
+      lastPublishedSummary: entry.lastPublishedSummary ?? null,
+      originSubmissionId: entry.originSubmissionId ?? null,
       createdAt: entry.createdAt.toISOString(),
       updatedAt: entry.updatedAt.toISOString(),
     };
+  }
+
+  private toRevisionContract(revision: GameCatalogRevisionEntity) {
+    return {
+      id: revision.id,
+      gameId: revision.gameId,
+      revisionSequence: revision.revisionSequence,
+      publishedVersion: revision.publishedVersion ?? null,
+      summary: revision.summary ?? null,
+      changeSource: revision.changeSource as GameCatalogRevisionChangeSource,
+      snapshot: {
+        ...revision.snapshotPayload,
+        sourceCharacterId: revision.snapshotPayload.sourceCharacterId ?? null,
+        sourceCharacterName: revision.snapshotPayload.sourceCharacterName ?? null,
+        aiHighlights: [...revision.snapshotPayload.aiHighlights],
+        tags: [...revision.snapshotPayload.tags],
+      },
+      createdAt: revision.createdAt.toISOString(),
+    };
+  }
+
+  private serializeGameSubmission(entry: GameSubmissionEntity) {
+    return {
+      id: entry.id,
+      sourceKind: entry.sourceKind as
+        | 'platform_official'
+        | 'third_party'
+        | 'character_creator',
+      status: entry.status as
+        | 'pending_review'
+        | 'draft_imported'
+        | 'approved'
+        | 'rejected',
+      proposedGameId: entry.proposedGameId,
+      proposedName: entry.proposedName,
+      slogan: entry.slogan,
+      description: entry.description,
+      studio: entry.studio,
+      category: entry.category as
+        | 'featured'
+        | 'party'
+        | 'competitive'
+        | 'relax'
+        | 'strategy',
+      tone: entry.tone as
+        | 'forest'
+        | 'gold'
+        | 'ocean'
+        | 'violet'
+        | 'sunset'
+        | 'mint',
+      runtimeMode: entry.runtimeMode as
+        | 'workspace_mock'
+        | 'chat_native'
+        | 'embedded_web'
+        | 'remote_session',
+      productionKind: entry.productionKind as
+        | 'human_authored'
+        | 'ai_assisted'
+        | 'ai_generated'
+        | 'character_generated',
+      sourceCharacterId: entry.sourceCharacterId ?? null,
+      sourceCharacterName: entry.sourceCharacterName ?? null,
+      submitterName: entry.submitterName,
+      submitterContact: entry.submitterContact,
+      submissionNote: entry.submissionNote,
+      reviewNote: entry.reviewNote ?? null,
+      linkedCatalogGameId: entry.linkedCatalogGameId ?? null,
+      aiHighlights: [...entry.aiHighlightsPayload],
+      tags: [...entry.tagsPayload],
+      createdAt: entry.createdAt.toISOString(),
+      updatedAt: entry.updatedAt.toISOString(),
+    };
+  }
+
+  private resolvePublishedVisibilityScope(
+    currentVisibilityScope: string,
+    requestedVisibilityScope?: string,
+  ) {
+    if (typeof requestedVisibilityScope === 'string' && requestedVisibilityScope.trim()) {
+      return requestedVisibilityScope.trim();
+    }
+
+    if (
+      currentVisibilityScope === 'published' ||
+      currentVisibilityScope === 'featured'
+    ) {
+      return currentVisibilityScope;
+    }
+
+    return 'published';
+  }
+
+  private resolveSubmissionBadge(sourceKind: string) {
+    switch (sourceKind) {
+      case 'character_creator':
+        return '角色投稿';
+      case 'platform_official':
+        return '平台提案';
+      case 'third_party':
+      default:
+        return '合作投稿';
+    }
+  }
+
+  private resolveSubmissionHeroLabel(sourceKind: string) {
+    switch (sourceKind) {
+      case 'character_creator':
+        return '角色产游提案';
+      case 'platform_official':
+        return '平台孵化草稿';
+      case 'third_party':
+      default:
+        return '合作入库草稿';
+    }
+  }
+
+  private async markOriginSubmissionPublished(entry: GameCatalogEntity) {
+    if (!entry.originSubmissionId) {
+      return;
+    }
+
+    const submission = await this.submissionRepo.findOne({
+      where: { id: entry.originSubmissionId },
+    });
+    if (!submission) {
+      return;
+    }
+
+    submission.status = 'approved';
+    submission.linkedCatalogGameId = entry.id;
+    if (!submission.reviewNote) {
+      submission.reviewNote = `已随目录版本 v${entry.publishedVersion} 发布。`;
+    }
+    await this.submissionRepo.save(submission);
   }
 
   private async getNextSortOrder() {

@@ -97,7 +97,7 @@
 - `friend-moments-page.tsx`：桌面端好友朋友圈独立页，当前由 `desktop/friend-moments/$characterId` 承载，从通讯录 / 资料页 / 聊天信息等入口进入单个好友的朋友圈时间线
 - `chat-room-page` · `group-chat-page` · `character-detail-page` · `friend-requests-page` · `create-group-page`
 
-## 数据库实体（50个，物理表保持兼容）
+## 数据库实体（52个，物理表保持兼容）
 
 **核心**：User（运行时语义为单例 World Owner） · Character · Conversation · Message · SystemConfig
 
@@ -113,7 +113,7 @@
 
 **视频号**：FeedPost · FeedComment · UserFeedInteraction · VideoChannelFollow
 
-**游戏**：GameOwnerState · GameCatalogEntry · GameCenterCuration
+**游戏**：GameOwnerState · GameCatalogEntry · GameCatalogRevision · GameCenterCuration · GameSubmission
 
 **公众号**：OfficialAccount · OfficialAccountArticle · OfficialAccountFollow · OfficialAccountDelivery · OfficialAccountServiceMessage
 
@@ -334,9 +334,15 @@
 
 - `GET /api/admin/games`
 - `GET /api/admin/games/curation`
+- `GET /api/admin/games/submissions`
 - `GET /api/admin/games/:id`
+- `GET /api/admin/games/:id/revisions`
 - `POST /api/admin/games`
+- `POST /api/admin/games/submissions`
+- `POST /api/admin/games/submissions/:id/import`
+- `POST /api/admin/games/:id/publish`
 - `PATCH /api/admin/games/curation`
+- `PATCH /api/admin/games/submissions/:id`
 - `PATCH /api/admin/games/:id`
 
 ## 管理后台需求发现路由

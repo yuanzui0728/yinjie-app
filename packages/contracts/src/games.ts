@@ -56,6 +56,19 @@ export type GameCenterStoryKind =
   | "update"
   | "behind_the_scenes";
 
+export type GameCatalogRevisionChangeSource =
+  | "draft_created"
+  | "draft_updated"
+  | "publish"
+  | "submission_ingest"
+  | "seed_backfill";
+
+export type GameSubmissionStatus =
+  | "pending_review"
+  | "draft_imported"
+  | "approved"
+  | "rejected";
+
 export interface GameCenterPrimarySection {
   id: GameCenterPrimarySectionId;
   label: string;
@@ -166,7 +179,7 @@ export interface GameCenterHomeResponse {
   generatedAt: string;
 }
 
-export interface AdminGameCatalogItem {
+export interface AdminGameCatalogSnapshot {
   id: string;
   name: string;
   slogan: string;
@@ -193,11 +206,31 @@ export interface AdminGameCatalogItem {
   updateNote: string;
   playersLabel: string;
   friendsLabel: string;
+}
+
+export interface AdminGameCatalogItem extends AdminGameCatalogSnapshot {
+  publishedVersion: number;
+  publishedRevisionId?: string | null;
+  hasUnpublishedChanges: boolean;
+  lastPublishedAt?: string | null;
+  lastPublishedSummary?: string | null;
+  originSubmissionId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface AdminGameCatalogDetail extends AdminGameCatalogItem {}
+
+export interface AdminGameCatalogRevision {
+  id: string;
+  gameId: string;
+  revisionSequence: number;
+  publishedVersion?: number | null;
+  summary?: string | null;
+  changeSource: GameCatalogRevisionChangeSource;
+  snapshot: AdminGameCatalogSnapshot;
+  createdAt: string;
+}
 
 export interface AdminGameCenterCuration {
   featuredGameIds: string[];
@@ -206,6 +239,32 @@ export interface AdminGameCenterCuration {
   newRankings: GameCenterRankingEntry[];
   events: GameCenterEvent[];
   stories: GameCenterStory[];
+  updatedAt: string;
+}
+
+export interface AdminGameSubmission {
+  id: string;
+  sourceKind: GamePublisherKind;
+  status: GameSubmissionStatus;
+  proposedGameId: string;
+  proposedName: string;
+  slogan: string;
+  description: string;
+  studio: string;
+  category: GameCenterCategoryId;
+  tone: GameCenterTone;
+  runtimeMode: GameRuntimeMode;
+  productionKind: GameProductionKind;
+  sourceCharacterId?: string | null;
+  sourceCharacterName?: string | null;
+  submitterName: string;
+  submitterContact: string;
+  submissionNote: string;
+  reviewNote?: string | null;
+  linkedCatalogGameId?: string | null;
+  aiHighlights: string[];
+  tags: string[];
+  createdAt: string;
   updatedAt: string;
 }
 
@@ -273,4 +332,62 @@ export interface AdminUpdateGameCenterCurationRequest {
   newRankings?: GameCenterRankingEntry[];
   events?: GameCenterEvent[];
   stories?: GameCenterStory[];
+}
+
+export interface AdminPublishGameCatalogRequest {
+  summary?: string;
+  visibilityScope?: GameVisibilityScope;
+}
+
+export interface AdminCreateGameSubmissionRequest {
+  sourceKind?: GamePublisherKind;
+  proposedGameId: string;
+  proposedName: string;
+  slogan?: string;
+  description?: string;
+  studio?: string;
+  category?: GameCenterCategoryId;
+  tone?: GameCenterTone;
+  runtimeMode?: GameRuntimeMode;
+  productionKind?: GameProductionKind;
+  sourceCharacterId?: string | null;
+  sourceCharacterName?: string | null;
+  submitterName?: string;
+  submitterContact?: string;
+  submissionNote?: string;
+  aiHighlights?: string[];
+  tags?: string[];
+}
+
+export interface AdminUpdateGameSubmissionRequest {
+  sourceKind?: GamePublisherKind;
+  status?: GameSubmissionStatus;
+  proposedGameId?: string;
+  proposedName?: string;
+  slogan?: string;
+  description?: string;
+  studio?: string;
+  category?: GameCenterCategoryId;
+  tone?: GameCenterTone;
+  runtimeMode?: GameRuntimeMode;
+  productionKind?: GameProductionKind;
+  sourceCharacterId?: string | null;
+  sourceCharacterName?: string | null;
+  submitterName?: string;
+  submitterContact?: string;
+  submissionNote?: string;
+  reviewNote?: string | null;
+  linkedCatalogGameId?: string | null;
+  aiHighlights?: string[];
+  tags?: string[];
+}
+
+export interface AdminImportGameSubmissionRequest {
+  targetGameId?: string;
+  sortOrder?: number;
+}
+
+export interface AdminImportGameSubmissionResult {
+  submission: AdminGameSubmission;
+  game: AdminGameCatalogDetail;
 }
