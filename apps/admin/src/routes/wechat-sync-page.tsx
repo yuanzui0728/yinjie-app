@@ -92,24 +92,28 @@ const DEFAULT_WECHAT_SYNC_ANNOTATION_TEMPLATES: WechatSyncAnnotationTemplate[] =
       label: "来源可信",
       content: "聊天样本与联系人标签基本一致，当前资料可作为后续角色修订依据。",
       source: "default",
+      isPinned: false,
     },
     {
       id: "default-needs-review",
       label: "需二次核验",
       content: "聊天摘要和联系人画像仍需二次核验，暂不建议直接覆盖线上角色。",
       source: "default",
+      isPinned: false,
     },
     {
       id: "default-safe-restore",
       label: "适合恢复线上",
       content: "当前信息完整，适合直接恢复为线上角色并保留现有好友关系。",
       source: "default",
+      isPinned: false,
     },
     {
       id: "default-trim-summary",
       label: "建议压缩摘要",
       content: "摘要信息偏长，建议先压缩成关键事实，再执行重导入或版本恢复。",
       source: "default",
+      isPinned: false,
     },
   ];
 
@@ -886,6 +890,7 @@ export function WechatSyncPage() {
         label: normalizedLabel,
         content: normalizedContent,
         source: "custom",
+        isPinned: false,
       },
     ]);
     return true;
@@ -902,6 +907,19 @@ export function WechatSyncPage() {
 
   function resetAnnotationTemplates() {
     setAnnotationTemplates(DEFAULT_WECHAT_SYNC_ANNOTATION_TEMPLATES);
+  }
+
+  function toggleAnnotationTemplatePin(templateId: string) {
+    setAnnotationTemplates((current) =>
+      current.map((template) =>
+        template.id === templateId
+          ? {
+              ...template,
+              isPinned: !template.isPinned,
+            }
+          : template,
+      ),
+    );
   }
 
   function applyAnnotationTemplateToRecord(
@@ -1941,6 +1959,7 @@ export function WechatSyncPage() {
               onAddAnnotationTemplate={addAnnotationTemplate}
               onRemoveAnnotationTemplate={removeAnnotationTemplate}
               onResetAnnotationTemplates={resetAnnotationTemplates}
+              onToggleAnnotationTemplatePin={toggleAnnotationTemplatePin}
               onApplyRecordAnnotationTemplate={applyAnnotationTemplateToRecord}
               onApplySnapshotAnnotationTemplate={
                 selectedHistoryItem
@@ -2249,6 +2268,7 @@ function HistoryDetailPanel({
   onAddAnnotationTemplate,
   onRemoveAnnotationTemplate,
   onResetAnnotationTemplates,
+  onToggleAnnotationTemplatePin,
   onApplyRecordAnnotationTemplate,
   onApplySnapshotAnnotationTemplate,
   onFocusSnapshotVersion,
@@ -2300,6 +2320,7 @@ function HistoryDetailPanel({
   onAddAnnotationTemplate: (label: string, content: string) => boolean;
   onRemoveAnnotationTemplate: (templateId: string) => void;
   onResetAnnotationTemplates: () => void;
+  onToggleAnnotationTemplatePin: (templateId: string) => void;
   onApplyRecordAnnotationTemplate: (
     recordId: string,
     template: WechatSyncAnnotationTemplate,
@@ -2539,6 +2560,7 @@ function HistoryDetailPanel({
           onAddTemplate={onAddAnnotationTemplate}
           onRemoveTemplate={onRemoveAnnotationTemplate}
           onResetTemplates={onResetAnnotationTemplates}
+          onToggleTemplatePin={onToggleAnnotationTemplatePin}
           onOpenRecord={openAnnotatedRecord}
           onOpenSnapshot={openAnnotatedSnapshot}
         />
@@ -2762,6 +2784,7 @@ function ImportAnnotationSummaryPanel({
   onAddTemplate,
   onRemoveTemplate,
   onResetTemplates,
+  onToggleTemplatePin,
   onOpenRecord,
   onOpenSnapshot,
 }: {
@@ -2771,6 +2794,7 @@ function ImportAnnotationSummaryPanel({
   onAddTemplate: (label: string, content: string) => boolean;
   onRemoveTemplate: (templateId: string) => void;
   onResetTemplates: () => void;
+  onToggleTemplatePin: (templateId: string) => void;
   onOpenRecord?: (record: WechatImportChangeRecordLike) => void;
   onOpenSnapshot?: (snapshot: WechatImportSnapshotLike) => void;
 }) {
@@ -2915,6 +2939,7 @@ function ImportAnnotationSummaryPanel({
             onAddTemplate={onAddTemplate}
             onRemoveTemplate={onRemoveTemplate}
             onResetTemplates={onResetTemplates}
+            onToggleTemplatePin={onToggleTemplatePin}
           />
           {filteredEntries.map((entry) => (
             <Card key={entry.key} className="bg-[color:var(--surface-card)]">
@@ -2971,17 +2996,27 @@ function AnnotationTemplateManager({
   onAddTemplate,
   onRemoveTemplate,
   onResetTemplates,
+  onToggleTemplatePin,
 }: {
   templates: WechatSyncAnnotationTemplate[];
   onAddTemplate: (label: string, content: string) => boolean;
   onRemoveTemplate: (templateId: string) => void;
   onResetTemplates: () => void;
+  onToggleTemplatePin: (templateId: string) => void;
 }) {
   const [label, setLabel] = useState("");
   const [content, setContent] = useState("");
   const [feedback, setFeedback] = useState("");
+  const pinnedCount = useMemo(
+    () => templates.filter((template) => template.isPinned).length,
+    [templates],
+  );
   const customCount = useMemo(
     () => templates.filter((template) => template.source === "custom").length,
+    [templates],
+  );
+  const orderedTemplates = useMemo(
+    () => sortWechatSyncAnnotationTemplates(templates),
     [templates],
   );
 
@@ -3024,7 +3059,7 @@ function AnnotationTemplateManager({
           </div>
           <div className="mt-2 text-sm text-[color:var(--text-secondary)]">
             默认模板 {templates.length - customCount} 条，自定义模板{" "}
-            {customCount}{" "}
+            {customCount} 条，已置顶 {pinnedCount}{" "}
             条。点击下方模板后，可以在记录批注和版本批注里一键追加。
           </div>
         </div>
@@ -3074,7 +3109,7 @@ function AnnotationTemplateManager({
         </div>
 
         <div className="space-y-3">
-          {templates.map((template) => (
+          {orderedTemplates.map((template) => (
             <div
               key={template.id}
               className="rounded-2xl border border-[color:var(--border-faint)] bg-[color:var(--surface-soft)] px-4 py-3"
@@ -3094,18 +3129,30 @@ function AnnotationTemplateManager({
                         ? "默认模板"
                         : "自定义模板"}
                     </StatusPill>
+                    {template.isPinned ? (
+                      <StatusPill tone="warning">已置顶</StatusPill>
+                    ) : null}
                   </div>
                   <div className="leading-6">{template.content}</div>
                 </div>
-                {template.source === "custom" ? (
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="secondary"
                     size="sm"
-                    onClick={() => onRemoveTemplate(template.id)}
+                    onClick={() => onToggleTemplatePin(template.id)}
                   >
-                    删除
+                    {template.isPinned ? "取消置顶" : "置顶"}
                   </Button>
-                ) : null}
+                  {template.source === "custom" ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onRemoveTemplate(template.id)}
+                    >
+                      删除
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             </div>
           ))}
@@ -3128,7 +3175,12 @@ function AnnotationTemplateQuickActions({
   feedback?: string;
   onApplyTemplate?: (template: WechatSyncAnnotationTemplate) => void;
 }) {
-  if (!templates.length) {
+  const orderedTemplates = useMemo(
+    () => sortWechatSyncAnnotationTemplates(templates),
+    [templates],
+  );
+
+  if (!orderedTemplates.length) {
     return null;
   }
 
@@ -3145,10 +3197,10 @@ function AnnotationTemplateQuickActions({
         {title}
       </div>
       <div className="flex flex-wrap gap-2">
-        {templates.map((template) => (
+        {orderedTemplates.map((template) => (
           <Button
             key={template.id}
-            variant="secondary"
+            variant={template.isPinned ? "primary" : "secondary"}
             size="sm"
             onClick={() => onApplyTemplate?.(template)}
             disabled={!onApplyTemplate}
@@ -4948,6 +5000,7 @@ type WechatSyncAnnotationTemplate = {
   label: string;
   content: string;
   source: "default" | "custom";
+  isPinned: boolean;
 };
 
 type WechatSyncAnnotationsState = {
@@ -5106,10 +5159,17 @@ function readWechatSyncAnnotationTemplates() {
   }
   try {
     const parsed = JSON.parse(raw);
-    return [
-      ...DEFAULT_WECHAT_SYNC_ANNOTATION_TEMPLATES,
-      ...normalizeWechatSyncAnnotationTemplates(parsed),
-    ];
+    const record = isRecord(parsed) ? parsed : null;
+    const customTemplates = record
+      ? normalizeWechatSyncAnnotationTemplates(record.customTemplates)
+      : normalizeWechatSyncAnnotationTemplates(parsed);
+    const pinnedTemplateIds = record
+      ? readStringArray(record.pinnedTemplateIds)
+      : [];
+    return hydrateWechatSyncAnnotationTemplates(
+      customTemplates,
+      new Set(pinnedTemplateIds),
+    );
   } catch {
     return DEFAULT_WECHAT_SYNC_ANNOTATION_TEMPLATES;
   }
@@ -5129,9 +5189,15 @@ function persistWechatSyncAnnotationTemplates(
       label: template.label,
       content: template.content,
     }));
+  const pinnedTemplateIds = templates
+    .filter((template) => template.isPinned)
+    .map((template) => template.id);
   storage.setItem(
     WECHAT_SYNC_ANNOTATION_TEMPLATES_STORAGE_KEY,
-    JSON.stringify(customTemplates),
+    JSON.stringify({
+      customTemplates,
+      pinnedTemplateIds,
+    }),
   );
 }
 
@@ -5166,9 +5232,40 @@ function normalizeWechatSyncAnnotationTemplates(value: unknown) {
         label,
         content,
         source: "custom" as const,
+        isPinned: false,
       };
     })
     .filter(Boolean) as WechatSyncAnnotationTemplate[];
+}
+
+function hydrateWechatSyncAnnotationTemplates(
+  customTemplates: WechatSyncAnnotationTemplate[],
+  pinnedTemplateIds: Set<string>,
+) {
+  return [
+    ...DEFAULT_WECHAT_SYNC_ANNOTATION_TEMPLATES.map((template) => ({
+      ...template,
+      isPinned: pinnedTemplateIds.has(template.id),
+    })),
+    ...customTemplates.map((template) => ({
+      ...template,
+      isPinned: pinnedTemplateIds.has(template.id),
+    })),
+  ];
+}
+
+function sortWechatSyncAnnotationTemplates(
+  templates: WechatSyncAnnotationTemplate[],
+) {
+  return [...templates].sort((left, right) => {
+    if (left.isPinned !== right.isPinned) {
+      return left.isPinned ? -1 : 1;
+    }
+    if (left.source !== right.source) {
+      return left.source === "default" ? -1 : 1;
+    }
+    return left.label.localeCompare(right.label, "zh-Hans-CN");
+  });
 }
 
 function syncWechatSyncViewStateToUrl(state: WechatSyncViewState) {
