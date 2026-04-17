@@ -26,7 +26,10 @@ import {
   AdminTextField,
   AdminToggle,
 } from "../components/admin-workbench";
-import { adminApi } from "../lib/admin-api";
+import {
+  adminApi,
+  type WechatSyncHistoryItem,
+} from "../lib/admin-api";
 import {
   buildWechatConnectorContactBundles,
   getWechatConnectorHealth,
@@ -126,6 +129,10 @@ export function WechatSyncPage() {
     enabled: connectorHealthQuery.isSuccess,
     retry: false,
   });
+  const historyQuery = useQuery({
+    queryKey: ["admin-wechat-sync-history", baseUrl],
+    queryFn: () => adminApi.getWechatSyncHistory(),
+  });
 
   const connectorReady = connectorHealthQuery.isSuccess && connectorHealthQuery.data.ok;
   const selectedSet = useMemo(
@@ -213,6 +220,49 @@ export function WechatSyncPage() {
     },
     onSuccess: async () => {
       await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["admin-wechat-sync-history", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["admin-characters-crud", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["admin-characters", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["admin-character-friend-ids", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["admin-system-status", baseUrl],
+        }),
+      ]);
+    },
+  });
+  const retryFriendshipMutation = useMutation({
+    mutationFn: (characterId: string) =>
+      adminApi.retryWechatSyncFriendship(characterId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["admin-wechat-sync-history", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["admin-character-friend-ids", baseUrl],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["admin-system-status", baseUrl],
+        }),
+      ]);
+    },
+  });
+  const rollbackMutation = useMutation({
+    mutationFn: (characterId: string) =>
+      adminApi.rollbackWechatSyncImport(characterId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["admin-wechat-sync-history", baseUrl],
+        }),
         queryClient.invalidateQueries({
           queryKey: ["admin-characters-crud", baseUrl],
         }),
@@ -830,6 +880,89 @@ export function WechatSyncPage() {
           </div>
         ) : null}
       </Card>
+
+      <Card className="bg-[color:var(--surface-console)]">
+        <AdminSectionHeader
+          title="已导入历史"
+          actions={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                queryClient.invalidateQueries({
+                  queryKey: ["admin-wechat-sync-history", baseUrl],
+                })
+              }
+            >
+              刷新历史
+            </Button>
+          }
+        />
+
+        {historyQuery.isLoading ? (
+          <LoadingBlock className="mt-4" label="正在加载微信同步导入历史..." />
+        ) : null}
+        {historyQuery.isError && historyQuery.error instanceof Error ? (
+          <ErrorBlock className="mt-4" message={historyQuery.error.message} />
+        ) : null}
+        {retryFriendshipMutation.isError && retryFriendshipMutation.error instanceof Error ? (
+          <ErrorBlock className="mt-4" message={retryFriendshipMutation.error.message} />
+        ) : null}
+        {rollbackMutation.isError && rollbackMutation.error instanceof Error ? (
+          <ErrorBlock className="mt-4" message={rollbackMutation.error.message} />
+        ) : null}
+        {retryFriendshipMutation.isSuccess ? (
+          <AdminActionFeedback
+            className="mt-4"
+            tone="success"
+            title="好友关系补建完成"
+            description={
+              retryFriendshipMutation.data.friendshipCreated
+                ? "目标角色已重新成为好友。"
+                : "目标角色本来就是好友，已完成状态校正。"
+            }
+          />
+        ) : null}
+        {rollbackMutation.isSuccess ? (
+          <AdminActionFeedback
+            className="mt-4"
+            tone="success"
+            title="导入已回滚"
+            description="该微信同步角色已删除，关联会话、好友关系和内容也一并清理。"
+          />
+        ) : null}
+
+        {!historyQuery.isLoading && !(historyQuery.data?.items.length ?? 0) ? (
+          <AdminEmptyState
+            className="mt-4"
+            title="还没有微信同步导入历史"
+            description="完成一次导入后，这里会展示导入角色、好友状态、朋友圈种子数以及回滚 / 重试操作。"
+          />
+        ) : null}
+
+        {historyQuery.data?.items.length ? (
+          <div className="mt-4 grid gap-4 xl:grid-cols-2">
+            {historyQuery.data.items.map((item) => (
+              <WechatSyncHistoryCard
+                key={item.character.id}
+                item={item}
+                retryPending={
+                  retryFriendshipMutation.isPending &&
+                  retryFriendshipMutation.variables === item.character.id
+                }
+                rollbackPending={
+                  rollbackMutation.isPending &&
+                  rollbackMutation.variables === item.character.id
+                }
+                onRetryFriendship={() =>
+                  retryFriendshipMutation.mutate(item.character.id)
+                }
+                onRollback={() => rollbackMutation.mutate(item.character.id)}
+              />
+            ))}
+          </div>
+        ) : null}
+      </Card>
     </div>
   );
 }
@@ -896,6 +1029,93 @@ function ImportResultPanel({ result }: { result: WechatSyncImportResponse }) {
         </Card>
       ) : null}
     </div>
+  );
+}
+
+function WechatSyncHistoryCard({
+  item,
+  retryPending,
+  rollbackPending,
+  onRetryFriendship,
+  onRollback,
+}: {
+  item: WechatSyncHistoryItem;
+  retryPending: boolean;
+  rollbackPending: boolean;
+  onRetryFriendship: () => void;
+  onRollback: () => void;
+}) {
+  const friendshipTone =
+    item.friendshipStatus === "friend" ||
+    item.friendshipStatus === "close" ||
+    item.friendshipStatus === "best"
+      ? "healthy"
+      : item.friendshipStatus === "removed" || item.friendshipStatus === "blocked"
+        ? "warning"
+        : "muted";
+
+  return (
+    <Card className="bg-[color:var(--surface-card)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-lg font-semibold text-[color:var(--text-primary)]">
+            {item.character.name}
+          </div>
+          <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
+            {item.remarkName || item.character.relationship}
+          </div>
+        </div>
+        <StatusPill tone={friendshipTone}>
+          {formatFriendshipStatus(item.friendshipStatus)}
+        </StatusPill>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <AdminMiniPanel title="导入信息">
+          <div className="space-y-2 text-sm text-[color:var(--text-secondary)]">
+            <div>导入时间：{formatDateTime(item.importedAt)}</div>
+            <div>朋友圈种子：{item.seededMomentCount} 条</div>
+            <div>来源键：{item.character.sourceKey || "暂无"}</div>
+            <div>地区：{item.region || "暂无"}</div>
+          </div>
+        </AdminMiniPanel>
+        <AdminMiniPanel title="好友状态">
+          <div className="space-y-2 text-sm text-[color:var(--text-secondary)]">
+            <div>当前状态：{formatFriendshipStatus(item.friendshipStatus)}</div>
+            <div>建立时间：{formatDateTime(item.friendshipCreatedAt)}</div>
+            <div>最近互动：{formatDateTime(item.lastInteractedAt)}</div>
+            <div>标签：{item.tags.length ? item.tags.join("、") : "暂无"}</div>
+          </div>
+        </AdminMiniPanel>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link
+          to="/characters/$characterId"
+          params={{ characterId: item.character.id }}
+        >
+          <Button variant="secondary" size="sm">
+            打开角色工作区
+          </Button>
+        </Link>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRetryFriendship}
+          disabled={retryPending || rollbackPending}
+        >
+          {retryPending ? "补建中..." : "补建好友关系"}
+        </Button>
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={onRollback}
+          disabled={rollbackPending || retryPending}
+        >
+          {rollbackPending ? "回滚中..." : "回滚导入"}
+        </Button>
+      </div>
+    </Card>
   );
 }
 
@@ -1369,6 +1589,23 @@ function formatDirection(
       return "系统";
     default:
       return "未知";
+  }
+}
+
+function formatFriendshipStatus(value?: string | null) {
+  switch (value) {
+    case "friend":
+      return "好友";
+    case "close":
+      return "亲密好友";
+    case "best":
+      return "挚友";
+    case "removed":
+      return "已移除";
+    case "blocked":
+      return "已屏蔽";
+    default:
+      return "未建立";
   }
 }
 

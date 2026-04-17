@@ -87,3 +87,30 @@ export interface WechatSyncImportResponseValue {
   items: WechatSyncImportedItemValue[];
   skipped: WechatSyncSkippedItemValue[];
 }
+
+export interface WechatSyncHistoryItemValue {
+  character: CharacterEntity;
+  importedAt?: string | null;
+  friendshipStatus?: string | null;
+  friendshipCreatedAt?: string | null;
+  lastInteractedAt?: string | null;
+  seededMomentCount: number;
+  remarkName?: string | null;
+  region?: string | null;
+  tags: string[];
+}
+
+export interface WechatSyncHistoryResponseValue {
+  items: WechatSyncHistoryItemValue[];
+}
+
+export interface WechatSyncRetryFriendshipResponseValue {
+  characterId: string;
+  friendshipCreated: boolean;
+  friendshipStatus: string;
+}
+
+export interface WechatSyncRollbackResponseValue {
+  success: true;
+  characterId: string;
+}

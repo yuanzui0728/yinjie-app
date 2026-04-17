@@ -1,21 +1,31 @@
 import { randomUUID } from 'crypto';
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
 import { WorldOwnerService } from '../auth/world-owner.service';
 import { CharacterEntity } from '../characters/character.entity';
+import { CharactersService } from '../characters/characters.service';
 import { MomentPostEntity } from '../moments/moment-post.entity';
+import { FriendRequestEntity } from '../social/friend-request.entity';
 import { FriendshipEntity } from '../social/friendship.entity';
 import { SocialService } from '../social/social.service';
 import { FeedService } from '../feed/feed.service';
 import type {
   WechatSyncContactBundleValue,
+  WechatSyncHistoryResponseValue,
   WechatSyncImportRequestValue,
   WechatSyncImportResponseValue,
   WechatSyncPreviewItemValue,
   WechatSyncPreviewRequestValue,
   WechatSyncPreviewResponseValue,
+  WechatSyncRetryFriendshipResponseValue,
+  WechatSyncRollbackResponseValue,
 } from './wechat-sync-admin.types';
 
 @Injectable()
@@ -27,13 +37,88 @@ export class WechatSyncAdminService {
     private readonly characterRepo: Repository<CharacterEntity>,
     @InjectRepository(FriendshipEntity)
     private readonly friendshipRepo: Repository<FriendshipEntity>,
+    @InjectRepository(FriendRequestEntity)
+    private readonly friendRequestRepo: Repository<FriendRequestEntity>,
     @InjectRepository(MomentPostEntity)
     private readonly momentPostRepo: Repository<MomentPostEntity>,
     private readonly ai: AiOrchestratorService,
     private readonly socialService: SocialService,
     private readonly worldOwnerService: WorldOwnerService,
+    private readonly charactersService: CharactersService,
     private readonly feedService: FeedService,
   ) {}
+
+  async getHistory(): Promise<WechatSyncHistoryResponseValue> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
+    const characters = await this.characterRepo.find({
+      where: { sourceType: 'wechat_import' },
+      order: { name: 'ASC' },
+    });
+
+    if (!characters.length) {
+      return { items: [] };
+    }
+
+    const characterIds = characters.map((item) => item.id);
+    const [friendships, friendRequests, momentPosts] = await Promise.all([
+      this.friendshipRepo.find({
+        where: { ownerId: owner.id, characterId: In(characterIds) },
+      }),
+      this.friendRequestRepo.find({
+        where: { ownerId: owner.id, characterId: In(characterIds) },
+        order: { createdAt: 'DESC' },
+      }),
+      this.momentPostRepo.find({
+        where: { authorType: 'character', authorId: In(characterIds) },
+      }),
+    ]);
+
+    const friendshipMap = new Map(
+      friendships.map((item) => [item.characterId, item]),
+    );
+    const requestMap = new Map<string, FriendRequestEntity>();
+    for (const request of friendRequests) {
+      if (!requestMap.has(request.characterId)) {
+        requestMap.set(request.characterId, request);
+      }
+    }
+    const momentCountMap = new Map<string, number>();
+    for (const post of momentPosts) {
+      momentCountMap.set(
+        post.authorId,
+        (momentCountMap.get(post.authorId) ?? 0) + 1,
+      );
+    }
+
+    const items = characters
+      .map((character) => {
+        const friendship = friendshipMap.get(character.id);
+        const request = requestMap.get(character.id);
+        const importedAt = request?.createdAt ?? friendship?.createdAt ?? null;
+
+        return {
+          character,
+          importedAt: importedAt ? importedAt.toISOString() : null,
+          friendshipStatus: friendship?.status ?? null,
+          friendshipCreatedAt: friendship?.createdAt?.toISOString() ?? null,
+          lastInteractedAt: friendship?.lastInteractedAt?.toISOString() ?? null,
+          seededMomentCount: momentCountMap.get(character.id) ?? 0,
+          remarkName: friendship?.remarkName ?? null,
+          region: friendship?.region ?? null,
+          tags: friendship?.tags ?? [],
+        };
+      })
+      .sort((left, right) => {
+        const leftTime = left.importedAt ? Date.parse(left.importedAt) : 0;
+        const rightTime = right.importedAt ? Date.parse(right.importedAt) : 0;
+        if (leftTime !== rightTime) {
+          return rightTime - leftTime;
+        }
+        return left.character.name.localeCompare(right.character.name, 'zh-CN');
+      });
+
+    return { items };
+  }
 
   async preview(
     input: WechatSyncPreviewRequestValue,
@@ -169,6 +254,67 @@ export class WechatSyncAdminService {
       importedCount: items.length,
       items,
       skipped,
+    };
+  }
+
+  async retryFriendship(
+    characterId: string,
+  ): Promise<WechatSyncRetryFriendshipResponseValue> {
+    const owner = await this.worldOwnerService.getOwnerOrThrow();
+    const character = await this.characterRepo.findOneBy({ id: characterId });
+    if (!character) {
+      throw new NotFoundException('微信同步角色不存在。');
+    }
+    if (character.sourceType !== 'wechat_import') {
+      throw new BadRequestException('只支持补建微信同步导入的角色好友关系。');
+    }
+
+    const existing = await this.friendshipRepo.findOneBy({
+      ownerId: owner.id,
+      characterId,
+    });
+    await this.socialService.sendFriendRequest(
+      characterId,
+      this.buildImportedGreeting(character.name),
+      { autoAccept: true },
+    );
+
+    const friendship = await this.friendshipRepo.findOneBy({
+      ownerId: owner.id,
+      characterId,
+    });
+    if (!friendship) {
+      throw new BadRequestException('好友关系补建失败。');
+    }
+
+    friendship.source = friendship.source || 'wechat_import';
+    await this.friendshipRepo.save(friendship);
+
+    return {
+      characterId,
+      friendshipCreated:
+        !existing ||
+        existing.status === 'removed' ||
+        existing.status === 'blocked',
+      friendshipStatus: friendship.status,
+    };
+  }
+
+  async rollbackImport(
+    characterId: string,
+  ): Promise<WechatSyncRollbackResponseValue> {
+    const character = await this.characterRepo.findOneBy({ id: characterId });
+    if (!character) {
+      throw new NotFoundException('微信同步角色不存在。');
+    }
+    if (character.sourceType !== 'wechat_import') {
+      throw new BadRequestException('只支持回滚微信同步导入的角色。');
+    }
+
+    await this.charactersService.delete(characterId);
+    return {
+      success: true,
+      characterId,
     };
   }
 
