@@ -28,6 +28,10 @@ import type {
   WechatSyncRollbackResponseValue,
 } from './wechat-sync-admin.types';
 
+type ImportSnapshotRecord = NonNullable<
+  NonNullable<CharacterEntity['profile']['wechatSyncImport']>['currentSnapshot']
+>;
+
 @Injectable()
 export class WechatSyncAdminService {
   private readonly logger = new Logger(WechatSyncAdminService.name);
@@ -185,9 +189,10 @@ export class WechatSyncAdminService {
         sourceType: 'wechat_import',
         sourceKey,
       });
+      const existingImportMetadata = existing?.profile?.wechatSyncImport;
       const previousSnapshot =
-        existing?.profile?.wechatSyncImport?.currentSnapshot ??
-        existing?.profile?.wechatSyncImport?.previousSnapshot ??
+        existingImportMetadata?.currentSnapshot ??
+        existingImportMetadata?.previousSnapshot ??
         null;
       const normalizedCharacter = this.normalizeCharacterDraft(
         item.draftCharacter,
@@ -216,19 +221,25 @@ export class WechatSyncAdminService {
         seededMomentCount = await this.seedMomentHighlights(saved, contact);
       }
 
+      const currentSnapshot = buildImportSnapshot({
+        contact,
+        character: saved,
+        status,
+        autoAddFriend: item.autoAddFriend !== false,
+        seedMoments: item.seedMoments !== false,
+        seededMomentCount,
+        previousSnapshot,
+      });
+      const snapshotHistory = buildSnapshotHistory(
+        currentSnapshot,
+        existingImportMetadata,
+      );
       saved.profile = {
         ...saved.profile,
         wechatSyncImport: {
-          currentSnapshot: buildImportSnapshot({
-            contact,
-            character: saved,
-            status,
-            autoAddFriend: item.autoAddFriend !== false,
-            seedMoments: item.seedMoments !== false,
-            seededMomentCount,
-            previousSnapshot,
-          }),
-          previousSnapshot,
+          currentSnapshot,
+          previousSnapshot: snapshotHistory[1] ?? previousSnapshot,
+          snapshotHistory,
         },
       };
       saved = await this.characterRepo.save(saved);
@@ -828,7 +839,7 @@ function buildImportSnapshot(input: {
   seedMoments: boolean;
   seededMomentCount: number;
   previousSnapshot?: { version: number } | null;
-}) {
+}): ImportSnapshotRecord {
   const nextVersion = (input.previousSnapshot?.version ?? 0) + 1;
   return {
     version: nextVersion,
@@ -846,6 +857,44 @@ function buildImportSnapshot(input: {
       memorySummary: input.character.profile?.memorySummary ?? '',
     },
   };
+}
+
+function buildSnapshotHistory(
+  currentSnapshot: ImportSnapshotRecord,
+  metadata?:
+    | CharacterEntity['profile']['wechatSyncImport']
+    | null,
+) {
+  const existingHistory = dedupeSnapshotHistory([
+    ...(metadata?.snapshotHistory ?? []),
+    metadata?.currentSnapshot ?? null,
+    metadata?.previousSnapshot ?? null,
+  ]);
+
+  return dedupeSnapshotHistory([currentSnapshot, ...existingHistory]).slice(0, 6);
+}
+
+function dedupeSnapshotHistory(
+  snapshots: Array<ImportSnapshotRecord | null | undefined>,
+) {
+  const seen = new Set<string>();
+  const items: ImportSnapshotRecord[] = [];
+
+  for (const snapshot of snapshots) {
+    if (!snapshot) {
+      continue;
+    }
+    const key = `${snapshot.version}:${snapshot.importedAt}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    items.push(snapshot);
+  }
+
+  return items.sort(
+    (left, right) => Date.parse(right.importedAt) - Date.parse(left.importedAt),
+  );
 }
 
 function cloneWechatContactSnapshot(contact: WechatSyncContactBundleValue) {

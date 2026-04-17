@@ -514,10 +514,8 @@ export function WechatSyncPage() {
     if (!rollbackGuideItem) {
       return;
     }
-    setManualBundleError(null);
-    setManualBundleJson(
-      JSON.stringify([buildRollbackGuideContactBundle(rollbackGuideItem)], null, 2),
-    );
+    const snapshot = getImportSnapshotsFromHistoryItem(rollbackGuideItem)[0] ?? null;
+    loadSnapshotIntoManualInput(snapshot, rollbackGuideItem);
   }
 
   function regeneratePreviewFromHistoryItem(item: WechatSyncHistoryItem) {
@@ -529,6 +527,37 @@ export function WechatSyncPage() {
     setSelectedPreviewUsernames([]);
     setSelectedUsernames([bundle.username]);
     previewMutation.mutate([bundle]);
+  }
+
+  function loadSnapshotIntoManualInput(
+    snapshot: WechatImportSnapshotLike | null,
+    item: WechatSyncHistoryItem,
+  ) {
+    reimportMutation.reset();
+    setManualBundleError(null);
+    setManualBundleJson(
+      JSON.stringify(
+        [snapshot ? buildContactBundleFromImportSnapshot(snapshot) : buildRollbackGuideContactBundle(item)],
+        null,
+        2,
+      ),
+    );
+  }
+
+  function restorePreviewFromSnapshot(
+    snapshot: WechatImportSnapshotLike,
+    item: WechatSyncHistoryItem,
+  ) {
+    const restoredItem = buildPreviewItemFromImportSnapshot(snapshot);
+    reimportMutation.reset();
+    setManualBundleError(null);
+    setManualBundleJson(
+      JSON.stringify([buildContactBundleFromImportSnapshot(snapshot)], null, 2),
+    );
+    setSelectedHistoryCharacterId(item.character.id);
+    setPreviewItems([restoredItem]);
+    setSelectedUsernames([restoredItem.contact.username]);
+    setSelectedPreviewUsernames([restoredItem.contact.username]);
   }
 
   return (
@@ -719,42 +748,58 @@ export function WechatSyncPage() {
           </div>
 
           {rollbackGuideItem ? (
-            <AdminCallout
-              className="mt-4"
-              title="已保留最近一次回滚的重新导入模板"
-              tone="warning"
-              description={
-                <div className="space-y-2">
-                  <p>
-                    已回滚角色：{rollbackGuideItem.character.name}。
-                    {rollbackGuideItem.character.sourceKey
-                      ? ` 你也可以用 ${extractWechatUsername(
-                          rollbackGuideItem.character.sourceKey,
-                        ) || rollbackGuideItem.character.sourceKey} 在上方连接器联系人里重新搜索。`
-                      : " 当前没有可用的 sourceKey，只能通过手动 JSON 重新导入。"}
-                  </p>
-                  <p>点“填回手动导入区”后，会生成一份最小联系人快照模板，方便你重新生成预览。</p>
-                </div>
-              }
-              actions={
-                <>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={loadRollbackGuideIntoManualInput}
-                  >
-                    填回手动导入区
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setRollbackGuideItem(null)}
-                  >
-                    关闭引导
-                  </Button>
-                </>
-              }
-            />
+            <div className="mt-4 space-y-4">
+              <AdminCallout
+                title="已保留最近一次回滚的重新导入模板"
+                tone="warning"
+                description={
+                  <div className="space-y-2">
+                    <p>
+                      已回滚角色：{rollbackGuideItem.character.name}。
+                      {rollbackGuideItem.character.sourceKey
+                        ? ` 你也可以用 ${extractWechatUsername(
+                            rollbackGuideItem.character.sourceKey,
+                          ) || rollbackGuideItem.character.sourceKey} 在上方连接器联系人里重新搜索。`
+                        : " 当前没有可用的 sourceKey，只能通过手动 JSON 重新导入。"}
+                    </p>
+                    <p>
+                      现在除了最小联系人模板，还可以直接从这条记录保留下来的导入快照恢复某个历史版本。
+                    </p>
+                  </div>
+                }
+                actions={
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={loadRollbackGuideIntoManualInput}
+                    >
+                      填回最新手动导入区
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setRollbackGuideItem(null)}
+                    >
+                      关闭引导
+                    </Button>
+                  </>
+                }
+              />
+
+              {getImportSnapshotsFromHistoryItem(rollbackGuideItem).length ? (
+                <ImportSnapshotVersionList
+                  title="回滚后快照恢复入口"
+                  snapshots={getImportSnapshotsFromHistoryItem(rollbackGuideItem)}
+                  onRestorePreview={(snapshot) =>
+                    restorePreviewFromSnapshot(snapshot, rollbackGuideItem)
+                  }
+                  onLoadToManualInput={(snapshot) =>
+                    loadSnapshotIntoManualInput(snapshot, rollbackGuideItem)
+                  }
+                />
+              ) : null}
+            </div>
           ) : null}
 
           {manualBundleError ? (
@@ -1221,6 +1266,16 @@ export function WechatSyncPage() {
                   ? () => reimportMutation.mutate(selectedHistoryPreviewItem)
                   : undefined
               }
+              onRestoreSnapshotPreview={
+                selectedHistoryItem
+                  ? (snapshot) => restorePreviewFromSnapshot(snapshot, selectedHistoryItem)
+                  : undefined
+              }
+              onLoadSnapshotToManualInput={
+                selectedHistoryItem
+                  ? (snapshot) => loadSnapshotIntoManualInput(snapshot, selectedHistoryItem)
+                  : undefined
+              }
               onRetryFriendship={
                 selectedHistoryItem
                   ? () => retryFriendshipMutation.mutate(selectedHistoryItem.character.id)
@@ -1448,6 +1503,8 @@ function HistoryDetailPanel({
   rollbackPending,
   onRegeneratePreview,
   onReimportPreview,
+  onRestoreSnapshotPreview,
+  onLoadSnapshotToManualInput,
   onRetryFriendship,
   onRollback,
   onLoadTemplateToManualInput,
@@ -1461,6 +1518,8 @@ function HistoryDetailPanel({
   rollbackPending: boolean;
   onRegeneratePreview?: () => void;
   onReimportPreview?: () => void;
+  onRestoreSnapshotPreview?: (snapshot: WechatImportSnapshotLike) => void;
+  onLoadSnapshotToManualInput?: (snapshot: WechatImportSnapshotLike) => void;
   onRetryFriendship?: () => void;
   onRollback?: () => void;
   onLoadTemplateToManualInput?: () => void;
@@ -1482,6 +1541,7 @@ function HistoryDetailPanel({
     item.character.profile?.wechatSyncImport?.currentSnapshot ?? null;
   const previousImportSnapshot =
     item.character.profile?.wechatSyncImport?.previousSnapshot ?? null;
+  const importSnapshots = getImportSnapshotsFromHistoryItem(item);
 
   return (
     <Card className="bg-[color:var(--surface-card)]">
@@ -1563,8 +1623,8 @@ function HistoryDetailPanel({
               previousImportSnapshot ? (
                 <div className="space-y-2">
                   <p>
-                    当前线上角色保存了 `v{previousImportSnapshot.version}` 到
-                    `v{currentImportSnapshot.version}` 的导入快照。
+                    当前线上角色保存了 v{previousImportSnapshot.version} 到
+                    v{currentImportSnapshot.version} 的导入快照。
                   </p>
                   <p>下面展示的是“上一版导入草稿 / 当前导入草稿”的字段差异，可直接用于回看这次同步改了什么。</p>
                 </div>
@@ -1602,6 +1662,13 @@ function HistoryDetailPanel({
               </div>
             </AdminMiniPanel>
           )}
+
+          <ImportSnapshotVersionList
+            title="导入版本列表"
+            snapshots={importSnapshots}
+            onRestorePreview={onRestoreSnapshotPreview}
+            onLoadToManualInput={onLoadSnapshotToManualInput}
+          />
         </div>
       ) : null}
 
@@ -1759,6 +1826,82 @@ function HistoryDiffCard({
             {diff.nextValue}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ImportSnapshotVersionList({
+  title,
+  snapshots,
+  onRestorePreview,
+  onLoadToManualInput,
+}: {
+  title: string;
+  snapshots: WechatImportSnapshotLike[];
+  onRestorePreview?: (snapshot: WechatImportSnapshotLike) => void;
+  onLoadToManualInput?: (snapshot: WechatImportSnapshotLike) => void;
+}) {
+  if (!snapshots.length) {
+    return null;
+  }
+
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+        {title}
+      </div>
+      <div className="mt-3 space-y-3">
+        {snapshots.map((snapshot, index) => (
+          <Card
+            key={`${snapshot.version}-${snapshot.importedAt}`}
+            className="bg-[color:var(--surface-soft)]"
+          >
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-2 text-sm text-[color:var(--text-secondary)]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-base font-semibold text-[color:var(--text-primary)]">
+                    v{snapshot.version}
+                  </span>
+                  <StatusPill tone={index === 0 ? "healthy" : "muted"}>
+                    {index === 0 ? "当前版本" : "历史版本"}
+                  </StatusPill>
+                  <StatusPill tone={snapshot.status === "created" ? "healthy" : "warning"}>
+                    {snapshot.status === "created" ? "首次创建" : "覆盖更新"}
+                  </StatusPill>
+                </div>
+                <div>导入时间：{formatDateTime(snapshot.importedAt)}</div>
+                <div>角色名：{snapshot.draftCharacter.name || snapshot.contact.displayName}</div>
+                <div>关系：{snapshot.draftCharacter.relationship || "暂无"}</div>
+                <div>
+                  标签：
+                  {snapshot.contact.tags.length
+                    ? snapshot.contact.tags.join("、")
+                    : "暂无"}
+                </div>
+                <div>朋友圈种子：{snapshot.seededMomentCount} 条</div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => onLoadToManualInput?.(snapshot)}
+                  disabled={!onLoadToManualInput}
+                >
+                  写入此版本 JSON
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => onRestorePreview?.(snapshot)}
+                  disabled={!onRestorePreview}
+                >
+                  恢复为此版本预览
+                </Button>
+              </div>
+            </div>
+          </Card>
+        ))}
       </div>
     </div>
   );
@@ -2265,6 +2408,10 @@ function extractWechatUsername(sourceKey?: string | null) {
   return sourceKey.startsWith("wechat:") ? sourceKey.slice("wechat:".length) : sourceKey;
 }
 
+function buildWechatSourceKey(username: string) {
+  return `wechat:${username}`;
+}
+
 function buildRollbackGuideContactBundle(
   item: WechatSyncHistoryItem,
 ): WechatSyncContactBundle {
@@ -2317,6 +2464,126 @@ type HistoryDiffCardValue = {
   nextValue: string;
   changed: boolean;
 };
+
+type WechatImportSnapshotLike = NonNullable<
+  NonNullable<WechatSyncHistoryItem["character"]["profile"]["wechatSyncImport"]>["currentSnapshot"]
+>;
+
+function getImportSnapshotsFromHistoryItem(item: WechatSyncHistoryItem) {
+  const metadata = item.character.profile?.wechatSyncImport;
+  const snapshots = [
+    ...(metadata?.snapshotHistory ?? []),
+    metadata?.currentSnapshot ?? null,
+    metadata?.previousSnapshot ?? null,
+  ];
+  const seen = new Set<string>();
+  const items: WechatImportSnapshotLike[] = [];
+
+  for (const snapshot of snapshots) {
+    if (!snapshot) {
+      continue;
+    }
+    const key = `${snapshot.version}:${snapshot.importedAt}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    items.push(snapshot);
+  }
+
+  return items.sort(
+    (left, right) => Date.parse(right.importedAt) - Date.parse(left.importedAt),
+  );
+}
+
+function buildContactBundleFromImportSnapshot(
+  snapshot: WechatImportSnapshotLike,
+): WechatSyncContactBundle {
+  return {
+    username: snapshot.contact.username,
+    displayName: snapshot.contact.displayName,
+    nickname: snapshot.contact.nickname ?? null,
+    remarkName: snapshot.contact.remarkName ?? null,
+    region: snapshot.contact.region ?? null,
+    source: snapshot.contact.source ?? null,
+    tags: [...snapshot.contact.tags],
+    isGroup: snapshot.contact.isGroup,
+    messageCount: snapshot.contact.messageCount,
+    ownerMessageCount: snapshot.contact.ownerMessageCount,
+    contactMessageCount: snapshot.contact.contactMessageCount,
+    latestMessageAt: snapshot.contact.latestMessageAt ?? null,
+    chatSummary: snapshot.contact.chatSummary ?? null,
+    topicKeywords: [...snapshot.contact.topicKeywords],
+    sampleMessages: snapshot.contact.sampleMessages.map((item) => ({
+      timestamp: item.timestamp,
+      text: item.text,
+      sender: item.sender ?? null,
+      typeLabel: item.typeLabel ?? null,
+      direction: item.direction ?? "unknown",
+    })),
+    momentHighlights: snapshot.contact.momentHighlights.map((item) => ({
+      postedAt: item.postedAt ?? null,
+      text: item.text,
+      location: item.location ?? null,
+      mediaHint: item.mediaHint ?? null,
+    })),
+  };
+}
+
+function buildPreviewItemFromImportSnapshot(
+  snapshot: WechatImportSnapshotLike,
+): WechatSyncPreviewItem {
+  const contact = buildContactBundleFromImportSnapshot(snapshot);
+  const name =
+    snapshot.draftCharacter.name.trim() ||
+    contact.remarkName?.trim() ||
+    contact.nickname?.trim() ||
+    contact.displayName;
+  const relationship =
+    snapshot.draftCharacter.relationship.trim() ||
+    `${name} 是你现实微信里的熟人朋友，你们已经有真实聊天记录。`;
+  const bio =
+    snapshot.draftCharacter.bio.trim() ||
+    contact.chatSummary?.trim() ||
+    `${name} 是从微信导入快照恢复的熟人朋友。`;
+  const expertDomains =
+    snapshot.draftCharacter.expertDomains.length > 0
+      ? [...snapshot.draftCharacter.expertDomains]
+      : inferContactDomains(contact);
+  const memorySummary =
+    snapshot.draftCharacter.memorySummary.trim() ||
+    contact.chatSummary?.trim() ||
+    `${name} 和你保持着稳定的微信联系，彼此已经有明确的熟人语境。`;
+
+  return {
+    contact,
+    confidence: "high",
+    warnings: [`已从导入快照 v${snapshot.version} 恢复，可直接再导入。`],
+    draftCharacter: {
+      name,
+      relationship,
+      bio,
+      sourceType: "wechat_import",
+      sourceKey: buildWechatSourceKey(contact.username),
+      expertDomains,
+      profile: {
+        characterId: "",
+        name,
+        relationship,
+        expertDomains,
+        traits: {
+          speechPatterns: [],
+          catchphrases: [],
+          topicsOfInterest: [...contact.topicKeywords],
+          emotionalTone: "grounded",
+          responseLength: "medium",
+          emojiUsage: "occasional",
+        },
+        memorySummary,
+      },
+    },
+  };
+}
 
 function findPreviewItemForHistoryItem(
   item: WechatSyncHistoryItem,

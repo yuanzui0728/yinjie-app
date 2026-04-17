@@ -98,6 +98,7 @@ export interface WechatSyncImportSnapshotValue {
 export interface WechatSyncImportMetadataValue {
   currentSnapshot?: WechatSyncImportSnapshotValue | null;
   previousSnapshot?: WechatSyncImportSnapshotValue | null;
+  snapshotHistory?: WechatSyncImportSnapshotValue[];
 }
 
 // 角色人格画像结构

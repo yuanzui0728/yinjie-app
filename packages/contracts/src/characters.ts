@@ -185,6 +185,7 @@ export interface WechatSyncImportSnapshot {
 export interface WechatSyncImportMetadata {
   currentSnapshot?: WechatSyncImportSnapshot | null;
   previousSnapshot?: WechatSyncImportSnapshot | null;
+  snapshotHistory?: WechatSyncImportSnapshot[];
 }
 
 export interface PersonalityProfile {
