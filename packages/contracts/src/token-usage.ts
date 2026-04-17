@@ -241,14 +241,24 @@ export interface TokenUsageDowngradeCharacterQualityItem {
   characterId?: string | null;
   characterName: string;
   requestCount: number;
+  estimatedCost: number;
   distinctConversationCount: number;
   reviewedConversationCount: number;
   acceptableConversationCount: number;
   tooWeakConversationCount: number;
   pendingOutcomeConversationCount: number;
+  immediateContinuationCount: number;
+  continuedWithin24hCount: number;
+  postDowngradeFailureCount: number;
+  postDowngradeBlockedCount: number;
   reviewCoverageRate: number | null;
   acceptableReviewRate: number | null;
   tooWeakReviewRate: number | null;
+  immediateContinuationRate: number | null;
+  continuedWithin24hRate: number | null;
+  postDowngradeFailureRate: number | null;
+  postDowngradeBlockedRate: number | null;
+  priorityScore: number;
   tooWeakSamples: TokenUsageDowngradeReviewSample[];
   pendingOutcomeSamples: TokenUsageDowngradeReviewSample[];
 }

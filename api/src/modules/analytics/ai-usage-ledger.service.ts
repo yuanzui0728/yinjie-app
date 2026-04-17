@@ -250,14 +250,24 @@ type DowngradeCharacterQualityItem = {
   characterId?: string | null;
   characterName: string;
   requestCount: number;
+  estimatedCost: number;
   distinctConversationCount: number;
   reviewedConversationCount: number;
   acceptableConversationCount: number;
   tooWeakConversationCount: number;
   pendingOutcomeConversationCount: number;
+  immediateContinuationCount: number;
+  continuedWithin24hCount: number;
+  postDowngradeFailureCount: number;
+  postDowngradeBlockedCount: number;
   reviewCoverageRate: number | null;
   acceptableReviewRate: number | null;
   tooWeakReviewRate: number | null;
+  immediateContinuationRate: number | null;
+  continuedWithin24hRate: number | null;
+  postDowngradeFailureRate: number | null;
+  postDowngradeBlockedRate: number | null;
+  priorityScore: number;
   tooWeakSamples: DowngradeReviewSample[];
   pendingOutcomeSamples: DowngradeReviewSample[];
 };
@@ -880,6 +890,15 @@ export class AiUsageLedgerService {
     );
     const latestDowngradeRecordByConversation =
       this.groupLatestUsageByConversation(conversationScopedRecords);
+    const recordDiagnostics = new Map<
+      string,
+      {
+        hasImmediateContinuation: boolean;
+        hasContinuationWithin24h: boolean;
+        hasPostDowngradeFailure: boolean;
+        hasPostDowngradeBlocked: boolean;
+      }
+    >();
 
     let immediateContinuationCount = 0;
     let continuedWithin24hCount = 0;
@@ -924,6 +943,13 @@ export class AiUsageLedgerService {
           followupTime <= continuationDeadline &&
           followup.errorCode === 'BUDGET_BLOCKED'
         );
+      });
+
+      recordDiagnostics.set(record.id, {
+        hasImmediateContinuation,
+        hasContinuationWithin24h,
+        hasPostDowngradeFailure,
+        hasPostDowngradeBlocked,
       });
 
       if (hasImmediateContinuation) {
@@ -1003,6 +1029,7 @@ export class AiUsageLedgerService {
       records: conversationScopedRecords,
       reviews,
       latestDowngradeRecordByConversation,
+      recordDiagnostics,
       labelMaps,
       limit: normalized.limit,
     });
@@ -1091,6 +1118,15 @@ export class AiUsageLedgerService {
     records: AiUsageLedgerEntity[];
     reviews: AdminConversationReviewEntity[];
     latestDowngradeRecordByConversation: Map<string, AiUsageLedgerEntity>;
+    recordDiagnostics: Map<
+      string,
+      {
+        hasImmediateContinuation: boolean;
+        hasContinuationWithin24h: boolean;
+        hasPostDowngradeFailure: boolean;
+        hasPostDowngradeBlocked: boolean;
+      }
+    >;
     labelMaps: {
       conversationMap: Map<string, string>;
       groupMap: Map<string, string>;
@@ -1104,11 +1140,16 @@ export class AiUsageLedgerService {
         characterId?: string | null;
         characterName: string;
         requestCount: number;
+        estimatedCost: number;
         conversationIds: Set<string>;
         reviewedConversationCount: number;
         acceptableConversationCount: number;
         tooWeakConversationCount: number;
         pendingOutcomeConversationCount: number;
+        immediateContinuationCount: number;
+        continuedWithin24hCount: number;
+        postDowngradeFailureCount: number;
+        postDowngradeBlockedCount: number;
         tooWeakSamples: DowngradeReviewSample[];
         pendingOutcomeSamples: DowngradeReviewSample[];
       }
@@ -1136,11 +1177,16 @@ export class AiUsageLedgerService {
           record.scopeId?.trim() ||
           'Unknown character',
         requestCount: 0,
+        estimatedCost: 0,
         conversationIds: new Set<string>(),
         reviewedConversationCount: 0,
         acceptableConversationCount: 0,
         tooWeakConversationCount: 0,
         pendingOutcomeConversationCount: 0,
+        immediateContinuationCount: 0,
+        continuedWithin24hCount: 0,
+        postDowngradeFailureCount: 0,
+        postDowngradeBlockedCount: 0,
         tooWeakSamples: [],
         pendingOutcomeSamples: [],
       };
@@ -1155,7 +1201,21 @@ export class AiUsageLedgerService {
       }
       const bucket = ensureBucket(record);
       bucket.requestCount += 1;
+      bucket.estimatedCost += record.estimatedCost ?? 0;
       bucket.conversationIds.add(conversationId);
+      const diagnostics = input.recordDiagnostics.get(record.id);
+      if (diagnostics?.hasImmediateContinuation) {
+        bucket.immediateContinuationCount += 1;
+      }
+      if (diagnostics?.hasContinuationWithin24h) {
+        bucket.continuedWithin24hCount += 1;
+      }
+      if (diagnostics?.hasPostDowngradeFailure) {
+        bucket.postDowngradeFailureCount += 1;
+      }
+      if (diagnostics?.hasPostDowngradeBlocked) {
+        bucket.postDowngradeBlockedCount += 1;
+      }
     });
 
     input.latestDowngradeRecordByConversation.forEach((record, conversationId) => {
@@ -1199,34 +1259,77 @@ export class AiUsageLedgerService {
     });
 
     return Array.from(buckets.values())
-      .map((bucket) => ({
-        characterId: bucket.characterId ?? null,
-        characterName: bucket.characterName,
-        requestCount: bucket.requestCount,
-        distinctConversationCount: bucket.conversationIds.size,
-        reviewedConversationCount: bucket.reviewedConversationCount,
-        acceptableConversationCount: bucket.acceptableConversationCount,
-        tooWeakConversationCount: bucket.tooWeakConversationCount,
-        pendingOutcomeConversationCount: bucket.pendingOutcomeConversationCount,
-        reviewCoverageRate: bucket.conversationIds.size
+      .map((bucket) => {
+        const reviewCoverageRate = bucket.conversationIds.size
           ? this.roundRatio(bucket.reviewedConversationCount / bucket.conversationIds.size)
-          : null,
-        acceptableReviewRate: bucket.reviewedConversationCount
+          : null;
+        const acceptableReviewRate = bucket.reviewedConversationCount
           ? this.roundRatio(
               bucket.acceptableConversationCount / bucket.reviewedConversationCount,
             )
-          : null,
-        tooWeakReviewRate: bucket.reviewedConversationCount
+          : null;
+        const tooWeakReviewRate = bucket.reviewedConversationCount
           ? this.roundRatio(
               bucket.tooWeakConversationCount / bucket.reviewedConversationCount,
             )
-          : null,
-        tooWeakSamples: bucket.tooWeakSamples,
-        pendingOutcomeSamples: bucket.pendingOutcomeSamples,
-      }))
+          : null;
+        const immediateContinuationRate = bucket.requestCount
+          ? this.roundRatio(bucket.immediateContinuationCount / bucket.requestCount)
+          : null;
+        const continuedWithin24hRate = bucket.requestCount
+          ? this.roundRatio(bucket.continuedWithin24hCount / bucket.requestCount)
+          : null;
+        const postDowngradeFailureRate = bucket.requestCount
+          ? this.roundRatio(bucket.postDowngradeFailureCount / bucket.requestCount)
+          : null;
+        const postDowngradeBlockedRate = bucket.requestCount
+          ? this.roundRatio(bucket.postDowngradeBlockedCount / bucket.requestCount)
+          : null;
+        const costWeight = Math.min(bucket.estimatedCost / 5, 1);
+        const priorityScore = Math.round(
+          (
+            (tooWeakReviewRate ?? 0) * 0.34 +
+            (postDowngradeFailureRate ?? 0) * 0.22 +
+            (postDowngradeBlockedRate ?? 0) * 0.12 +
+            (bucket.pendingOutcomeConversationCount > 0
+              ? bucket.pendingOutcomeConversationCount /
+                Math.max(bucket.distinctConversationCount ?? 0, 1)
+              : 0) *
+              0.12 +
+            (1 - (continuedWithin24hRate ?? 0)) * 0.12 +
+            costWeight * 0.08
+          ) * 100,
+        );
+
+        return {
+          characterId: bucket.characterId ?? null,
+          characterName: bucket.characterName,
+          requestCount: bucket.requestCount,
+          estimatedCost: this.roundCost(bucket.estimatedCost),
+          distinctConversationCount: bucket.conversationIds.size,
+          reviewedConversationCount: bucket.reviewedConversationCount,
+          acceptableConversationCount: bucket.acceptableConversationCount,
+          tooWeakConversationCount: bucket.tooWeakConversationCount,
+          pendingOutcomeConversationCount: bucket.pendingOutcomeConversationCount,
+          immediateContinuationCount: bucket.immediateContinuationCount,
+          continuedWithin24hCount: bucket.continuedWithin24hCount,
+          postDowngradeFailureCount: bucket.postDowngradeFailureCount,
+          postDowngradeBlockedCount: bucket.postDowngradeBlockedCount,
+          reviewCoverageRate,
+          acceptableReviewRate,
+          tooWeakReviewRate,
+          immediateContinuationRate,
+          continuedWithin24hRate,
+          postDowngradeFailureRate,
+          postDowngradeBlockedRate,
+          priorityScore,
+          tooWeakSamples: bucket.tooWeakSamples,
+          pendingOutcomeSamples: bucket.pendingOutcomeSamples,
+        };
+      })
       .sort((left, right) => {
-        if (right.tooWeakConversationCount !== left.tooWeakConversationCount) {
-          return right.tooWeakConversationCount - left.tooWeakConversationCount;
+        if (right.priorityScore !== left.priorityScore) {
+          return right.priorityScore - left.priorityScore;
         }
         if ((right.tooWeakReviewRate ?? 0) !== (left.tooWeakReviewRate ?? 0)) {
           return (right.tooWeakReviewRate ?? 0) - (left.tooWeakReviewRate ?? 0);
