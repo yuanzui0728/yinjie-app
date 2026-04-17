@@ -2009,7 +2009,7 @@ export class RealWorldSyncService {
             .map((item) => item.title)
             .join(
               '；',
-            )}。只能围绕这些线索组织早报、午报、晚报和聊天回答，不要补系统未提供的具体事实。`
+            )}。聊天、发圈和公开内容都只围着这些线索展开；能说清就说清，没把握的地方直接承认。`
         : `今天与 ${config.subjectName || character.name} 相关的外部现实锚点集中在：${acceptedSignals
             .map((item) => item.title)
             .join('；')}。表达时带着这层现实背景，但不要变成新闻播报。`
@@ -2039,10 +2039,10 @@ export class RealWorldSyncService {
       signalIds: acceptedSignals.map((item) => item.id),
       dailySummary: acceptedSignals.length
         ? isWorldNewsDesk
-          ? `今日新闻简报：${acceptedSignals
+          ? `今天值得看的新闻动向：${acceptedSignals
               .map((item) => item.normalizedSummary ?? item.title)
               .join(' ')}`
-          : `${config.subjectName || character.name} 今天的现实摘要：${acceptedSignals
+          : `${config.subjectName || character.name} 今天的现实概况：${acceptedSignals
               .map((item) => item.normalizedSummary ?? item.title)
               .join(' ')}`
         : isWorldNewsDesk
@@ -2050,12 +2050,12 @@ export class RealWorldSyncService {
           : `${config.subjectName || character.name} 今天暂无可用外部现实信号。`,
       behaviorSummary: acceptedSignals.length
         ? isWorldNewsDesk
-          ? '今天更适合像编辑台一样先报事实、再讲影响、最后提示仍待确认的部分。'
+          ? '今天说新闻时先把事实捋顺，再带影响和还没坐实的地方。'
           : `${config.subjectName || character.name} 今天更适合表现为关注现实进展、表达克制但有明确态度。`
         : null,
       stanceShiftSummary: acceptedSignals.length
         ? isWorldNewsDesk
-          ? '今天的新闻节奏要求角色像在做编辑压缩，而不是像热搜搬运或纯观点输出。'
+          ? '今天别写成播报稿，也别像热搜搬运；更像一个真的在盯新闻的人。'
           : `今天的公开动作让角色更像“带着现实背景在交流”，而不是脱离现实的静态人设。`
         : null,
       scenePatchPayload,
@@ -2063,7 +2063,7 @@ export class RealWorldSyncService {
       realityMomentAnchorSignalId: acceptedSignals[0]?.id ?? null,
       realityMomentBrief: acceptedSignals[0]
         ? isWorldNewsDesk
-          ? `优先用「${acceptedSignals[0].title}」作为本时段新闻简报的开头。`
+          ? `如果这会儿要发更新，先从「${acceptedSignals[0].title}」说起。`
           : `优先用「${acceptedSignals[0].title}」作为今天的现实发圈锚点。`
         : null,
       appliedMode,
@@ -2093,16 +2093,17 @@ export class RealWorldSyncService {
       return {
         ...DEFAULT_REAL_WORLD_SCENE_PATCH,
         chat: signalSummary
-          ? `今天你掌握的新闻线索是：${signalSummary}。聊天时围绕这些新闻给结论、补背景、讲影响，并明确哪些地方仍待确认。`
+          ? `今天你盯到的新闻线索是：${signalSummary}。聊天时就围着这些事说，先把事实捋顺，再补背景和影响；没把握的地方直接说。`
           : '今天暂时没有足够可信的新鲜新闻，聊天时直接说明目前没有新的高置信度更新。',
         moments_post: signalSummary
-          ? `今天发朋友圈时，必须写成当前时段的新闻简报。只允许基于这些线索选材：${signalSummary}。每条都写成“事件 + 一句话影响”。`
+          ? `今天发朋友圈时，只能基于这些线索选材：${signalSummary}。挑当前时段最值得看的 2-4 件事，写得像顺手整理，不要像播报稿。`
           : '如果今天发朋友圈，明确说明暂时没有抓到足够可信的新鲜新闻，不要编造条目。',
         moments_comment:
-          '评论别人朋友圈时，只在你能补充事实、背景或影响时开口，不要把评论区变成播报台。',
-        feed_post: '如果要输出更公开的内容，优先做新闻变量解释，不做情绪站队。',
+          '评论别人朋友圈时，只有在你真能补事实、背景或影响时再开口，别把评论区当小播音间。',
+        feed_post:
+          '如果要输出更公开的内容，优先把一个值得看的变化讲透，不做情绪站队。',
         channel_post:
-          '如果在更公开场域说话，优先做“今天最值得跟踪的一个主线”。',
+          '如果在更公开场域说话，挑一个今天最值得继续盯的主线讲清楚。',
         feed_comment: '只在你能补一条关键事实或关键变量时评论。',
         greeting: '',
         proactive: signalSummary

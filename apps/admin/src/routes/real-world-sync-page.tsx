@@ -373,14 +373,14 @@ export function RealWorldSyncPage() {
     <div className="space-y-6">
       <AdminPageHero
         eyebrow="Reality Sync"
-        title="真实世界新闻联动与日更提示词"
-        description="每天为角色收集外部现实信号，生成现实摘要、scene patch 和现实发圈锚点，再以 overlay 方式注入聊天与内容生成链路。界闻会在此基础上固定执行早报、午报、晚报三段播报。"
+        title="真实世界联动与日更口径"
+        description="每天为角色收集外部现实信号，整理成现实概况、scene patch 和发圈锚点，再叠进聊天与内容生成链路。界闻会按早上、中午、晚上三段更新。"
         metrics={[
           { label: "已启用角色", value: overview.stats.enabledCharacters },
           { label: "Live 生效角色", value: overview.stats.liveCharacters },
           { label: "今日信号数", value: overview.stats.signalsToday },
           {
-            label: "今日新闻简报",
+            label: "今日新闻更新",
             value: overview.stats.newsBulletinsToday,
           },
         ]}
@@ -418,7 +418,7 @@ export function RealWorldSyncPage() {
         <AdminActionFeedback
           tone="success"
           title="Reality Sync 规则已保存"
-          description="新的默认搜索窗口、信号阈值和摘要模板已经写入后台配置。"
+          description="新的默认搜索窗口、信号阈值和概况模板已经写入后台配置。"
         />
       ) : null}
       {runMutation.isSuccess ? (
@@ -433,8 +433,8 @@ export function RealWorldSyncPage() {
           tone={publishBulletinMutation.data.created ? "success" : "info"}
           title={
             publishBulletinMutation.data.created
-              ? "界闻简报已发布"
-              : "界闻简报未重复发布"
+              ? "界闻更新已发出"
+              : "界闻这轮没重复发"
           }
           description={publishBulletinMutation.data.summary}
         />
@@ -706,7 +706,7 @@ export function RealWorldSyncPage() {
                 }
               />
               <AdminTextArea
-                label="日摘要提示词"
+                label="每日概况提示词"
                 value={rulesDraft.promptTemplates.dailyDigestPrompt}
                 onChange={(value) =>
                   setRulesDraft((current) =>
@@ -802,7 +802,7 @@ export function RealWorldSyncPage() {
                     }
                     meta={`${signal.sourceName} | ${formatTime(signal.publishedAt ?? signal.capturedAt)}`}
                     description={
-                      signal.normalizedSummary ?? signal.snippet ?? "暂无摘要"
+                      signal.normalizedSummary ?? signal.snippet ?? "暂无概况"
                     }
                   />
                   <SignalDebugPanel signal={signal} />
@@ -840,7 +840,7 @@ export function RealWorldSyncPage() {
                     badges={
                       <>
                         {item.isWorldNewsDesk ? (
-                          <StatusPill tone="healthy">三段播报角色</StatusPill>
+                          <StatusPill tone="healthy">三段更新角色</StatusPill>
                         ) : null}
                         <StatusPill tone={toneForApplyMode(item.applyMode)}>
                           {APPLY_MODE_LABELS[item.applyMode] ?? item.applyMode}
@@ -852,7 +852,7 @@ export function RealWorldSyncPage() {
                     }
                     meta={
                       item.isWorldNewsDesk
-                        ? `今日采纳 ${item.todayAcceptedSignalCount} 条 | 简报进度 ${formatBulletinSlots(item.todayBulletinSlots)}`
+                        ? `今日采纳 ${item.todayAcceptedSignalCount} 条 | 更新进度 ${formatBulletinSlots(item.todayBulletinSlots)}`
                         : `今日采纳 ${item.todayAcceptedSignalCount} 条 | 今日发圈 ${item.hasRealityLinkedMomentToday ? "已完成" : "未完成"}`
                     }
                     description={`主体：${item.subjectName} · 类型：${item.subjectType}`}
@@ -895,20 +895,20 @@ export function RealWorldSyncPage() {
               ) : (
                 <AdminEmptyState
                   title="还没有启用真实世界联动的角色"
-                  description="先去角色工厂打开“真实世界链接”，再回来观察每日 digest 和现实发圈。"
+                  description="先去角色工厂打开“真实世界链接”，再回来观察每日现实概况和现实发圈。"
                 />
               )}
             </div>
           </Card>
 
           {detailQuery.isLoading ? (
-            <LoadingBlock label="正在读取角色现实摘要..." />
+            <LoadingBlock label="正在读取角色现实概况..." />
           ) : detailQuery.isError && detailQuery.error instanceof Error ? (
             <ErrorBlock message={detailQuery.error.message} />
           ) : detail ? (
             <Card className="bg-[color:var(--surface-console)]">
               <AdminSectionHeader
-                title={`${detail.characterName} · 当前 digest`}
+                title={`${detail.characterName} · 当前现实概况`}
                 actions={
                   <StatusPill tone={toneForApplyMode(detail.config.applyMode)}>
                     {APPLY_MODE_LABELS[detail.config.applyMode] ??
@@ -936,7 +936,7 @@ export function RealWorldSyncPage() {
 
                 {detail.isWorldNewsDesk ? (
                   <AdminCallout
-                    title="界闻三段播报"
+                    title="界闻三段更新"
                     tone="success"
                     description={`今天已完成：${formatBulletinSlots(detail.todayBulletinSlots)}。调度窗口为 07:30-09:30、11:30-13:30、18:30-21:00，同一时段当天只发一次。`}
                     actions={
@@ -963,7 +963,7 @@ export function RealWorldSyncPage() {
                 {detail.activeDigest ? (
                   <>
                     <AdminCallout
-                      title="今日现实摘要"
+                      title="今日现实概况"
                       tone="info"
                       description={detail.activeDigest.dailySummary}
                     />
@@ -989,7 +989,7 @@ export function RealWorldSyncPage() {
                   </>
                 ) : (
                   <AdminEmptyState
-                    title="当前没有 active digest"
+                    title="当前还没有生效中的现实概况"
                     description="该角色还没跑出 live digest，或者当前处于 shadow / disabled 模式。"
                   />
                 )}
@@ -1009,7 +1009,7 @@ export function RealWorldSyncPage() {
                         description={
                           signal.normalizedSummary ??
                           signal.snippet ??
-                          "暂无摘要"
+                          "暂无概况"
                         }
                       />
                       <SignalDebugPanel signal={signal} />
