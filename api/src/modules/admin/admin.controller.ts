@@ -511,6 +511,8 @@ export class AdminController {
       displayName?: string | null;
       status?: 'disabled' | 'ready' | 'error' | null;
       endpointConfig?: Record<string, unknown> | null;
+      credential?: string | null;
+      clearCredential?: boolean | null;
     },
   ) {
     return this.actionRuntimeService.updateConnector(id, {
@@ -522,6 +524,8 @@ export class AdminController {
           ? body.status
           : undefined,
       endpointConfig: body.endpointConfig,
+      credential: body.credential,
+      clearCredential: body.clearCredential === true,
     });
   }
 
@@ -571,6 +575,20 @@ export class AdminController {
     );
   }
 
+  @Get('cyber-avatar/real-world/items')
+  listCyberAvatarRealWorldItems(@Query('limit') limit?: string) {
+    return this.cyberAvatarAdminService.listRealWorldItems(
+      limit ? Number.parseInt(limit, 10) : undefined,
+    );
+  }
+
+  @Get('cyber-avatar/real-world/briefs')
+  listCyberAvatarRealWorldBriefs(@Query('limit') limit?: string) {
+    return this.cyberAvatarAdminService.listRealWorldBriefs(
+      limit ? Number.parseInt(limit, 10) : undefined,
+    );
+  }
+
   @Get('cyber-avatar/runs')
   listCyberAvatarRuns(@Query('limit') limit?: string) {
     return this.cyberAvatarAdminService.listRuns(
@@ -601,6 +619,11 @@ export class AdminController {
   @Post('cyber-avatar/run/project')
   runCyberAvatarProjection() {
     return this.cyberAvatarAdminService.runProjection();
+  }
+
+  @Post('cyber-avatar/run/real-world')
+  runCyberAvatarRealWorldSync() {
+    return this.cyberAvatarAdminService.runRealWorldSync();
   }
 
   @Get('reply-logic/overview')

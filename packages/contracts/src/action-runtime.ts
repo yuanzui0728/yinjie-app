@@ -171,4 +171,6 @@ export interface UpdateActionConnectorRequest {
   displayName?: string;
   status?: ActionConnectorStatus;
   endpointConfig?: Record<string, unknown> | null;
+  credential?: string | null;
+  clearCredential?: boolean;
 }

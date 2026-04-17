@@ -107,6 +107,37 @@ const DEFAULT_CONNECTOR_OPERATIONS: Record<string, ActionConnectorOperationValue
 
 export const DEFAULT_ACTION_CONNECTOR_SEEDS: ActionConnectorSeedValue[] = [
   {
+    id: 'connector-official-home-assistant-smart-home',
+    connectorKey: 'official-home-assistant-smart-home',
+    displayName: 'Home Assistant 智能家居',
+    providerType: 'official_api',
+    status: 'disabled',
+    endpointConfigPayload: {
+      baseUrl: '',
+      timeoutMs: 12000,
+      provider: 'home_assistant',
+      deviceTargets: {
+        '客厅:空调': {
+          entityId: 'climate.living_room_ac',
+          serviceDomain: 'climate',
+          turnOnService: 'turn_on',
+          turnOffService: 'turn_off',
+          setTemperatureService: 'set_temperature',
+          temperatureField: 'temperature',
+        },
+        '客厅:灯': {
+          entityId: 'light.living_room_main',
+          serviceDomain: 'light',
+          turnOnService: 'turn_on',
+          turnOffService: 'turn_off',
+        },
+      },
+      notes:
+        'credential 填 Home Assistant Long-Lived Access Token；deviceTargets 用 “房间:设备” 映射到 entity/service。',
+    },
+    capabilitiesPayload: DEFAULT_CONNECTOR_OPERATIONS['mock-smart-home'],
+  },
+  {
     id: 'connector-http-smart-home',
     connectorKey: 'http-smart-home',
     displayName: 'HTTP 智能家居桥',

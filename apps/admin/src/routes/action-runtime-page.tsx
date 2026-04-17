@@ -36,6 +36,7 @@ type ConnectorDraft = {
   displayName: string;
   endpointConfigText: string;
   testMessage: string;
+  credential: string;
 };
 
 const RISK_LEVEL_OPTIONS: Array<{
@@ -139,10 +140,14 @@ export function ActionRuntimePage() {
       id: string;
       displayName: string;
       endpointConfig: Record<string, unknown> | null;
+      credential?: string | null;
+      clearCredential?: boolean;
     }) =>
       adminApi.updateActionRuntimeConnector(payload.id, {
         displayName: payload.displayName,
         endpointConfig: payload.endpointConfig,
+        credential: payload.credential,
+        clearCredential: payload.clearCredential,
       }),
     onSuccess: (connector) => {
       setConnectorDraftErrors((current) => {
@@ -150,6 +155,15 @@ export function ActionRuntimePage() {
         delete next[connector.id];
         return next;
       });
+      setConnectorDrafts((current) => ({
+        ...current,
+        [connector.id]: {
+          ...(current[connector.id] ?? createConnectorDraft(connector)),
+          displayName: connector.displayName,
+          endpointConfigText: formatEndpointConfig(connector.endpointConfig ?? null),
+          credential: "",
+        },
+      }));
       void queryClient.invalidateQueries({
         queryKey: ["admin-action-runtime-overview", baseUrl],
       });
@@ -285,6 +299,7 @@ export function ActionRuntimePage() {
           displayName: "",
           endpointConfigText: "",
           testMessage: "",
+          credential: "",
         }),
         ...patch,
       },
@@ -313,6 +328,29 @@ export function ActionRuntimePage() {
       id: connector.id,
       displayName: draft.displayName.trim() || connector.displayName,
       endpointConfig: parsed.value,
+      credential: draft.credential.trim() || null,
+    });
+  }
+
+  function handleClearConnectorCredential(connector: ActionConnectorSummary) {
+    const draft =
+      connectorDrafts[connector.id] ?? createConnectorDraft(connector);
+    const parsed = parseEndpointConfig(draft.endpointConfigText);
+    if (parsed.error) {
+      const errorMessage = parsed.error ?? "Endpoint Config 无法解析。";
+      setConnectorDraftErrors((current) => ({
+        ...current,
+        [connector.id]: errorMessage,
+      }));
+      return;
+    }
+
+    saveConnectorMutation.mutate({
+      id: connector.id,
+      displayName: draft.displayName.trim() || connector.displayName,
+      endpointConfig: parsed.value,
+      credential: null,
+      clearCredential: true,
     });
   }
 
@@ -707,6 +745,14 @@ export function ActionRuntimePage() {
                             description='服务端会向 `endpointConfig.url` 发送 JSON：`{ connectorKey, operationKey, domain, title, goal, riskLevel, requiresConfirmation, previewOnly, slots, missingSlots, sentAt }`。返回 JSON 时优先读取 `resultSummary` / `summary`、`result`、`execution`。'
                           />
                         ) : null}
+                        {connector.connectorKey ===
+                        "official-home-assistant-smart-home" ? (
+                          <AdminCallout
+                            tone="info"
+                            title="Home Assistant 配置方式"
+                            description='填写 `baseUrl`，把 Long-Lived Access Token 填进 credential。`deviceTargets` 用 “房间:设备” 作为 key，例如 `客厅:空调`；每个 target 至少包含 `entityId`，可选 `serviceDomain`、`turnOnService`、`turnOffService`、`setTemperatureService`、`temperatureField`。'
+                          />
+                        ) : null}
                         <AdminTextField
                           label="显示名称"
                           value={draft.displayName}
@@ -738,6 +784,27 @@ export function ActionRuntimePage() {
                           placeholder="留空则使用系统默认样例。"
                           textareaClassName="min-h-24"
                         />
+                        {(connector.providerType === "official_api" ||
+                          connector.providerType === "http_bridge") ? (
+                          <AdminTextField
+                            label={
+                              connector.providerType === "official_api"
+                                ? "Access Token / Credential"
+                                : "Bridge Secret / Credential"
+                            }
+                            value={draft.credential}
+                            onChange={(value) =>
+                              updateConnectorDraft(connector.id, {
+                                credential: value,
+                              })
+                            }
+                            placeholder={
+                              connector.credentialConfigured
+                                ? "已配置新凭证时再覆盖；留空则保持不变。"
+                                : "输入凭证后保存。"
+                            }
+                          />
+                        ) : null}
                         {connectorError ? (
                           <ErrorBlock message={connectorError} />
                         ) : null}
@@ -770,6 +837,22 @@ export function ActionRuntimePage() {
                             tone="warning"
                             title="最近一次连接器错误"
                             description={connector.lastError}
+                          />
+                        ) : null}
+                        {(connector.providerType === "official_api" ||
+                          connector.providerType === "http_bridge") ? (
+                          <AdminCallout
+                            tone={connector.credentialConfigured ? "success" : "warning"}
+                            title={
+                              connector.credentialConfigured
+                                ? "凭证已配置"
+                                : "凭证未配置"
+                            }
+                            description={
+                              connector.providerType === "official_api"
+                                ? "官方 API 连接器不会回显已保存 token；填写新值并保存即可覆盖。"
+                                : "Bridge credential 同样只写入不回显；需要替换时重新填写并保存。"
+                            }
                           />
                         ) : null}
                         {testResult ? (
@@ -807,6 +890,16 @@ export function ActionRuntimePage() {
                         >
                           {isSaving ? "保存中..." : "保存配置"}
                         </Button>
+                        {(connector.providerType === "official_api" ||
+                          connector.providerType === "http_bridge") ? (
+                          <Button
+                            variant="secondary"
+                            disabled={isSaving || !connector.credentialConfigured}
+                            onClick={() => handleClearConnectorCredential(connector)}
+                          >
+                            清除凭证
+                          </Button>
+                        ) : null}
                         <Button
                           variant="secondary"
                           disabled={isTesting}
@@ -1024,6 +1117,7 @@ function createConnectorDraft(
     displayName: connector.displayName,
     endpointConfigText: formatEndpointConfig(connector.endpointConfig ?? null),
     testMessage: "",
+    credential: "",
   };
 }
 
@@ -1032,6 +1126,7 @@ function isConnectorDirty(
   draft: ConnectorDraft,
 ) {
   return (
+    draft.credential.trim().length > 0 ||
     draft.displayName.trim() !== connector.displayName ||
     normalizeConfigText(draft.endpointConfigText) !==
       normalizeConfigText(

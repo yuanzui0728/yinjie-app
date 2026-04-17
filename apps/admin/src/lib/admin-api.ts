@@ -14,6 +14,8 @@ import type {
   CharacterFactorySnapshot,
   CyberAvatarOverview,
   CyberAvatarProfile,
+  CyberAvatarRealWorldBrief,
+  CyberAvatarRealWorldItem,
   CyberAvatarRunDetail,
   CyberAvatarRunSummary,
   CyberAvatarRuntimeRules,
@@ -324,6 +326,14 @@ export const adminApi = {
     adminFetch<CyberAvatarSignal[]>(
       `/cyber-avatar/signals${limit ? `?limit=${encodeURIComponent(String(limit))}` : ""}`,
     ),
+  listCyberAvatarRealWorldItems: (limit?: number) =>
+    adminFetch<CyberAvatarRealWorldItem[]>(
+      `/cyber-avatar/real-world/items${limit ? `?limit=${encodeURIComponent(String(limit))}` : ""}`,
+    ),
+  listCyberAvatarRealWorldBriefs: (limit?: number) =>
+    adminFetch<CyberAvatarRealWorldBrief[]>(
+      `/cyber-avatar/real-world/briefs${limit ? `?limit=${encodeURIComponent(String(limit))}` : ""}`,
+    ),
   listCyberAvatarRuns: (limit?: number) =>
     adminFetch<CyberAvatarRunSummary[]>(
       `/cyber-avatar/runs${limit ? `?limit=${encodeURIComponent(String(limit))}` : ""}`,
@@ -346,6 +356,10 @@ export const adminApi = {
     adminFetch<CyberAvatarRunDetail>("/cyber-avatar/run/project", {
       method: "POST",
     }),
+  runCyberAvatarRealWorldSync: () =>
+    adminFetch<CyberAvatarRunDetail>("/cyber-avatar/run/real-world", {
+      method: "POST",
+    }),
   getActionRuntimeOverview: () =>
     adminFetch<ActionRuntimeOverview>("/action-runtime/overview"),
   getActionRuntimeRules: () =>
@@ -363,6 +377,8 @@ export const adminApi = {
       displayName?: string;
       status?: "disabled" | "ready" | "error";
       endpointConfig?: Record<string, unknown> | null;
+      credential?: string | null;
+      clearCredential?: boolean;
     },
   ) =>
     adminFetch<ActionConnectorSummary>(`/action-runtime/connectors/${id}`, {

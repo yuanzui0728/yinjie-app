@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
+import { decryptUserApiKey, encryptUserApiKey } from '../auth/api-key-crypto';
 import { CharacterEntity } from '../characters/character.entity';
 import { DEFAULT_ACTION_CONNECTOR_SEEDS } from './action-runtime.constants';
 import { ActionConnectorEntity } from './action-connector.entity';
@@ -274,6 +275,8 @@ export class ActionRuntimeService {
       displayName?: string;
       status?: 'disabled' | 'ready' | 'error';
       endpointConfig?: Record<string, unknown> | null;
+      credential?: string | null;
+      clearCredential?: boolean;
     },
   ) {
     await this.ensureDefaultConnectors();
@@ -297,6 +300,15 @@ export class ActionRuntimeService {
     }
     if (payload.endpointConfig !== undefined) {
       connector.endpointConfigPayload = payload.endpointConfig;
+    }
+    if (payload.clearCredential === true) {
+      connector.credentialPayloadEncrypted = null;
+    } else if (typeof payload.credential === 'string') {
+      const trimmedCredential = payload.credential.trim();
+      if (trimmedCredential) {
+        connector.credentialPayloadEncrypted =
+          encryptUserApiKey(trimmedCredential);
+      }
     }
 
     await this.connectorRepo.save(connector);
@@ -517,7 +529,11 @@ export class ActionRuntimeService {
       const connector = connectors.find(
         (item) => item.connectorKey === plan.connectorKey,
       );
-      const execution = this.executeMockOperation(plan, connector, true);
+      const execution = await this.executeConnectorOperation(
+        plan,
+        connector,
+        true,
+      );
       responsePreview = this.renderSuccess(
         plan,
         connector?.displayName ?? plan.connectorKey,
@@ -1689,6 +1705,10 @@ export class ActionRuntimeService {
       return this.executeHttpBridgeOperation(plan, connector, previewOnly);
     }
 
+    if (connector.providerType === 'official_api') {
+      return this.executeOfficialApiOperation(plan, connector, previewOnly);
+    }
+
     if (connector.providerType === 'mock') {
       return this.executeMockOperation(plan, connector, previewOnly);
     }
@@ -1696,6 +1716,305 @@ export class ActionRuntimeService {
     throw new Error(
       `当前尚未支持 ${connector.providerType} 类型的真实执行器。`,
     );
+  }
+
+  private async executeOfficialApiOperation(
+    plan: ActionPlanValue,
+    connector: ActionConnectorEntity,
+    previewOnly: boolean,
+  ): Promise<ActionExecutionResultValue> {
+    const endpointConfig =
+      connector.endpointConfigPayload &&
+      typeof connector.endpointConfigPayload === 'object'
+        ? connector.endpointConfigPayload
+        : null;
+    const provider =
+      typeof endpointConfig?.provider === 'string'
+        ? endpointConfig.provider.trim()
+        : '';
+    if (
+      provider === 'home_assistant' ||
+      connector.connectorKey === 'official-home-assistant-smart-home'
+    ) {
+      return this.executeHomeAssistantOperation(plan, connector, previewOnly);
+    }
+
+    throw new Error(
+      `当前未识别 ${connector.displayName} 的 official_api provider。`,
+    );
+  }
+
+  private async executeHomeAssistantOperation(
+    plan: ActionPlanValue,
+    connector: ActionConnectorEntity,
+    previewOnly: boolean,
+  ): Promise<ActionExecutionResultValue> {
+    const endpointConfig =
+      connector.endpointConfigPayload &&
+      typeof connector.endpointConfigPayload === 'object'
+        ? connector.endpointConfigPayload
+        : null;
+    const baseUrl =
+      typeof endpointConfig?.baseUrl === 'string'
+        ? endpointConfig.baseUrl.trim().replace(/\/+$/, '')
+        : '';
+    if (!baseUrl) {
+      throw new Error('Home Assistant connector 缺少 baseUrl。');
+    }
+
+    const token = decryptUserApiKey(connector.credentialPayloadEncrypted);
+    if (!token?.trim()) {
+      throw new Error('Home Assistant connector 尚未配置 access token。');
+    }
+
+    const timeoutMs =
+      typeof endpointConfig?.timeoutMs === 'number' && endpointConfig.timeoutMs > 0
+        ? Math.min(endpointConfig.timeoutMs, 60000)
+        : 12000;
+    const health = await fetch(`${baseUrl}/api/`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token.trim()}`,
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const healthText = await health.text();
+    if (!health.ok) {
+      throw new Error(
+        `Home Assistant 健康检查失败 ${health.status}：${healthText.slice(0, 280) || health.statusText}`,
+      );
+    }
+
+    const target = this.resolveHomeAssistantTarget(plan, endpointConfig);
+    if (previewOnly) {
+      return {
+        resultSummary: target
+          ? `Home Assistant 已连通，目标实体 ${target.entityId} 可用于「${plan.title}」。`
+          : `Home Assistant 已连通，但当前还没有为「${plan.title}」配置 entity 映射。`,
+        executionPayload: {
+          providerType: connector.providerType,
+          previewOnly: true,
+          baseUrl,
+          entityId: target?.entityId ?? null,
+          serviceDomain: target?.serviceDomain ?? null,
+        },
+        resultPayload: {
+          message: healthText.trim() || 'API running.',
+          entityId: target?.entityId ?? null,
+          target,
+        },
+      };
+    }
+
+    if (!target) {
+      throw new Error(
+        `Home Assistant 未找到 ${this.describeSlots(plan.slots)} 对应的 entity 映射。`,
+      );
+    }
+
+    const serviceCall = this.buildHomeAssistantServiceCall(plan, target);
+    const response = await fetch(
+      `${baseUrl}/api/services/${serviceCall.domain}/${serviceCall.service}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token.trim()}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(serviceCall.payload),
+        signal: AbortSignal.timeout(timeoutMs),
+      },
+    );
+    const rawText = await response.text();
+    if (!response.ok) {
+      throw new Error(
+        `Home Assistant 服务调用失败 ${response.status}：${rawText.slice(0, 280) || response.statusText}`,
+      );
+    }
+
+    let parsedBody: unknown = null;
+    if (rawText.trim()) {
+      try {
+        parsedBody = JSON.parse(rawText) as unknown;
+      } catch {
+        parsedBody = rawText;
+      }
+    }
+
+    return {
+      resultSummary: this.buildHomeAssistantResultSummary(plan, target),
+      executionPayload: {
+        providerType: connector.providerType,
+        previewOnly: false,
+        baseUrl,
+        entityId: target.entityId,
+        domain: serviceCall.domain,
+        service: serviceCall.service,
+        payload: serviceCall.payload,
+      },
+      resultPayload:
+        parsedBody && typeof parsedBody === 'object'
+          ? ({
+              entityId: target.entityId,
+              serviceResult: parsedBody,
+            } as Record<string, unknown>)
+          : {
+              entityId: target.entityId,
+              serviceResultRaw: parsedBody ?? rawText,
+            },
+    };
+  }
+
+  private resolveHomeAssistantTarget(
+    plan: ActionPlanValue,
+    endpointConfig: Record<string, unknown> | null,
+  ) {
+    const deviceTargets =
+      endpointConfig?.deviceTargets &&
+      typeof endpointConfig.deviceTargets === 'object' &&
+      !Array.isArray(endpointConfig.deviceTargets)
+        ? (endpointConfig.deviceTargets as Record<string, unknown>)
+        : {};
+    const room =
+      typeof plan.slots.room === 'string' ? plan.slots.room.trim() : '';
+    const device =
+      typeof plan.slots.device === 'string' ? plan.slots.device.trim() : '';
+    const candidateKeys = [
+      room && device ? `${room}:${device}` : '',
+      room ? `${room}:*` : '',
+      device ? `*:${device}` : '',
+      device,
+    ].filter(Boolean);
+
+    for (const key of candidateKeys) {
+      const raw = deviceTargets[key];
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+        continue;
+      }
+      const target = raw as Record<string, unknown>;
+      const entityId =
+        typeof target.entityId === 'string' ? target.entityId.trim() : '';
+      if (!entityId) {
+        continue;
+      }
+      return {
+        key,
+        entityId,
+        serviceDomain:
+          typeof target.serviceDomain === 'string' && target.serviceDomain.trim()
+            ? target.serviceDomain.trim()
+            : entityId.split('.')[0] || 'homeassistant',
+        turnOnService:
+          typeof target.turnOnService === 'string' && target.turnOnService.trim()
+            ? target.turnOnService.trim()
+            : 'turn_on',
+        turnOffService:
+          typeof target.turnOffService === 'string' && target.turnOffService.trim()
+            ? target.turnOffService.trim()
+            : 'turn_off',
+        setTemperatureService:
+          typeof target.setTemperatureService === 'string' &&
+          target.setTemperatureService.trim()
+            ? target.setTemperatureService.trim()
+            : 'set_temperature',
+        temperatureField:
+          typeof target.temperatureField === 'string' &&
+          target.temperatureField.trim()
+            ? target.temperatureField.trim()
+            : 'temperature',
+        onData:
+          target.onData && typeof target.onData === 'object' && !Array.isArray(target.onData)
+            ? (target.onData as Record<string, unknown>)
+            : {},
+        offData:
+          target.offData &&
+          typeof target.offData === 'object' &&
+          !Array.isArray(target.offData)
+            ? (target.offData as Record<string, unknown>)
+            : {},
+        setTemperatureData:
+          target.setTemperatureData &&
+          typeof target.setTemperatureData === 'object' &&
+          !Array.isArray(target.setTemperatureData)
+            ? (target.setTemperatureData as Record<string, unknown>)
+            : {},
+      };
+    }
+
+    return null;
+  }
+
+  private buildHomeAssistantServiceCall(
+    plan: ActionPlanValue,
+    target: {
+      entityId: string;
+      serviceDomain: string;
+      turnOnService: string;
+      turnOffService: string;
+      setTemperatureService: string;
+      temperatureField: string;
+      onData: Record<string, unknown>;
+      offData: Record<string, unknown>;
+      setTemperatureData: Record<string, unknown>;
+    },
+  ) {
+    if (plan.slots.action === 'set_temperature') {
+      const temperatureCelsius =
+        typeof plan.slots.temperatureCelsius === 'number'
+          ? plan.slots.temperatureCelsius
+          : Number(plan.slots.temperatureCelsius);
+      if (!Number.isFinite(temperatureCelsius)) {
+        throw new Error('当前动作缺少有效的 temperatureCelsius。');
+      }
+      return {
+        domain: target.serviceDomain,
+        service: target.setTemperatureService,
+        payload: {
+          entity_id: target.entityId,
+          ...target.setTemperatureData,
+          [target.temperatureField]: temperatureCelsius,
+        },
+      };
+    }
+
+    if (plan.slots.action === 'turn_off') {
+      return {
+        domain: target.serviceDomain,
+        service: target.turnOffService,
+        payload: {
+          entity_id: target.entityId,
+          ...target.offData,
+        },
+      };
+    }
+
+    return {
+      domain: target.serviceDomain,
+      service: target.turnOnService,
+      payload: {
+        entity_id: target.entityId,
+        ...target.onData,
+      },
+    };
+  }
+
+  private buildHomeAssistantResultSummary(
+    plan: ActionPlanValue,
+    target: {
+      entityId: string;
+    },
+  ) {
+    const room = typeof plan.slots.room === 'string' ? plan.slots.room : '指定房间';
+    const device = typeof plan.slots.device === 'string' ? plan.slots.device : '设备';
+    const action = plan.slots.action;
+    if (action === 'set_temperature') {
+      return `${room}的${device}已通过 Home Assistant 调到 ${plan.slots.temperatureCelsius} 度。`;
+    }
+    if (action === 'turn_off') {
+      return `${room}的${device}已通过 Home Assistant 关闭。`;
+    }
+    return `${room}的${device}已通过 Home Assistant 打开。目标实体：${target.entityId}`;
   }
 
   private async executeHttpBridgeOperation(
