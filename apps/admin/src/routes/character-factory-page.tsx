@@ -27,7 +27,6 @@ import {
   AdminPageHero,
   AdminRecordCard,
   AdminSectionHeader,
-  AdminSubTabs,
   AdminTabs,
   AdminSelectField as SelectFieldBlock,
   AdminTextArea as TextAreaBlock,
@@ -810,10 +809,11 @@ export function CharacterFactoryPage() {
                     兼容字段
                   </div>
                   <InlineNotice tone="muted">
-                    以下字段仅用于兼容旧角色和旧提示词链路。新角色默认以新提示词架构为主。
+                    以下字段只给旧角色迁移和兼容链路兜底用。新角色默认只维护
+                    `coreLogic + scenePrompts`；兼容字段能留空就留空。
                   </InlineNotice>
                   <TextAreaBlock
-                    label="行动纲领（兼容）"
+                    label="行动纲领（兼容补丁）"
                     value={draft.tone.coreDirective ?? ""}
                     onChange={(value) =>
                       patchDraft((current) => ({
@@ -823,7 +823,7 @@ export function CharacterFactoryPage() {
                     }
                   />
                   <TextAreaBlock
-                    label="基础提示词（兼容）"
+                    label="基础提示词（兼容补丁）"
                     value={draft.tone.basePrompt}
                     onChange={(value) =>
                       patchDraft((current) => ({
@@ -833,7 +833,7 @@ export function CharacterFactoryPage() {
                     }
                   />
                   <TextAreaBlock
-                    label="系统提示词（兼容）"
+                    label="系统提示词（兼容补丁）"
                     value={draft.tone.systemPrompt}
                     onChange={(value) =>
                       patchDraft((current) => ({
@@ -842,6 +842,11 @@ export function CharacterFactoryPage() {
                       }))
                     }
                   />
+                  <InlineNotice tone="warning">
+                    `systemPrompt`
+                    现在只当兼容补丁拼进最终提示词，别再拿它当主入口堆整套设定。
+                    要调说话方式，优先改上面的底层逻辑和各场景提示词。
+                  </InlineNotice>
                 </div>
               </div>
             </Card>

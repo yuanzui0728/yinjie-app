@@ -209,21 +209,21 @@ const CHARACTER_FIELD_MAPPINGS: CharacterFieldMapping[] = [
       character.profile?.behavioralPatterns?.quirks ?? [],
   },
   {
-    label: '行动纲领',
+    label: '行动纲领（兼容补丁）',
     recipeField: 'tone.coreDirective',
     targetField: 'profile.coreDirective',
     readRecipe: (recipe) => recipe.tone.coreDirective,
     readCharacter: (character) => character.profile?.coreDirective ?? '',
   },
   {
-    label: '基础提示词',
+    label: '基础提示词（兼容补丁）',
     recipeField: 'tone.basePrompt',
     targetField: 'profile.basePrompt',
     readRecipe: (recipe) => recipe.tone.basePrompt,
     readCharacter: (character) => character.profile?.basePrompt ?? '',
   },
   {
-    label: '系统提示词',
+    label: '系统提示词（兼容补丁）',
     recipeField: 'tone.systemPrompt',
     targetField: 'profile.systemPrompt',
     readRecipe: (recipe) => recipe.tone.systemPrompt,
@@ -582,9 +582,9 @@ function isRealityLinkEffectivelyEmpty(
     (!realityLink.scenePatchPrompt || !realityLink.scenePatchPrompt.trim()) &&
     (!realityLink.realityMomentPrompt ||
       !realityLink.realityMomentPrompt.trim()) &&
-    !(realityLink.aliases?.length) &&
-    !(realityLink.sourceAllowlist?.length) &&
-    !(realityLink.sourceBlocklist?.length)
+    !realityLink.aliases?.length &&
+    !realityLink.sourceAllowlist?.length &&
+    !realityLink.sourceBlocklist?.length
   );
 }
 
@@ -1108,11 +1108,11 @@ export class CharacterBlueprintService {
           ? 'preset_catalog'
           : character.sourceType === 'need_generated'
             ? 'need_generated'
-          : character.sourceType === 'shake_generated'
-            ? 'shake_generated'
-          : character.sourceType === 'wechat_import'
-            ? 'wechat_import'
-            : 'manual_admin';
+            : character.sourceType === 'shake_generated'
+              ? 'shake_generated'
+              : character.sourceType === 'wechat_import'
+                ? 'wechat_import'
+                : 'manual_admin';
     const blueprint = this.blueprintRepo.create({
       id: `blueprint_${character.id}`,
       characterId: character.id,

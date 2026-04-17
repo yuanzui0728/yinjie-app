@@ -803,9 +803,9 @@ export function ReplyLogicPage() {
                   <>
                     {characterDraft.profile.systemPrompt?.trim() ? (
                       <InlineNotice className="mt-4" tone="warning">
-                        当前已填写
-                        `systemPrompt`，真实回复时会直接覆盖结构化提示词拼装。你在下面改的身份、语气、边界字段，只有清空
-                        `systemPrompt` 后才会重新体现在最终提示词里。
+                        当前已填写 `systemPrompt`
+                        兼容补丁。它仍会进入最终提示词，但默认不会再直接盖掉
+                        `coreLogic` 和 `scenePrompts`。新角色尽量留空；只有确实要保留旧角色口吻时再保留它。
                       </InlineNotice>
                     ) : null}
 
