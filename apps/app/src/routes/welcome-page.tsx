@@ -24,6 +24,20 @@ const LOCAL_APP_DEV_PORT = "5180";
 const LOCAL_CORE_API_PORT = "3000";
 const WAITING_CLOUD_SESSION_STATUSES = new Set<WorldAccessSessionSummary["status"]>(["pending", "resolving", "waiting"]);
 const FAILURE_CLOUD_SESSION_STATUSES = new Set<WorldAccessSessionSummary["status"]>(["failed", "disabled", "expired"]);
+const WORLD_ACCESS_MESSAGE_MAP: Record<string, string> = {
+  "World is missing an API endpoint.": "世界缺少可用的 API 地址。",
+  "The world finished starting but no apiBaseUrl is available yet.": "世界已经启动完成，但暂时还没有可用的 API 地址。",
+  "World is ready.": "世界已就绪。",
+  "Waking the existing world.": "正在唤醒已有世界。",
+  "World startup failed.": "世界启动失败。",
+  "The world could not be started.": "世界暂时无法启动。",
+  "World is disabled.": "世界已被停用。",
+  "This world is currently disabled by ops.": "该世界当前已被运维停用。",
+  "World is being deleted.": "世界正在删除中。",
+  "The world is being deleted and cannot be resumed.": "世界正在删除，无法恢复。",
+  "Creating a brand new world.": "正在创建全新的世界。",
+  "Cloud access session is missing.": "云世界访问会话缺失。",
+};
 
 function normalizeBaseUrl(value: string) {
   return value.trim().replace(/\/+$/, "");
@@ -85,24 +99,37 @@ function buildCloudAccessSessionQueryKey(baseUrl: string, sessionId: string, acc
   return ["welcome-cloud-access-session", baseUrl || "default", sessionId, accessToken] as const;
 }
 
+function translateWorldAccessText(message?: string | null) {
+  if (!message) {
+    return undefined;
+  }
+
+  return WORLD_ACCESS_MESSAGE_MAP[message] ?? message;
+}
+
+function describeCloudSessionFailure(session: WorldAccessSessionSummary) {
+  return translateWorldAccessText(session.failureReason) ?? translateWorldAccessText(session.displayStatus) ?? "世界当前不可用。";
+}
+
 function describeCloudSession(session?: WorldAccessSessionSummary | null) {
   if (!session) {
-    return "Verify your phone number to resolve your cloud world.";
+    return "请先验证手机号，以解析你的云世界。";
   }
 
   if (session.status === "ready") {
-    return "World is ready. Connecting now...";
+    return "世界已就绪，正在连接...";
   }
 
   if (FAILURE_CLOUD_SESSION_STATUSES.has(session.status)) {
-    return session.failureReason ?? session.displayStatus;
+    return describeCloudSessionFailure(session);
   }
 
+  const translatedDisplayStatus = translateWorldAccessText(session.displayStatus) ?? session.displayStatus;
   if (session.estimatedWaitSeconds && session.estimatedWaitSeconds > 0) {
-    return `${session.displayStatus} Estimated wait: ${session.estimatedWaitSeconds}s.`;
+    return `${translatedDisplayStatus} 预计等待：${session.estimatedWaitSeconds} 秒。`;
   }
 
-  return session.displayStatus;
+  return translatedDisplayStatus;
 }
 
 function describeCloudButtonLabel(
@@ -111,26 +138,26 @@ function describeCloudButtonLabel(
   ownerSyncing: boolean,
 ) {
   if (ownerSyncing) {
-    return "Connecting...";
+    return "连接中...";
   }
 
   if (isContinuing) {
-    return "Resolving...";
+    return "解析中...";
   }
 
   if (!session) {
-    return "Resolve my world";
+    return "解析我的世界";
   }
 
   if (session.status === "ready") {
-    return "Connecting...";
+    return "连接中...";
   }
 
   if (WAITING_CLOUD_SESSION_STATUSES.has(session.status)) {
-    return session.phase === "starting" ? "Waking world..." : "Creating world...";
+    return session.phase === "starting" ? "正在唤醒世界..." : "正在创建世界...";
   }
 
-  return "Resolve my world";
+  return "解析我的世界";
 }
 
 function mobileNoticeTone(
@@ -247,7 +274,7 @@ export function WelcomePage() {
 
         setReadyBaseUrl(null);
         if (!onboardingCompleted) {
-          setEntryError(describeRequestError(error, "Unable to connect to the selected world."));
+          setEntryError(describeRequestError(error, "无法连接到所选世界。"));
         }
       })
       .finally(() => {
@@ -265,7 +292,7 @@ export function WelcomePage() {
     queryKey: cloudAccessSessionQueryKey ?? ["welcome-cloud-access-session", "idle"],
     queryFn: () => {
       if (!cloudAccessSessionId || !cloudAccessToken) {
-        throw new Error("Cloud access session is missing.");
+        throw new Error("云世界访问会话缺失。");
       }
 
       return getMyCloudWorldAccessSession(cloudAccessSessionId, cloudAccessToken, normalizedCloudApiBaseUrl || undefined);
@@ -291,7 +318,7 @@ export function WelcomePage() {
     session: WorldAccessSessionSummary,
   ) {
     if (!session.resolvedApiBaseUrl) {
-      setEntryError(session.failureReason ?? "The world resolved without a usable API endpoint.");
+      setEntryError(translateWorldAccessText(session.failureReason) ?? "世界已解析完成，但没有可用的 API 地址。");
       return;
     }
 
@@ -316,14 +343,14 @@ export function WelcomePage() {
       setReadyBaseUrl(session.resolvedApiBaseUrl);
       setOwnerName(owner.username ?? "");
       setConnectedAccessSessionId(session.id);
-      setNotice("Connected to your cloud world.");
+      setNotice("已连接到云世界。");
 
       if (owner.onboardingCompleted) {
         void navigate({ to: "/tabs/chat", replace: true });
       }
     } catch (error) {
       setReadyBaseUrl(null);
-      setEntryError(describeRequestError(error, "World is ready but could not be reached yet."));
+      setEntryError(describeRequestError(error, "世界已就绪，但暂时还无法访问。"));
     } finally {
       setOwnerSyncing(false);
     }
@@ -365,7 +392,7 @@ export function WelcomePage() {
       setCloudAccessToken("");
       setCloudAccessSessionId(null);
       setConnectedAccessSessionId(null);
-      setNotice("Verification code sent.");
+      setNotice("验证码已发送。");
       setEntryError("");
       setAppRuntimeConfig({
         apiBaseUrl: undefined,
@@ -388,7 +415,7 @@ export function WelcomePage() {
 
   async function continueWithLocalWorld() {
     if (!normalizedLocalApiBaseUrl) {
-      setEntryError("Enter a local world API base URL.");
+      setEntryError("请输入本地世界 API 地址。");
       return;
     }
 
@@ -423,10 +450,10 @@ export function WelcomePage() {
         return;
       }
 
-      setNotice("Local world connected.");
+      setNotice("已连接到本地世界。");
     } catch (error) {
       setReadyBaseUrl(null);
-      setEntryError(describeRequestError(error, "Unable to connect to the local world."));
+      setEntryError(describeRequestError(error, "无法连接到本地世界。"));
     } finally {
       setIsContinuing(false);
     }
@@ -434,12 +461,12 @@ export function WelcomePage() {
 
   async function continueWithCloudWorld() {
     if (!phone.trim()) {
-      setEntryError("Enter your phone number.");
+      setEntryError("请输入手机号。");
       return;
     }
 
     if (!cloudAccessToken && !code.trim()) {
-      setEntryError("Enter the verification code.");
+      setEntryError("请输入验证码。");
       return;
     }
 
@@ -494,7 +521,7 @@ export function WelcomePage() {
       });
 
       if (FAILURE_CLOUD_SESSION_STATUSES.has(session.status)) {
-        setEntryError(session.failureReason ?? session.displayStatus);
+        setEntryError(describeCloudSessionFailure(session));
         return;
       }
 
@@ -505,7 +532,7 @@ export function WelcomePage() {
       }
     } catch (error) {
       setReadyBaseUrl(null);
-      setEntryError(describeRequestError(error, "Failed to resolve cloud world access."));
+      setEntryError(describeRequestError(error, "解析云世界访问失败。"));
     } finally {
       setIsContinuing(false);
     }
@@ -514,12 +541,12 @@ export function WelcomePage() {
   async function submitOwnerName() {
     const username = ownerName.trim();
     if (!username) {
-      setOwnerError("Enter a world owner name.");
+      setOwnerError("请输入世界主人的名字。");
       return;
     }
 
     if (!readyBaseUrl) {
-      setOwnerError("Connect to a world before setting the owner name.");
+      setOwnerError("请先连接世界，再设置世界主人名称。");
       return;
     }
 
@@ -537,7 +564,7 @@ export function WelcomePage() {
       hydrateOwner(owner);
       void navigate({ to: "/tabs/chat", replace: true });
     } catch (error) {
-      setOwnerError(describeRequestError(error, "Failed to save the owner profile."));
+      setOwnerError(describeRequestError(error, "保存世界主人资料失败。"));
     } finally {
       setIsContinuing(false);
     }
@@ -548,7 +575,7 @@ export function WelcomePage() {
       return (
         <div className="space-y-4">
           <label className="block space-y-2">
-            <span className="text-xs uppercase tracking-[0.24em] text-[color:var(--text-muted)]">Phone</span>
+            <span className="text-xs uppercase tracking-[0.24em] text-[color:var(--text-muted)]">手机号</span>
             <TextField
               value={phone}
               onChange={(event) => {
@@ -559,13 +586,13 @@ export function WelcomePage() {
                 setConnectedAccessSessionId(null);
                 setEntryError("");
               }}
-              placeholder="Enter your phone number"
+              placeholder="请输入手机号"
             />
           </label>
 
           <div className="space-y-2">
             <span className="block text-xs uppercase tracking-[0.24em] text-[color:var(--text-muted)]">
-              Verification Code
+              验证码
             </span>
             <div className="flex items-center gap-3">
               <div className="min-w-0 flex-1">
@@ -575,7 +602,7 @@ export function WelcomePage() {
                     setCode(event.target.value);
                     setEntryError("");
                   }}
-                  placeholder="Enter the verification code"
+                  placeholder="请输入验证码"
                 />
               </div>
               <Button
@@ -585,19 +612,19 @@ export function WelcomePage() {
                 size="lg"
                 className="shrink-0 rounded-2xl border-black/5 bg-[#f5f5f5] px-5 shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-white"
               >
-                {sendCodeMutation.isPending ? "Sending..." : "Send Code"}
+                {sendCodeMutation.isPending ? "发送中..." : "发送验证码"}
               </Button>
             </div>
           </div>
 
           {cloudAccessSessionQuery.isLoading ? (
             isDesktopLayout ? (
-              <LoadingBlock className="px-0 py-0 text-left" label="Resolving your cloud world..." />
+              <LoadingBlock className="px-0 py-0 text-left" label="正在解析你的云世界..." />
             ) : (
               <MobileWelcomeStatusCard
-                badge="Cloud World"
-                title="Resolving your world"
-                description="We are checking whether to create a new world or wake the one that already belongs to this phone."
+                badge="云世界"
+                title="正在解析你的世界"
+                description="我们正在判断是为这个手机号创建新世界，还是唤醒它已拥有的世界。"
               />
             )
           ) : null}
@@ -616,10 +643,10 @@ export function WelcomePage() {
 
           {currentCloudSession?.resolvedApiBaseUrl ? (
             isDesktopLayout ? (
-              <InlineNotice tone="muted">Resolved world endpoint: {currentCloudSession.resolvedApiBaseUrl}</InlineNotice>
+              <InlineNotice tone="muted">已解析到世界地址：{currentCloudSession.resolvedApiBaseUrl}</InlineNotice>
             ) : (
               <MobileWelcomeNotice tone="muted">
-                Resolved world endpoint: {currentCloudSession.resolvedApiBaseUrl}
+                已解析到世界地址：{currentCloudSession.resolvedApiBaseUrl}
               </MobileWelcomeNotice>
             )
           ) : null}
@@ -640,7 +667,7 @@ export function WelcomePage() {
     return (
       <div className="space-y-4">
         <label className="block space-y-2">
-          <span className="text-xs uppercase tracking-[0.24em] text-[color:var(--text-muted)]">Local World API</span>
+          <span className="text-xs uppercase tracking-[0.24em] text-[color:var(--text-muted)]">本地世界 API</span>
           <TextField
             value={localApiBaseUrl}
             onChange={(event) => {
@@ -653,7 +680,7 @@ export function WelcomePage() {
 
         {localApiBaseUrlAdjusted ? (
           <InlineNotice tone="muted">
-            The entered loopback app URL was adjusted to the matching Core API endpoint: {normalizedLocalApiBaseUrl}
+            检测到你输入的是本机应用地址，已自动换算为对应的 Core API 地址：{normalizedLocalApiBaseUrl}
           </InlineNotice>
         ) : null}
 
@@ -664,7 +691,7 @@ export function WelcomePage() {
           size="lg"
           className="w-full rounded-2xl bg-[#07c160] text-white shadow-none hover:bg-[#06ad56]"
         >
-          {isContinuing ? "Connecting..." : "Connect Local World"}
+          {isContinuing ? "连接中..." : "连接本地世界"}
         </Button>
       </div>
     );
@@ -673,7 +700,7 @@ export function WelcomePage() {
   function renderOwnerStep() {
     return (
       <div className="space-y-5">
-        <h2 className="text-3xl font-semibold tracking-[0.05em] text-[color:var(--text-primary)]">Name Your World Owner</h2>
+        <h2 className="text-3xl font-semibold tracking-[0.05em] text-[color:var(--text-primary)]">为世界主人命名</h2>
 
         <div className="rounded-[28px] border border-black/5 bg-white p-5 shadow-none">
           <TextField
@@ -687,7 +714,7 @@ export function WelcomePage() {
                 void submitOwnerName();
               }
             }}
-            placeholder="Choose the owner name for this world"
+            placeholder="为这个世界设置主人的名字"
             className="text-center text-base"
             autoFocus
           />
@@ -717,7 +744,7 @@ export function WelcomePage() {
               size="lg"
               className="rounded-2xl border-black/5 bg-[#f5f5f5] shadow-none hover:border-[rgba(7,193,96,0.16)] hover:bg-white"
             >
-              Back
+              返回
             </Button>
             <Button
               onClick={() => void submitOwnerName()}
@@ -726,7 +753,7 @@ export function WelcomePage() {
               size="lg"
               className="rounded-2xl bg-[#07c160] text-white shadow-none hover:bg-[#06ad56]"
             >
-              {isContinuing ? "Saving..." : "Enter World"}
+              {isContinuing ? "保存中..." : "进入世界"}
             </Button>
           </div>
         </div>
@@ -747,9 +774,9 @@ export function WelcomePage() {
                 : "border-[color:var(--border-faint)] bg-white hover:border-[rgba(7,193,96,0.16)]"
             }`}
           >
-            <div className="text-sm font-medium text-[color:var(--text-primary)]">Cloud World</div>
+            <div className="text-sm font-medium text-[color:var(--text-primary)]">云世界</div>
             <div className="mt-2 text-xs leading-6 text-[color:var(--text-secondary)]">
-              Login by phone. New users get a fresh world and returning users wake their existing one.
+              通过手机号登录。新用户会获得一个全新的世界，老用户会唤醒自己已有的世界。
             </div>
           </button>
 
@@ -762,9 +789,9 @@ export function WelcomePage() {
                 : "border-[color:var(--border-faint)] bg-white hover:border-[rgba(7,193,96,0.16)]"
             }`}
           >
-            <div className="text-sm font-medium text-[color:var(--text-primary)]">Local World</div>
+            <div className="text-sm font-medium text-[color:var(--text-primary)]">本地世界</div>
             <div className="mt-2 text-xs leading-6 text-[color:var(--text-secondary)]">
-              Enter a known world API endpoint and connect directly.
+              输入已知的世界 API 地址并直接连接。
             </div>
           </button>
         </div>
@@ -775,12 +802,12 @@ export function WelcomePage() {
 
         {ownerSyncing && runtimeConfig.apiBaseUrl ? (
           isDesktopLayout ? (
-            <LoadingBlock className="px-0 py-0 text-left" label="Loading world owner..." />
+            <LoadingBlock className="px-0 py-0 text-left" label="正在加载世界主人..." />
           ) : (
             <MobileWelcomeStatusCard
-              badge="World"
-              title="Loading world owner"
-              description="The world endpoint is reachable. We are hydrating the owner profile before entering the app."
+              badge="世界"
+              title="正在加载世界主人"
+              description="世界地址已连通，正在进入应用前同步世界主人资料。"
             />
           )
         ) : null}
@@ -817,10 +844,10 @@ export function WelcomePage() {
           <div className="pointer-events-none absolute inset-0 rounded-[44px] bg-[rgba(255,255,255,0.24)] blur-3xl" />
           <AppSection className="relative mx-auto w-full max-w-xl rounded-[32px] border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,248,235,0.94))] px-7 py-8 shadow-[0_28px_72px_rgba(160,90,10,0.22)] backdrop-blur-2xl">
             <div className="inline-flex rounded-full border border-[rgba(249,115,22,0.24)] bg-white/78 px-3 py-1 text-[11px] uppercase tracking-[0.32em] text-[color:var(--brand-primary)]">
-              World Entry
+              世界入口
             </div>
             <h1 className="mt-5 text-3xl font-semibold tracking-[0.08em] text-[color:var(--text-primary)]">
-              Connect to Your World
+              连接你的世界
             </h1>
 
             <div className="mt-6">{showOwnerStep ? renderOwnerStep() : renderEntryStep()}</div>
@@ -834,10 +861,10 @@ export function WelcomePage() {
     <AppPage className="bg-[#f5f5f5] px-4 py-8">
       <AppSection className="mx-auto w-full max-w-xl border-black/5 bg-white px-6 py-8 shadow-none">
         <div className="inline-flex rounded-full border border-[rgba(7,193,96,0.16)] bg-[rgba(7,193,96,0.08)] px-3 py-1 text-[11px] uppercase tracking-[0.32em] text-[#15803d]">
-          World Entry
+          世界入口
         </div>
         <h1 className="mt-6 text-3xl font-semibold tracking-[0.08em] text-[color:var(--text-primary)]">
-          Connect to Your World
+          连接你的世界
         </h1>
 
         <div className="mt-6">{showOwnerStep ? renderOwnerStep() : renderEntryStep()}</div>
