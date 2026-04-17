@@ -1,7 +1,9 @@
 import type {
   AdminCreateGameCatalogRequest,
   AdminGameCatalogDetail,
+  AdminGameCenterCuration,
   AdminGameCatalogItem,
+  AdminUpdateGameCenterCurationRequest,
   AdminUpdateGameCatalogRequest,
   ActionConnectorDiscoveryResult,
   ActionConnectorSummary,
@@ -263,11 +265,17 @@ export const adminApi = {
     ),
   getFriendCharacterIds: () => adminFetch<string[]>("/characters/friend-ids"),
   getGamesCatalog: () => adminFetch<AdminGameCatalogItem[]>("/games"),
+  getGameCenterCuration: () => adminFetch<AdminGameCenterCuration>("/games/curation"),
   getGameCatalogItem: (id: string) =>
     adminFetch<AdminGameCatalogDetail>(`/games/${id}`),
   createGameCatalogItem: (payload: AdminCreateGameCatalogRequest) =>
     adminFetch<AdminGameCatalogDetail>("/games", {
       method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateGameCenterCuration: (payload: AdminUpdateGameCenterCurationRequest) =>
+    adminFetch<AdminGameCenterCuration>("/games/curation", {
+      method: "PATCH",
       body: JSON.stringify(payload),
     }),
   updateGameCatalogItem: (id: string, payload: AdminUpdateGameCatalogRequest) =>

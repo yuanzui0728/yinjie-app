@@ -6,11 +6,16 @@ import { GamesService } from './games.service';
 import { AdminGamesController } from './admin-games.controller';
 import { AdminGuard } from '../admin/admin.guard';
 import { GameCatalogEntity } from './game-catalog.entity';
+import { GameCenterCurationEntity } from './game-center-curation.entity';
 import { GameOwnerStateEntity } from './game-owner-state.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([GameOwnerStateEntity, GameCatalogEntity]),
+    TypeOrmModule.forFeature([
+      GameOwnerStateEntity,
+      GameCatalogEntity,
+      GameCenterCurationEntity,
+    ]),
     AuthModule,
   ],
   providers: [GamesService, AdminGuard],

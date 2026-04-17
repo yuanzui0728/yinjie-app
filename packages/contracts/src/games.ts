@@ -199,6 +199,16 @@ export interface AdminGameCatalogItem {
 
 export interface AdminGameCatalogDetail extends AdminGameCatalogItem {}
 
+export interface AdminGameCenterCuration {
+  featuredGameIds: string[];
+  shelves: GameCenterShelf[];
+  hotRankings: GameCenterRankingEntry[];
+  newRankings: GameCenterRankingEntry[];
+  events: GameCenterEvent[];
+  stories: GameCenterStory[];
+  updatedAt: string;
+}
+
 export interface AdminCreateGameCatalogRequest {
   id: string;
   name: string;
@@ -254,4 +264,13 @@ export interface AdminUpdateGameCatalogRequest {
   playersLabel?: string;
   friendsLabel?: string;
   sortOrder?: number;
+}
+
+export interface AdminUpdateGameCenterCurationRequest {
+  featuredGameIds?: string[];
+  shelves?: GameCenterShelf[];
+  hotRankings?: GameCenterRankingEntry[];
+  newRankings?: GameCenterRankingEntry[];
+  events?: GameCenterEvent[];
+  stories?: GameCenterStory[];
 }

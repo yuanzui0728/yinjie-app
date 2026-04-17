@@ -9,9 +9,11 @@ import { WorldOwnerService } from '../auth/world-owner.service';
 import {
   createDefaultGameCenterOwnerState,
   GAME_CENTER_HOME_SEED,
+  cloneGameCenterCurationSeed,
   cloneGameCenterHomeSeed,
 } from './game-center.data';
 import { GameCatalogEntity } from './game-catalog.entity';
+import { GameCenterCurationEntity } from './game-center-curation.entity';
 import { GameOwnerStateEntity } from './game-owner-state.entity';
 
 const MAX_RECENT_GAMES = 6;
@@ -20,6 +22,12 @@ const MAX_PINNED_GAMES = 8;
 type SerializedGameCenterOwnerState = ReturnType<
   typeof createDefaultGameCenterOwnerState
 >;
+
+type SerializedGameCenterCuration = ReturnType<
+  typeof cloneGameCenterCurationSeed
+> & {
+  updatedAt: string;
+};
 
 type CreateAdminGameInput = {
   id?: string;
@@ -52,6 +60,48 @@ type CreateAdminGameInput = {
 
 type UpdateAdminGameInput = Omit<CreateAdminGameInput, 'id'>;
 
+type UpdateAdminGameCenterCurationInput = {
+  featuredGameIds?: string[];
+  shelves?: Array<{
+    id: string;
+    title: string;
+    description: string;
+    gameIds: string[];
+  }>;
+  hotRankings?: Array<{
+    gameId: string;
+    rank: number;
+    note: string;
+  }>;
+  newRankings?: Array<{
+    gameId: string;
+    rank: number;
+    note: string;
+  }>;
+  events?: Array<{
+    id: string;
+    title: string;
+    description: string;
+    meta: string;
+    ctaLabel: string;
+    relatedGameId: string;
+    actionKind: string;
+    tone: string;
+  }>;
+  stories?: Array<{
+    id: string;
+    title: string;
+    description: string;
+    eyebrow: string;
+    authorName: string;
+    ctaLabel: string;
+    publishedAt: string;
+    kind: string;
+    tone: string;
+    relatedGameId?: string | null;
+  }>;
+};
+
 @Injectable()
 export class GamesService {
   constructor(
@@ -59,6 +109,8 @@ export class GamesService {
     private readonly ownerStateRepo: Repository<GameOwnerStateEntity>,
     @InjectRepository(GameCatalogEntity)
     private readonly catalogRepo: Repository<GameCatalogEntity>,
+    @InjectRepository(GameCenterCurationEntity)
+    private readonly curationRepo: Repository<GameCenterCurationEntity>,
     private readonly worldOwnerService: WorldOwnerService,
   ) {}
 
@@ -67,27 +119,26 @@ export class GamesService {
     const catalogEntries = await this.listCatalogEntities();
     const games = catalogEntries.map((entry) => this.serializeGame(entry));
     const knownGameIds = new Set(games.map((game) => game.id));
+    const [curationEntity, ownerStateEntity] = await Promise.all([
+      this.ensureCurationEntity(),
+      this.ensureOwnerState(),
+    ]);
+    const curation = this.serializeGameCenterCuration(curationEntity, knownGameIds);
+    const ownerState = this.serializeOwnerState(ownerStateEntity, knownGameIds);
 
     return {
       ...seed,
-      featuredGameIds: seed.featuredGameIds.filter((id) => knownGameIds.has(id)),
-      shelves: seed.shelves
-        .map((shelf) => ({
-          ...shelf,
-          gameIds: shelf.gameIds.filter((id) => knownGameIds.has(id)),
-        }))
-        .filter((shelf) => shelf.gameIds.length > 0),
-      hotRankings: seed.hotRankings.filter((entry) => knownGameIds.has(entry.gameId)),
-      newRankings: seed.newRankings.filter((entry) => knownGameIds.has(entry.gameId)),
+      featuredGameIds: curation.featuredGameIds,
+      shelves: curation.shelves,
+      hotRankings: curation.hotRankings,
+      newRankings: curation.newRankings,
       friendActivities: seed.friendActivities.filter((item) =>
         knownGameIds.has(item.gameId),
       ),
-      events: seed.events.filter((event) => knownGameIds.has(event.relatedGameId)),
-      stories: seed.stories.filter(
-        (story) => !story.relatedGameId || knownGameIds.has(story.relatedGameId),
-      ),
+      events: curation.events,
+      stories: curation.stories,
       games,
-      ownerState: await this.getOwnerState(),
+      ownerState,
       generatedAt: new Date().toISOString(),
     };
   }
@@ -211,10 +262,7 @@ export class GamesService {
     const entry = this.catalogRepo.create({
       id,
       name,
-      slogan: this.normalizeText(
-        input.slogan,
-        `${name} 的一句话介绍`,
-      ),
+      slogan: this.normalizeText(input.slogan, `${name} 的一句话介绍`),
       description: this.normalizeText(
         input.description,
         `${name} 的 AI 游戏说明待补充。`,
@@ -235,23 +283,11 @@ export class GamesService {
         '待补充本局目标与玩法重点。',
       ),
       tagsPayload: this.normalizeStringArray(input.tags),
-      publisherKind: this.normalizeText(
-        input.publisherKind,
-        'platform_official',
-      ),
-      productionKind: this.normalizeText(
-        input.productionKind,
-        'ai_assisted',
-      ),
+      publisherKind: this.normalizeText(input.publisherKind, 'platform_official'),
+      productionKind: this.normalizeText(input.productionKind, 'ai_assisted'),
       runtimeMode: this.normalizeText(input.runtimeMode, 'workspace_mock'),
-      reviewStatus: this.normalizeText(
-        input.reviewStatus,
-        'pending_review',
-      ),
-      visibilityScope: this.normalizeText(
-        input.visibilityScope,
-        'internal',
-      ),
+      reviewStatus: this.normalizeText(input.reviewStatus, 'pending_review'),
+      visibilityScope: this.normalizeText(input.visibilityScope, 'internal'),
       sourceCharacterId: this.normalizeNullableText(input.sourceCharacterId),
       sourceCharacterName: this.normalizeNullableText(input.sourceCharacterName),
       aiHighlightsPayload: this.normalizeStringArray(input.aiHighlights),
@@ -329,10 +365,7 @@ export class GamesService {
       );
     }
     if (input.runtimeMode !== undefined) {
-      entry.runtimeMode = this.normalizeText(
-        input.runtimeMode,
-        entry.runtimeMode,
-      );
+      entry.runtimeMode = this.normalizeText(input.runtimeMode, entry.runtimeMode);
     }
     if (input.reviewStatus !== undefined) {
       entry.reviewStatus = this.normalizeText(
@@ -369,6 +402,53 @@ export class GamesService {
 
     const saved = await this.catalogRepo.save(entry);
     return this.serializeAdminCatalogItem(saved);
+  }
+
+  async getAdminGameCenterCuration() {
+    const [entity, knownGameIds] = await Promise.all([
+      this.ensureCurationEntity(),
+      this.getKnownGameIdSet(),
+    ]);
+
+    return this.serializeGameCenterCuration(entity, knownGameIds);
+  }
+
+  async updateAdminGameCenterCuration(input: UpdateAdminGameCenterCurationInput) {
+    const [entity, knownGameIds] = await Promise.all([
+      this.ensureCurationEntity(),
+      this.getKnownGameIdSet(),
+    ]);
+    const current = this.serializeGameCenterCuration(entity, knownGameIds);
+
+    const nextState: SerializedGameCenterCuration = {
+      featuredGameIds:
+        input.featuredGameIds !== undefined
+          ? this.normalizeFeaturedGameIds(input.featuredGameIds, knownGameIds)
+          : current.featuredGameIds,
+      shelves:
+        input.shelves !== undefined
+          ? this.normalizeShelves(input.shelves, knownGameIds)
+          : current.shelves,
+      hotRankings:
+        input.hotRankings !== undefined
+          ? this.normalizeRankings(input.hotRankings, knownGameIds, '热门榜')
+          : current.hotRankings,
+      newRankings:
+        input.newRankings !== undefined
+          ? this.normalizeRankings(input.newRankings, knownGameIds, '新游榜')
+          : current.newRankings,
+      events:
+        input.events !== undefined
+          ? this.normalizeEvents(input.events, knownGameIds)
+          : current.events,
+      stories:
+        input.stories !== undefined
+          ? this.normalizeStories(input.stories, knownGameIds)
+          : current.stories,
+      updatedAt: new Date().toISOString(),
+    };
+
+    return this.persistGameCenterCuration(entity, nextState, knownGameIds);
   }
 
   private async ensureCatalogSeeded() {
@@ -442,6 +522,31 @@ export class GamesService {
     }
 
     return entry;
+  }
+
+  private async ensureCurationEntity() {
+    const existing = await this.curationRepo.findOne({
+      where: {
+        id: 'default',
+      },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    const seed = cloneGameCenterCurationSeed();
+    const created = this.curationRepo.create({
+      id: 'default',
+      featuredGameIdsPayload: seed.featuredGameIds,
+      shelvesPayload: seed.shelves,
+      hotRankingsPayload: seed.hotRankings,
+      newRankingsPayload: seed.newRankings,
+      eventsPayload: seed.events,
+      storiesPayload: seed.stories,
+    });
+
+    return this.curationRepo.save(created);
   }
 
   private async getKnownGameIdSet() {
@@ -529,7 +634,175 @@ export class GamesService {
       .filter((item): item is string => Boolean(item));
   }
 
-  private sanitizeGameIds(value: unknown, knownGameIds: Set<string>, fallback: string[]) {
+  private ensureKnownGameIds(
+    ids: string[],
+    knownGameIds: Set<string>,
+    label: string,
+  ) {
+    const missingIds = ids.filter((id) => !knownGameIds.has(id));
+    if (missingIds.length > 0) {
+      throw new BadRequestException(
+        `${label} 包含不存在的游戏 ID：${missingIds.join(', ')}`,
+      );
+    }
+  }
+
+  private normalizeFeaturedGameIds(value: unknown, knownGameIds: Set<string>) {
+    const gameIds = Array.from(new Set(this.normalizeStringArray(value)));
+    this.ensureKnownGameIds(gameIds, knownGameIds, '主推位');
+    return gameIds;
+  }
+
+  private normalizeShelves(
+    value: UpdateAdminGameCenterCurationInput['shelves'],
+    knownGameIds: Set<string>,
+  ) {
+    if (!Array.isArray(value)) {
+      return [] as SerializedGameCenterCuration['shelves'];
+    }
+
+    return value.map((shelf, index) => {
+      const gameIds = Array.from(
+        new Set(this.normalizeStringArray(shelf?.gameIds ?? [])),
+      );
+      this.ensureKnownGameIds(gameIds, knownGameIds, `货架 ${index + 1}`);
+
+      return {
+        id: this.normalizeRequiredText(shelf?.id, `shelves[${index}].id`, '货架 ID'),
+        title: this.normalizeRequiredText(
+          shelf?.title,
+          `shelves[${index}].title`,
+          '货架标题',
+        ),
+        description: this.normalizeText(shelf?.description, ''),
+        gameIds,
+      };
+    });
+  }
+
+  private normalizeRankings(
+    value:
+      | UpdateAdminGameCenterCurationInput['hotRankings']
+      | UpdateAdminGameCenterCurationInput['newRankings'],
+    knownGameIds: Set<string>,
+    label: string,
+  ) {
+    if (!Array.isArray(value)) {
+      return [] as SerializedGameCenterCuration['hotRankings'];
+    }
+
+    return value.map((entry, index) => {
+      const gameId = this.normalizeRequiredText(
+        entry?.gameId,
+        `${label}[${index}].gameId`,
+        `${label}游戏 ID`,
+      );
+      this.ensureKnownGameIds([gameId], knownGameIds, label);
+
+      return {
+        gameId,
+        rank:
+          typeof entry?.rank === 'number' && Number.isFinite(entry.rank)
+            ? entry.rank
+            : index + 1,
+        note: this.normalizeText(entry?.note, ''),
+      };
+    });
+  }
+
+  private normalizeEvents(
+    value: UpdateAdminGameCenterCurationInput['events'],
+    knownGameIds: Set<string>,
+  ) {
+    if (!Array.isArray(value)) {
+      return [] as SerializedGameCenterCuration['events'];
+    }
+
+    return value.map((event, index) => {
+      const relatedGameId = this.normalizeRequiredText(
+        event?.relatedGameId,
+        `events[${index}].relatedGameId`,
+        '活动关联游戏 ID',
+      );
+      this.ensureKnownGameIds([relatedGameId], knownGameIds, '活动卡');
+
+      return {
+        id: this.normalizeRequiredText(event?.id, `events[${index}].id`, '活动 ID'),
+        title: this.normalizeRequiredText(
+          event?.title,
+          `events[${index}].title`,
+          '活动标题',
+        ),
+        description: this.normalizeText(event?.description, ''),
+        meta: this.normalizeText(event?.meta, ''),
+        ctaLabel: this.normalizeText(event?.ctaLabel, '立即查看'),
+        relatedGameId,
+        actionKind: this.normalizeText(event?.actionKind, 'mission') as
+          | 'mission'
+          | 'reminder'
+          | 'join',
+        tone: this.normalizeText(event?.tone, 'forest') as
+          | 'forest'
+          | 'gold'
+          | 'ocean'
+          | 'violet'
+          | 'sunset'
+          | 'mint',
+      };
+    });
+  }
+
+  private normalizeStories(
+    value: UpdateAdminGameCenterCurationInput['stories'],
+    knownGameIds: Set<string>,
+  ) {
+    if (!Array.isArray(value)) {
+      return [] as SerializedGameCenterCuration['stories'];
+    }
+
+    return value.map((story, index) => {
+      const relatedGameId = this.normalizeNullableText(story?.relatedGameId);
+      if (relatedGameId) {
+        this.ensureKnownGameIds([relatedGameId], knownGameIds, '内容卡');
+      }
+
+      return {
+        id: this.normalizeRequiredText(story?.id, `stories[${index}].id`, '内容 ID'),
+        title: this.normalizeRequiredText(
+          story?.title,
+          `stories[${index}].title`,
+          '内容标题',
+        ),
+        description: this.normalizeText(story?.description, ''),
+        eyebrow: this.normalizeText(story?.eyebrow, '编辑精选'),
+        authorName: this.normalizeText(story?.authorName, '隐界编辑部'),
+        ctaLabel: this.normalizeText(story?.ctaLabel, '查看内容'),
+        publishedAt: this.normalizeText(
+          story?.publishedAt,
+          new Date().toISOString(),
+        ),
+        kind: this.normalizeText(story?.kind, 'spotlight') as
+          | 'spotlight'
+          | 'guide'
+          | 'update'
+          | 'behind_the_scenes',
+        tone: this.normalizeText(story?.tone, 'forest') as
+          | 'forest'
+          | 'gold'
+          | 'ocean'
+          | 'violet'
+          | 'sunset'
+          | 'mint',
+        relatedGameId,
+      };
+    });
+  }
+
+  private sanitizeGameIds(
+    value: unknown,
+    knownGameIds: Set<string>,
+    fallback: string[],
+  ) {
     if (!Array.isArray(value)) {
       return [...fallback].filter((item) => knownGameIds.has(item));
     }
@@ -642,6 +915,92 @@ export class GamesService {
 
     const saved = await this.ownerStateRepo.save(entity);
     return this.serializeOwnerState(saved, knownGameIds);
+  }
+
+  private serializeGameCenterCuration(
+    entity: GameCenterCurationEntity,
+    knownGameIds: Set<string>,
+  ): SerializedGameCenterCuration {
+    const fallback = cloneGameCenterCurationSeed();
+
+    return {
+      featuredGameIds: this.sanitizeGameIds(
+        entity.featuredGameIdsPayload,
+        knownGameIds,
+        fallback.featuredGameIds,
+      ),
+      shelves: (Array.isArray(entity.shelvesPayload)
+        ? entity.shelvesPayload
+        : fallback.shelves
+      )
+        .map((shelf) => ({
+          id: typeof shelf?.id === 'string' ? shelf.id : '',
+          title: typeof shelf?.title === 'string' ? shelf.title : '',
+          description: typeof shelf?.description === 'string' ? shelf.description : '',
+          gameIds: this.sanitizeGameIds(
+            shelf?.gameIds,
+            knownGameIds,
+            [],
+          ),
+        }))
+        .filter((shelf) => shelf.id && shelf.title && shelf.gameIds.length > 0),
+      hotRankings: (Array.isArray(entity.hotRankingsPayload)
+        ? entity.hotRankingsPayload
+        : fallback.hotRankings
+      ).filter(
+        (entry): entry is { gameId: string; rank: number; note: string } =>
+          typeof entry?.gameId === 'string' &&
+          knownGameIds.has(entry.gameId) &&
+          typeof entry.rank === 'number' &&
+          Number.isFinite(entry.rank),
+      ),
+      newRankings: (Array.isArray(entity.newRankingsPayload)
+        ? entity.newRankingsPayload
+        : fallback.newRankings
+      ).filter(
+        (entry): entry is { gameId: string; rank: number; note: string } =>
+          typeof entry?.gameId === 'string' &&
+          knownGameIds.has(entry.gameId) &&
+          typeof entry.rank === 'number' &&
+          Number.isFinite(entry.rank),
+      ),
+      events: (Array.isArray(entity.eventsPayload)
+        ? entity.eventsPayload
+        : fallback.events
+      ).filter(
+        (event): event is SerializedGameCenterCuration['events'][number] =>
+          typeof event?.id === 'string' &&
+          typeof event.title === 'string' &&
+          typeof event.relatedGameId === 'string' &&
+          knownGameIds.has(event.relatedGameId),
+      ),
+      stories: (Array.isArray(entity.storiesPayload)
+        ? entity.storiesPayload
+        : fallback.stories
+      ).filter(
+        (story): story is SerializedGameCenterCuration['stories'][number] =>
+          typeof story?.id === 'string' &&
+          typeof story.title === 'string' &&
+          (!story.relatedGameId || knownGameIds.has(story.relatedGameId)),
+      ),
+      updatedAt: entity.updatedAt?.toISOString() ?? new Date().toISOString(),
+    };
+  }
+
+  private async persistGameCenterCuration(
+    entity: GameCenterCurationEntity,
+    state: SerializedGameCenterCuration,
+    knownGameIds: Set<string>,
+  ) {
+    entity.featuredGameIdsPayload = state.featuredGameIds;
+    entity.shelvesPayload = state.shelves;
+    entity.hotRankingsPayload = state.hotRankings;
+    entity.newRankingsPayload = state.newRankings;
+    entity.eventsPayload = state.events;
+    entity.storiesPayload = state.stories;
+
+    const saved = await this.curationRepo.save(entity);
+    return this.serializeGameCenterCuration(saved, knownGameIds);
   }
 
   private serializeGame(entry: GameCatalogEntity) {

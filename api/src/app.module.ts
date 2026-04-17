@@ -50,6 +50,7 @@ import { FeedPostEntity } from './modules/feed/feed-post.entity';
 import { FeedCommentEntity } from './modules/feed/feed-comment.entity';
 import { VideoChannelFollowEntity } from './modules/feed/video-channel-follow.entity';
 import { GameCatalogEntity } from './modules/games/game-catalog.entity';
+import { GameCenterCurationEntity } from './modules/games/game-center-curation.entity';
 import { GameOwnerStateEntity } from './modules/games/game-owner-state.entity';
 import { WorldContextEntity } from './modules/world/world-context.entity';
 import { NarrativeArcEntity } from './modules/narrative/narrative-arc.entity';
@@ -121,6 +122,7 @@ import {
           FeedCommentEntity,
           VideoChannelFollowEntity,
           GameCatalogEntity,
+          GameCenterCurationEntity,
           GameOwnerStateEntity,
           WorldContextEntity,
           NarrativeArcEntity,

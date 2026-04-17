@@ -12,6 +12,11 @@ export class AdminGamesController {
     return this.gamesService.getAdminCatalog();
   }
 
+  @Get('curation')
+  getAdminGameCenterCuration() {
+    return this.gamesService.getAdminGameCenterCuration();
+  }
+
   @Get(':id')
   getAdminCatalogItem(@Param('id') id: string) {
     return this.gamesService.getAdminCatalogItem(id);
@@ -50,6 +55,54 @@ export class AdminGamesController {
     },
   ) {
     return this.gamesService.createAdminCatalogItem(body);
+  }
+
+  @Patch('curation')
+  updateAdminGameCenterCuration(
+    @Body()
+    body: {
+      featuredGameIds?: string[];
+      shelves?: Array<{
+        id: string;
+        title: string;
+        description: string;
+        gameIds: string[];
+      }>;
+      hotRankings?: Array<{
+        gameId: string;
+        rank: number;
+        note: string;
+      }>;
+      newRankings?: Array<{
+        gameId: string;
+        rank: number;
+        note: string;
+      }>;
+      events?: Array<{
+        id: string;
+        title: string;
+        description: string;
+        meta: string;
+        ctaLabel: string;
+        relatedGameId: string;
+        actionKind: string;
+        tone: string;
+      }>;
+      stories?: Array<{
+        id: string;
+        title: string;
+        description: string;
+        eyebrow: string;
+        authorName: string;
+        ctaLabel: string;
+        publishedAt: string;
+        kind: string;
+        tone: string;
+        relatedGameId?: string | null;
+      }>;
+    },
+  ) {
+    return this.gamesService.updateAdminGameCenterCuration(body);
   }
 
   @Patch(':id')

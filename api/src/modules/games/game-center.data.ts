@@ -621,6 +621,20 @@ export function createDefaultGameCenterOwnerState(): GameCenterOwnerState {
   };
 }
 
+export function cloneGameCenterCurationSeed() {
+  return {
+    featuredGameIds: [...GAME_CENTER_HOME_SEED.featuredGameIds],
+    shelves: GAME_CENTER_HOME_SEED.shelves.map((shelf) => ({
+      ...shelf,
+      gameIds: [...shelf.gameIds],
+    })),
+    hotRankings: GAME_CENTER_HOME_SEED.hotRankings.map((entry) => ({ ...entry })),
+    newRankings: GAME_CENTER_HOME_SEED.newRankings.map((entry) => ({ ...entry })),
+    events: GAME_CENTER_HOME_SEED.events.map((event) => ({ ...event })),
+    stories: GAME_CENTER_HOME_SEED.stories.map((story) => ({ ...story })),
+  };
+}
+
 export function cloneGameCenterHomeSeed() {
   return {
     primarySections: GAME_CENTER_HOME_SEED.primarySections.map((section) => ({

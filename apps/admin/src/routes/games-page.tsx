@@ -23,6 +23,7 @@ import {
   TextField,
 } from "@yinjie/ui";
 import { AdminCallout, AdminEmptyState } from "../components/admin-workbench";
+import { GameCurationWorkbench } from "../components/game-curation-workbench";
 import { adminApi } from "../lib/admin-api";
 
 type GameWorkbenchDraft = {
@@ -443,7 +444,7 @@ export function GamesPage() {
 
       <AdminCallout
         title="后台工作台先承接目录、审核和来源编辑"
-        description="这一版先把 AI 游戏目录事实源切到服务端表，后台可以直接新建草稿、维护资料、调整审核状态。后续再继续补版本、运营位和角色产游工坊。"
+        description="上半区维护游戏目录、审核和来源，下半区已经接入首页运营位、榜单和内容卡策展。后续继续补版本管理和角色产游工坊。"
         tone="info"
         actions={
           <Button variant="primary" onClick={handleStartCreate}>
@@ -968,6 +969,13 @@ export function GamesPage() {
           ) : null}
         </Card>
       </div>
+
+      {!gamesQuery.isLoading ? (
+        <GameCurationWorkbench
+          games={gamesQuery.data ?? []}
+          onFeedback={setFeedback}
+        />
+      ) : null}
     </div>
   );
 }
