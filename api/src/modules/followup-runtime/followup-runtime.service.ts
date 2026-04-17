@@ -479,6 +479,10 @@ export class FollowupRuntimeService {
           }
         }
 
+        let notificationConversationId: string | null = null;
+        let textMessageId: string | null = null;
+        let cardMessageId: string | null = null;
+
         try {
           const handoffMessage = startedFriendRequest
             ? await this.buildFriendRequestNoticeMessage({
@@ -494,81 +498,127 @@ export class FollowupRuntimeService {
                 ownerId: owner.id,
               });
           recommendation.handoffSummary = handoffMessage;
+
           const conversation =
             await this.chatService.getOrCreateConversation(SELF_CHARACTER_ID);
-          const textMessage = await this.chatGateway.sendProactiveMessage(
-            conversation.id,
-            SELF_CHARACTER_ID,
-            '我自己',
-            handoffMessage,
-          );
-          const cardMessage =
-            await this.chatGateway.sendProactiveAttachmentMessage(
+          notificationConversationId = conversation.id;
+
+          try {
+            const textMessage = await this.chatGateway.sendProactiveMessage(
               conversation.id,
               SELF_CHARACTER_ID,
               '我自己',
-              {
-                kind: 'contact_card',
-                characterId: candidate.character.id,
-                name: candidate.character.name,
-                avatar: candidate.character.avatar,
-                relationship: candidate.character.relationship,
-                bio: candidate.character.bio,
-                recommendationMetadata: {
-                  recommendationId: recommendation.id,
-                  reasonSummary: recommendation.reasonSummary,
-                  sourceThreadId: recommendation.sourceThreadId,
-                  sourceThreadType: recommendation.sourceThreadType as
-                    | 'direct'
-                    | 'group',
-                  sourceThreadTitle: recommendation.sourceThreadTitle ?? null,
-                  sourceMessageId: recommendation.sourceMessageId ?? null,
-                  relationshipState: recommendation.relationshipState as
-                    | 'friend'
-                    | 'pending'
-                    | 'not_friend',
-                  badgeLabel,
-                },
-              },
-              `[名片] ${candidate.character.name}`,
+              handoffMessage,
             );
+            textMessageId = textMessage.id;
+          } catch (error) {
+            this.logger.warn('Failed to emit followup text notification', {
+              recommendationId: recommendation.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
 
-          recommendation.messageConversationId = conversation.id;
-          recommendation.messageId = textMessage.id;
-          recommendation.cardMessageId = cardMessage.id;
-          await this.recommendationRepo.save(recommendation);
-          emittedCount += 1;
-          remainingBudget -= 1;
-          if (startedFriendRequest) {
-            autoStartedFriendRequestCount += 1;
+          try {
+            const cardMessage =
+              await this.chatGateway.sendProactiveAttachmentMessage(
+                conversation.id,
+                SELF_CHARACTER_ID,
+                '我自己',
+                {
+                  kind: 'contact_card',
+                  characterId: candidate.character.id,
+                  name: candidate.character.name,
+                  avatar: candidate.character.avatar,
+                  relationship: candidate.character.relationship,
+                  bio: candidate.character.bio,
+                  recommendationMetadata: {
+                    recommendationId: recommendation.id,
+                    reasonSummary: recommendation.reasonSummary,
+                    sourceThreadId: recommendation.sourceThreadId,
+                    sourceThreadType: recommendation.sourceThreadType as
+                      | 'direct'
+                      | 'group',
+                    sourceThreadTitle: recommendation.sourceThreadTitle ?? null,
+                    sourceMessageId: recommendation.sourceMessageId ?? null,
+                    relationshipState: recommendation.relationshipState as
+                      | 'friend'
+                      | 'pending'
+                      | 'not_friend',
+                    badgeLabel,
+                  },
+                },
+                `[名片] ${candidate.character.name}`,
+              );
+            cardMessageId = cardMessage.id;
+          } catch (error) {
+            this.logger.warn('Failed to emit followup contact card', {
+              recommendationId: recommendation.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
           }
         } catch (error) {
-          if (startedFriendRequest) {
+          if (!startedFriendRequest) {
+            recommendation.status = 'draft';
+            recommendation.handoffSummary = null;
             await this.recommendationRepo.save(recommendation);
-            emittedCount += 1;
-            remainingBudget -= 1;
-            autoStartedFriendRequestCount += 1;
-            this.logger.warn(
-              'Followup friend request started but owner notification failed',
-              {
-                recommendationId: recommendation.id,
-                friendRequestId: startedFriendRequest.id,
-                error: error instanceof Error ? error.message : String(error),
-              },
-            );
+            openLoop.status = 'watching';
+            openLoop.recommendedAt = null;
+            await this.openLoopRepo.save(openLoop);
+            this.logger.warn('Failed to build followup recommendation payload', {
+              recommendationId: recommendation.id,
+              error: error instanceof Error ? error.message : String(error),
+            });
             continue;
           }
 
+          this.logger.warn(
+            'Followup friend request started but owner notification payload failed',
+            {
+              recommendationId: recommendation.id,
+              friendRequestId: startedFriendRequest.id,
+              error: error instanceof Error ? error.message : String(error),
+            },
+          );
+        }
+
+        const deliveredOwnerNotification = Boolean(textMessageId || cardMessageId);
+        recommendation.messageConversationId = deliveredOwnerNotification
+          ? notificationConversationId
+          : null;
+        recommendation.messageId = textMessageId;
+        recommendation.cardMessageId = cardMessageId;
+
+        if (!deliveredOwnerNotification && !startedFriendRequest) {
           recommendation.status = 'draft';
           recommendation.handoffSummary = null;
+          recommendation.messageConversationId = null;
+          recommendation.messageId = null;
+          recommendation.cardMessageId = null;
           await this.recommendationRepo.save(recommendation);
           openLoop.status = 'watching';
           openLoop.recommendedAt = null;
           await this.openLoopRepo.save(openLoop);
           this.logger.warn('Failed to emit followup recommendation', {
             recommendationId: recommendation.id,
-            error: error instanceof Error ? error.message : String(error),
+            error: 'No owner notification message was delivered.',
           });
+          continue;
+        }
+
+        await this.recommendationRepo.save(recommendation);
+        emittedCount += 1;
+        remainingBudget -= 1;
+        if (startedFriendRequest) {
+          autoStartedFriendRequestCount += 1;
+          if (!deliveredOwnerNotification) {
+            this.logger.warn(
+              'Followup friend request started but owner notification failed',
+              {
+                recommendationId: recommendation.id,
+                friendRequestId: startedFriendRequest.id,
+              },
+            );
+          }
         }
       }
 
@@ -1146,6 +1196,7 @@ export class FollowupRuntimeService {
       sanitizeFriendRequestGreeting(text || fallback),
       {
         triggerScene: 'followup_runtime',
+        initiator: 'system',
       },
     );
   }

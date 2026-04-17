@@ -458,7 +458,7 @@ export class SocialService {
       autoAccept?: boolean;
       expiresAt?: Date | null;
       triggerScene?: string;
-      initiator?: 'user' | 'character';
+      initiator?: 'user' | 'character' | 'system';
     },
   ): Promise<FriendRequestEntity> {
     const owner = await this.worldOwnerService.getOwnerOrThrow();
@@ -557,7 +557,11 @@ export class SocialService {
       });
     } else {
       const initiator =
-        options?.initiator === 'character' ? 'character' : 'user';
+        options?.initiator === 'character'
+          ? 'character'
+          : options?.initiator === 'system'
+            ? 'system'
+            : 'user';
       await this.cyberAvatar.captureSignal({
         ownerId: owner.id,
         signalType: 'friendship_event',
@@ -565,20 +569,30 @@ export class SocialService {
         sourceEntityType:
           initiator === 'character'
             ? 'friend_request_receive'
-            : 'friend_request_send',
+            : initiator === 'system'
+              ? 'friend_request_auto_send'
+              : 'friend_request_send',
         sourceEntityId: saved.id,
         dedupeKey: `friendship:${
-          initiator === 'character' ? 'receive-request' : 'send-request'
+          initiator === 'character'
+            ? 'receive-request'
+            : initiator === 'system'
+              ? 'auto-send-request'
+              : 'send-request'
         }:${saved.id}`,
         summaryText:
           initiator === 'character'
             ? `${char.name} 向用户发起了好友申请。`
-            : `用户向 ${char.name} 发送了好友申请。`,
+            : initiator === 'system'
+              ? `主动跟进替用户向 ${char.name} 发起了好友申请。`
+              : `用户向 ${char.name} 发送了好友申请。`,
         payload: {
           action:
             initiator === 'character'
               ? 'receive_friend_request'
-              : 'send_friend_request',
+              : initiator === 'system'
+                ? 'auto_send_friend_request'
+                : 'send_friend_request',
           requestId: saved.id,
           characterId: char.id,
           characterName: char.name,
