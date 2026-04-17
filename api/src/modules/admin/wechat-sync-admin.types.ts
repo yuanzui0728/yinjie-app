@@ -61,6 +61,8 @@ export interface WechatSyncImportItemValue {
   draftCharacter: Partial<CharacterEntity>;
   autoAddFriend?: boolean;
   seedMoments?: boolean;
+  importMode?: 'preview_import' | 'snapshot_restore';
+  restoredFromVersion?: number | null;
 }
 
 export interface WechatSyncImportRequestValue {

@@ -32,6 +32,10 @@ type ImportSnapshotRecord = NonNullable<
   NonNullable<CharacterEntity['profile']['wechatSyncImport']>['currentSnapshot']
 >;
 
+type ImportChangeRecord = NonNullable<
+  NonNullable<CharacterEntity['profile']['wechatSyncImport']>['changeHistory']
+>[number];
+
 @Injectable()
 export class WechatSyncAdminService {
   private readonly logger = new Logger(WechatSyncAdminService.name);
@@ -228,18 +232,31 @@ export class WechatSyncAdminService {
         autoAddFriend: item.autoAddFriend !== false,
         seedMoments: item.seedMoments !== false,
         seededMomentCount,
-        previousSnapshot,
+        previousSnapshot:
+          previousSnapshot ??
+          (item.importMode === 'snapshot_restore' &&
+          typeof item.restoredFromVersion === 'number'
+            ? { version: item.restoredFromVersion }
+            : null),
       });
       const snapshotHistory = buildSnapshotHistory(
         currentSnapshot,
         existingImportMetadata,
       );
+      const changeHistory = buildChangeHistory({
+        currentSnapshot,
+        previousSnapshot,
+        metadata: existingImportMetadata,
+        importMode: item.importMode,
+        restoredFromVersion: item.restoredFromVersion,
+      });
       saved.profile = {
         ...saved.profile,
         wechatSyncImport: {
           currentSnapshot,
           previousSnapshot: snapshotHistory[1] ?? previousSnapshot,
           snapshotHistory,
+          changeHistory,
         },
       };
       saved = await this.characterRepo.save(saved);
@@ -859,11 +876,177 @@ function buildImportSnapshot(input: {
   };
 }
 
+function buildChangeHistory(input: {
+  currentSnapshot: ImportSnapshotRecord;
+  previousSnapshot?: ImportSnapshotRecord | null;
+  metadata?: CharacterEntity['profile']['wechatSyncImport'] | null;
+  importMode?: 'preview_import' | 'snapshot_restore';
+  restoredFromVersion?: number | null;
+}) {
+  const currentRecord = buildImportChangeRecord(input);
+  return dedupeChangeHistory([
+    currentRecord,
+    ...(input.metadata?.changeHistory ?? []),
+  ]).slice(0, 12);
+}
+
+function buildImportChangeRecord(input: {
+  currentSnapshot: ImportSnapshotRecord;
+  previousSnapshot?: ImportSnapshotRecord | null;
+  importMode?: 'preview_import' | 'snapshot_restore';
+  restoredFromVersion?: number | null;
+}): ImportChangeRecord {
+  const mode =
+    input.importMode === 'snapshot_restore'
+      ? 'snapshot_restore'
+      : 'preview_import';
+  const changedFields = collectSnapshotChangedFields(
+    input.previousSnapshot ?? null,
+    input.currentSnapshot,
+  );
+
+  return {
+    id: randomUUID(),
+    recordedAt: input.currentSnapshot.importedAt,
+    mode,
+    previousVersion: input.previousSnapshot?.version ?? null,
+    restoredFromVersion:
+      mode === 'snapshot_restore' ? (input.restoredFromVersion ?? null) : null,
+    toVersion: input.currentSnapshot.version,
+    summary: buildImportChangeSummary({
+      mode,
+      changedFields,
+      currentSnapshot: input.currentSnapshot,
+      previousSnapshot: input.previousSnapshot ?? null,
+      restoredFromVersion: input.restoredFromVersion ?? null,
+    }),
+    changedFields,
+  };
+}
+
+function buildImportChangeSummary(input: {
+  mode: 'preview_import' | 'snapshot_restore';
+  changedFields: string[];
+  currentSnapshot: ImportSnapshotRecord;
+  previousSnapshot?: ImportSnapshotRecord | null;
+  restoredFromVersion?: number | null;
+}) {
+  const changedSummary = summarizeChangedFieldLabels(input.changedFields);
+  if (input.mode === 'snapshot_restore') {
+    const sourceVersion = input.restoredFromVersion
+      ? `v${input.restoredFromVersion}`
+      : '所选历史版本';
+    if (!input.previousSnapshot) {
+      return `已从 ${sourceVersion} 重建线上角色，并写入 v${input.currentSnapshot.version} 恢复记录。`;
+    }
+    if (!input.changedFields.length) {
+      return `已从 ${sourceVersion} 恢复为新的线上版本，恢复结果与恢复前一致。`;
+    }
+    return `已从 ${sourceVersion} 恢复为 v${input.currentSnapshot.version}，变更 ${input.changedFields.length} 项：${changedSummary}。`;
+  }
+
+  if (!input.previousSnapshot) {
+    return `首次创建微信同步角色，已写入 v${input.currentSnapshot.version} 导入快照。`;
+  }
+
+  if (!input.changedFields.length) {
+    return `已按当前预览重新导入 v${input.currentSnapshot.version}，导入字段与上一版一致。`;
+  }
+
+  return `已按当前预览更新为 v${input.currentSnapshot.version}，变更 ${input.changedFields.length} 项：${changedSummary}。`;
+}
+
+function collectSnapshotChangedFields(
+  previousSnapshot: ImportSnapshotRecord | null,
+  currentSnapshot: ImportSnapshotRecord,
+) {
+  return [
+    createSnapshotDiffLabel(
+      '角色名',
+      previousSnapshot?.draftCharacter.name ?? '',
+      currentSnapshot.draftCharacter.name ||
+        currentSnapshot.contact.displayName,
+    ),
+    createSnapshotDiffLabel(
+      '关系定位',
+      previousSnapshot?.draftCharacter.relationship ?? '',
+      currentSnapshot.draftCharacter.relationship,
+    ),
+    createSnapshotDiffLabel(
+      '角色简介',
+      previousSnapshot?.draftCharacter.bio ?? '',
+      currentSnapshot.draftCharacter.bio,
+    ),
+    createSnapshotDiffLabel(
+      '领域标签',
+      (previousSnapshot?.draftCharacter.expertDomains ?? []).join('、'),
+      currentSnapshot.draftCharacter.expertDomains.join('、'),
+    ),
+    createSnapshotDiffLabel(
+      '记忆摘要',
+      previousSnapshot?.draftCharacter.memorySummary ?? '',
+      currentSnapshot.draftCharacter.memorySummary,
+    ),
+    createSnapshotDiffLabel(
+      '微信备注/显示名',
+      previousSnapshot?.contact.remarkName?.trim() ||
+        previousSnapshot?.contact.nickname?.trim() ||
+        previousSnapshot?.contact.displayName ||
+        '',
+      currentSnapshot.contact.remarkName?.trim() ||
+        currentSnapshot.contact.nickname?.trim() ||
+        currentSnapshot.contact.displayName,
+    ),
+    createSnapshotDiffLabel(
+      '地区',
+      previousSnapshot?.contact.region ?? '',
+      currentSnapshot.contact.region ?? '',
+    ),
+    createSnapshotDiffLabel(
+      '联系人标签',
+      (previousSnapshot?.contact.tags ?? []).join('、'),
+      currentSnapshot.contact.tags.join('、'),
+    ),
+    createSnapshotDiffLabel(
+      '聊天摘要',
+      previousSnapshot?.contact.chatSummary ?? '',
+      currentSnapshot.contact.chatSummary ?? '',
+    ),
+  ]
+    .filter((item) => item.changed)
+    .map((item) => item.label);
+}
+
+function createSnapshotDiffLabel(
+  label: string,
+  previousValue: string,
+  nextValue: string,
+) {
+  const normalizedPrevious = normalizeSnapshotDiffValue(previousValue);
+  const normalizedNext = normalizeSnapshotDiffValue(nextValue);
+  return {
+    label,
+    changed: normalizedPrevious !== normalizedNext,
+  };
+}
+
+function normalizeSnapshotDiffValue(value?: string | null) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function summarizeChangedFieldLabels(labels: string[]) {
+  if (!labels.length) {
+    return '无字段差异';
+  }
+  if (labels.length <= 3) {
+    return labels.join('、');
+  }
+  return `${labels.slice(0, 3).join('、')}，另 ${labels.length - 3} 项`;
+}
+
 function buildSnapshotHistory(
   currentSnapshot: ImportSnapshotRecord,
-  metadata?:
-    | CharacterEntity['profile']['wechatSyncImport']
-    | null,
+  metadata?: CharacterEntity['profile']['wechatSyncImport'] | null,
 ) {
   const existingHistory = dedupeSnapshotHistory([
     ...(metadata?.snapshotHistory ?? []),
@@ -871,7 +1054,32 @@ function buildSnapshotHistory(
     metadata?.previousSnapshot ?? null,
   ]);
 
-  return dedupeSnapshotHistory([currentSnapshot, ...existingHistory]).slice(0, 6);
+  return dedupeSnapshotHistory([currentSnapshot, ...existingHistory]).slice(
+    0,
+    6,
+  );
+}
+
+function dedupeChangeHistory(
+  records: Array<ImportChangeRecord | null | undefined>,
+) {
+  const seen = new Set<string>();
+  const items: ImportChangeRecord[] = [];
+
+  for (const record of records) {
+    if (!record) {
+      continue;
+    }
+    if (seen.has(record.id)) {
+      continue;
+    }
+    seen.add(record.id);
+    items.push(record);
+  }
+
+  return items.sort(
+    (left, right) => Date.parse(right.recordedAt) - Date.parse(left.recordedAt),
+  );
 }
 
 function dedupeSnapshotHistory(

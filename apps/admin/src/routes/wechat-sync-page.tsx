@@ -7,13 +7,7 @@ import type {
   WechatSyncImportResponse,
   WechatSyncPreviewItem,
 } from "@yinjie/contracts";
-import {
-  Button,
-  Card,
-  ErrorBlock,
-  LoadingBlock,
-  StatusPill,
-} from "@yinjie/ui";
+import { Button, Card, ErrorBlock, LoadingBlock, StatusPill } from "@yinjie/ui";
 import {
   AdminActionFeedback,
   AdminCallout,
@@ -26,10 +20,7 @@ import {
   AdminTextField,
   AdminToggle,
 } from "../components/admin-workbench";
-import {
-  adminApi,
-  type WechatSyncHistoryItem,
-} from "../lib/admin-api";
+import { adminApi, type WechatSyncHistoryItem } from "../lib/admin-api";
 import {
   buildWechatConnectorContactBundles,
   getWechatConnectorHealth,
@@ -90,28 +81,40 @@ const SAMPLE_WECHAT_SYNC_JSON = JSON.stringify(
 export function WechatSyncPage() {
   const baseUrl = resolveAdminCoreApiBaseUrl();
   const queryClient = useQueryClient();
-  const [connectorSettings, setConnectorSettings] = useState<WechatConnectorSettings>(
-    () => loadWechatConnectorSettings(),
-  );
+  const [connectorSettings, setConnectorSettings] =
+    useState<WechatConnectorSettings>(() => loadWechatConnectorSettings());
   const [search, setSearch] = useState("");
   const [includeGroups, setIncludeGroups] = useState(false);
   const [autoAddFriend, setAutoAddFriend] = useState(true);
   const [seedMoments, setSeedMoments] = useState(true);
   const [manualBundleJson, setManualBundleJson] = useState("");
-  const [manualBundleError, setManualBundleError] = useState<string | null>(null);
+  const [manualBundleError, setManualBundleError] = useState<string | null>(
+    null,
+  );
   const [historySearch, setHistorySearch] = useState("");
   const [historyStatusFilter, setHistoryStatusFilter] = useState<
     "all" | "active" | "attention" | "removed"
   >("all");
-  const [selectedHistoryCharacterId, setSelectedHistoryCharacterId] = useState<string | null>(null);
-  const [rollbackGuideItem, setRollbackGuideItem] = useState<WechatSyncHistoryItem | null>(null);
+  const [selectedHistoryCharacterId, setSelectedHistoryCharacterId] = useState<
+    string | null
+  >(null);
+  const [rollbackGuideItem, setRollbackGuideItem] =
+    useState<WechatSyncHistoryItem | null>(null);
+  const [pendingSnapshotRestore, setPendingSnapshotRestore] = useState<{
+    historyItem: WechatSyncHistoryItem;
+    snapshot: WechatImportSnapshotLike;
+  } | null>(null);
   const [selectedUsernames, setSelectedUsernames] = useState<string[]>([]);
-  const [selectedPreviewUsernames, setSelectedPreviewUsernames] = useState<string[]>([]);
+  const [selectedPreviewUsernames, setSelectedPreviewUsernames] = useState<
+    string[]
+  >([]);
   const [batchRelationshipInput, setBatchRelationshipInput] = useState("");
   const [batchDomainInput, setBatchDomainInput] = useState("");
   const [previewItems, setPreviewItems] = useState<WechatSyncPreviewItem[]>([]);
   const deferredSearch = useDeferredValue(search.trim());
-  const deferredHistorySearch = useDeferredValue(historySearch.trim().toLowerCase());
+  const deferredHistorySearch = useDeferredValue(
+    historySearch.trim().toLowerCase(),
+  );
 
   const connectorHealthQuery = useQuery({
     queryKey: ["wechat-connector-health", connectorSettings.baseUrl],
@@ -141,7 +144,8 @@ export function WechatSyncPage() {
     queryFn: () => adminApi.getWechatSyncHistory(),
   });
 
-  const connectorReady = connectorHealthQuery.isSuccess && connectorHealthQuery.data.ok;
+  const connectorReady =
+    connectorHealthQuery.isSuccess && connectorHealthQuery.data.ok;
   const selectedSet = useMemo(
     () => new Set(selectedUsernames),
     [selectedUsernames],
@@ -164,7 +168,8 @@ export function WechatSyncPage() {
   const invalidPreviewCount = useMemo(
     () =>
       previewItems.filter(
-        (item) => (previewValidation.get(item.contact.username)?.length ?? 0) > 0,
+        (item) =>
+          (previewValidation.get(item.contact.username)?.length ?? 0) > 0,
       ).length,
     [previewItems, previewValidation],
   );
@@ -238,7 +243,9 @@ export function WechatSyncPage() {
     if (!selectedHistoryPreviewItem) {
       return [];
     }
-    return previewValidation.get(selectedHistoryPreviewItem.contact.username) ?? [];
+    return (
+      previewValidation.get(selectedHistoryPreviewItem.contact.username) ?? []
+    );
   }, [previewValidation, selectedHistoryPreviewItem]);
 
   const scanMutation = useMutation({
@@ -273,7 +280,9 @@ export function WechatSyncPage() {
     },
     onSuccess: (result) => {
       setPreviewItems(result.items);
-      setSelectedPreviewUsernames(result.items.map((item) => item.contact.username));
+      setSelectedPreviewUsernames(
+        result.items.map((item) => item.contact.username),
+      );
     },
   });
 
@@ -293,6 +302,7 @@ export function WechatSyncPage() {
     },
     onSuccess: async () => {
       setRollbackGuideItem(null);
+      setPendingSnapshotRestore(null);
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ["admin-wechat-sync-history", baseUrl],
@@ -334,6 +344,7 @@ export function WechatSyncPage() {
       adminApi.rollbackWechatSyncImport(item.character.id),
     onSuccess: async (_, item) => {
       setRollbackGuideItem(item);
+      setPendingSnapshotRestore(null);
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: ["admin-wechat-sync-history", baseUrl],
@@ -367,6 +378,7 @@ export function WechatSyncPage() {
       }),
     onSuccess: async (result) => {
       setRollbackGuideItem(null);
+      setPendingSnapshotRestore(null);
       if (result.items[0]) {
         setSelectedHistoryCharacterId(result.items[0].character.id);
       }
@@ -404,12 +416,15 @@ export function WechatSyncPage() {
             draftCharacter: restoredPreviewItem.draftCharacter,
             autoAddFriend,
             seedMoments,
+            importMode: "snapshot_restore",
+            restoredFromVersion: input.snapshot.version,
           },
         ],
       });
     },
     onSuccess: async (result, variables) => {
       setRollbackGuideItem(null);
+      setPendingSnapshotRestore(null);
       setSelectedHistoryCharacterId(
         result.items[0]?.character.id ?? variables.historyItem.character.id,
       );
@@ -452,9 +467,11 @@ export function WechatSyncPage() {
   function selectVisibleContacts() {
     setPreviewItems([]);
     setSelectedPreviewUsernames([]);
-    setSelectedUsernames((contactsQuery.data ?? [])
-      .filter((item) => !item.isGroup)
-      .map((item) => item.username));
+    setSelectedUsernames(
+      (contactsQuery.data ?? [])
+        .filter((item) => !item.isGroup)
+        .map((item) => item.username),
+    );
   }
 
   function clearSelection() {
@@ -555,7 +572,10 @@ export function WechatSyncPage() {
   function autofillPreviewDrafts() {
     patchPreviewItems(batchTargetUsernames, (item) => ({
       ...item,
-      draftCharacter: fillWechatSyncDraftBlanks(item.contact, item.draftCharacter),
+      draftCharacter: fillWechatSyncDraftBlanks(
+        item.contact,
+        item.draftCharacter,
+      ),
     }));
   }
 
@@ -563,14 +583,36 @@ export function WechatSyncPage() {
     if (!rollbackGuideItem) {
       return;
     }
-    const snapshot = getImportSnapshotsFromHistoryItem(rollbackGuideItem)[0] ?? null;
+    const snapshot =
+      getImportSnapshotsFromHistoryItem(rollbackGuideItem)[0] ?? null;
+    setPendingSnapshotRestore(null);
     loadSnapshotIntoManualInput(snapshot, rollbackGuideItem);
+  }
+
+  function requestRestoreSnapshotToLive(
+    historyItem: WechatSyncHistoryItem,
+    snapshot: WechatImportSnapshotLike,
+  ) {
+    restoreSnapshotMutation.reset();
+    setPendingSnapshotRestore({ historyItem, snapshot });
+  }
+
+  function cancelRestoreSnapshotToLive() {
+    setPendingSnapshotRestore(null);
+  }
+
+  function confirmRestoreSnapshotToLive() {
+    if (!pendingSnapshotRestore) {
+      return;
+    }
+    restoreSnapshotMutation.mutate(pendingSnapshotRestore);
   }
 
   function regeneratePreviewFromHistoryItem(item: WechatSyncHistoryItem) {
     const bundle = buildRollbackGuideContactBundle(item);
     reimportMutation.reset();
     restoreSnapshotMutation.reset();
+    setPendingSnapshotRestore(null);
     setManualBundleError(null);
     setManualBundleJson(JSON.stringify([bundle], null, 2));
     setPreviewItems([]);
@@ -585,10 +627,15 @@ export function WechatSyncPage() {
   ) {
     reimportMutation.reset();
     restoreSnapshotMutation.reset();
+    setPendingSnapshotRestore(null);
     setManualBundleError(null);
     setManualBundleJson(
       JSON.stringify(
-        [snapshot ? buildContactBundleFromImportSnapshot(snapshot) : buildRollbackGuideContactBundle(item)],
+        [
+          snapshot
+            ? buildContactBundleFromImportSnapshot(snapshot)
+            : buildRollbackGuideContactBundle(item),
+        ],
         null,
         2,
       ),
@@ -602,6 +649,7 @@ export function WechatSyncPage() {
     const restoredItem = buildPreviewItemFromImportSnapshot(snapshot);
     reimportMutation.reset();
     restoreSnapshotMutation.reset();
+    setPendingSnapshotRestore(null);
     setManualBundleError(null);
     setManualBundleJson(
       JSON.stringify([buildContactBundleFromImportSnapshot(snapshot)], null, 2),
@@ -629,7 +677,9 @@ export function WechatSyncPage() {
               variant="primary"
               size="lg"
               onClick={() => previewMutation.mutate(undefined)}
-              disabled={!connectorReady || !selectedCount || previewMutation.isPending}
+              disabled={
+                !connectorReady || !selectedCount || previewMutation.isPending
+              }
             >
               {previewMutation.isPending ? "生成预览中..." : "生成角色预览"}
             </Button>
@@ -660,8 +710,13 @@ export function WechatSyncPage() {
         tone="info"
         description={
           <div className="space-y-2">
-            <p>后台只消费你本地已经授权整理好的联系人资料和聊天摘要，不提供密钥提取、聊天记录破解或进程内存读取能力。</p>
-            <p>如果你已经有自己的本地数据连接器，可直接填入连接器地址；如果没有，也可以把联系人快照 JSON 直接粘贴到下方手动导入区。</p>
+            <p>
+              后台只消费你本地已经授权整理好的联系人资料和聊天摘要，不提供密钥提取、聊天记录破解或进程内存读取能力。
+            </p>
+            <p>
+              如果你已经有自己的本地数据连接器，可直接填入连接器地址；如果没有，也可以把联系人快照
+              JSON 直接粘贴到下方手动导入区。
+            </p>
           </div>
         }
       />
@@ -682,7 +737,10 @@ export function WechatSyncPage() {
               value={connectorSettings.baseUrl}
               placeholder="http://127.0.0.1:17364"
               onChange={(value) =>
-                setConnectorSettings((current) => ({ ...current, baseUrl: value }))
+                setConnectorSettings((current) => ({
+                  ...current,
+                  baseUrl: value,
+                }))
               }
             />
           </div>
@@ -699,7 +757,10 @@ export function WechatSyncPage() {
               variant="secondary"
               onClick={() =>
                 queryClient.invalidateQueries({
-                  queryKey: ["wechat-connector-health", connectorSettings.baseUrl],
+                  queryKey: [
+                    "wechat-connector-health",
+                    connectorSettings.baseUrl,
+                  ],
                 })
               }
             >
@@ -710,8 +771,12 @@ export function WechatSyncPage() {
           {connectorHealthQuery.isLoading ? (
             <LoadingBlock className="mt-4" label="正在探测本地微信连接器..." />
           ) : null}
-          {connectorHealthQuery.isError && connectorHealthQuery.error instanceof Error ? (
-            <ErrorBlock className="mt-4" message={connectorHealthQuery.error.message} />
+          {connectorHealthQuery.isError &&
+          connectorHealthQuery.error instanceof Error ? (
+            <ErrorBlock
+              className="mt-4"
+              message={connectorHealthQuery.error.message}
+            />
           ) : null}
           {scanMutation.isError && scanMutation.error instanceof Error ? (
             <ErrorBlock className="mt-4" message={scanMutation.error.message} />
@@ -730,9 +795,20 @@ export function WechatSyncPage() {
               <AdminMiniPanel title="当前配置">
                 <div className="space-y-2 text-sm text-[color:var(--text-secondary)]">
                   <div>连接器：{connectorSettings.baseUrl}</div>
-                  <div>连接器标识：{connectorHealthQuery.data.activeConfig.connectorLabel || "未回报"}</div>
-                  <div>数据摘要：{connectorHealthQuery.data.activeConfig.sourceSummary || "未回报"}</div>
-                  <div>上次扫描：{formatDateTime(connectorHealthQuery.data.lastScanAt)}</div>
+                  <div>
+                    连接器标识：
+                    {connectorHealthQuery.data.activeConfig.connectorLabel ||
+                      "未回报"}
+                  </div>
+                  <div>
+                    数据摘要：
+                    {connectorHealthQuery.data.activeConfig.sourceSummary ||
+                      "未回报"}
+                  </div>
+                  <div>
+                    上次扫描：
+                    {formatDateTime(connectorHealthQuery.data.lastScanAt)}
+                  </div>
                 </div>
               </AdminMiniPanel>
               <AdminMiniPanel title="导入选项">
@@ -770,14 +846,19 @@ export function WechatSyncPage() {
                   size="sm"
                   onClick={() => {
                     try {
-                      const bundles = parseWechatSyncContactBundles(manualBundleJson);
+                      const bundles =
+                        parseWechatSyncContactBundles(manualBundleJson);
                       setManualBundleError(null);
                       setPreviewItems([]);
-                      setSelectedUsernames(bundles.map((item) => item.username));
+                      setSelectedUsernames(
+                        bundles.map((item) => item.username),
+                      );
                       previewMutation.mutate(bundles);
                     } catch (error) {
                       setManualBundleError(
-                        error instanceof Error ? error.message : "联系人快照解析失败。",
+                        error instanceof Error
+                          ? error.message
+                          : "联系人快照解析失败。",
                       );
                     }
                   }}
@@ -809,9 +890,11 @@ export function WechatSyncPage() {
                     <p>
                       已回滚角色：{rollbackGuideItem.character.name}。
                       {rollbackGuideItem.character.sourceKey
-                        ? ` 你也可以用 ${extractWechatUsername(
-                            rollbackGuideItem.character.sourceKey,
-                          ) || rollbackGuideItem.character.sourceKey} 在上方连接器联系人里重新搜索。`
+                        ? ` 你也可以用 ${
+                            extractWechatUsername(
+                              rollbackGuideItem.character.sourceKey,
+                            ) || rollbackGuideItem.character.sourceKey
+                          } 在上方连接器联系人里重新搜索。`
                         : " 当前没有可用的 sourceKey，只能通过手动 JSON 重新导入。"}
                     </p>
                     <p>
@@ -843,18 +926,27 @@ export function WechatSyncPage() {
                 <ImportSnapshotVersionList
                   title="回滚后快照恢复入口"
                   liveItem={null}
-                  snapshots={getImportSnapshotsFromHistoryItem(rollbackGuideItem)}
+                  snapshots={getImportSnapshotsFromHistoryItem(
+                    rollbackGuideItem,
+                  )}
                   onRestorePreview={(snapshot) =>
                     restorePreviewFromSnapshot(snapshot, rollbackGuideItem)
                   }
                   onRestoreLive={(snapshot) =>
-                    restoreSnapshotMutation.mutate({
-                      historyItem: rollbackGuideItem,
-                      snapshot,
-                    })
+                    requestRestoreSnapshotToLive(rollbackGuideItem, snapshot)
                   }
+                  onConfirmRestoreLive={confirmRestoreSnapshotToLive}
+                  onCancelRestoreLive={cancelRestoreSnapshotToLive}
                   onLoadToManualInput={(snapshot) =>
                     loadSnapshotIntoManualInput(snapshot, rollbackGuideItem)
+                  }
+                  confirmingSnapshotKey={
+                    pendingSnapshotRestore
+                      ? buildSnapshotMutationKey(
+                          pendingSnapshotRestore.historyItem.character.id,
+                          pendingSnapshotRestore.snapshot,
+                        )
+                      : null
                   }
                   restoringSnapshotKey={
                     restoreSnapshotMutation.isPending
@@ -873,7 +965,10 @@ export function WechatSyncPage() {
             <ErrorBlock className="mt-4" message={manualBundleError} />
           ) : null}
           {previewMutation.isError && previewMutation.error instanceof Error ? (
-            <ErrorBlock className="mt-4" message={previewMutation.error.message} />
+            <ErrorBlock
+              className="mt-4"
+              message={previewMutation.error.message}
+            />
           ) : null}
         </Card>
 
@@ -926,10 +1021,15 @@ export function WechatSyncPage() {
             <LoadingBlock className="mt-4" label="正在读取本地微信联系人..." />
           ) : null}
           {contactsQuery.isError && contactsQuery.error instanceof Error ? (
-            <ErrorBlock className="mt-4" message={contactsQuery.error.message} />
+            <ErrorBlock
+              className="mt-4"
+              message={contactsQuery.error.message}
+            />
           ) : null}
 
-          {!contactsQuery.isLoading && connectorReady && !(contactsQuery.data?.length ?? 0) ? (
+          {!contactsQuery.isLoading &&
+          connectorReady &&
+          !(contactsQuery.data?.length ?? 0) ? (
             <AdminEmptyState
               className="mt-4"
               title="当前没有可选择的联系人"
@@ -944,7 +1044,9 @@ export function WechatSyncPage() {
                 active={selectedSet.has(contact.username)}
                 onClick={() => toggleUsername(contact.username)}
                 title={contact.displayName}
-                subtitle={contact.remarkName || contact.nickname || contact.username}
+                subtitle={
+                  contact.remarkName || contact.nickname || contact.username
+                }
                 badge={
                   <StatusPill tone={contact.isGroup ? "warning" : "healthy"}>
                     {contact.isGroup ? "群聊" : "联系人"}
@@ -954,12 +1056,18 @@ export function WechatSyncPage() {
                   <div className="space-y-1">
                     <div>
                       消息 {contact.messageCount} 条
-                      {contact.latestMessageAt ? ` · 最近 ${formatDateTime(contact.latestMessageAt)}` : ""}
+                      {contact.latestMessageAt
+                        ? ` · 最近 ${formatDateTime(contact.latestMessageAt)}`
+                        : ""}
                     </div>
                     <div>
-                      {contact.tags.length ? `标签：${contact.tags.join("、")}` : "暂无标签"}
+                      {contact.tags.length
+                        ? `标签：${contact.tags.join("、")}`
+                        : "暂无标签"}
                     </div>
-                    {contact.sampleSnippet ? <div>样本：{contact.sampleSnippet}</div> : null}
+                    {contact.sampleSnippet ? (
+                      <div>样本：{contact.sampleSnippet}</div>
+                    ) : null}
                   </div>
                 }
                 activeLabel="已加入导入队列"
@@ -1002,7 +1110,10 @@ export function WechatSyncPage() {
         />
 
         {previewMutation.isError && previewMutation.error instanceof Error ? (
-          <ErrorBlock className="mt-4" message={previewMutation.error.message} />
+          <ErrorBlock
+            className="mt-4"
+            message={previewMutation.error.message}
+          />
         ) : null}
         {importMutation.isError && importMutation.error instanceof Error ? (
           <ErrorBlock className="mt-4" message={importMutation.error.message} />
@@ -1067,7 +1178,10 @@ export function WechatSyncPage() {
                     variant="secondary"
                     size="sm"
                     onClick={applyBatchRelationship}
-                    disabled={!batchTargetUsernames.length || !batchRelationshipInput.trim()}
+                    disabled={
+                      !batchTargetUsernames.length ||
+                      !batchRelationshipInput.trim()
+                    }
                   >
                     应用关系定位
                   </Button>
@@ -1075,7 +1189,10 @@ export function WechatSyncPage() {
                     variant="secondary"
                     size="sm"
                     onClick={applyBatchDomains}
-                    disabled={!batchTargetUsernames.length || !splitCsv(batchDomainInput).length}
+                    disabled={
+                      !batchTargetUsernames.length ||
+                      !splitCsv(batchDomainInput).length
+                    }
                   >
                     追加领域标签
                   </Button>
@@ -1117,7 +1234,10 @@ export function WechatSyncPage() {
           />
         ) : null}
         {previewMutation.isPending ? (
-          <LoadingBlock className="mt-4" label="正在根据微信聊天资料生成角色预览..." />
+          <LoadingBlock
+            className="mt-4"
+            label="正在根据微信聊天资料生成角色预览..."
+          />
         ) : null}
 
         {previewItems.length ? (
@@ -1131,7 +1251,9 @@ export function WechatSyncPage() {
                   previewValidation.get(item.contact.username) ?? []
                 }
                 onRemove={() => removePreviewItem(item.contact.username)}
-                onToggleSelect={() => togglePreviewSelection(item.contact.username)}
+                onToggleSelect={() =>
+                  togglePreviewSelection(item.contact.username)
+                }
                 onNameChange={(value) =>
                   patchPreviewDraft(item.contact.username, (draft) =>
                     patchDraftIdentity(draft, { name: value }),
@@ -1188,14 +1310,24 @@ export function WechatSyncPage() {
         {historyQuery.isError && historyQuery.error instanceof Error ? (
           <ErrorBlock className="mt-4" message={historyQuery.error.message} />
         ) : null}
-        {retryFriendshipMutation.isError && retryFriendshipMutation.error instanceof Error ? (
-          <ErrorBlock className="mt-4" message={retryFriendshipMutation.error.message} />
+        {retryFriendshipMutation.isError &&
+        retryFriendshipMutation.error instanceof Error ? (
+          <ErrorBlock
+            className="mt-4"
+            message={retryFriendshipMutation.error.message}
+          />
         ) : null}
         {rollbackMutation.isError && rollbackMutation.error instanceof Error ? (
-          <ErrorBlock className="mt-4" message={rollbackMutation.error.message} />
+          <ErrorBlock
+            className="mt-4"
+            message={rollbackMutation.error.message}
+          />
         ) : null}
         {reimportMutation.isError && reimportMutation.error instanceof Error ? (
-          <ErrorBlock className="mt-4" message={reimportMutation.error.message} />
+          <ErrorBlock
+            className="mt-4"
+            message={reimportMutation.error.message}
+          />
         ) : null}
         {restoreSnapshotMutation.isError &&
         restoreSnapshotMutation.error instanceof Error ? (
@@ -1235,7 +1367,7 @@ export function WechatSyncPage() {
           <ImportResultPanel
             result={restoreSnapshotMutation.data}
             title="历史版本已恢复为线上角色"
-            description={`已按所选导入版本恢复 ${restoreSnapshotMutation.data.importedCount} 个角色。`}
+            description={`已按所选导入版本恢复 ${restoreSnapshotMutation.data.importedCount} 个角色，并自动写入一条变更记录。`}
           />
         ) : null}
 
@@ -1249,28 +1381,36 @@ export function WechatSyncPage() {
             />
             <div className="flex flex-wrap gap-2">
               <Button
-                variant={historyStatusFilter === "all" ? "primary" : "secondary"}
+                variant={
+                  historyStatusFilter === "all" ? "primary" : "secondary"
+                }
                 size="sm"
                 onClick={() => setHistoryStatusFilter("all")}
               >
                 全部 {historyCounts.total}
               </Button>
               <Button
-                variant={historyStatusFilter === "active" ? "primary" : "secondary"}
+                variant={
+                  historyStatusFilter === "active" ? "primary" : "secondary"
+                }
                 size="sm"
                 onClick={() => setHistoryStatusFilter("active")}
               >
                 好友正常 {historyCounts.active}
               </Button>
               <Button
-                variant={historyStatusFilter === "attention" ? "primary" : "secondary"}
+                variant={
+                  historyStatusFilter === "attention" ? "primary" : "secondary"
+                }
                 size="sm"
                 onClick={() => setHistoryStatusFilter("attention")}
               >
                 待处理 {historyCounts.attention}
               </Button>
               <Button
-                variant={historyStatusFilter === "removed" ? "primary" : "secondary"}
+                variant={
+                  historyStatusFilter === "removed" ? "primary" : "secondary"
+                }
                 size="sm"
                 onClick={() => setHistoryStatusFilter("removed")}
               >
@@ -1303,17 +1443,24 @@ export function WechatSyncPage() {
                 <WechatSyncHistoryCard
                   key={item.character.id}
                   item={item}
-                  selected={selectedHistoryItem?.character.id === item.character.id}
+                  selected={
+                    selectedHistoryItem?.character.id === item.character.id
+                  }
                   retryPending={
                     retryFriendshipMutation.isPending &&
                     retryFriendshipMutation.variables === item.character.id
                   }
                   rollbackPending={
                     rollbackMutation.isPending &&
-                    rollbackMutation.variables?.character.id === item.character.id
+                    rollbackMutation.variables?.character.id ===
+                      item.character.id
                   }
-                  onSelect={() => setSelectedHistoryCharacterId(item.character.id)}
-                  onRegeneratePreview={() => regeneratePreviewFromHistoryItem(item)}
+                  onSelect={() =>
+                    setSelectedHistoryCharacterId(item.character.id)
+                  }
+                  onRegeneratePreview={() =>
+                    regeneratePreviewFromHistoryItem(item)
+                  }
                   onRetryFriendship={() =>
                     retryFriendshipMutation.mutate(item.character.id)
                   }
@@ -1332,11 +1479,13 @@ export function WechatSyncPage() {
               restoreSnapshotPending={restoreSnapshotMutation.isPending}
               retryPending={
                 retryFriendshipMutation.isPending &&
-                retryFriendshipMutation.variables === selectedHistoryItem?.character.id
+                retryFriendshipMutation.variables ===
+                  selectedHistoryItem?.character.id
               }
               rollbackPending={
                 rollbackMutation.isPending &&
-                rollbackMutation.variables?.character.id === selectedHistoryItem?.character.id
+                rollbackMutation.variables?.character.id ===
+                  selectedHistoryItem?.character.id
               }
               onRegeneratePreview={
                 selectedHistoryItem
@@ -1350,22 +1499,34 @@ export function WechatSyncPage() {
               }
               onRestoreSnapshotPreview={
                 selectedHistoryItem
-                  ? (snapshot) => restorePreviewFromSnapshot(snapshot, selectedHistoryItem)
+                  ? (snapshot) =>
+                      restorePreviewFromSnapshot(snapshot, selectedHistoryItem)
                   : undefined
               }
               onRestoreSnapshotToLive={
                 selectedHistoryItem
                   ? (snapshot) =>
-                      restoreSnapshotMutation.mutate({
-                        historyItem: selectedHistoryItem,
+                      requestRestoreSnapshotToLive(
+                        selectedHistoryItem,
                         snapshot,
-                      })
+                      )
                   : undefined
               }
+              onConfirmSnapshotRestore={confirmRestoreSnapshotToLive}
+              onCancelSnapshotRestore={cancelRestoreSnapshotToLive}
               onLoadSnapshotToManualInput={
                 selectedHistoryItem
-                  ? (snapshot) => loadSnapshotIntoManualInput(snapshot, selectedHistoryItem)
+                  ? (snapshot) =>
+                      loadSnapshotIntoManualInput(snapshot, selectedHistoryItem)
                   : undefined
+              }
+              confirmingSnapshotKey={
+                pendingSnapshotRestore
+                  ? buildSnapshotMutationKey(
+                      pendingSnapshotRestore.historyItem.character.id,
+                      pendingSnapshotRestore.snapshot,
+                    )
+                  : null
               }
               restoringSnapshotKey={
                 restoreSnapshotMutation.isPending
@@ -1377,7 +1538,10 @@ export function WechatSyncPage() {
               }
               onRetryFriendship={
                 selectedHistoryItem
-                  ? () => retryFriendshipMutation.mutate(selectedHistoryItem.character.id)
+                  ? () =>
+                      retryFriendshipMutation.mutate(
+                        selectedHistoryItem.character.id,
+                      )
                   : undefined
               }
               onRollback={
@@ -1392,7 +1556,11 @@ export function WechatSyncPage() {
                       setManualBundleError(null);
                       setManualBundleJson(
                         JSON.stringify(
-                          [buildRollbackGuideContactBundle(selectedHistoryItem)],
+                          [
+                            buildRollbackGuideContactBundle(
+                              selectedHistoryItem,
+                            ),
+                          ],
                           null,
                           2,
                         ),
@@ -1428,14 +1596,18 @@ function ImportResultPanel({
       {result.items.length ? (
         <div className="grid gap-3 xl:grid-cols-2">
           {result.items.map((item) => (
-            <Card key={item.contactUsername} className="bg-[color:var(--surface-card)]">
+            <Card
+              key={item.contactUsername}
+              className="bg-[color:var(--surface-card)]"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-semibold text-[color:var(--text-primary)]">
                     {item.character.name}
                   </div>
                   <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
-                    {item.displayName} · {item.status === "created" ? "新建角色" : "更新现有角色"}
+                    {item.displayName} ·{" "}
+                    {item.status === "created" ? "新建角色" : "更新现有角色"}
                   </div>
                 </div>
                 <StatusPill tone="healthy">
@@ -1500,13 +1672,15 @@ function WechatSyncHistoryCard({
   onRetryFriendship: () => void;
   onRollback: () => void;
 }) {
-  const currentSnapshot = item.character.profile?.wechatSyncImport?.currentSnapshot;
+  const currentSnapshot =
+    item.character.profile?.wechatSyncImport?.currentSnapshot;
   const friendshipTone =
     item.friendshipStatus === "friend" ||
     item.friendshipStatus === "close" ||
     item.friendshipStatus === "best"
       ? "healthy"
-      : item.friendshipStatus === "removed" || item.friendshipStatus === "blocked"
+      : item.friendshipStatus === "removed" ||
+          item.friendshipStatus === "blocked"
         ? "warning"
         : "muted";
 
@@ -1552,7 +1726,11 @@ function WechatSyncHistoryCard({
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Button variant={selected ? "primary" : "secondary"} size="sm" onClick={onSelect}>
+        <Button
+          variant={selected ? "primary" : "secondary"}
+          size="sm"
+          onClick={onSelect}
+        >
           {selected ? "详情已展开" : "查看详情"}
         </Button>
         <Link
@@ -1599,12 +1777,15 @@ function HistoryDetailPanel({
   previewPending,
   reimportPending,
   restoreSnapshotPending,
+  confirmingSnapshotKey,
   retryPending,
   rollbackPending,
   onRegeneratePreview,
   onReimportPreview,
   onRestoreSnapshotPreview,
   onRestoreSnapshotToLive,
+  onConfirmSnapshotRestore,
+  onCancelSnapshotRestore,
   onLoadSnapshotToManualInput,
   onRetryFriendship,
   onRollback,
@@ -1617,12 +1798,15 @@ function HistoryDetailPanel({
   previewPending: boolean;
   reimportPending: boolean;
   restoreSnapshotPending: boolean;
+  confirmingSnapshotKey: string | null;
   retryPending: boolean;
   rollbackPending: boolean;
   onRegeneratePreview?: () => void;
   onReimportPreview?: () => void;
   onRestoreSnapshotPreview?: (snapshot: WechatImportSnapshotLike) => void;
   onRestoreSnapshotToLive?: (snapshot: WechatImportSnapshotLike) => void;
+  onConfirmSnapshotRestore?: () => void;
+  onCancelSnapshotRestore?: () => void;
   onLoadSnapshotToManualInput?: (snapshot: WechatImportSnapshotLike) => void;
   onRetryFriendship?: () => void;
   onRollback?: () => void;
@@ -1647,6 +1831,7 @@ function HistoryDetailPanel({
   const previousImportSnapshot =
     item.character.profile?.wechatSyncImport?.previousSnapshot ?? null;
   const importSnapshots = getImportSnapshotsFromHistoryItem(item);
+  const importChangeHistory = getImportChangeHistoryFromHistoryItem(item);
 
   return (
     <Card className="bg-[color:var(--surface-card)]">
@@ -1663,7 +1848,8 @@ function HistoryDetailPanel({
           tone={
             isActiveFriendshipStatus(item.friendshipStatus)
               ? "healthy"
-              : item.friendshipStatus === "removed" || item.friendshipStatus === "blocked"
+              : item.friendshipStatus === "removed" ||
+                  item.friendshipStatus === "blocked"
                 ? "warning"
                 : "muted"
           }
@@ -1728,15 +1914,20 @@ function HistoryDetailPanel({
               previousImportSnapshot ? (
                 <div className="space-y-2">
                   <p>
-                    当前线上角色保存了 v{previousImportSnapshot.version} 到
-                    v{currentImportSnapshot.version} 的导入快照。
+                    当前线上角色保存了 v{previousImportSnapshot.version} 到 v
+                    {currentImportSnapshot.version} 的导入快照。
                   </p>
-                  <p>下面展示的是“上一版导入草稿 / 当前导入草稿”的字段差异，可直接用于回看这次同步改了什么。</p>
+                  <p>
+                    下面展示的是“上一版导入草稿 /
+                    当前导入草稿”的字段差异，可直接用于回看这次同步改了什么。
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">
                   <p>这条记录已经持久化了最近一次导入快照。</p>
-                  <p>后续再次导入时，会把当前快照滚到上一版，形成可对照的版本链。</p>
+                  <p>
+                    后续再次导入时，会把当前快照滚到上一版，形成可对照的版本链。
+                  </p>
                 </div>
               )
             }
@@ -1760,10 +1951,22 @@ function HistoryDetailPanel({
             <AdminMiniPanel title="当前导入快照">
               <div className="space-y-2 text-sm text-[color:var(--text-secondary)]">
                 <div>版本：v{currentImportSnapshot.version}</div>
-                <div>导入时间：{formatDateTime(currentImportSnapshot.importedAt)}</div>
-                <div>导入状态：{currentImportSnapshot.status === "created" ? "首次创建" : "覆盖更新"}</div>
-                <div>自动加好友：{currentImportSnapshot.autoAddFriend ? "是" : "否"}</div>
-                <div>朋友圈种子：{currentImportSnapshot.seededMomentCount} 条</div>
+                <div>
+                  导入时间：{formatDateTime(currentImportSnapshot.importedAt)}
+                </div>
+                <div>
+                  导入状态：
+                  {currentImportSnapshot.status === "created"
+                    ? "首次创建"
+                    : "覆盖更新"}
+                </div>
+                <div>
+                  自动加好友：
+                  {currentImportSnapshot.autoAddFriend ? "是" : "否"}
+                </div>
+                <div>
+                  朋友圈种子：{currentImportSnapshot.seededMomentCount} 条
+                </div>
               </div>
             </AdminMiniPanel>
           )}
@@ -1774,8 +1977,27 @@ function HistoryDetailPanel({
             snapshots={importSnapshots}
             onRestorePreview={onRestoreSnapshotPreview}
             onRestoreLive={onRestoreSnapshotToLive}
+            onConfirmRestoreLive={onConfirmSnapshotRestore}
+            onCancelRestoreLive={onCancelSnapshotRestore}
             onLoadToManualInput={onLoadSnapshotToManualInput}
-            restoringSnapshotKey={restoreSnapshotPending ? restoringSnapshotKey : null}
+            confirmingSnapshotKey={confirmingSnapshotKey}
+            restoringSnapshotKey={
+              restoreSnapshotPending ? restoringSnapshotKey : null
+            }
+          />
+        </div>
+      ) : null}
+
+      {importChangeHistory.length ? (
+        <div className="mt-4">
+          <ImportChangeHistoryList records={importChangeHistory} />
+        </div>
+      ) : currentImportSnapshot ? (
+        <div className="mt-4">
+          <AdminCallout
+            title="变更记录将在下一次导入或版本恢复后自动生成"
+            tone="muted"
+            description="旧数据已经补齐了快照链；从现在开始，每次重新导入或恢复历史版本都会自动记录一条变更摘要，方便回溯。"
           />
         </div>
       ) : null}
@@ -1801,13 +2023,23 @@ function HistoryDetailPanel({
               description={
                 matchedPreviewValidationIssues.length ? (
                   <div className="space-y-2">
-                    <p>当前已经命中了这条历史项对应的预览草稿，但还有未通过校验的字段，暂时不能直接再导入。</p>
-                    <p>请先在上方“角色预览”卡片里补齐缺失字段，再回来执行一键再导入。</p>
+                    <p>
+                      当前已经命中了这条历史项对应的预览草稿，但还有未通过校验的字段，暂时不能直接再导入。
+                    </p>
+                    <p>
+                      请先在上方“角色预览”卡片里补齐缺失字段，再回来执行一键再导入。
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    <p>这条历史项已经和当前预览草稿关联上了。下面会按“当前线上角色 / 当前预览草稿”展示字段差异。</p>
-                    <p>确认无误后，可以直接按当前预览重新导入，后台会按同一个 `sourceKey` 更新角色与好友资料。</p>
+                    <p>
+                      这条历史项已经和当前预览草稿关联上了。下面会按“当前线上角色
+                      / 当前预览草稿”展示字段差异。
+                    </p>
+                    <p>
+                      确认无误后，可以直接按当前预览重新导入，后台会按同一个
+                      `sourceKey` 更新角色与好友资料。
+                    </p>
                   </div>
                 )
               }
@@ -1818,9 +2050,11 @@ function HistoryDetailPanel({
                 当前线上角色 / 当前预览草稿
               </div>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
-                {buildHistoryPreviewDiffs(item, matchedPreviewItem).map((diff) => (
-                  <HistoryDiffCard key={diff.label} diff={diff} />
-                ))}
+                {buildHistoryPreviewDiffs(item, matchedPreviewItem).map(
+                  (diff) => (
+                    <HistoryDiffCard key={diff.label} diff={diff} />
+                  ),
+                )}
               </div>
             </div>
 
@@ -1896,11 +2130,7 @@ function HistoryDetailPanel({
   );
 }
 
-function HistoryDiffCard({
-  diff,
-}: {
-  diff: HistoryDiffCardValue;
-}) {
+function HistoryDiffCard({ diff }: { diff: HistoryDiffCardValue }) {
   return (
     <div
       className={`rounded-2xl border px-4 py-3 ${
@@ -1939,13 +2169,80 @@ function HistoryDiffCard({
   );
 }
 
+function ImportChangeHistoryList({
+  records,
+}: {
+  records: WechatImportChangeRecordLike[];
+}) {
+  return (
+    <div>
+      <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+        变更记录
+      </div>
+      <div className="mt-3 space-y-3">
+        {records.map((record) => (
+          <Card key={record.id} className="bg-[color:var(--surface-soft)]">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-2 text-sm text-[color:var(--text-secondary)]">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-base font-semibold text-[color:var(--text-primary)]">
+                    v{record.toVersion}
+                  </span>
+                  <StatusPill
+                    tone={
+                      record.mode === "snapshot_restore" ? "warning" : "muted"
+                    }
+                  >
+                    {record.mode === "snapshot_restore"
+                      ? "历史版本恢复"
+                      : "预览重新导入"}
+                  </StatusPill>
+                  <StatusPill
+                    tone={record.changedFields.length ? "warning" : "healthy"}
+                  >
+                    {record.changedFields.length
+                      ? `变更 ${record.changedFields.length} 项`
+                      : "无字段差异"}
+                  </StatusPill>
+                </div>
+                <div>记录时间：{formatDateTime(record.recordedAt)}</div>
+                <div>
+                  版本轨迹：
+                  {buildChangeRecordVersionPath(record)}
+                </div>
+                <div className="rounded-2xl border border-[color:var(--border-faint)] bg-white/80 px-3 py-2 leading-6">
+                  {record.summary}
+                </div>
+              </div>
+              <div className="flex max-w-xl flex-wrap gap-2">
+                {record.changedFields.length ? (
+                  record.changedFields.map((field) => (
+                    <StatusPill key={`${record.id}-${field}`} tone="warning">
+                      {field}
+                    </StatusPill>
+                  ))
+                ) : (
+                  <StatusPill tone="healthy">无字段差异</StatusPill>
+                )}
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ImportSnapshotVersionList({
   title,
   liveItem,
   snapshots,
   onRestorePreview,
   onRestoreLive,
+  onConfirmRestoreLive,
+  onCancelRestoreLive,
   onLoadToManualInput,
+  confirmingSnapshotKey,
   restoringSnapshotKey,
 }: {
   title: string;
@@ -1953,7 +2250,10 @@ function ImportSnapshotVersionList({
   snapshots: WechatImportSnapshotLike[];
   onRestorePreview?: (snapshot: WechatImportSnapshotLike) => void;
   onRestoreLive?: (snapshot: WechatImportSnapshotLike) => void;
+  onConfirmRestoreLive?: () => void;
+  onCancelRestoreLive?: () => void;
   onLoadToManualInput?: (snapshot: WechatImportSnapshotLike) => void;
+  confirmingSnapshotKey?: string | null;
   restoringSnapshotKey?: string | null;
 }) {
   if (!snapshots.length) {
@@ -1978,6 +2278,7 @@ function ImportSnapshotVersionList({
             liveItem?.character.id ?? "rollback-guide",
             snapshot,
           );
+          const awaitingConfirmation = confirmingSnapshotKey === restoreKey;
           const restoreDisabled =
             (liveItem ? changedDiffs.length === 0 : false) || !onRestoreLive;
 
@@ -1995,7 +2296,11 @@ function ImportSnapshotVersionList({
                     <StatusPill tone={index === 0 ? "healthy" : "muted"}>
                       {index === 0 ? "当前版本" : "历史版本"}
                     </StatusPill>
-                    <StatusPill tone={snapshot.status === "created" ? "healthy" : "warning"}>
+                    <StatusPill
+                      tone={
+                        snapshot.status === "created" ? "healthy" : "warning"
+                      }
+                    >
                       {snapshot.status === "created" ? "首次创建" : "覆盖更新"}
                     </StatusPill>
                     <StatusPill
@@ -2015,8 +2320,14 @@ function ImportSnapshotVersionList({
                     </StatusPill>
                   </div>
                   <div>导入时间：{formatDateTime(snapshot.importedAt)}</div>
-                  <div>角色名：{snapshot.draftCharacter.name || snapshot.contact.displayName}</div>
-                  <div>关系：{snapshot.draftCharacter.relationship || "暂无"}</div>
+                  <div>
+                    角色名：
+                    {snapshot.draftCharacter.name ||
+                      snapshot.contact.displayName}
+                  </div>
+                  <div>
+                    关系：{snapshot.draftCharacter.relationship || "暂无"}
+                  </div>
                   <div>
                     标签：
                     {snapshot.contact.tags.length
@@ -2049,19 +2360,64 @@ function ImportSnapshotVersionList({
                     variant="primary"
                     size="sm"
                     onClick={() => onRestoreLive?.(snapshot)}
-                    disabled={restoreDisabled || restoringSnapshotKey === restoreKey}
+                    disabled={
+                      restoreDisabled ||
+                      restoringSnapshotKey === restoreKey ||
+                      awaitingConfirmation
+                    }
                   >
                     {restoringSnapshotKey === restoreKey
                       ? "恢复中..."
-                      : liveItem
-                        ? changedDiffs.length
-                          ? "直接恢复为线上角色"
-                          : "当前已在线上"
-                        : "直接恢复为线上角色"
-                    }
+                      : awaitingConfirmation
+                        ? "等待确认..."
+                        : liveItem
+                          ? changedDiffs.length
+                            ? "直接恢复为线上角色"
+                            : "当前已在线上"
+                          : "直接恢复为线上角色"}
                   </Button>
                 </div>
               </div>
+              {awaitingConfirmation ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-[color:var(--text-secondary)]">
+                  <div className="font-semibold text-[color:var(--text-primary)]">
+                    {liveItem
+                      ? `确认把 ${liveItem.character.name} 恢复成快照 v${snapshot.version}？`
+                      : `确认用快照 v${snapshot.version} 重建线上角色？`}
+                  </div>
+                  <div className="mt-2 leading-6">
+                    {liveItem
+                      ? `本次会生成一个新的线上导入版本，并自动记录变更摘要。预计改动：${compressedSummary}`
+                      : "当前角色已经回滚删除。确认后会按这个历史快照重新创建角色、恢复好友资料，并自动写入恢复记录。"}
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={onConfirmRestoreLive}
+                      disabled={
+                        !onConfirmRestoreLive ||
+                        restoringSnapshotKey === restoreKey
+                      }
+                    >
+                      {restoringSnapshotKey === restoreKey
+                        ? "恢复中..."
+                        : "确认恢复为线上角色"}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={onCancelRestoreLive}
+                      disabled={
+                        !onCancelRestoreLive ||
+                        restoringSnapshotKey === restoreKey
+                      }
+                    >
+                      取消
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </Card>
           );
         })}
@@ -2100,9 +2456,9 @@ function PreviewCharacterCard({
       : item.confidence === "medium"
         ? "warning"
         : "muted";
-  const domains = (draft.expertDomains?.length
-    ? draft.expertDomains
-    : ["general"]).join("、");
+  const domains = (
+    draft.expertDomains?.length ? draft.expertDomains : ["general"]
+  ).join("、");
 
   return (
     <Card className="bg-[color:var(--surface-card)]">
@@ -2181,11 +2537,21 @@ function PreviewCharacterCard({
           <AdminMiniPanel title="源联系人上下文">
             <div className="space-y-2 text-sm text-[color:var(--text-secondary)]">
               <div>用户名：{item.contact.username}</div>
-              <div>备注 / 昵称：{item.contact.remarkName || item.contact.nickname || "暂无"}</div>
+              <div>
+                备注 / 昵称：
+                {item.contact.remarkName || item.contact.nickname || "暂无"}
+              </div>
               <div>地区：{item.contact.region || "暂无"}</div>
               <div>消息数：{item.contact.messageCount}</div>
-              <div>最近聊天：{formatDateTime(item.contact.latestMessageAt)}</div>
-              <div>标签：{item.contact.tags.length ? item.contact.tags.join("、") : "暂无"}</div>
+              <div>
+                最近聊天：{formatDateTime(item.contact.latestMessageAt)}
+              </div>
+              <div>
+                标签：
+                {item.contact.tags.length
+                  ? item.contact.tags.join("、")
+                  : "暂无"}
+              </div>
               <div>
                 关键词：
                 {item.contact.topicKeywords.length
@@ -2208,7 +2574,8 @@ function PreviewCharacterCard({
                     className="rounded-2xl border border-[color:var(--border-faint)] bg-[color:var(--surface-soft)] px-3 py-2"
                   >
                     <div className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
-                      {message.sender || formatDirection(message.direction)} · {message.timestamp}
+                      {message.sender || formatDirection(message.direction)} ·{" "}
+                      {message.timestamp}
                     </div>
                     <div className="mt-1 leading-6">{message.text}</div>
                   </div>
@@ -2279,7 +2646,9 @@ async function loadSelectedConnectorContacts(
   return buildWechatConnectorContactBundles(baseUrl, usernames);
 }
 
-function parseWechatSyncContactBundles(value: string): WechatSyncContactBundle[] {
+function parseWechatSyncContactBundles(
+  value: string,
+): WechatSyncContactBundle[] {
   const raw = value.trim();
   if (!raw) {
     throw new Error("请先粘贴联系人快照 JSON。");
@@ -2339,7 +2708,9 @@ function parseWechatSyncContactBundles(value: string): WechatSyncContactBundle[]
   return contacts;
 }
 
-function readMessageSamples(value: unknown): WechatSyncContactBundle["sampleMessages"] {
+function readMessageSamples(
+  value: unknown,
+): WechatSyncContactBundle["sampleMessages"] {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -2422,9 +2793,7 @@ function readStringArray(value: unknown) {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value
-    .map((entry) => readString(entry))
-    .filter(Boolean);
+  return value.map((entry) => readString(entry)).filter(Boolean);
 }
 
 function readNumber(value: unknown) {
@@ -2458,7 +2827,10 @@ function patchDraftIdentity(
   };
 }
 
-function patchDraftDomains(draft: CharacterDraft, value: string): CharacterDraft {
+function patchDraftDomains(
+  draft: CharacterDraft,
+  value: string,
+): CharacterDraft {
   const expertDomains = splitCsv(value);
   const profile = draft.profile;
 
@@ -2568,7 +2940,9 @@ function extractWechatUsername(sourceKey?: string | null) {
   if (!sourceKey) {
     return "";
   }
-  return sourceKey.startsWith("wechat:") ? sourceKey.slice("wechat:".length) : sourceKey;
+  return sourceKey.startsWith("wechat:")
+    ? sourceKey.slice("wechat:".length)
+    : sourceKey;
 }
 
 function buildWechatSourceKey(username: string) {
@@ -2590,11 +2964,10 @@ function buildRollbackGuideContactBundle(
   }
 
   const username =
-    extractWechatUsername(item.character.sourceKey) || `wechat_import_${item.character.id}`;
+    extractWechatUsername(item.character.sourceKey) ||
+    `wechat_import_${item.character.id}`;
   const displayName =
-    item.remarkName?.trim() ||
-    item.character.name.trim() ||
-    "未命名联系人";
+    item.remarkName?.trim() || item.character.name.trim() || "未命名联系人";
   const memorySummary =
     item.character.profile?.memorySummary?.trim() ||
     item.character.bio?.trim() ||
@@ -2629,8 +3002,16 @@ type HistoryDiffCardValue = {
 };
 
 type WechatImportSnapshotLike = NonNullable<
-  NonNullable<WechatSyncHistoryItem["character"]["profile"]["wechatSyncImport"]>["currentSnapshot"]
+  NonNullable<
+    WechatSyncHistoryItem["character"]["profile"]["wechatSyncImport"]
+  >["currentSnapshot"]
 >;
+
+type WechatImportChangeRecordLike = NonNullable<
+  NonNullable<
+    WechatSyncHistoryItem["character"]["profile"]["wechatSyncImport"]
+  >["changeHistory"]
+>[number];
 
 function getImportSnapshotsFromHistoryItem(item: WechatSyncHistoryItem) {
   const metadata = item.character.profile?.wechatSyncImport;
@@ -2657,6 +3038,35 @@ function getImportSnapshotsFromHistoryItem(item: WechatSyncHistoryItem) {
   return items.sort(
     (left, right) => Date.parse(right.importedAt) - Date.parse(left.importedAt),
   );
+}
+
+function getImportChangeHistoryFromHistoryItem(item: WechatSyncHistoryItem) {
+  const history = item.character.profile?.wechatSyncImport?.changeHistory ?? [];
+  const seen = new Set<string>();
+  const records: WechatImportChangeRecordLike[] = [];
+
+  for (const record of history) {
+    if (seen.has(record.id)) {
+      continue;
+    }
+    seen.add(record.id);
+    records.push(record);
+  }
+
+  return records.sort(
+    (left, right) => Date.parse(right.recordedAt) - Date.parse(left.recordedAt),
+  );
+}
+
+function buildChangeRecordVersionPath(record: WechatImportChangeRecordLike) {
+  const previousVersion =
+    record.previousVersion && record.previousVersion > 0
+      ? `v${record.previousVersion}`
+      : "无上一版";
+  if (record.mode === "snapshot_restore") {
+    return `${previousVersion} -> 快照 v${record.restoredFromVersion ?? "?"} -> v${record.toVersion}`;
+  }
+  return `${previousVersion} -> v${record.toVersion}`;
 }
 
 function buildContactBundleFromImportSnapshot(
@@ -2762,10 +3172,12 @@ function findPreviewItemForHistoryItem(
     }
   }
 
-  return previewItems.find(
-    (previewItem) =>
-      previewItem.draftCharacter.sourceKey === item.character.sourceKey,
-  ) ?? null;
+  return (
+    previewItems.find(
+      (previewItem) =>
+        previewItem.draftCharacter.sourceKey === item.character.sourceKey,
+    ) ?? null
+  );
 }
 
 function buildHistoryPreviewDiffs(
@@ -2776,7 +3188,8 @@ function buildHistoryPreviewDiffs(
     createHistoryPreviewDiff(
       "角色名",
       item.character.name,
-      previewItem.draftCharacter.name?.trim() || previewItem.contact.displayName,
+      previewItem.draftCharacter.name?.trim() ||
+        previewItem.contact.displayName,
     ),
     createHistoryPreviewDiff(
       "关系定位",
@@ -2822,7 +3235,9 @@ function hasHistoryPreviewChanges(
   item: WechatSyncHistoryItem,
   previewItem: WechatSyncPreviewItem,
 ) {
-  return buildHistoryPreviewDiffs(item, previewItem).some((diff) => diff.changed);
+  return buildHistoryPreviewDiffs(item, previewItem).some(
+    (diff) => diff.changed,
+  );
 }
 
 function buildPersistedImportVersionDiffs(
@@ -2940,8 +3355,8 @@ function buildHistorySnapshotDiffs(
     ),
     createHistoryPreviewDiff(
       "聊天摘要",
-      item.character.profile?.wechatSyncImport?.currentSnapshot?.contact.chatSummary ||
-        "暂无",
+      item.character.profile?.wechatSyncImport?.currentSnapshot?.contact
+        .chatSummary || "暂无",
       snapshot.contact.chatSummary || "暂无",
     ),
   ];
@@ -2995,8 +3410,9 @@ function validatePreviewItem(item: WechatSyncPreviewItem) {
   const relationship = item.draftCharacter.relationship?.trim();
   const bio = item.draftCharacter.bio?.trim();
   const expertDomains =
-    item.draftCharacter.expertDomains?.filter((entry) => entry.trim().length > 0) ??
-    [];
+    item.draftCharacter.expertDomains?.filter(
+      (entry) => entry.trim().length > 0,
+    ) ?? [];
   const memorySummary = item.draftCharacter.profile?.memorySummary?.trim();
 
   if (!name) {
@@ -3034,10 +3450,11 @@ function fillWechatSyncDraftBlanks(
     draft.bio?.trim() ||
     contact.chatSummary?.trim() ||
     `${resolvedName} 是从本地联系人资料导入的熟人朋友。`;
-  const expertDomains =
-    draft.expertDomains?.filter((entry) => entry.trim().length > 0).length
-      ? draft.expertDomains
-      : inferContactDomains(contact);
+  const expertDomains = draft.expertDomains?.filter(
+    (entry) => entry.trim().length > 0,
+  ).length
+    ? draft.expertDomains
+    : inferContactDomains(contact);
   const profile = draft.profile;
   const memorySummary =
     profile?.memorySummary?.trim() ||
@@ -3055,10 +3472,11 @@ function fillWechatSyncDraftBlanks(
           ...profile,
           name: profile.name?.trim() || resolvedName,
           relationship: profile.relationship?.trim() || relationship,
-          expertDomains:
-            profile.expertDomains?.filter((entry) => entry.trim().length > 0).length
-              ? profile.expertDomains
-              : expertDomains,
+          expertDomains: profile.expertDomains?.filter(
+            (entry) => entry.trim().length > 0,
+          ).length
+            ? profile.expertDomains
+            : expertDomains,
           memorySummary,
           memory: profile.memory
             ? {
@@ -3076,5 +3494,7 @@ function inferContactDomains(contact: WechatSyncContactBundle) {
   const inferred = [...contact.topicKeywords, ...contact.tags].filter(
     (entry) => entry.trim().length > 0,
   );
-  return inferred.length ? Array.from(new Set(inferred)).slice(0, 6) : ["general"];
+  return inferred.length
+    ? Array.from(new Set(inferred)).slice(0, 6)
+    : ["general"];
 }

@@ -1,4 +1,8 @@
-import type { Character, CharacterDraft } from "./characters";
+import type {
+  Character,
+  CharacterDraft,
+  WechatSyncImportMode,
+} from "./characters";
 
 export type WechatSyncMessageDirection =
   | "owner"
@@ -61,6 +65,8 @@ export interface WechatSyncImportItem {
   draftCharacter: CharacterDraft;
   autoAddFriend?: boolean;
   seedMoments?: boolean;
+  importMode?: WechatSyncImportMode;
+  restoredFromVersion?: number | null;
 }
 
 export interface WechatSyncImportRequest {

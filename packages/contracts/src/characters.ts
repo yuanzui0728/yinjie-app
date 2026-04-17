@@ -182,10 +182,24 @@ export interface WechatSyncImportSnapshot {
   draftCharacter: WechatSyncImportDraftSnapshot;
 }
 
+export type WechatSyncImportMode = "preview_import" | "snapshot_restore";
+
+export interface WechatSyncImportChangeRecord {
+  id: string;
+  recordedAt: string;
+  mode: WechatSyncImportMode;
+  previousVersion?: number | null;
+  restoredFromVersion?: number | null;
+  toVersion: number;
+  summary: string;
+  changedFields: string[];
+}
+
 export interface WechatSyncImportMetadata {
   currentSnapshot?: WechatSyncImportSnapshot | null;
   previousSnapshot?: WechatSyncImportSnapshot | null;
   snapshotHistory?: WechatSyncImportSnapshot[];
+  changeHistory?: WechatSyncImportChangeRecord[];
 }
 
 export interface PersonalityProfile {

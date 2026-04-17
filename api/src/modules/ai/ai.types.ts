@@ -95,10 +95,24 @@ export interface WechatSyncImportSnapshotValue {
   draftCharacter: WechatSyncImportDraftSnapshotValue;
 }
 
+export type WechatSyncImportModeValue = 'preview_import' | 'snapshot_restore';
+
+export interface WechatSyncImportChangeRecordValue {
+  id: string;
+  recordedAt: string;
+  mode: WechatSyncImportModeValue;
+  previousVersion?: number | null;
+  restoredFromVersion?: number | null;
+  toVersion: number;
+  summary: string;
+  changedFields: string[];
+}
+
 export interface WechatSyncImportMetadataValue {
   currentSnapshot?: WechatSyncImportSnapshotValue | null;
   previousSnapshot?: WechatSyncImportSnapshotValue | null;
   snapshotHistory?: WechatSyncImportSnapshotValue[];
+  changeHistory?: WechatSyncImportChangeRecordValue[];
 }
 
 // 角色人格画像结构
