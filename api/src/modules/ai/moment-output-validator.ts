@@ -1,4 +1,8 @@
-import type { MomentGenerationContext, PersonalityProfile } from './ai.types';
+import type {
+  MomentGenerationContext,
+  PersonalityProfile,
+  SceneKey,
+} from './ai.types';
 import { sanitizeAiText } from './ai-text-sanitizer';
 
 export type MomentOutputValidationResult = {
@@ -12,7 +16,7 @@ const META_PATTERNS = [
   /语言模型/u,
   /^朋友圈[：:]/u,
   /^文案[：:]/u,
-  /(以下|下面).{0,4}(朋友圈|文案)/u,
+  /(以下|下面).{0,4}(朋友圈|文案|内容)/u,
   /(只输出|不要解释|说明如下)/u,
 ];
 
@@ -29,6 +33,20 @@ const GENERIC_PATTERNS = [
   /有时候/u,
   /碎碎念/u,
   /一切都会/u,
+];
+
+const STRUCTURE_PATTERNS = [
+  /首先/u,
+  /其次/u,
+  /最后/u,
+  /总之/u,
+  /以下(?:几点|几个方面|内容)/u,
+  /分(?:三|3)点/u,
+];
+
+const STAGE_DIRECTION_PATTERNS = [
+  /^[（(](?:轻笑|笑了笑|笑|苦笑|叹气|叹了口气|沉默|停顿|顿了顿|停了停|想了想|看了看|看向|看着|低头|抬头|耸肩|皱眉|挑眉|扶额|点头|摇头|拍拍|抱抱|凑近|后退|清了清嗓|咳了一声|压低声音|轻声|无奈|认真)[^）)]{0,12}[)）]/u,
+  /^[*＊](?:轻笑|笑了笑|笑|苦笑|叹气|叹了口气|沉默|停顿|顿了顿|停了停|想了想|看了看|看向|看着|低头|抬头|耸肩|皱眉|挑眉|扶额|点头|摇头|拍拍|抱抱|凑近|后退|清了清嗓|咳了一声|压低声音|轻声|无奈|认真)[^*＊\n]{0,12}[*＊]/u,
 ];
 
 const STOPWORDS = new Set([
@@ -105,13 +123,56 @@ function hasConcreteSignal(text: string) {
   );
 }
 
-export function validateGeneratedMomentOutput(input: {
+function resolveLengthRange(sceneKey: SceneKey) {
+  switch (sceneKey) {
+    case 'moments_post':
+      return { min: 5, max: 160 };
+    case 'feed_post':
+      return { min: 8, max: 220 };
+    case 'channel_post':
+      return { min: 16, max: 320 };
+    default:
+      return { min: 4, max: 180 };
+  }
+}
+
+function validateSceneSpecificRules(input: {
+  normalizedText: string;
+  sceneKey: SceneKey;
+  reasons: string[];
+}) {
+  const { normalizedText, sceneKey, reasons } = input;
+
+  if (
+    STAGE_DIRECTION_PATTERNS.some((pattern) => pattern.test(normalizedText))
+  ) {
+    reasons.push('含有舞台动作描写');
+  }
+
+  if (
+    (sceneKey === 'feed_post' || sceneKey === 'channel_post') &&
+    STRUCTURE_PATTERNS.some((pattern) => pattern.test(normalizedText))
+  ) {
+    reasons.push('内容像提纲或总结稿');
+  }
+
+  if (
+    (sceneKey === 'moments_post' || sceneKey === 'feed_post') &&
+    GENERIC_PATTERNS.some((pattern) => pattern.test(normalizedText))
+  ) {
+    reasons.push('内容偏模板化');
+  }
+}
+
+export function validateGeneratedSceneOutput(input: {
   text: string;
   context?: MomentGenerationContext;
   profile: PersonalityProfile;
+  sceneKey?: SceneKey;
 }): MomentOutputValidationResult {
   const normalizedText = normalizeText(input.text);
   const reasons: string[] = [];
+  const sceneKey = input.sceneKey ?? 'moments_post';
 
   if (!normalizedText) {
     return {
@@ -121,30 +182,39 @@ export function validateGeneratedMomentOutput(input: {
     };
   }
 
-  if (normalizedText.length < 5) {
+  const lengthRange = resolveLengthRange(sceneKey);
+  if (normalizedText.length < lengthRange.min) {
     reasons.push('内容过短');
   }
-  if (normalizedText.length > 160) {
+  if (normalizedText.length > lengthRange.max) {
     reasons.push('内容过长');
   }
   if (META_PATTERNS.some((pattern) => pattern.test(normalizedText))) {
     reasons.push('带有解释或 AI 口吻');
   }
 
-  const anchorTokens = extractAnchorTokens(input.context, input.profile);
-  const hasAnchorHit = anchorTokens.some((token) =>
-    normalizedText.includes(token),
-  );
-  const hasGenericPattern = GENERIC_PATTERNS.some((pattern) =>
-    pattern.test(normalizedText),
-  );
-  const concreteSignal = hasConcreteSignal(normalizedText);
+  validateSceneSpecificRules({
+    normalizedText,
+    sceneKey,
+    reasons,
+  });
 
-  if (!hasAnchorHit && !concreteSignal && normalizedText.length < 14) {
-    reasons.push('缺少具体锚点');
-  }
-  if (hasGenericPattern && !hasAnchorHit && !concreteSignal) {
-    reasons.push('内容偏空泛');
+  if (sceneKey === 'moments_post') {
+    const anchorTokens = extractAnchorTokens(input.context, input.profile);
+    const hasAnchorHit = anchorTokens.some((token) =>
+      normalizedText.includes(token),
+    );
+    const hasGenericPattern = GENERIC_PATTERNS.some((pattern) =>
+      pattern.test(normalizedText),
+    );
+    const concreteSignal = hasConcreteSignal(normalizedText);
+
+    if (!hasAnchorHit && !concreteSignal && normalizedText.length < 14) {
+      reasons.push('缺少具体锚点');
+    }
+    if (hasGenericPattern && !hasAnchorHit && !concreteSignal) {
+      reasons.push('内容偏空泛');
+    }
   }
 
   return {
@@ -153,3 +223,5 @@ export function validateGeneratedMomentOutput(input: {
     reasons,
   };
 }
+
+export const validateGeneratedMomentOutput = validateGeneratedSceneOutput;

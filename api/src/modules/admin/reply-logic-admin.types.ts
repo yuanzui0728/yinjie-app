@@ -38,6 +38,7 @@ export type ReplyLogicGroupReplySelectionDisposition =
 export interface ReplyLogicPromptSection {
   key:
     | 'core_directive'
+    | 'legacy_system_prompt'
     | 'identity'
     | 'personality_and_tone'
     | 'behavioral_patterns'

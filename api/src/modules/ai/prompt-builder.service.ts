@@ -20,6 +20,7 @@ export interface ChatContext {
 export interface ChatSystemPromptSection {
   key:
     | 'core_directive'
+    | 'legacy_system_prompt'
     | 'identity'
     | 'personality_and_tone'
     | 'behavioral_patterns'
@@ -101,14 +102,26 @@ export class PromptBuilderService {
 
     // 1. 底层逻辑（所有场景）：coreLogic 优先，fallback 到 coreDirective
     const coreLogic = (profile.coreLogic || profile.coreDirective)?.trim();
+    const scenePrompt = profile.scenePrompts?.[scene]?.trim();
+    const legacySystemPrompt = this.resolveLegacySystemPrompt(profile, [
+      coreLogic,
+      scenePrompt,
+      profile.basePrompt,
+    ]);
     if (coreLogic) {
       parts.push(`<core_logic>\n${coreLogic}\n</core_logic>`);
+    } else if (legacySystemPrompt) {
+      parts.push(`<core_logic>\n${legacySystemPrompt}\n</core_logic>`);
     }
 
     // 2. 场景提示词
-    const scenePrompt = profile.scenePrompts?.[scene]?.trim();
     if (scenePrompt) {
       parts.push(`<scene_prompt>\n${scenePrompt}\n</scene_prompt>`);
+    }
+    if (legacySystemPrompt && coreLogic) {
+      parts.push(
+        `<legacy_system_prompt>\n${legacySystemPrompt}\n</legacy_system_prompt>`,
+      );
     }
 
     const realWorldContextSection = this.buildRealWorldContextSection(
@@ -165,7 +178,7 @@ export class PromptBuilderService {
 
     // 5. 基础规则（所有场景）
     parts.push(
-      `<rules>\n- 永远以${profile.name}的身份说话，不要暴露自己是AI\n- 用中文回复，语气自然\n- 不要说"作为AI"或"我是语言模型"之类的话\n- 当前时间：${worldCalendar.dateTimeText}\n</rules>`,
+      `<rules>\n- 永远以${profile.name}的身份说话，不要暴露自己是AI\n- 用中文回复，语气自然\n- 不要说"作为AI"或"我是语言模型"之类的话\n- 不要用（动作）、[旁白]、*动作*描述自己的动作、表情或心理活动\n- 除非用户明确要求，不要机械地凑“三点”“三段”“总结一下”\n- 当前时间：${worldCalendar.dateTimeText}\n</rules>`,
     );
 
     parts.push('</system_prompt>');
@@ -232,6 +245,57 @@ export class PromptBuilderService {
       userPrompt: this.buildMomentTaskPrompt(generationContext, false),
       retryUserPrompt: this.buildMomentTaskPrompt(generationContext, true),
     };
+  }
+
+  buildSceneGenerationTaskPrompt(sceneKey: SceneKey, strict = false) {
+    switch (sceneKey) {
+      case 'feed_post':
+        return strict
+          ? [
+              '上一版广场动态太像 AI 文案、提纲或正确废话，请重写。',
+              '只抓一个最值得公开说的点，像真人随手发一条，不要铺陈。',
+              '不要写成咨询建议、课程摘要、品牌文案或“首先/其次/最后”的结构。',
+              '不要用（动作）、[旁白]、*动作*。',
+              '只输出动态正文，不要解释。',
+            ].join('\n')
+          : [
+              '请现在发一条广场动态。',
+              '像真人在公开场域随手发的一条，不像提纲、教程、交付件或标准答案。',
+              '默认只抓一个点，不要为了完整把内容写空。',
+              '不要用（动作）、[旁白]、*动作*。',
+              '只输出动态正文，不要解释。',
+            ].join('\n');
+      case 'channel_post':
+        return strict
+          ? [
+              '上一版视频号文案太像模板、运营 SOP 或 AI 批量生成，请重写。',
+              '保留这个角色自己的表达，不要写成统一爆款公式、课程讲义或品牌口播。',
+              '如果需要标题、正文、话题，就自然写完，不要先解释。',
+              '不要用（动作）、[旁白]、*动作*。',
+              '只输出最终内容，不要解释。',
+            ].join('\n')
+          : [
+              '请现在发一条视频号内容。',
+              '按这个角色本来的表达来写，不要写成起号模板、运营脚本或标准爆款文案。',
+              '有结构可以，但每一段都要像真人会说的话。',
+              '不要用（动作）、[旁白]、*动作*。',
+              '只输出最终内容，不要解释。',
+            ].join('\n');
+      default:
+        return strict
+          ? [
+              '上一版输出太像模板或 AI，请重写。',
+              '保持自然、直接、有角色感。',
+              '不要用（动作）、[旁白]、*动作*。',
+              '只输出最终内容，不要解释。',
+            ].join('\n')
+          : [
+              '请直接给出这个场景下的最终内容。',
+              '保持自然、直接、有角色感。',
+              '不要用（动作）、[旁白]、*动作*。',
+              '只输出最终内容，不要解释。',
+            ].join('\n');
+    }
   }
 
   async buildMomentPrompt(
@@ -476,6 +540,14 @@ export class PromptBuilderService {
         ? `<collaboration_routing>\n${templates.collaborationRouting}\n</collaboration_routing>`
         : '';
 
+    const legacySystemPrompt = this.resolveLegacySystemPrompt(profile, [
+      profile.coreDirective,
+      profile.basePrompt,
+    ]);
+    const legacySystemPromptSection = legacySystemPrompt
+      ? `<legacy_system_prompt>\n${legacySystemPrompt}\n</legacy_system_prompt>`
+      : '';
+
     const coreMemory = profile.memory?.coreMemory || '';
     const recentSummary =
       profile.memory?.recentSummary || profile.memorySummary || '';
@@ -553,6 +625,12 @@ ${templates.behavioralGuideline}
         label: 'Core Directive',
         content: `<core_directive>\n${profile.coreDirective}\n</core_directive>`,
         active: Boolean(profile.coreDirective?.trim()),
+      },
+      {
+        key: 'legacy_system_prompt',
+        label: 'Legacy System Prompt',
+        content: legacySystemPromptSection,
+        active: Boolean(legacySystemPromptSection),
       },
       {
         key: 'identity',
@@ -778,6 +856,7 @@ ${templates.behavioralGuideline}
             ? `可以轻微呼应这些最近对话余温：${recentTopics}。但不要点名用户，不要复述原话。`
             : '如果没有合适的对话余温，不要硬蹭用户。',
           '至少写出一个具体细节或判断，不要写正确废话、鸡汤、流水账。',
+          '不要用（动作）、[旁白]、*动作*。',
           '只输出朋友圈正文，不要解释，不要加前缀。',
         ]
       : [
@@ -787,6 +866,7 @@ ${templates.behavioralGuideline}
             ? `如果自然，可以轻微带到这些最近对话余温：${recentTopics}。但不要像公开回复私聊。`
             : '如果没有合适的对话余温，就回到角色自己的当下观察，不要硬蹭用户。',
           '默认只选 1-2 个最自然的锚点，不要把所有线索都堆进去。',
+          '不要用（动作）、[旁白]、*动作*。',
           '只输出朋友圈正文，不要解释，不要加前缀。',
         ];
 
@@ -863,7 +943,26 @@ ${templates.behavioralGuideline}
       generationContext?.generationHints?.anchorPriority,
     );
 
-    return `<moment_rules>\n- 这是一条朋友圈，不是聊天回复，不是公告，也不是公开长文。\n- 必须让人看出这是 ${profile.name} 在${timeOfDay}这个时间点自然会发的内容。\n- 优先从这些锚点里选 1-2 个自然落地：${anchorPriority}。\n- 如果用了最近对话余温，只能弱关联，不能像在公开回私聊。\n- 优先写具体观察、状态、判断或瞬间，不写空泛感慨、鸡汤、正确废话、流水账。\n- 宁可短一点，也不要为了凑字数把信息写空。\n- 最终只输出朋友圈正文，不要任何解释或前缀。\n</moment_rules>`;
+    return `<moment_rules>\n- 这是一条朋友圈，不是聊天回复，不是公告，也不是公开长文。\n- 必须让人看出这是 ${profile.name} 在${timeOfDay}这个时间点自然会发的内容。\n- 优先从这些锚点里选 1-2 个自然落地：${anchorPriority}。\n- 如果用了最近对话余温，只能弱关联，不能像在公开回私聊。\n- 优先写具体观察、状态、判断或瞬间，不写空泛感慨、鸡汤、正确废话、流水账。\n- 不要用（动作）、[旁白]、*动作*描述自己，也不要写成文案任务、教程提纲或运营腔。\n- 宁可短一点，也不要为了凑字数把信息写空。\n- 最终只输出朋友圈正文，不要任何解释或前缀。\n</moment_rules>`;
+  }
+
+  private resolveLegacySystemPrompt(
+    profile: PersonalityProfile,
+    candidates: Array<string | undefined>,
+  ) {
+    const legacySystemPrompt = profile.systemPrompt?.trim();
+    if (!legacySystemPrompt) {
+      return '';
+    }
+
+    const normalizedCandidates = candidates
+      .map((item) => item?.trim())
+      .filter(Boolean);
+    if (normalizedCandidates.includes(legacySystemPrompt)) {
+      return '';
+    }
+
+    return legacySystemPrompt;
   }
 
   private formatMomentAnchorPriority(

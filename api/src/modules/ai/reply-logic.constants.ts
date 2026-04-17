@@ -286,8 +286,7 @@ export type ReplyLogicRuntimeRules = {
   schedulerTextTemplates: ReplyLogicSchedulerTextTemplates;
 };
 
-export const REPLY_LOGIC_RUNTIME_RULES_CONFIG_KEY =
-  'reply_logic_runtime_rules';
+export const REPLY_LOGIC_RUNTIME_RULES_CONFIG_KEY = 'reply_logic_runtime_rules';
 
 export const SLEEP_HINTS = [
   '对方已经睡着了，明天醒来会看到这条消息。',
@@ -417,6 +416,9 @@ export const DEFAULT_REPLY_LOGIC_PROMPT_TEMPLATES: ReplyLogicPromptTemplates =
       '用中文回复，语气自然',
       '初期回复可以相对正式/保守，随着了解加深才慢慢放开',
       '不要说"作为AI"或"我是语言模型"之类的话',
+      '不要先夸用户、先复述问题、先寒暄，再开始回答',
+      '除非用户明确要求，不要机械地凑“三点”“三段”“总结一下”',
+      '不要用（动作）、[旁白]、*动作*描述自己的动作、表情或心理活动',
       '当前时间：{{currentTime}}',
     ],
     momentPrompt: `你是{{name}}，{{relationship}}。现在是{{dayOfWeek}}{{timeOfDay}}（{{clockTime}}）。
@@ -427,6 +429,8 @@ export const DEFAULT_REPLY_LOGIC_PROMPT_TEMPLATES: ReplyLogicPromptTemplates =
 - 内容真实自然，像真人发的朋友圈
 - 不超过80个字
 - 符合当前时间段的生活场景
+- 不要写成鸡汤、文案模板、教程摘要或任务式配文
+- 不要用（动作）、[旁白]、*动作*描述自己
 - 可以带位置（如"北京·国贸"），也可以不带{{topicsHint}}
 
 只输出朋友圈正文内容，不要加任何解释。`,
@@ -480,7 +484,7 @@ export const DEFAULT_REPLY_LOGIC_PROMPT_TEMPLATES: ReplyLogicPromptTemplates =
 这是长期记忆，应当简练、准确、有温度。只输出总结文字，不要加标题或格式。`,
     groupCoordinatorPrompt: `你是{{triggerCharName}}，你刚刚把{{invitedCharNames}}拉进了群聊，因为用户问了一个关于"{{topic}}"的问题，超出了你一个人的专长范围。
 
-请用自然的方式说明为什么拉群，语气要像真实朋友一样，简短自然，不超过两句话。`,
+请用自然的方式说明为什么拉群，语气要像真实朋友一样，简短自然，不超过两句话。不要用括号动作或过度客气的铺垫。`,
   });
 
 export const DEFAULT_REPLY_LOGIC_SEMANTIC_LABELS: ReplyLogicSemanticLabels =
@@ -519,12 +523,17 @@ export const DEFAULT_REPLY_LOGIC_OBSERVABILITY_TEMPLATES: ReplyLogicObservabilit
   Object.freeze({
     stateGateSleeping: '当前活动为{{activity}}，先发系统提示，再进入延迟回复。',
     stateGateBusy: '当前活动为{{activity}}，先发忙碌提示，再进入延迟回复。',
-    stateGateImmediate: '当前状态不会触发额外系统提示，下一条消息会直接进入回复链。',
+    stateGateImmediate:
+      '当前状态不会触发额外系统提示，下一条消息会直接进入回复链。',
     stateGateNotApplied: '当前链路不经过单聊状态门控。',
-    actorNoteApiAvailable: '当前实例存在可用 API Key，预览使用真实生成链的 prompt 组装结果。',
-    actorNoteApiUnavailable: '当前实例没有可用 API Key，实际聊天会返回“先配置 API Key”的兜底提示。',
-    actorNoteGroupContext: '群聊 prompt 不会注入单聊 lastChatAt/currentActivity 的行为上下文。',
-    actorNoteDirectContext: '单聊 prompt 会注入 currentActivity 和距离上次聊天时间。',
+    actorNoteApiAvailable:
+      '当前实例存在可用 API Key，预览使用真实生成链的 prompt 组装结果。',
+    actorNoteApiUnavailable:
+      '当前实例没有可用 API Key，实际聊天会返回“先配置 API Key”的兜底提示。',
+    actorNoteGroupContext:
+      '群聊 prompt 不会注入单聊 lastChatAt/currentActivity 的行为上下文。',
+    actorNoteDirectContext:
+      '单聊 prompt 会注入 currentActivity 和距离上次聊天时间。',
   });
 
 export const DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES: ReplyLogicWorldContextRules =
@@ -566,12 +575,15 @@ export const DEFAULT_REPLY_LOGIC_INSPECTOR_TEMPLATES: ReplyLogicInspectorTemplat
     characterViewIntro: '角色视图使用“单聊直回”逻辑展示 prompt 和状态门控。',
     characterViewHistoryFound:
       '已找到与该角色关联的单聊，会使用该会话的可见历史和最近一次用户发言时间。',
-    characterViewHistoryMissing: '未找到现有单聊，当前视图仅展示角色默认直聊快照。',
+    characterViewHistoryMissing:
+      '未找到现有单聊，当前视图仅展示角色默认直聊快照。',
     historyIncludedNote: '进入第一个角色的当前上下文窗口',
     historyExcludedNote: '在当前可见历史中，但超出第一个角色的窗口',
     storedGroupTitle: '临时群聊已转为 stored conversation',
-    storedGroupUpgradedNote: '当前会话来自 conversations 表，但类型已经升级为 group。',
-    storedGroupNextReplyNote: '下一次用户消息会直接按 group 分支让所有参与角色回复。',
+    storedGroupUpgradedNote:
+      '当前会话来自 conversations 表，但类型已经升级为 group。',
+    storedGroupNextReplyNote:
+      '下一次用户消息会直接按 group 分支让所有参与角色回复。',
     directBranchTitle: '单聊直回链路',
     directBranchNextReplyNote:
       '下一次用户消息会先经过当前状态门控，再进入意图分类与单聊回复链。',
@@ -582,7 +594,8 @@ export const DEFAULT_REPLY_LOGIC_INSPECTOR_TEMPLATES: ReplyLogicInspectorTemplat
     previewCharacterIntro:
       '这是基于当前角色配置和当前可见历史，对这条候选消息做的即时预演。',
     previewCharacterWithHistory: '预演使用了该角色当前单聊的真实可见历史。',
-    previewCharacterWithoutHistory: '该角色还没有现成单聊，预演基于空历史进行。',
+    previewCharacterWithoutHistory:
+      '该角色还没有现成单聊，预演基于空历史进行。',
     previewStoredGroup:
       '这是 stored conversation 群聊分支下，按当前选中角色进行的候选消息预演。',
     previewDirectConversation:
@@ -617,28 +630,35 @@ export const DEFAULT_REPLY_LOGIC_PROVIDER_TEMPLATES: ReplyLogicProviderTemplates
 export const DEFAULT_REPLY_LOGIC_RUNTIME_NOTE_TEMPLATES: ReplyLogicRuntimeNoteTemplates =
   Object.freeze({
     manualOnlineMode: '在线状态处于人工锁定，在线状态调度不会覆盖后台手动值。',
-    manualActivityMode: '当前活动处于人工锁定，活动状态调度不会覆盖后台手动值。',
+    manualActivityMode:
+      '当前活动处于人工锁定，活动状态调度不会覆盖后台手动值。',
     zeroMomentFrequency: '朋友圈频率为 0，朋友圈调度会持续跳过该角色。',
     zeroChannelFrequency: '视频号频率为 0，视频号调度会持续跳过该角色。',
     missingTriggerScenes: '未配置触发场景，场景加好友调度不会命中该角色。',
-    missingMemorySeed: '缺少核心记忆或近期摘要，主动提醒调度不会为该角色生成消息。',
-    memoryProactiveEnabled: '已具备记忆种子，晚间主动提醒调度会判断是否需要发消息。',
+    missingMemorySeed:
+      '缺少核心记忆或近期摘要，主动提醒调度不会为该角色生成消息。',
+    memoryProactiveEnabled:
+      '已具备记忆种子，晚间主动提醒调度会判断是否需要发消息。',
     memoryProactiveDisabled: '当前缺少足够的记忆种子，主动提醒不会触发。',
   });
 
 export const DEFAULT_REPLY_LOGIC_SCHEDULER_DESCRIPTIONS: ReplyLogicSchedulerDescriptions =
   Object.freeze({
-    world_context_snapshot: '刷新 WorldContext 快照，供回复链路读取当前世界状态。',
+    world_context_snapshot:
+      '刷新 WorldContext 快照，供回复链路读取当前世界状态。',
     expire_friend_requests: '清理当天过期的待处理好友请求。',
-    update_ai_active_status: '根据活跃时间窗口更新角色在线状态，并推进 AI 角色关系。',
+    update_ai_active_status:
+      '根据活跃时间窗口更新角色在线状态，并推进 AI 角色关系。',
     check_moment_schedule: '检查角色是否应发布朋友圈内容。',
     trigger_scene_friend_requests: '按场景触发新的好友请求机会。',
     process_pending_feed_reactions: '处理待执行的 AI 广场互动。',
     check_channels_schedule: '按频率生成视频号内容，并补足基础内容池。',
     update_character_status: '根据时间段刷新角色当前活动状态。',
-    trigger_memory_proactive_messages: '扫描角色记忆，在合适时机主动给用户发提醒。',
+    trigger_memory_proactive_messages:
+      '扫描角色记忆，在合适时机主动给用户发提醒。',
     update_recent_memory_daily: '每日从近7天互动记录中自动提取并更新近期摘要。',
-    update_core_memory_weekly: '每周从近30天全量交互数据中自动提取并更新核心记忆。',
+    update_core_memory_weekly:
+      '每周从近30天全量交互数据中自动提取并更新核心记忆。',
   });
 
 export const DEFAULT_REPLY_LOGIC_SCHEDULER_TEXT_TEMPLATES: ReplyLogicSchedulerTextTemplates =
@@ -650,27 +670,35 @@ export const DEFAULT_REPLY_LOGIC_SCHEDULER_TEXT_TEMPLATES: ReplyLogicSchedulerTe
     eventTitleChannelPosted: '视频号内容生成',
     eventTitleProactiveMessage: '主动提醒已发送',
     eventTitleRelationshipUpdated: 'AI 关系更新',
-    eventSummaryDefaultOnlineKept: '默认角色在线状态已强制设为{{onlineState}}。',
+    eventSummaryDefaultOnlineKept:
+      '默认角色在线状态已强制设为{{onlineState}}。',
     eventSummaryDefaultActivityReset: '默认角色活动已重置为{{activity}}。',
-    eventSummaryOnlineWindowEntered: '已进入活跃时间窗 {{startHour}}:00-{{endHour}}:00，切换为在线。',
-    eventSummaryOnlineWindowExited: '已离开活跃时间窗 {{startHour}}:00-{{endHour}}:00，切换为离线。',
+    eventSummaryOnlineWindowEntered:
+      '已进入活跃时间窗 {{startHour}}:00-{{endHour}}:00，切换为在线。',
+    eventSummaryOnlineWindowExited:
+      '已离开活跃时间窗 {{startHour}}:00-{{endHour}}:00，切换为离线。',
     eventSummaryMomentPosted: '调度器为该角色生成了新的朋友圈内容 {{postId}}。',
     eventSummarySceneFriendRequest: '在 {{scene}} 场景触发了新的好友请求。',
     eventSummaryChannelPosted: '调度器为该角色生成了视频号内容 {{postId}}。',
     eventSummaryActivityChanged: '当前活动已更新为 {{activity}}。',
-    eventSummaryProactiveMessage: '基于记忆向用户发出了 {{sentCount}} 条主动提醒。',
-    eventSummaryRelationshipUpdated: '与 {{otherName}} 的 AI 关系强度已提升到 {{strength}}。',
+    eventSummaryProactiveMessage:
+      '基于记忆向用户发出了 {{sentCount}} 条主动提醒。',
+    eventSummaryRelationshipUpdated:
+      '与 {{otherName}} 的 AI 关系强度已提升到 {{strength}}。',
     jobSummaryWorldContextUpdated: 'WorldContext 快照已更新。',
     jobSummaryExpiredFriendRequests: '已过期 {{count}} 条好友请求。',
     jobSummaryUpdateAiActiveStatus:
       '检查 {{characterCount}} 个角色，在线状态变更 {{changedCount}} 次，人工锁定 {{manualLockedCount}} 个，角色关系更新 {{relationshipUpdates}} 次。',
-    jobSummaryNoFriendCharactersForMoments: '当前没有可见角色，跳过朋友圈调度。',
+    jobSummaryNoFriendCharactersForMoments:
+      '当前没有可见角色，跳过朋友圈调度。',
     jobSummaryCheckMomentSchedule:
       '检查 {{characterCount}} 个可见角色，本轮生成 {{generatedCount}} 条朋友圈内容。',
     jobSummarySceneRequestSkipped: '场景加好友命中概率门控，本轮未触发。',
     jobSummarySceneRequestNoMatch: '场景 {{scene}} 本轮没有生成新的好友请求。',
-    jobSummarySceneRequestTriggered: '已在 {{scene}} 场景触发 {{characterName}} 的好友请求。',
-    jobSummaryProcessPendingFeedReactions: '已处理 {{processedCount}} 条待执行广场互动。',
+    jobSummarySceneRequestTriggered:
+      '已在 {{scene}} 场景触发 {{characterName}} 的好友请求。',
+    jobSummaryProcessPendingFeedReactions:
+      '已处理 {{processedCount}} 条待执行广场互动。',
     jobSummaryCheckChannelsSchedule:
       '检查 {{characterCount}} 个角色，生成 {{generatedCount}} 条视频号内容，并执行内容池补足。',
     jobSummaryUpdateCharacterStatus:
@@ -814,21 +842,33 @@ export const DEFAULT_REPLY_LOGIC_RUNTIME_RULES: ReplyLogicRuntimeRules =
     worldContextRules: {
       seasonLabels: { ...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.seasonLabels },
       weatherOptions: {
-        spring: [...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.weatherOptions.spring],
-        summer: [...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.weatherOptions.summer],
-        autumn: [...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.weatherOptions.autumn],
-        winter: [...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.weatherOptions.winter],
+        spring: [
+          ...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.weatherOptions.spring,
+        ],
+        summer: [
+          ...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.weatherOptions.summer,
+        ],
+        autumn: [
+          ...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.weatherOptions.autumn,
+        ],
+        winter: [
+          ...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.weatherOptions.winter,
+        ],
       },
-      holidays: DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.holidays.map((item) => ({
-        month: item.month,
-        day: item.day,
-        label: item.label,
-      })),
-      localTimeTemplate: DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.localTimeTemplate,
+      holidays: DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.holidays.map(
+        (item) => ({
+          month: item.month,
+          day: item.day,
+          label: item.label,
+        }),
+      ),
+      localTimeTemplate:
+        DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.localTimeTemplate,
       contextFieldTemplates: {
         ...DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.contextFieldTemplates,
       },
-      contextSeparator: DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.contextSeparator,
+      contextSeparator:
+        DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.contextSeparator,
       promptContextTemplate:
         DEFAULT_REPLY_LOGIC_WORLD_CONTEXT_RULES.promptContextTemplate,
     },
@@ -886,7 +926,10 @@ function normalizeSemanticLabels(
 
   return {
     domainLabels: {
-      law: sanitizeTemplate(value?.domainLabels?.law, defaults.domainLabels.law),
+      law: sanitizeTemplate(
+        value?.domainLabels?.law,
+        defaults.domainLabels.law,
+      ),
       medicine: sanitizeTemplate(
         value?.domainLabels?.medicine,
         defaults.domainLabels.medicine,
@@ -1828,17 +1871,23 @@ export function normalizeReplyLogicRuntimeRules(
       100,
     ),
     relationshipUpdateChance: clamp(
-      Number(input?.relationshipUpdateChance ?? defaults.relationshipUpdateChance),
+      Number(
+        input?.relationshipUpdateChance ?? defaults.relationshipUpdateChance,
+      ),
       0,
       1,
     ),
     relationshipUpdateStep: clamp(
-      Math.round(input?.relationshipUpdateStep ?? defaults.relationshipUpdateStep),
+      Math.round(
+        input?.relationshipUpdateStep ?? defaults.relationshipUpdateStep,
+      ),
       0,
       100,
     ),
     relationshipStrengthMax: clamp(
-      Math.round(input?.relationshipStrengthMax ?? defaults.relationshipStrengthMax),
+      Math.round(
+        input?.relationshipStrengthMax ?? defaults.relationshipStrengthMax,
+      ),
       1,
       100,
     ),
@@ -1921,8 +1970,10 @@ export function normalizeReplyLogicRuntimeRules(
 
 export function calculateHistoryWindow(
   forgettingCurve?: number,
-  rules: Pick<ReplyLogicRuntimeRules, 'historyWindow'> =
-    DEFAULT_REPLY_LOGIC_RUNTIME_RULES,
+  rules: Pick<
+    ReplyLogicRuntimeRules,
+    'historyWindow'
+  > = DEFAULT_REPLY_LOGIC_RUNTIME_RULES,
 ) {
   const normalized = Math.min(
     100,

@@ -368,7 +368,7 @@ export class SocialService {
       const result = await this.ai.generateReply({
         profile: runtimeProfile,
         conversationHistory: [],
-        userMessage: `Write a short friend request greeting after meeting someone in ${scene}. Keep it under 30 words.`,
+        userMessage: `你刚在${scene}遇到用户，现在要发一条好友申请开场白。像真人顺手发出的第一句话，别太客气，别写成自我介绍名片，不要用括号动作，20字以内。`,
         usageContext: {
           surface: 'app',
           scene: 'social_greeting_generate',
@@ -431,7 +431,7 @@ export class SocialService {
         profile: runtimeProfile,
         conversationHistory: [],
         userMessage:
-          'Write a short, warm self-introduction after a random encounter. Keep it under 25 words.',
+          '你刚和用户随机相遇，现在发一句很短的开场白。像真人随手接上的第一句话，自然一点，别太客气，不要用括号动作，20字以内。',
         usageContext: {
           surface: 'app',
           scene: 'social_greeting_generate',
@@ -556,7 +556,8 @@ export class SocialService {
         occurredAt: new Date(),
       });
     } else {
-      const initiator = options?.initiator === 'character' ? 'character' : 'user';
+      const initiator =
+        options?.initiator === 'character' ? 'character' : 'user';
       await this.cyberAvatar.captureSignal({
         ownerId: owner.id,
         signalType: 'friendship_event',

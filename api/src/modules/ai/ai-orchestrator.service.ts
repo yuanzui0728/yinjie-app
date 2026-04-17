@@ -26,7 +26,7 @@ import {
 } from './ai.types';
 import { PromptBuilderService } from './prompt-builder.service';
 import { sanitizeAiText } from './ai-text-sanitizer';
-import { validateGeneratedMomentOutput } from './moment-output-validator';
+import { validateGeneratedSceneOutput } from './moment-output-validator';
 import { MomentGenerationContextService } from './moment-generation-context.service';
 import { SystemConfigService } from '../config/config.service';
 import { WorldService } from '../world/world.service';
@@ -1156,9 +1156,7 @@ export class AiOrchestratorService {
     sceneKey?: import('./ai.types').SceneKey,
   ) {
     let systemPrompt: string;
-    if (profile.systemPrompt) {
-      systemPrompt = profile.systemPrompt;
-    } else if (sceneKey && sceneKey !== 'chat') {
+    if (sceneKey && sceneKey !== 'chat') {
       // 非聊天场景（评论、问候、主动提醒等）走场景化构建
       systemPrompt = await this.promptBuilder.buildSceneSystemPrompt(
         profile,
@@ -1388,32 +1386,61 @@ export class AiOrchestratorService {
 
     try {
       if (sceneKey !== 'moments_post') {
-        const prompt = await this.promptBuilder.buildMomentPrompt(
+        const systemPrompt = await this.buildSystemPrompt(
           profile,
-          currentTime,
-          recentTopics,
+          false,
+          undefined,
           sceneKey,
         );
-        const response = await client.chat.completions.create({
-          model: provider.model,
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 150,
-          temperature: 0.95,
-        });
+        const taskPrompts = [
+          this.promptBuilder.buildSceneGenerationTaskPrompt(sceneKey, false),
+          this.promptBuilder.buildSceneGenerationTaskPrompt(sceneKey, true),
+        ];
 
-        const usage = this.normalizeUsageMetrics(response.usage);
-        await this.recordSuccessfulUsage(
-          provider,
-          'instance_default',
-          resolvedUsageContext,
-          {
-            usage,
-            model: response.model ?? provider.model,
-          },
-          budgetedProvider.usageAudit,
+        for (let attempt = 0; attempt < taskPrompts.length; attempt += 1) {
+          const response = await client.chat.completions.create({
+            model: provider.model,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: taskPrompts[attempt] },
+            ],
+            max_tokens: sceneKey === 'channel_post' ? 220 : 170,
+            temperature: attempt === 0 ? 0.9 : 0.72,
+          });
+
+          const usage = this.normalizeUsageMetrics(response.usage);
+          await this.recordSuccessfulUsage(
+            provider,
+            'instance_default',
+            resolvedUsageContext,
+            {
+              usage,
+              model: response.model ?? provider.model,
+            },
+            budgetedProvider.usageAudit,
+          );
+
+          const text = sanitizeAiText(
+            response.choices[0]?.message?.content ?? '',
+          );
+          const validation = validateGeneratedSceneOutput({
+            text,
+            profile,
+            sceneKey,
+          });
+          if (validation.valid) {
+            return validation.normalizedText;
+          }
+
+          this.logger.warn(
+            `Discarded low-quality ${sceneKey} output for ${resolvedUsageContext.characterName ?? profile.name} (attempt ${attempt + 1}): ${validation.reasons.join('；') || '未通过校验'}`,
+          );
+        }
+
+        this.logger.warn(
+          `Skipped ${sceneKey} generation for ${resolvedUsageContext.characterName ?? profile.name} after validation.`,
         );
-
-        return sanitizeAiText(response.choices[0]?.message?.content ?? '');
+        return '';
       }
 
       const resolvedGenerationContext =
@@ -1460,10 +1487,11 @@ export class AiOrchestratorService {
         const text = sanitizeAiText(
           response.choices[0]?.message?.content ?? '',
         );
-        const validation = validateGeneratedMomentOutput({
+        const validation = validateGeneratedSceneOutput({
           text,
           context: resolvedGenerationContext,
           profile,
+          sceneKey,
         });
         if (validation.valid) {
           return validation.normalizedText;

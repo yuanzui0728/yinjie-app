@@ -416,7 +416,9 @@ export class NeedDiscoveryService {
     const characterIds = conversations
       .flatMap((item) => item.participants ?? [])
       .filter(Boolean);
-    const userGroupIds = [...new Set(userGroupMemberships.map((item) => item.groupId))];
+    const userGroupIds = [
+      ...new Set(userGroupMemberships.map((item) => item.groupId)),
+    ];
     const [characters, activeGroups] = await Promise.all([
       characterIds.length
         ? this.characterRepo.find({ where: { id: In(characterIds) } })
@@ -432,7 +434,9 @@ export class NeedDiscoveryService {
           })
         : Promise.resolve([] as GroupEntity[]),
     ]);
-    const characterMap = new Map(characters.map((item) => [item.id, item.name]));
+    const characterMap = new Map(
+      characters.map((item) => [item.id, item.name]),
+    );
     const groupMap = new Map(activeGroups.map((item) => [item.id, item.name]));
 
     if (conversationIds.length > 0) {
@@ -454,10 +458,11 @@ export class NeedDiscoveryService {
           const conversation = conversationMap.get(message.conversationId);
           const counterpartId = conversation?.participants?.[0] ?? '';
           const isSelfConversation = counterpartId === SELF_CHARACTER_ID;
-          const counterpartName =
-            isSelfConversation
-              ? '自己'
-              : (characterMap.get(counterpartId) ?? message.senderName ?? '联系人');
+          const counterpartName = isSelfConversation
+            ? '自己'
+            : (characterMap.get(counterpartId) ??
+              message.senderName ??
+              '联系人');
           entries.push({
             timestamp: message.createdAt,
             text: `[${isSelfConversation ? '和自己聊天' : '聊天'}][${formatTimestamp(
@@ -703,7 +708,9 @@ export class NeedDiscoveryService {
           timestamp >= windowStartedAt &&
           timestamp <= windowEndedAt,
       )
-      .sort((left, right) => right.timestamp.getTime() - left.timestamp.getTime())
+      .sort(
+        (left, right) => right.timestamp.getTime() - left.timestamp.getTime(),
+      )
       .slice(0, 8)
       .forEach(({ note, timestamp }) => {
         const isEdited = note.updatedAt !== note.createdAt;
@@ -741,7 +748,9 @@ export class NeedDiscoveryService {
             item.query,
             80,
           )}${
-            item.source ? `（来源：${formatSearchHistorySource(item.source)}）` : ''
+            item.source
+              ? `（来源：${formatSearchHistorySource(item.source)}）`
+              : ''
           }`,
         });
       });
@@ -1354,13 +1363,13 @@ function buildRecipeFromGeneratedDraft(
       emotionalTone: draft.emotionalTone,
       responseLength: draft.responseLength,
       emojiUsage: draft.emojiUsage,
-      workStyle: '先澄清问题，再给出可执行建议。',
+      workStyle: '先把问题说清楚，再接最关键的那一点。',
       socialStyle: '自然、稳定、不过度热情。',
       taboos: ['夸大承诺', '制造依赖'],
-      quirks: ['喜欢把问题拆成 2-3 个可执行步骤'],
+      quirks: ['说话会顺手把复杂问题压回最值得聊的一点'],
       coreDirective: corePrompt,
       basePrompt: corePrompt,
-      systemPrompt: corePrompt,
+      systemPrompt: '',
     },
     prompting: {
       coreLogic: corePrompt,
