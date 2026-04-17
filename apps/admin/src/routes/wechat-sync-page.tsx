@@ -97,6 +97,9 @@ export function WechatSyncPage() {
   const [manualBundleJson, setManualBundleJson] = useState("");
   const [manualBundleError, setManualBundleError] = useState<string | null>(null);
   const [selectedUsernames, setSelectedUsernames] = useState<string[]>([]);
+  const [selectedPreviewUsernames, setSelectedPreviewUsernames] = useState<string[]>([]);
+  const [batchRelationshipInput, setBatchRelationshipInput] = useState("");
+  const [batchDomainInput, setBatchDomainInput] = useState("");
   const [previewItems, setPreviewItems] = useState<WechatSyncPreviewItem[]>([]);
   const deferredSearch = useDeferredValue(search.trim());
 
@@ -129,13 +132,41 @@ export function WechatSyncPage() {
     () => new Set(selectedUsernames),
     [selectedUsernames],
   );
+  const selectedPreviewSet = useMemo(
+    () => new Set(selectedPreviewUsernames),
+    [selectedPreviewUsernames],
+  );
   const selectedCount = selectedUsernames.length;
+  const previewValidation = useMemo(
+    () =>
+      new Map(
+        previewItems.map((item) => [
+          item.contact.username,
+          validatePreviewItem(item),
+        ]),
+      ),
+    [previewItems],
+  );
+  const invalidPreviewCount = useMemo(
+    () =>
+      previewItems.filter(
+        (item) => (previewValidation.get(item.contact.username)?.length ?? 0) > 0,
+      ).length,
+    [previewItems, previewValidation],
+  );
+  const batchTargetUsernames = useMemo(() => {
+    if (selectedPreviewUsernames.length > 0) {
+      return selectedPreviewUsernames;
+    }
+    return previewItems.map((item) => item.contact.username);
+  }, [previewItems, selectedPreviewUsernames]);
 
   const scanMutation = useMutation({
     mutationFn: () => scanWechatConnector(connectorSettings.baseUrl),
     onSuccess: async () => {
       saveWechatConnectorSettings(connectorSettings);
       setPreviewItems([]);
+      setSelectedPreviewUsernames([]);
       setSelectedUsernames([]);
       await Promise.all([
         queryClient.invalidateQueries({
@@ -162,6 +193,7 @@ export function WechatSyncPage() {
     },
     onSuccess: (result) => {
       setPreviewItems(result.items);
+      setSelectedPreviewUsernames(result.items.map((item) => item.contact.username));
     },
   });
 
@@ -199,6 +231,7 @@ export function WechatSyncPage() {
 
   function toggleUsername(username: string) {
     setPreviewItems([]);
+    setSelectedPreviewUsernames([]);
     setSelectedUsernames((current) =>
       current.includes(username)
         ? current.filter((item) => item !== username)
@@ -208,6 +241,7 @@ export function WechatSyncPage() {
 
   function selectVisibleContacts() {
     setPreviewItems([]);
+    setSelectedPreviewUsernames([]);
     setSelectedUsernames((contactsQuery.data ?? [])
       .filter((item) => !item.isGroup)
       .map((item) => item.username));
@@ -215,6 +249,7 @@ export function WechatSyncPage() {
 
   function clearSelection() {
     setPreviewItems([]);
+    setSelectedPreviewUsernames([]);
     setSelectedUsernames([]);
   }
 
@@ -246,6 +281,72 @@ export function WechatSyncPage() {
     setSelectedUsernames((current) =>
       current.filter((item) => item !== username),
     );
+    setSelectedPreviewUsernames((current) =>
+      current.filter((item) => item !== username),
+    );
+  }
+
+  function togglePreviewSelection(username: string) {
+    setSelectedPreviewUsernames((current) =>
+      current.includes(username)
+        ? current.filter((item) => item !== username)
+        : [...current, username],
+    );
+  }
+
+  function selectAllPreviewItems() {
+    setSelectedPreviewUsernames(
+      previewItems.map((item) => item.contact.username),
+    );
+  }
+
+  function clearPreviewSelection() {
+    setSelectedPreviewUsernames([]);
+  }
+
+  function patchPreviewItems(
+    usernames: string[],
+    updater: (current: WechatSyncPreviewItem) => WechatSyncPreviewItem,
+  ) {
+    if (!usernames.length) {
+      return;
+    }
+    const selected = new Set(usernames);
+    setPreviewItems((current) =>
+      current.map((item) =>
+        selected.has(item.contact.username) ? updater(item) : item,
+      ),
+    );
+  }
+
+  function applyBatchRelationship() {
+    const relationship = batchRelationshipInput.trim();
+    if (!relationship) {
+      return;
+    }
+    patchPreviewItems(batchTargetUsernames, (item) => ({
+      ...item,
+      draftCharacter: patchDraftIdentity(item.draftCharacter, { relationship }),
+    }));
+  }
+
+  function applyBatchDomains() {
+    const domains = splitCsv(batchDomainInput);
+    if (!domains.length) {
+      return;
+    }
+    patchPreviewItems(batchTargetUsernames, (item) => ({
+      ...item,
+      draftCharacter: mergeDraftDomains(item.draftCharacter, domains),
+    }));
+    setBatchDomainInput("");
+  }
+
+  function autofillPreviewDrafts() {
+    patchPreviewItems(batchTargetUsernames, (item) => ({
+      ...item,
+      draftCharacter: fillWechatSyncDraftBlanks(item.contact, item.draftCharacter),
+    }));
   }
 
   return (
@@ -543,7 +644,10 @@ export function WechatSyncPage() {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => setPreviewItems([])}
+                onClick={() => {
+                  setPreviewItems([]);
+                  setSelectedPreviewUsernames([]);
+                }}
                 disabled={!previewItems.length || importMutation.isPending}
               >
                 清空预览
@@ -552,7 +656,11 @@ export function WechatSyncPage() {
                 variant="primary"
                 size="sm"
                 onClick={() => importMutation.mutate()}
-                disabled={!previewItems.length || importMutation.isPending}
+                disabled={
+                  !previewItems.length ||
+                  importMutation.isPending ||
+                  invalidPreviewCount > 0
+                }
               >
                 {importMutation.isPending ? "导入中..." : "导入并建立好友关系"}
               </Button>
@@ -568,6 +676,104 @@ export function WechatSyncPage() {
         ) : null}
         {importMutation.isSuccess ? (
           <ImportResultPanel result={importMutation.data} />
+        ) : null}
+
+        {previewItems.length ? (
+          <Card className="mt-4 bg-[color:var(--surface-card)]">
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+              <div>
+                <div className="text-base font-semibold text-[color:var(--text-primary)]">
+                  批量编辑与导入校验
+                </div>
+                <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
+                  当前批量目标：
+                  {selectedPreviewUsernames.length
+                    ? `已选 ${selectedPreviewUsernames.length} 项`
+                    : `全部 ${previewItems.length} 项`}
+                  。不勾选时，批量动作默认作用于全部预览项。
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={selectAllPreviewItems}
+                  disabled={!previewItems.length}
+                >
+                  全选预览
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={clearPreviewSelection}
+                  disabled={!selectedPreviewUsernames.length}
+                >
+                  清空批量选中
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+              <div className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <AdminTextField
+                    label="批量关系定位"
+                    value={batchRelationshipInput}
+                    onChange={setBatchRelationshipInput}
+                    placeholder="统一替换目标项的关系定位"
+                  />
+                  <AdminTextField
+                    label="批量追加领域标签"
+                    value={batchDomainInput}
+                    onChange={setBatchDomainInput}
+                    placeholder="例如：朋友, 同事, 产品"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={applyBatchRelationship}
+                    disabled={!batchTargetUsernames.length || !batchRelationshipInput.trim()}
+                  >
+                    应用关系定位
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={applyBatchDomains}
+                    disabled={!batchTargetUsernames.length || !splitCsv(batchDomainInput).length}
+                  >
+                    追加领域标签
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={autofillPreviewDrafts}
+                    disabled={!batchTargetUsernames.length}
+                  >
+                    自动填补空白字段
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {invalidPreviewCount > 0 ? (
+                  <AdminCallout
+                    title="当前还有未通过校验的角色草稿"
+                    tone="warning"
+                    description={`共有 ${invalidPreviewCount} 个预览项缺少必要字段，导入按钮已禁用。请先补齐角色名、关系定位、简介、领域标签和记忆摘要。`}
+                  />
+                ) : (
+                  <AdminCallout
+                    title="当前预览已通过导入前校验"
+                    tone="success"
+                    description={`本轮 ${previewItems.length} 个预览项都具备基础导入字段，可以继续导入并建立好友关系。`}
+                  />
+                )}
+              </div>
+            </div>
+          </Card>
         ) : null}
 
         {!previewItems.length && !previewMutation.isPending ? (
@@ -587,7 +793,12 @@ export function WechatSyncPage() {
               <PreviewCharacterCard
                 key={item.contact.username}
                 item={item}
+                selected={selectedPreviewSet.has(item.contact.username)}
+                validationIssues={
+                  previewValidation.get(item.contact.username) ?? []
+                }
                 onRemove={() => removePreviewItem(item.contact.username)}
+                onToggleSelect={() => togglePreviewSelection(item.contact.username)}
                 onNameChange={(value) =>
                   patchPreviewDraft(item.contact.username, (draft) =>
                     patchDraftIdentity(draft, { name: value }),
@@ -690,7 +901,10 @@ function ImportResultPanel({ result }: { result: WechatSyncImportResponse }) {
 
 function PreviewCharacterCard({
   item,
+  selected,
+  validationIssues,
   onRemove,
+  onToggleSelect,
   onNameChange,
   onRelationshipChange,
   onBioChange,
@@ -698,7 +912,10 @@ function PreviewCharacterCard({
   onMemorySummaryChange,
 }: {
   item: WechatSyncPreviewItem;
+  selected: boolean;
+  validationIssues: string[];
   onRemove: () => void;
+  onToggleSelect: () => void;
   onNameChange: (value: string) => void;
   onRelationshipChange: (value: string) => void;
   onBioChange: (value: string) => void;
@@ -735,6 +952,13 @@ function PreviewCharacterCard({
                 ? "中置信"
                 : "低置信"}
           </StatusPill>
+          <Button
+            variant={selected ? "primary" : "secondary"}
+            size="sm"
+            onClick={onToggleSelect}
+          >
+            {selected ? "已选中" : "加入批量"}
+          </Button>
           <Button variant="secondary" size="sm" onClick={onRemove}>
             移出本轮
           </Button>
@@ -834,6 +1058,19 @@ function PreviewCharacterCard({
               className="rounded-2xl border border-amber-200 bg-amber-50/80 px-3 py-2 text-sm text-[color:var(--text-secondary)]"
             >
               {warning}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {validationIssues.length ? (
+        <div className="mt-4 space-y-2">
+          {validationIssues.map((issue) => (
+            <div
+              key={issue}
+              className="rounded-2xl border border-rose-200 bg-rose-50/90 px-3 py-2 text-sm text-[color:var(--text-secondary)]"
+            >
+              {issue}
             </div>
           ))}
         </div>
@@ -1066,6 +1303,27 @@ function patchDraftDomains(draft: CharacterDraft, value: string): CharacterDraft
   };
 }
 
+function mergeDraftDomains(
+  draft: CharacterDraft,
+  additions: string[],
+): CharacterDraft {
+  const expertDomains = Array.from(
+    new Set([...(draft.expertDomains ?? []), ...additions]),
+  );
+  const profile = draft.profile;
+
+  return {
+    ...draft,
+    expertDomains,
+    profile: profile
+      ? {
+          ...profile,
+          expertDomains,
+        }
+      : profile,
+  };
+}
+
 function patchDraftMemorySummary(
   draft: CharacterDraft,
   value: string,
@@ -1112,4 +1370,94 @@ function formatDirection(
     default:
       return "未知";
   }
+}
+
+function validatePreviewItem(item: WechatSyncPreviewItem) {
+  const issues: string[] = [];
+  const name = item.draftCharacter.name?.trim();
+  const relationship = item.draftCharacter.relationship?.trim();
+  const bio = item.draftCharacter.bio?.trim();
+  const expertDomains =
+    item.draftCharacter.expertDomains?.filter((entry) => entry.trim().length > 0) ??
+    [];
+  const memorySummary = item.draftCharacter.profile?.memorySummary?.trim();
+
+  if (!name) {
+    issues.push("缺少角色名。");
+  }
+  if (!relationship) {
+    issues.push("缺少关系定位。");
+  }
+  if (!bio) {
+    issues.push("缺少角色简介。");
+  }
+  if (expertDomains.length === 0) {
+    issues.push("至少需要一个领域标签。");
+  }
+  if (!memorySummary) {
+    issues.push("缺少记忆摘要。");
+  }
+
+  return issues;
+}
+
+function fillWechatSyncDraftBlanks(
+  contact: WechatSyncContactBundle,
+  draft: CharacterDraft,
+): CharacterDraft {
+  const resolvedName =
+    draft.name?.trim() ||
+    contact.remarkName?.trim() ||
+    contact.nickname?.trim() ||
+    contact.displayName;
+  const relationship =
+    draft.relationship?.trim() ||
+    `${resolvedName} 是你现实微信里的熟人朋友，你们已经有真实聊天记录。`;
+  const bio =
+    draft.bio?.trim() ||
+    contact.chatSummary?.trim() ||
+    `${resolvedName} 是从本地联系人资料导入的熟人朋友。`;
+  const expertDomains =
+    draft.expertDomains?.filter((entry) => entry.trim().length > 0).length
+      ? draft.expertDomains
+      : inferContactDomains(contact);
+  const profile = draft.profile;
+  const memorySummary =
+    profile?.memorySummary?.trim() ||
+    contact.chatSummary?.trim() ||
+    `${resolvedName} 和你保持着稳定的微信联系，彼此已经有明确的熟人语境。`;
+
+  return {
+    ...draft,
+    name: resolvedName,
+    relationship,
+    bio,
+    expertDomains,
+    profile: profile
+      ? {
+          ...profile,
+          name: profile.name?.trim() || resolvedName,
+          relationship: profile.relationship?.trim() || relationship,
+          expertDomains:
+            profile.expertDomains?.filter((entry) => entry.trim().length > 0).length
+              ? profile.expertDomains
+              : expertDomains,
+          memorySummary,
+          memory: profile.memory
+            ? {
+                ...profile.memory,
+                recentSummary:
+                  profile.memory.recentSummary?.trim() || memorySummary,
+              }
+            : profile.memory,
+        }
+      : profile,
+  };
+}
+
+function inferContactDomains(contact: WechatSyncContactBundle) {
+  const inferred = [...contact.topicKeywords, ...contact.tags].filter(
+    (entry) => entry.trim().length > 0,
+  );
+  return inferred.length ? Array.from(new Set(inferred)).slice(0, 6) : ["general"];
 }
