@@ -1175,10 +1175,12 @@ export function WechatSyncPage() {
               {getImportSnapshotsFromHistoryItem(rollbackGuideItem).length ? (
                 <ImportSnapshotVersionList
                   title="回滚后快照恢复入口"
+                  characterName={rollbackGuideItem.character.name}
                   liveItem={null}
                   snapshots={getImportSnapshotsFromHistoryItem(
                     rollbackGuideItem,
                   )}
+                  annotationCharacterId={rollbackGuideItem.character.id}
                   annotations={annotations.snapshots}
                   onRestorePreview={(snapshot) =>
                     restorePreviewFromSnapshot(snapshot, rollbackGuideItem)
@@ -2315,9 +2317,11 @@ function HistoryDetailPanel({
 
           <ImportSnapshotVersionList
             title="导入版本列表"
+            characterName={item.character.name}
             liveItem={item}
             snapshots={importSnapshots}
             linkedVersionFilter={linkedAuditVersion}
+            annotationCharacterId={item.character.id}
             annotations={snapshotAnnotations}
             onRestorePreview={onRestoreSnapshotPreview}
             onRestoreLive={onRestoreSnapshotToLive}
@@ -2338,6 +2342,7 @@ function HistoryDetailPanel({
       {importChangeHistory.length ? (
         <div className="mt-4">
           <ImportChangeHistoryList
+            characterId={item.character.id}
             key={item.character.id}
             characterName={item.character.name}
             records={importChangeHistory}
@@ -2352,6 +2357,7 @@ function HistoryDetailPanel({
             onExpandedRecordIdChange={onAuditExpandedRecordIdChange}
             onLinkedVersionFilterChange={onLinkedAuditVersionChange}
             annotations={recordAnnotations}
+            snapshotAnnotations={snapshotAnnotations}
             onAnnotationChange={onRecordAnnotationChange}
             onReplaySnapshotPreview={onReplayChangeRecordPreview}
             onLoadSnapshotToManualInput={onLoadChangeRecordToManualInput}
@@ -2543,6 +2549,7 @@ function HistoryDiffCard({
 }
 
 function ImportChangeHistoryList({
+  characterId,
   characterName,
   records,
   availableSnapshots,
@@ -2552,6 +2559,7 @@ function ImportChangeHistoryList({
   linkedVersionFilter,
   shareUrl,
   annotations,
+  snapshotAnnotations,
   onSearchChange,
   onModeFilterChange,
   onExpandedRecordIdChange,
@@ -2560,6 +2568,7 @@ function ImportChangeHistoryList({
   onReplaySnapshotPreview,
   onLoadSnapshotToManualInput,
 }: {
+  characterId: string;
   characterName: string;
   records: WechatImportChangeRecordLike[];
   availableSnapshots: WechatImportSnapshotLike[];
@@ -2569,6 +2578,7 @@ function ImportChangeHistoryList({
   linkedVersionFilter: number | null;
   shareUrl: string;
   annotations: Record<string, string>;
+  snapshotAnnotations: Record<string, string>;
   onSearchChange: (value: string) => void;
   onModeFilterChange: (
     value: "all" | "preview_import" | "snapshot_restore",
@@ -2580,11 +2590,24 @@ function ImportChangeHistoryList({
   onLoadSnapshotToManualInput?: (snapshot: WechatImportSnapshotLike) => void;
 }) {
   const [focusedRecordId, setFocusedRecordId] = useState<string | null>(null);
+  const [annotationFilter, setAnnotationFilter] =
+    useState<WechatSyncAnnotationFilter>("all");
   const [copyNotice, setCopyNotice] = useState("");
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
+  const annotatedRecordCount = useMemo(
+    () =>
+      records.filter((record) =>
+        hasWechatSyncAnnotation(annotations[record.id] ?? ""),
+      ).length,
+    [annotations, records],
+  );
   const filteredRecords = useMemo(() => {
     return records.filter((record) => {
+      const note = annotations[record.id] ?? "";
       if (modeFilter !== "all" && record.mode !== modeFilter) {
+        return false;
+      }
+      if (!matchesWechatSyncAnnotationFilter(note, annotationFilter)) {
         return false;
       }
       if (!deferredSearch) {
@@ -2593,14 +2616,23 @@ function ImportChangeHistoryList({
           isWechatSyncRecordLinkedToVersion(record, linkedVersionFilter)
         );
       }
-      const matchesSearch =
-        buildImportChangeRecordKeyword(record).includes(deferredSearch);
+      const matchesSearch = buildImportChangeRecordKeyword(
+        record,
+        note,
+      ).includes(deferredSearch);
       const matchesVersion =
         linkedVersionFilter === null ||
         isWechatSyncRecordLinkedToVersion(record, linkedVersionFilter);
       return matchesSearch && matchesVersion;
     });
-  }, [deferredSearch, linkedVersionFilter, modeFilter, records]);
+  }, [
+    annotationFilter,
+    annotations,
+    deferredSearch,
+    linkedVersionFilter,
+    modeFilter,
+    records,
+  ]);
 
   useEffect(() => {
     if (!copyNotice) {
@@ -2641,7 +2673,8 @@ function ImportChangeHistoryList({
             变更记录
           </div>
           <div className="mt-2 text-sm text-[color:var(--text-secondary)]">
-            共 {records.length} 条，当前命中 {filteredRecords.length} 条。
+            共 {records.length} 条，当前命中 {filteredRecords.length}{" "}
+            条，已写批注 {annotatedRecordCount} 条。
           </div>
         </div>
         <div className="grid gap-3 xl:min-w-[30rem] xl:grid-cols-[1fr_auto]">
@@ -2649,7 +2682,7 @@ function ImportChangeHistoryList({
             label="筛选变更记录"
             value={search}
             onChange={onSearchChange}
-            placeholder="搜索摘要、版本号、字段名或字段值"
+            placeholder="搜索摘要、版本号、字段名、字段值或批注"
           />
           <div className="flex flex-wrap gap-2 xl:justify-end">
             <Button
@@ -2678,13 +2711,43 @@ function ImportChangeHistoryList({
               历史恢复
             </Button>
             <Button
+              variant={annotationFilter === "all" ? "primary" : "secondary"}
+              size="sm"
+              onClick={() => setAnnotationFilter("all")}
+            >
+              全部批注
+            </Button>
+            <Button
+              variant={
+                annotationFilter === "annotated" ? "primary" : "secondary"
+              }
+              size="sm"
+              onClick={() => setAnnotationFilter("annotated")}
+            >
+              仅有批注
+            </Button>
+            <Button
+              variant={
+                annotationFilter === "unannotated" ? "primary" : "secondary"
+              }
+              size="sm"
+              onClick={() => setAnnotationFilter("unannotated")}
+            >
+              未批注
+            </Button>
+            <Button
               variant="secondary"
               size="sm"
               onClick={() =>
                 downloadWechatSyncChangeExport(
+                  characterId,
                   characterName,
                   filteredRecords,
                   availableSnapshots,
+                  {
+                    recordAnnotations: annotations,
+                    snapshotAnnotations,
+                  },
                 )
               }
               disabled={!filteredRecords.length}
@@ -2696,9 +2759,14 @@ function ImportChangeHistoryList({
               size="sm"
               onClick={() =>
                 downloadWechatSyncChangeMarkdownExport(
+                  characterId,
                   characterName,
                   filteredRecords,
                   availableSnapshots,
+                  {
+                    recordAnnotations: annotations,
+                    snapshotAnnotations,
+                  },
                 )
               }
               disabled={!filteredRecords.length}
@@ -2747,6 +2815,28 @@ function ImportChangeHistoryList({
               size="sm"
               onClick={() => onLinkedVersionFilterChange?.(null)}
               disabled={!onLinkedVersionFilterChange}
+            >
+              查看全部记录
+            </Button>
+          }
+        />
+      ) : null}
+
+      {annotationFilter !== "all" ? (
+        <AdminCallout
+          className="mt-4"
+          title={
+            annotationFilter === "annotated"
+              ? "当前只看带本地批注的审计记录"
+              : "当前只看未写本地批注的审计记录"
+          }
+          tone="info"
+          description="这个筛选只作用于当前浏览器里的本地批注，不会影响服务端数据。"
+          actions={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setAnnotationFilter("all")}
             >
               查看全部记录
             </Button>
@@ -2852,9 +2942,14 @@ function ImportChangeHistoryList({
                       size="sm"
                       onClick={() =>
                         downloadWechatSyncChangeExport(
+                          characterId,
                           characterName,
                           [record],
                           availableSnapshots,
+                          {
+                            recordAnnotations: annotations,
+                            snapshotAnnotations,
+                          },
                         )
                       }
                     >
@@ -2865,9 +2960,14 @@ function ImportChangeHistoryList({
                       size="sm"
                       onClick={() =>
                         downloadWechatSyncChangeMarkdownExport(
+                          characterId,
                           characterName,
                           [record],
                           availableSnapshots,
+                          {
+                            recordAnnotations: annotations,
+                            snapshotAnnotations,
+                          },
                         )
                       }
                     >
@@ -2879,9 +2979,14 @@ function ImportChangeHistoryList({
                       onClick={async () => {
                         const copied = await copyWechatSyncAuditText(
                           buildWechatSyncChangeMarkdownReport(
+                            characterId,
                             characterName,
                             [record],
                             availableSnapshots,
+                            {
+                              recordAnnotations: annotations,
+                              snapshotAnnotations,
+                            },
                           ),
                           "复制审计 Markdown",
                         );
@@ -2983,9 +3088,11 @@ function ImportChangeHistoryList({
 
 function ImportSnapshotVersionList({
   title,
+  characterName,
   liveItem,
   snapshots,
   linkedVersionFilter,
+  annotationCharacterId,
   annotations,
   onRestorePreview,
   onRestoreLive,
@@ -2999,9 +3106,11 @@ function ImportSnapshotVersionList({
   restoringSnapshotKey,
 }: {
   title: string;
+  characterName: string;
   liveItem: WechatSyncHistoryItem | null;
   snapshots: WechatImportSnapshotLike[];
   linkedVersionFilter?: number | null;
+  annotationCharacterId?: string | null;
   annotations: Record<string, string>;
   onRestorePreview?: (snapshot: WechatImportSnapshotLike) => void;
   onRestoreLive?: (snapshot: WechatImportSnapshotLike) => void;
@@ -3018,6 +3127,9 @@ function ImportSnapshotVersionList({
   restoringSnapshotKey?: string | null;
 }) {
   const snapshotCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [annotationFilter, setAnnotationFilter] =
+    useState<WechatSyncAnnotationFilter>("all");
+  const [copyNotice, setCopyNotice] = useState("");
 
   useEffect(() => {
     if (!focusedSnapshotKey) {
@@ -3032,40 +3144,149 @@ function ImportSnapshotVersionList({
     }
   }, [focusedSnapshotKey]);
 
+  useEffect(() => {
+    if (!copyNotice) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setCopyNotice((current) => (current === copyNotice ? "" : current));
+    }, 2600);
+    return () => window.clearTimeout(timeoutId);
+  }, [copyNotice]);
+
+  useEffect(() => {
+    setAnnotationFilter("all");
+    setCopyNotice("");
+  }, [characterName, title]);
+
   if (!snapshots.length) {
     return null;
   }
 
+  const resolvedAnnotationCharacterId =
+    annotationCharacterId ?? liveItem?.character.id ?? null;
+  const annotatedSnapshotCount = snapshots.filter((snapshot) =>
+    hasWechatSyncAnnotation(
+      resolveWechatSyncSnapshotAnnotation(
+        annotations,
+        snapshot,
+        resolvedAnnotationCharacterId,
+      ),
+    ),
+  ).length;
   const visibleSnapshots =
     linkedVersionFilter === null || linkedVersionFilter === undefined
       ? snapshots
       : snapshots.filter(
           (snapshot) => snapshot.version === linkedVersionFilter,
         );
+  const filteredSnapshots = visibleSnapshots.filter((snapshot) =>
+    matchesWechatSyncAnnotationFilter(
+      resolveWechatSyncSnapshotAnnotation(
+        annotations,
+        snapshot,
+        resolvedAnnotationCharacterId,
+      ),
+      annotationFilter,
+    ),
+  );
 
   return (
     <div>
+      {copyNotice ? (
+        <AdminActionFeedback
+          className="mb-4"
+          tone="success"
+          title="版本批注已复制"
+          description={copyNotice}
+        />
+      ) : null}
       <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
             {title}
           </div>
+          <div className="mt-2 text-sm text-[color:var(--text-secondary)]">
+            共 {snapshots.length} 张，当前命中 {filteredSnapshots.length}{" "}
+            张，已写批注 {annotatedSnapshotCount} 张。
+          </div>
           {linkedVersionFilter !== null && linkedVersionFilter !== undefined ? (
-            <div className="mt-2 text-sm text-[color:var(--text-secondary)]">
+            <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
               当前只展示和 v{linkedVersionFilter} 对应的版本卡。
             </div>
           ) : null}
         </div>
-        {linkedVersionFilter !== null && linkedVersionFilter !== undefined ? (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={annotationFilter === "all" ? "primary" : "secondary"}
+            size="sm"
+            onClick={() => setAnnotationFilter("all")}
+          >
+            全部批注
+          </Button>
+          <Button
+            variant={annotationFilter === "annotated" ? "primary" : "secondary"}
+            size="sm"
+            onClick={() => setAnnotationFilter("annotated")}
+          >
+            仅有批注
+          </Button>
+          <Button
+            variant={
+              annotationFilter === "unannotated" ? "primary" : "secondary"
+            }
+            size="sm"
+            onClick={() => setAnnotationFilter("unannotated")}
+          >
+            未批注
+          </Button>
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => onLinkRelatedRecords?.(null)}
-            disabled={!onLinkRelatedRecords}
+            onClick={() =>
+              downloadWechatSyncSnapshotNotesMarkdownExport(
+                characterName,
+                filteredSnapshots,
+                annotations,
+                resolvedAnnotationCharacterId,
+              )
+            }
+            disabled={!filteredSnapshots.length}
           >
-            查看全部版本
+            导出当前批注 Markdown
           </Button>
-        ) : null}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={async () => {
+              const copied = await copyWechatSyncAuditText(
+                buildWechatSyncSnapshotNotesMarkdownReport(
+                  characterName,
+                  filteredSnapshots,
+                  annotations,
+                  resolvedAnnotationCharacterId,
+                ),
+                "复制版本批注 Markdown",
+              );
+              if (copied) {
+                setCopyNotice("已复制当前版本批注 Markdown。");
+              }
+            }}
+            disabled={!filteredSnapshots.length}
+          >
+            复制当前批注 Markdown
+          </Button>
+          {linkedVersionFilter !== null && linkedVersionFilter !== undefined ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onLinkRelatedRecords?.(null)}
+              disabled={!onLinkRelatedRecords}
+            >
+              查看全部版本
+            </Button>
+          ) : null}
+        </div>
       </div>
       {linkedVersionFilter !== null && linkedVersionFilter !== undefined ? (
         <AdminCallout
@@ -3075,18 +3296,46 @@ function ImportSnapshotVersionList({
           description="来自变更记录区的联动筛选已生效。清除后会恢复完整版本链。"
         />
       ) : null}
-      {!visibleSnapshots.length ? (
+      {annotationFilter !== "all" ? (
+        <AdminCallout
+          className="mt-4"
+          title={
+            annotationFilter === "annotated"
+              ? "当前只看带本地批注的版本卡"
+              : "当前只看未写本地批注的版本卡"
+          }
+          tone="info"
+          description="这个筛选只作用于当前浏览器里的本地批注，不会影响服务端快照链。"
+          actions={
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setAnnotationFilter("all")}
+            >
+              查看全部版本
+            </Button>
+          }
+        />
+      ) : null}
+      {!filteredSnapshots.length ? (
         <AdminEmptyState
           className="mt-4"
-          title="当前联动版本没有命中版本卡"
-          description="这通常说明所选记录引用的是更旧的历史版本。清除联动筛选后可恢复完整版本链。"
+          title="当前筛选没有命中版本卡"
+          description={
+            linkedVersionFilter !== null && linkedVersionFilter !== undefined
+              ? "这通常说明所选记录引用的是更旧的历史版本。清除联动筛选后可恢复完整版本链。"
+              : "调整批注筛选后，再查看这条角色的版本链。"
+          }
         />
       ) : null}
       <div className="mt-3 space-y-3">
-        {visibleSnapshots.map((snapshot, index) => {
+        {filteredSnapshots.map((snapshot) => {
           const diffs = liveItem
             ? buildHistorySnapshotDiffs(liveItem, snapshot)
             : [];
+          const isCurrentVersion =
+            snapshots[0]?.version === snapshot.version &&
+            snapshots[0]?.importedAt === snapshot.importedAt;
           const changedDiffs = diffs.filter((diff) => diff.changed);
           const compressedSummary = liveItem
             ? summarizeChangedDiffs(changedDiffs)
@@ -3097,13 +3346,11 @@ function ImportSnapshotVersionList({
           );
           const awaitingConfirmation = confirmingSnapshotKey === restoreKey;
           const focused = focusedSnapshotKey === restoreKey;
-          const note =
-            annotations[
-              buildWechatSyncSnapshotAnnotationKey(
-                snapshot,
-                liveItem?.character.id ?? null,
-              )
-            ] ?? "";
+          const note = resolveWechatSyncSnapshotAnnotation(
+            annotations,
+            snapshot,
+            resolvedAnnotationCharacterId,
+          );
           const restoreDisabled =
             (liveItem ? changedDiffs.length === 0 : false) || !onRestoreLive;
 
@@ -3128,8 +3375,8 @@ function ImportSnapshotVersionList({
                       <span className="text-base font-semibold text-[color:var(--text-primary)]">
                         v{snapshot.version}
                       </span>
-                      <StatusPill tone={index === 0 ? "healthy" : "muted"}>
-                        {index === 0 ? "当前版本" : "历史版本"}
+                      <StatusPill tone={isCurrentVersion ? "healthy" : "muted"}>
+                        {isCurrentVersion ? "当前版本" : "历史版本"}
                       </StatusPill>
                       <StatusPill
                         tone={
@@ -3954,6 +4201,8 @@ type WechatSyncViewState = {
   linkedAuditVersion: number | null;
 };
 
+type WechatSyncAnnotationFilter = "all" | "annotated" | "unannotated";
+
 type WechatSyncAnnotationsState = {
   records: Record<string, string>;
   snapshots: Record<string, string>;
@@ -4199,9 +4448,13 @@ function getWechatSyncBrowserStorage() {
   }
 }
 
-function buildImportChangeRecordKeyword(record: WechatImportChangeRecordLike) {
+function buildImportChangeRecordKeyword(
+  record: WechatImportChangeRecordLike,
+  annotation = "",
+) {
   return [
     record.summary,
+    annotation,
     buildChangeRecordVersionPath(record),
     record.mode === "snapshot_restore" ? "历史版本恢复" : "预览重新导入",
     ...record.changedFields,
@@ -4214,6 +4467,39 @@ function buildImportChangeRecordKeyword(record: WechatImportChangeRecordLike) {
     .join(" ")
     .toLowerCase();
 }
+
+function hasWechatSyncAnnotation(value: string | null | undefined) {
+  return (value?.trim().length ?? 0) > 0;
+}
+
+function matchesWechatSyncAnnotationFilter(
+  value: string | null | undefined,
+  filter: WechatSyncAnnotationFilter,
+) {
+  if (filter === "all") {
+    return true;
+  }
+  return filter === "annotated"
+    ? hasWechatSyncAnnotation(value)
+    : !hasWechatSyncAnnotation(value);
+}
+
+function resolveWechatSyncSnapshotAnnotation(
+  annotations: Record<string, string>,
+  snapshot: WechatImportSnapshotLike,
+  characterId: string | null | undefined,
+) {
+  return (
+    annotations[
+      buildWechatSyncSnapshotAnnotationKey(snapshot, characterId ?? null)
+    ] ?? ""
+  );
+}
+
+type WechatSyncAuditExportOptions = {
+  recordAnnotations?: Record<string, string>;
+  snapshotAnnotations?: Record<string, string>;
+};
 
 function resolveReplaySnapshotForChangeRecord(
   record: WechatImportChangeRecordLike,
@@ -4259,21 +4545,35 @@ function buildImportChangeDiffHeadings(record: WechatImportChangeRecordLike) {
 }
 
 function downloadWechatSyncChangeExport(
+  characterId: string,
   characterName: string,
   records: WechatImportChangeRecordLike[],
   availableSnapshots: WechatImportSnapshotLike[],
+  options: WechatSyncAuditExportOptions = {},
 ) {
   const payload = {
     exportedAt: new Date().toISOString(),
     characterName,
     recordCount: records.length,
-    records: records.map((record) => ({
-      ...record,
-      replaySnapshot: resolveReplaySnapshotForChangeRecord(
+    records: records.map((record) => {
+      const replaySnapshot = resolveReplaySnapshotForChangeRecord(
         record,
         availableSnapshots,
-      ),
-    })),
+      );
+      return {
+        ...record,
+        localAnnotation: options.recordAnnotations?.[record.id] ?? "",
+        replaySnapshot,
+        replaySnapshotAnnotation:
+          replaySnapshot && options.snapshotAnnotations
+            ? resolveWechatSyncSnapshotAnnotation(
+                options.snapshotAnnotations,
+                replaySnapshot,
+                characterId,
+              )
+            : "",
+      };
+    }),
   };
   downloadWechatSyncAuditFile(
     `${sanitizeWechatSyncExportFileName(characterName)}-wechat-sync-audit-${new Date().toISOString().slice(0, 10)}.json`,
@@ -4283,25 +4583,31 @@ function downloadWechatSyncChangeExport(
 }
 
 function downloadWechatSyncChangeMarkdownExport(
+  characterId: string,
   characterName: string,
   records: WechatImportChangeRecordLike[],
   availableSnapshots: WechatImportSnapshotLike[],
+  options: WechatSyncAuditExportOptions = {},
 ) {
   downloadWechatSyncAuditFile(
     `${sanitizeWechatSyncExportFileName(characterName)}-wechat-sync-audit-${new Date().toISOString().slice(0, 10)}.md`,
     buildWechatSyncChangeMarkdownReport(
+      characterId,
       characterName,
       records,
       availableSnapshots,
+      options,
     ),
     "text/markdown;charset=utf-8",
   );
 }
 
 function buildWechatSyncChangeMarkdownReport(
+  characterId: string,
   characterName: string,
   records: WechatImportChangeRecordLike[],
   availableSnapshots: WechatImportSnapshotLike[],
+  options: WechatSyncAuditExportOptions = {},
 ) {
   const lines = [
     `# 微信同步审计报告：${characterName}`,
@@ -4321,6 +4627,15 @@ function buildWechatSyncChangeMarkdownReport(
       record,
       availableSnapshots,
     );
+    const note = options.recordAnnotations?.[record.id] ?? "";
+    const replaySnapshotAnnotation =
+      replaySnapshot && options.snapshotAnnotations
+        ? resolveWechatSyncSnapshotAnnotation(
+            options.snapshotAnnotations,
+            replaySnapshot,
+            characterId,
+          )
+        : "";
     const diffHeadings = buildImportChangeDiffHeadings(record);
 
     lines.push(
@@ -4340,6 +4655,13 @@ function buildWechatSyncChangeMarkdownReport(
           replaySnapshot.importedAt,
         )}`,
       );
+    }
+
+    if (hasWechatSyncAnnotation(note)) {
+      lines.push(`- 本地批注：${note}`);
+    }
+    if (hasWechatSyncAnnotation(replaySnapshotAnnotation)) {
+      lines.push(`- 回放快照批注：${replaySnapshotAnnotation}`);
     }
 
     lines.push("");
@@ -4376,6 +4698,69 @@ function buildWechatSyncChangeMarkdownReport(
         "",
       );
     }
+  });
+
+  return lines.join("\n");
+}
+
+function downloadWechatSyncSnapshotNotesMarkdownExport(
+  characterName: string,
+  snapshots: WechatImportSnapshotLike[],
+  annotations: Record<string, string>,
+  characterId: string | null | undefined,
+) {
+  downloadWechatSyncAuditFile(
+    `${sanitizeWechatSyncExportFileName(characterName)}-wechat-sync-snapshot-notes-${new Date().toISOString().slice(0, 10)}.md`,
+    buildWechatSyncSnapshotNotesMarkdownReport(
+      characterName,
+      snapshots,
+      annotations,
+      characterId,
+    ),
+    "text/markdown;charset=utf-8",
+  );
+}
+
+function buildWechatSyncSnapshotNotesMarkdownReport(
+  characterName: string,
+  snapshots: WechatImportSnapshotLike[],
+  annotations: Record<string, string>,
+  characterId: string | null | undefined,
+) {
+  const lines = [
+    `# 微信同步版本批注报告：${characterName}`,
+    "",
+    `- 导出时间：${formatDateTime(new Date().toISOString())}`,
+    `- 版本数量：${snapshots.length}`,
+    "",
+  ];
+
+  if (!snapshots.length) {
+    lines.push("当前没有可导出的版本卡。");
+    return lines.join("\n");
+  }
+
+  snapshots.forEach((snapshot, index) => {
+    const note = resolveWechatSyncSnapshotAnnotation(
+      annotations,
+      snapshot,
+      characterId,
+    );
+    lines.push(
+      `## ${index + 1}. v${snapshot.version}`,
+      "",
+      `- 导入时间：${formatDateTime(snapshot.importedAt)}`,
+      `- 角色名：${
+        snapshot.draftCharacter.name || snapshot.contact.displayName
+      }`,
+      `- 关系：${snapshot.draftCharacter.relationship || "暂无"}`,
+      `- 标签：${
+        snapshot.contact.tags.length ? snapshot.contact.tags.join("、") : "暂无"
+      }`,
+      `- 朋友圈种子：${snapshot.seededMomentCount} 条`,
+      `- 本地批注：${note || "暂无"}`,
+      "",
+    );
   });
 
   return lines.join("\n");
