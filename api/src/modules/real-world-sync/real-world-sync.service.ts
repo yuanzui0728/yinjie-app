@@ -196,6 +196,43 @@ type ParsedFeedEntry = {
 
 type WorldNewsBulletinSlot = 'morning' | 'noon' | 'evening';
 
+type ArticleResolutionModeValue =
+  | 'direct_source'
+  | 'google_read'
+  | 'bing_search'
+  | 'unresolved';
+
+type ArticleEnrichmentStatusValue =
+  | 'direct_success'
+  | 'resolved_success'
+  | 'resolve_failed'
+  | 'fetch_failed'
+  | 'extract_failed';
+
+type ArticleResolutionResult = {
+  resolutionMode: ArticleResolutionModeValue;
+  articleUrl?: string | null;
+  resolutionQuery?: string | null;
+  resolverTitle?: string | null;
+  resolverSnippet?: string | null;
+  resolverScore?: number | null;
+  errorMessage?: string | null;
+};
+
+type ArticleEnrichmentResult = {
+  status: ArticleEnrichmentStatusValue;
+  resolutionMode: ArticleResolutionModeValue;
+  articleUrl?: string | null;
+  resolutionQuery?: string | null;
+  resolverTitle?: string | null;
+  resolverSnippet?: string | null;
+  resolverScore?: number | null;
+  articleTitle?: string | null;
+  articleExcerpt?: string | null;
+  articleTextLength?: number | null;
+  errorMessage?: string | null;
+};
+
 const WORLD_NEWS_BULLETIN_SLOT_ORDER: WorldNewsBulletinSlot[] = [
   'morning',
   'noon',
@@ -334,6 +371,142 @@ function cleanupFeedTitle(title: string, sourceName: string) {
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function clipText(value: string, limit: number) {
+  if (value.length <= limit) {
+    return value;
+  }
+  return `${value.slice(0, Math.max(limit - 1, 0)).trim()}…`;
+}
+
+function isGoogleNewsUrl(value?: string | null) {
+  if (!value) {
+    return false;
+  }
+
+  try {
+    return new URL(value).hostname.endsWith('news.google.com');
+  } catch {
+    return false;
+  }
+}
+
+function extractUrlHost(value?: string | null) {
+  if (!value) {
+    return '';
+  }
+
+  try {
+    return new URL(value).hostname.replace(/^www\./i, '').toLowerCase();
+  } catch {
+    return '';
+  }
+}
+
+function tokenizeComparableText(value: string) {
+  const normalized = normalizeComparableText(value);
+  if (!normalized) {
+    return [];
+  }
+
+  if (normalized.length < 3) {
+    return [normalized];
+  }
+
+  return Array.from(
+    new Set(
+      Array.from({ length: normalized.length - 1 }, (_, index) =>
+        normalized.slice(index, index + 2),
+      ),
+    ),
+  );
+}
+
+function computeTitleSimilarity(left: string, right: string) {
+  const normalizedLeft = normalizeComparableText(left);
+  const normalizedRight = normalizeComparableText(right);
+  if (!normalizedLeft || !normalizedRight) {
+    return 0;
+  }
+
+  if (normalizedLeft === normalizedRight) {
+    return 1;
+  }
+
+  if (
+    normalizedLeft.includes(normalizedRight) ||
+    normalizedRight.includes(normalizedLeft)
+  ) {
+    const shorterLength = Math.min(
+      normalizedLeft.length,
+      normalizedRight.length,
+    );
+    const longerLength = Math.max(
+      normalizedLeft.length,
+      normalizedRight.length,
+    );
+    return 0.82 + Math.min(shorterLength / Math.max(longerLength, 1), 0.16);
+  }
+
+  const leftTokens = new Set(tokenizeComparableText(normalizedLeft));
+  const rightTokens = new Set(tokenizeComparableText(normalizedRight));
+  if (leftTokens.size === 0 || rightTokens.size === 0) {
+    return 0;
+  }
+
+  let overlap = 0;
+  for (const token of leftTokens) {
+    if (rightTokens.has(token)) {
+      overlap += 1;
+    }
+  }
+
+  return overlap / Math.max(leftTokens.size, rightTokens.size, 1);
+}
+
+function sanitizeSearchTitle(value: string) {
+  return value
+    .replace(/[“”"'`‘’]/g, ' ')
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractHtmlMetaContent(
+  html: string,
+  key: string,
+  attribute: 'property' | 'name' = 'property',
+) {
+  const match = html.match(
+    new RegExp(
+      `<meta[^>]+${attribute}=["']${escapeRegExp(key)}["'][^>]+content=["']([\\s\\S]*?)["'][^>]*>`,
+      'i',
+    ),
+  );
+  return match ? normalizeFeedText(match[1]) : '';
+}
+
+function extractHtmlTitle(html: string) {
+  const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  return match ? normalizeFeedText(match[1]) : '';
+}
+
+function extractTagBlock(html: string, tagName: string) {
+  const match = html.match(
+    new RegExp(`<${tagName}\\b[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i'),
+  );
+  return match?.[1] ?? '';
+}
+
+function extractParagraphTexts(html: string) {
+  return Array.from(html.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi))
+    .map((match) => normalizeFeedText(match[1]))
+    .filter(
+      (item) =>
+        item.length >= 36 &&
+        !/cookie|订阅|广告|newsletter|privacy|版权|版权所有/i.test(item),
+    );
 }
 
 function hasConfiguredRealityLink(
@@ -908,7 +1081,7 @@ export class RealWorldSyncService {
     );
     const dedupe = new Set<string>();
 
-    return feedEntries
+    const filteredEntries = feedEntries
       .flat()
       .filter((entry) => {
         if (entry.publishedAt && entry.publishedAt < recencyCutoff) {
@@ -927,24 +1100,44 @@ export class RealWorldSyncService {
         const rightTs = right.publishedAt?.getTime() ?? 0;
         return rightTs - leftTs;
       })
-      .slice(0, Math.max(config.maxSignalsPerRun, 1))
-      .map((entry, index) => ({
-        signalType: 'news_article' as const,
-        sourceName: entry.sourceName,
-        title: entry.title,
-        snippet: entry.snippet,
-        normalizedSummary: `${entry.title}${entry.snippet ? `：${entry.snippet}` : ''}`,
-        credibilityScore: 0.9,
-        relevanceScore: Math.max(0.65, 0.95 - index * 0.04),
-        identityMatchScore: 0.99,
-        status: 'accepted' as const,
-        sourceUrl: entry.sourceUrl,
-        publishedAt: entry.publishedAt ?? now,
-        metadataPayload: {
-          providerMode: 'rss_public',
-          feedSource: entry.sourceName,
-        },
-      }));
+      .slice(0, Math.max(config.maxSignalsPerRun, 1));
+
+    return Promise.all(
+      filteredEntries.map(async (entry, index) => {
+        const enrichment = await this.enrichFeedEntry(entry);
+        const preferredSnippet = enrichment.articleExcerpt ?? entry.snippet;
+        return {
+          signalType: 'news_article' as const,
+          sourceName: entry.sourceName,
+          title: entry.title,
+          snippet: preferredSnippet,
+          normalizedSummary: this.composeNormalizedSummary(
+            entry.title,
+            preferredSnippet,
+          ),
+          credibilityScore: Math.max(
+            0.9,
+            enrichment.status === 'direct_success' ||
+              enrichment.status === 'resolved_success'
+              ? 0.94
+              : 0.9,
+          ),
+          relevanceScore: Math.max(0.65, 0.95 - index * 0.04),
+          identityMatchScore: 0.99,
+          status: 'accepted' as const,
+          sourceUrl: enrichment.articleUrl ?? entry.sourceUrl,
+          publishedAt: entry.publishedAt ?? now,
+          metadataPayload: {
+            providerMode: 'rss_public',
+            feedSource: entry.sourceName,
+            rawFeedTitle: entry.title,
+            rawFeedSnippet: entry.snippet,
+            publisherUrl: entry.publisherUrl ?? null,
+            ...this.buildArticleDebugMetadata(enrichment),
+          },
+        } satisfies SignalSeed;
+      }),
+    );
   }
 
   private async buildGoogleNewsSignals(
@@ -982,13 +1175,14 @@ export class RealWorldSyncService {
         return rightTs - leftTs;
       })
       .slice(0, maxEntries)) {
-      const seed = this.classifyGoogleNewsSignal(
+      const seed = await this.classifyGoogleNewsSignal(
         entry,
         config,
         rules,
         now,
         recencyCutoff,
         dedupe,
+        query,
       );
       if (!seed) {
         continue;
@@ -1019,14 +1213,15 @@ export class RealWorldSyncService {
     return url.toString();
   }
 
-  private classifyGoogleNewsSignal(
+  private async classifyGoogleNewsSignal(
     entry: ParsedFeedEntry,
     config: RealityLinkConfigValue,
     rules: RealWorldSyncRulesValue,
     now: Date,
     recencyCutoff: Date,
     dedupe: Set<string>,
-  ): SignalSeed | null {
+    searchQuery: string,
+  ): Promise<SignalSeed | null> {
     if (entry.publishedAt && entry.publishedAt < recencyCutoff) {
       return null;
     }
@@ -1061,21 +1256,32 @@ export class RealWorldSyncService {
         publishedAt: entry.publishedAt ?? now,
         metadataPayload: {
           providerMode: 'google_news_rss',
+          searchQuery,
+          rawFeedTitle: entry.title,
+          rawFeedSnippet: entry.snippet,
           publisherUrl: entry.publisherUrl ?? null,
+          rejectionReason: 'duplicate_title',
         },
       };
     }
     dedupe.add(titleKey);
 
+    const enrichment = await this.enrichFeedEntry(entry);
+    const preferredSnippet = enrichment.articleExcerpt ?? entry.snippet;
     const allowlistMatched = this.matchesSourcePattern(
       entry.sourceName,
       entry.publisherUrl,
       config.sourceAllowlist,
     );
-    const identityMatchScore = this.computeIdentityMatchScore(config, entry);
+    const identityMatchScore = this.computeIdentityMatchScore(
+      config,
+      entry,
+      `${enrichment.articleTitle ?? ''} ${enrichment.articleExcerpt ?? ''}`,
+    );
     const credibilityScore = this.computeGoogleNewsCredibilityScore(
       entry,
       allowlistMatched,
+      enrichment,
     );
     const relevanceScore = this.computeGoogleNewsRelevanceScore(
       entry,
@@ -1083,35 +1289,48 @@ export class RealWorldSyncService {
       recencyCutoff,
       identityMatchScore,
       allowlistMatched,
+      enrichment,
     );
     const compositeScore =
       (credibilityScore + relevanceScore + identityMatchScore) / 3;
 
     let status: RealWorldSignalStatusValue = 'accepted';
+    let rejectionReason: string | null = null;
     if (identityMatchScore < 0.55) {
       status = 'filtered_identity_mismatch';
+      rejectionReason = 'identity_mismatch';
     } else if (compositeScore < config.minimumConfidence) {
       status = 'filtered_low_confidence';
+      rejectionReason = 'below_minimum_confidence';
     }
 
     return {
-      signalType: this.inferSignalType(entry.title, entry.snippet),
+      signalType: this.inferSignalType(entry.title, preferredSnippet),
       sourceName: entry.sourceName,
       title: entry.title,
-      snippet: entry.snippet,
-      normalizedSummary: `${entry.title}${entry.snippet ? `：${entry.snippet}` : ''}`,
+      snippet: preferredSnippet,
+      normalizedSummary: this.composeNormalizedSummary(
+        entry.title,
+        preferredSnippet,
+      ),
       credibilityScore,
       relevanceScore,
       identityMatchScore,
       status,
-      sourceUrl: entry.sourceUrl,
+      sourceUrl: enrichment.articleUrl ?? entry.sourceUrl,
       publishedAt: entry.publishedAt ?? now,
       metadataPayload: {
         providerMode: 'google_news_rss',
+        searchQuery,
+        rawFeedTitle: entry.title,
+        rawFeedSnippet: entry.snippet,
         publisherUrl: entry.publisherUrl ?? null,
         editionLanguage: rules.googleNews.editionLanguage,
         editionRegion: rules.googleNews.editionRegion,
         allowlistMatched,
+        compositeScore,
+        rejectionReason,
+        ...this.buildArticleDebugMetadata(enrichment),
       },
     };
   }
@@ -1141,9 +1360,10 @@ export class RealWorldSyncService {
   private computeIdentityMatchScore(
     config: RealityLinkConfigValue,
     entry: ParsedFeedEntry,
+    extraText = '',
   ) {
     const haystack = normalizeComparableText(
-      `${entry.title} ${entry.snippet} ${entry.publisherUrl ?? ''}`,
+      `${entry.title} ${entry.snippet} ${entry.publisherUrl ?? ''} ${extraText}`,
     );
     const candidates = Array.from(
       new Set(
@@ -1206,6 +1426,7 @@ export class RealWorldSyncService {
   private computeGoogleNewsCredibilityScore(
     entry: ParsedFeedEntry,
     allowlistMatched: boolean,
+    enrichment: ArticleEnrichmentResult,
   ) {
     const sourceFingerprint = normalizeComparableText(
       `${entry.sourceName} ${entry.publisherUrl ?? ''}`,
@@ -1231,6 +1452,12 @@ export class RealWorldSyncService {
     ) {
       score -= 0.1;
     }
+    if (
+      enrichment.status === 'direct_success' ||
+      enrichment.status === 'resolved_success'
+    ) {
+      score += 0.05;
+    }
 
     return Math.max(0.2, Math.min(0.96, score));
   }
@@ -1241,6 +1468,7 @@ export class RealWorldSyncService {
     recencyCutoff: Date,
     identityMatchScore: number,
     allowlistMatched: boolean,
+    enrichment: ArticleEnrichmentResult,
   ) {
     const recencyWindowMs = Math.max(
       now.getTime() - recencyCutoff.getTime(),
@@ -1257,8 +1485,15 @@ export class RealWorldSyncService {
     if (allowlistMatched) {
       score += 0.04;
     }
+    if (enrichment.articleExcerpt) {
+      score += 0.06;
+    }
 
     return Math.max(0.2, Math.min(0.98, score));
+  }
+
+  private composeNormalizedSummary(title: string, snippet: string) {
+    return `${title}${snippet ? `：${clipText(snippet, 240)}` : ''}`;
   }
 
   private inferSignalType(
@@ -1279,6 +1514,262 @@ export class RealWorldSyncService {
       return 'public_appearance';
     }
     return 'news_article';
+  }
+
+  private buildArticleDebugMetadata(enrichment: ArticleEnrichmentResult) {
+    return {
+      articleEnrichmentStatus: enrichment.status,
+      articleResolutionMode: enrichment.resolutionMode,
+      resolvedArticleUrl: enrichment.articleUrl ?? null,
+      articleResolutionQuery: enrichment.resolutionQuery ?? null,
+      resolverTitle: enrichment.resolverTitle ?? null,
+      resolverSnippet: enrichment.resolverSnippet ?? null,
+      resolverScore: enrichment.resolverScore ?? null,
+      articleTitle: enrichment.articleTitle ?? null,
+      articleExcerpt: enrichment.articleExcerpt ?? null,
+      articleTextLength: enrichment.articleTextLength ?? null,
+      articleErrorMessage: enrichment.errorMessage ?? null,
+    };
+  }
+
+  private async enrichFeedEntry(
+    entry: ParsedFeedEntry,
+  ): Promise<ArticleEnrichmentResult> {
+    const resolution = await this.resolveArticleUrl(entry);
+    if (!resolution.articleUrl) {
+      return {
+        status: 'resolve_failed',
+        resolutionMode: resolution.resolutionMode,
+        articleUrl: null,
+        resolutionQuery: resolution.resolutionQuery ?? null,
+        resolverTitle: resolution.resolverTitle ?? null,
+        resolverSnippet: resolution.resolverSnippet ?? null,
+        resolverScore: resolution.resolverScore ?? null,
+        errorMessage: resolution.errorMessage ?? 'article_url_unresolved',
+      };
+    }
+
+    try {
+      const response = await fetch(resolution.articleUrl, {
+        headers: {
+          'user-agent': 'YinjieApp/1.0 (+https://yinjie.app)',
+          accept: 'text/html,application/xhtml+xml',
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!response.ok) {
+        return {
+          status: 'fetch_failed',
+          resolutionMode: resolution.resolutionMode,
+          articleUrl: resolution.articleUrl,
+          resolutionQuery: resolution.resolutionQuery ?? null,
+          resolverTitle: resolution.resolverTitle ?? null,
+          resolverSnippet: resolution.resolverSnippet ?? null,
+          resolverScore: resolution.resolverScore ?? null,
+          errorMessage: `http_${response.status}`,
+        };
+      }
+
+      const contentType = response.headers.get('content-type') ?? '';
+      if (!/text\/html|application\/xhtml\+xml/i.test(contentType)) {
+        return {
+          status: 'fetch_failed',
+          resolutionMode: resolution.resolutionMode,
+          articleUrl: response.url || resolution.articleUrl,
+          resolutionQuery: resolution.resolutionQuery ?? null,
+          resolverTitle: resolution.resolverTitle ?? null,
+          resolverSnippet: resolution.resolverSnippet ?? null,
+          resolverScore: resolution.resolverScore ?? null,
+          errorMessage: `unsupported_content_type:${contentType || 'unknown'}`,
+        };
+      }
+
+      const html = await response.text();
+      const articleTitle =
+        extractHtmlMetaContent(html, 'og:title') ||
+        extractHtmlMetaContent(html, 'twitter:title', 'name') ||
+        extractHtmlTitle(html);
+      const articleExcerpt = this.extractArticleExcerpt(html);
+      if (!articleExcerpt) {
+        return {
+          status: 'extract_failed',
+          resolutionMode: resolution.resolutionMode,
+          articleUrl: response.url || resolution.articleUrl,
+          resolutionQuery: resolution.resolutionQuery ?? null,
+          resolverTitle: resolution.resolverTitle ?? null,
+          resolverSnippet: resolution.resolverSnippet ?? null,
+          resolverScore: resolution.resolverScore ?? null,
+          articleTitle: articleTitle || null,
+          errorMessage: 'article_excerpt_empty',
+        };
+      }
+
+      return {
+        status:
+          resolution.resolutionMode === 'direct_source'
+            ? 'direct_success'
+            : 'resolved_success',
+        resolutionMode: resolution.resolutionMode,
+        articleUrl: response.url || resolution.articleUrl,
+        resolutionQuery: resolution.resolutionQuery ?? null,
+        resolverTitle: resolution.resolverTitle ?? null,
+        resolverSnippet: resolution.resolverSnippet ?? null,
+        resolverScore: resolution.resolverScore ?? null,
+        articleTitle: articleTitle || null,
+        articleExcerpt,
+        articleTextLength: articleExcerpt.length,
+      };
+    } catch (error) {
+      return {
+        status: 'fetch_failed',
+        resolutionMode: resolution.resolutionMode,
+        articleUrl: resolution.articleUrl,
+        resolutionQuery: resolution.resolutionQuery ?? null,
+        resolverTitle: resolution.resolverTitle ?? null,
+        resolverSnippet: resolution.resolverSnippet ?? null,
+        resolverScore: resolution.resolverScore ?? null,
+        errorMessage:
+          error instanceof Error ? error.message : 'article_fetch_failed',
+      };
+    }
+  }
+
+  private async resolveArticleUrl(
+    entry: ParsedFeedEntry,
+  ): Promise<ArticleResolutionResult> {
+    if (entry.sourceUrl && !isGoogleNewsUrl(entry.sourceUrl)) {
+      return {
+        resolutionMode: 'direct_source',
+        articleUrl: entry.sourceUrl,
+      };
+    }
+
+    if (entry.sourceUrl && isGoogleNewsUrl(entry.sourceUrl)) {
+      const googleReadUrl = this.toGoogleReadUrl(entry.sourceUrl);
+      const host = extractUrlHost(entry.publisherUrl);
+      const searchTitle = sanitizeSearchTitle(entry.title);
+      const candidateQueries = [
+        host ? `site:${host} ${searchTitle}` : '',
+        `${searchTitle} ${entry.sourceName}`,
+      ]
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+      for (const query of candidateQueries) {
+        const searchEntries = await this.fetchFeedEntries(
+          'Bing Search',
+          this.buildBingSearchRssUrl(query),
+        );
+        const resolved = this.pickBestResolvedArticle(
+          entry,
+          searchEntries,
+          host,
+        );
+        if (resolved) {
+          return {
+            resolutionMode: 'bing_search',
+            articleUrl: resolved.sourceUrl,
+            resolutionQuery: query,
+            resolverTitle: resolved.title,
+            resolverSnippet: resolved.snippet,
+            resolverScore: resolved.score,
+          };
+        }
+      }
+
+      return {
+        resolutionMode: 'google_read',
+        articleUrl: googleReadUrl,
+        errorMessage: 'google_news_article_only',
+      };
+    }
+
+    return {
+      resolutionMode: 'unresolved',
+      articleUrl: null,
+      errorMessage: 'source_url_missing',
+    };
+  }
+
+  private toGoogleReadUrl(sourceUrl: string) {
+    try {
+      const url = new URL(sourceUrl);
+      url.pathname = url.pathname.replace('/rss/articles/', '/read/');
+      if (!url.searchParams.has('hl')) {
+        url.searchParams.set('hl', 'zh-CN');
+      }
+      if (!url.searchParams.has('gl')) {
+        url.searchParams.set('gl', 'CN');
+      }
+      if (!url.searchParams.has('ceid')) {
+        url.searchParams.set('ceid', 'CN:zh-Hans');
+      }
+      return url.toString();
+    } catch {
+      return sourceUrl;
+    }
+  }
+
+  private buildBingSearchRssUrl(query: string) {
+    const url = new URL('https://www.bing.com/search');
+    url.searchParams.set('format', 'rss');
+    url.searchParams.set('q', query);
+    return url.toString();
+  }
+
+  private pickBestResolvedArticle(
+    entry: ParsedFeedEntry,
+    candidates: ParsedFeedEntry[],
+    preferredHost: string,
+  ) {
+    let bestMatch:
+      | (ParsedFeedEntry & {
+          score: number;
+        })
+      | null = null;
+    for (const candidate of candidates) {
+      const titleScore = computeTitleSimilarity(entry.title, candidate.title);
+      const hostScore =
+        preferredHost &&
+        extractUrlHost(candidate.sourceUrl).includes(preferredHost)
+          ? 0.12
+          : 0;
+      const publisherScore = normalizeComparableText(
+        candidate.sourceName,
+      ).includes(normalizeComparableText(entry.sourceName))
+        ? 0.04
+        : 0;
+      const score = Math.min(1, titleScore + hostScore + publisherScore);
+      if (score < 0.62) {
+        continue;
+      }
+
+      if (!bestMatch || score > bestMatch.score) {
+        bestMatch = {
+          ...candidate,
+          score,
+        };
+      }
+    }
+
+    return bestMatch;
+  }
+
+  private extractArticleExcerpt(html: string) {
+    const metaDescription =
+      extractHtmlMetaContent(html, 'og:description') ||
+      extractHtmlMetaContent(html, 'description', 'name') ||
+      extractHtmlMetaContent(html, 'twitter:description', 'name');
+    const scopedHtml =
+      extractTagBlock(html, 'article') || extractTagBlock(html, 'main') || html;
+    const paragraphs = extractParagraphTexts(scopedHtml);
+    const fallbackParagraphs =
+      paragraphs.length > 0 ? paragraphs : extractParagraphTexts(html);
+    const preferredParts = [metaDescription, ...fallbackParagraphs].filter(
+      (item, index, items) => item && items.indexOf(item) === index,
+    );
+    const excerpt = preferredParts.join(' ');
+    return excerpt ? clipText(excerpt, 420) : '';
   }
 
   private async fetchFeedEntries(sourceName: string, feedUrl: string) {

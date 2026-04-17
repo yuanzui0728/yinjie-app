@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import type {
   RealWorldSyncCharacterDetail,
   RealWorldNewsBulletinSlot,
+  RealWorldSignalRecord,
   RealWorldSyncRules,
 } from "@yinjie/contracts";
 import {
@@ -128,6 +129,130 @@ function formatBulletinSlots(slots: RealWorldNewsBulletinSlot[]) {
   return ordered.map((slot) => BULLETIN_SLOT_LABELS[slot]).join(" / ");
 }
 
+function readMetadataRecord(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function readMetadataString(
+  metadata: Record<string, unknown> | null,
+  key: string,
+) {
+  const value = metadata?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function readMetadataNumber(
+  metadata: Record<string, unknown> | null,
+  key: string,
+) {
+  const value = metadata?.[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function readMetadataBoolean(
+  metadata: Record<string, unknown> | null,
+  key: string,
+) {
+  const value = metadata?.[key];
+  return typeof value === "boolean" ? value : null;
+}
+
+function buildSignalDebugSnapshot(signal: RealWorldSignalRecord) {
+  const metadata = readMetadataRecord(signal.metadata);
+  if (!metadata) {
+    return null;
+  }
+
+  return {
+    providerMode: readMetadataString(metadata, "providerMode"),
+    searchQuery: readMetadataString(metadata, "searchQuery"),
+    feedSource: readMetadataString(metadata, "feedSource"),
+    rawFeedTitle: readMetadataString(metadata, "rawFeedTitle"),
+    rawFeedSnippet: readMetadataString(metadata, "rawFeedSnippet"),
+    publisherUrl: readMetadataString(metadata, "publisherUrl"),
+    resolvedArticleUrl: readMetadataString(metadata, "resolvedArticleUrl"),
+    articleEnrichmentStatus: readMetadataString(
+      metadata,
+      "articleEnrichmentStatus",
+    ),
+    articleResolutionMode: readMetadataString(
+      metadata,
+      "articleResolutionMode",
+    ),
+    articleResolutionQuery: readMetadataString(
+      metadata,
+      "articleResolutionQuery",
+    ),
+    resolverTitle: readMetadataString(metadata, "resolverTitle"),
+    resolverSnippet: readMetadataString(metadata, "resolverSnippet"),
+    resolverScore: readMetadataNumber(metadata, "resolverScore"),
+    articleTitle: readMetadataString(metadata, "articleTitle"),
+    articleExcerpt: readMetadataString(metadata, "articleExcerpt"),
+    articleTextLength: readMetadataNumber(metadata, "articleTextLength"),
+    articleErrorMessage: readMetadataString(metadata, "articleErrorMessage"),
+    allowlistMatched: readMetadataBoolean(metadata, "allowlistMatched"),
+    rejectionReason: readMetadataString(metadata, "rejectionReason"),
+    compositeScore: readMetadataNumber(metadata, "compositeScore"),
+    credibilityScore: signal.credibilityScore,
+    relevanceScore: signal.relevanceScore,
+    identityMatchScore: signal.identityMatchScore,
+  };
+}
+
+function SignalDebugPanel({
+  signal,
+  title = "抓取调试",
+  defaultOpen = false,
+}: {
+  signal: RealWorldSignalRecord;
+  title?: string;
+  defaultOpen?: boolean;
+}) {
+  const debugSnapshot = buildSignalDebugSnapshot(signal);
+  if (!debugSnapshot) {
+    return null;
+  }
+
+  const articleExcerpt = debugSnapshot.articleExcerpt;
+  const resolvedArticleUrl = debugSnapshot.resolvedArticleUrl;
+
+  return (
+    <details
+      className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] px-4 py-3"
+      open={defaultOpen}
+    >
+      <summary className="cursor-pointer text-sm font-medium text-[color:var(--text-secondary)]">
+        {title}
+      </summary>
+      <div className="mt-3 space-y-3">
+        {articleExcerpt ? (
+          <AdminCallout
+            title="正文摘录"
+            tone="info"
+            description={articleExcerpt}
+          />
+        ) : null}
+        {resolvedArticleUrl ? (
+          <div className="text-xs text-[color:var(--text-secondary)]">
+            <a
+              href={resolvedArticleUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+            >
+              打开解析后的文章
+            </a>
+          </div>
+        ) : null}
+        <AdminCodeBlock value={JSON.stringify(debugSnapshot, null, 2)} />
+      </div>
+    </details>
+  );
+}
+
 export function RealWorldSyncPage() {
   const baseUrl = resolveAdminCoreApiBaseUrl();
   const queryClient = useQueryClient();
@@ -240,6 +365,9 @@ export function RealWorldSyncPage() {
   const characterNameById = new Map(
     overview.characters.map((item) => [item.characterId, item.characterName]),
   );
+  const latestDebugSignal =
+    detail?.recentSignals.find((signal) => buildSignalDebugSnapshot(signal)) ??
+    null;
 
   return (
     <div className="space-y-6">
@@ -664,19 +792,21 @@ export function RealWorldSyncPage() {
             <SectionHeading>最近信号</SectionHeading>
             <div className="mt-4 space-y-3">
               {overview.recentSignals.slice(0, 8).map((signal) => (
-                <AdminRecordCard
-                  key={signal.id}
-                  title={signal.title}
-                  badges={
-                    <StatusPill tone={toneForSignalStatus(signal.status)}>
-                      {SIGNAL_STATUS_LABELS[signal.status] ?? signal.status}
-                    </StatusPill>
-                  }
-                  meta={`${signal.sourceName} | ${formatTime(signal.publishedAt ?? signal.capturedAt)}`}
-                  description={
-                    signal.normalizedSummary ?? signal.snippet ?? "暂无摘要"
-                  }
-                />
+                <div key={signal.id} className="space-y-2">
+                  <AdminRecordCard
+                    title={signal.title}
+                    badges={
+                      <StatusPill tone={toneForSignalStatus(signal.status)}>
+                        {SIGNAL_STATUS_LABELS[signal.status] ?? signal.status}
+                      </StatusPill>
+                    }
+                    meta={`${signal.sourceName} | ${formatTime(signal.publishedAt ?? signal.capturedAt)}`}
+                    description={
+                      signal.normalizedSummary ?? signal.snippet ?? "暂无摘要"
+                    }
+                  />
+                  <SignalDebugPanel signal={signal} />
+                </div>
               ))}
             </div>
           </Card>
@@ -817,9 +947,7 @@ export function RealWorldSyncPage() {
                             variant="secondary"
                             size="sm"
                             disabled={publishBulletinMutation.isPending}
-                            onClick={() =>
-                              publishBulletinMutation.mutate(slot)
-                            }
+                            onClick={() => publishBulletinMutation.mutate(slot)}
                           >
                             {publishBulletinMutation.isPending &&
                             publishBulletinMutation.variables === slot
@@ -868,21 +996,34 @@ export function RealWorldSyncPage() {
 
                 <div className="grid gap-3">
                   {detail.recentSignals.slice(0, 6).map((signal) => (
-                    <AdminRecordCard
-                      key={signal.id}
-                      title={signal.title}
-                      badges={
-                        <StatusPill tone={toneForSignalStatus(signal.status)}>
-                          {SIGNAL_STATUS_LABELS[signal.status] ?? signal.status}
-                        </StatusPill>
-                      }
-                      meta={`${signal.sourceName} | ${formatTime(signal.publishedAt ?? signal.capturedAt)}`}
-                      description={
-                        signal.normalizedSummary ?? signal.snippet ?? "暂无摘要"
-                      }
-                    />
+                    <div key={signal.id} className="space-y-2">
+                      <AdminRecordCard
+                        title={signal.title}
+                        badges={
+                          <StatusPill tone={toneForSignalStatus(signal.status)}>
+                            {SIGNAL_STATUS_LABELS[signal.status] ??
+                              signal.status}
+                          </StatusPill>
+                        }
+                        meta={`${signal.sourceName} | ${formatTime(signal.publishedAt ?? signal.capturedAt)}`}
+                        description={
+                          signal.normalizedSummary ??
+                          signal.snippet ??
+                          "暂无摘要"
+                        }
+                      />
+                      <SignalDebugPanel signal={signal} />
+                    </div>
                   ))}
                 </div>
+
+                {latestDebugSignal ? (
+                  <SignalDebugPanel
+                    signal={latestDebugSignal}
+                    title="最近一次抓取原始结果"
+                    defaultOpen
+                  />
+                ) : null}
               </div>
             </Card>
           ) : null}
