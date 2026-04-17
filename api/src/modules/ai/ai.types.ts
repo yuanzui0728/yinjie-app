@@ -97,6 +97,7 @@ export type AiMessagePart =
       imageUrl: string;
       detail?: 'auto' | 'low' | 'high';
       altText?: string;
+      mimeType?: string;
     }
   | {
       type: 'file';

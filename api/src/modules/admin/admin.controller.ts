@@ -1,6 +1,13 @@
 import {
-  Controller, Get, Post, Patch, Delete,
-  Param, Body, Query, UseGuards,
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
 } from '@nestjs/common';
 import { AdminGuard } from './admin.guard';
 import { AdminService } from './admin.service';
@@ -11,6 +18,11 @@ import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
 import { AiUsageLedgerService } from '../analytics/ai-usage-ledger.service';
 import { WechatSyncAdminService } from './wechat-sync-admin.service';
 import { ActionRuntimeService } from '../action-runtime/action-runtime.service';
+import { CyberAvatarAdminService } from '../cyber-avatar/cyber-avatar-admin.service';
+import { NeedDiscoveryService } from '../need-discovery/need-discovery.service';
+import { RealWorldSyncService } from '../real-world-sync/real-world-sync.service';
+import type { RealWorldSyncRulesValue } from '../real-world-sync/real-world-sync.types';
+import type { NeedDiscoveryConfig } from '../need-discovery/need-discovery.types';
 import type {
   WechatSyncImportRequestValue,
   WechatSyncPreviewRequestValue,
@@ -27,6 +39,9 @@ export class AdminController {
     private readonly usageLedger: AiUsageLedgerService,
     private readonly wechatSyncAdminService: WechatSyncAdminService,
     private readonly actionRuntimeService: ActionRuntimeService,
+    private readonly cyberAvatarAdminService: CyberAvatarAdminService,
+    private readonly needDiscoveryService: NeedDiscoveryService,
+    private readonly realWorldSyncService: RealWorldSyncService,
   ) {}
 
   @Get('stats')
@@ -52,6 +67,52 @@ export class AdminController {
   @Get('characters')
   getCharacters() {
     return this.adminService.findAllCharacters();
+  }
+
+  @Get('real-world-sync/overview')
+  getRealWorldSyncOverview() {
+    return this.realWorldSyncService.getOverview();
+  }
+
+  @Get('real-world-sync/characters/:id')
+  getRealWorldSyncCharacterDetail(@Param('id') id: string) {
+    return this.realWorldSyncService.getCharacterDetail(id);
+  }
+
+  @Patch('real-world-sync/rules')
+  setRealWorldSyncRules(
+    @Body()
+    body: {
+      defaultLocale?: string;
+      defaultSourceAllowlist?: string[];
+      defaultSourceBlocklist?: string[];
+      defaultRecencyHours?: number;
+      defaultMaxSignalsPerRun?: number;
+      defaultMinimumConfidence?: number;
+      promptTemplates?: {
+        signalNormalizationPrompt?: string;
+        dailyDigestPrompt?: string;
+        scenePatchPrompt?: string;
+        realityMomentPrompt?: string;
+      };
+    },
+  ) {
+    return this.realWorldSyncService.setRules(
+      body as Partial<RealWorldSyncRulesValue>,
+    );
+  }
+
+  @Post('real-world-sync/run')
+  runRealWorldSync(
+    @Body()
+    body: {
+      characterId?: string | null;
+    },
+  ) {
+    return this.realWorldSyncService.runSync({
+      characterId: body.characterId ?? null,
+      force: true,
+    });
   }
 
   @Get('token-usage/overview')
@@ -239,7 +300,7 @@ export class AdminController {
     },
   ) {
     return this.usageLedger.setBudgetConfig({
-          overall: body.overall
+      overall: body.overall
         ? {
             enabled: body.overall.enabled === true,
             metric: body.overall.metric === 'cost' ? 'cost' : 'tokens',
@@ -324,13 +385,26 @@ export class AdminController {
     return this.wechatSyncAdminService.rollbackImport(characterId);
   }
 
+  @Get('need-discovery/overview')
+  getNeedDiscoveryOverview() {
+    return this.needDiscoveryService.getOverview();
+  }
+
+  @Patch('need-discovery/config')
+  setNeedDiscoveryConfig(@Body() body: Partial<NeedDiscoveryConfig>) {
+    return this.needDiscoveryService.setConfig(body);
+  }
+
   @Post('characters')
   createCharacter(@Body() body: Partial<CharacterEntity>) {
     return this.adminService.createCharacter(body);
   }
 
   @Patch('characters/:id')
-  updateCharacter(@Param('id') id: string, @Body() body: Partial<CharacterEntity>) {
+  updateCharacter(
+    @Param('id') id: string,
+    @Body() body: Partial<CharacterEntity>,
+  ) {
     return this.adminService.updateCharacter(id, body);
   }
 
@@ -448,6 +522,65 @@ export class AdminController {
     return this.actionRuntimeService.previewMessage(body.message?.trim() ?? '');
   }
 
+  @Get('cyber-avatar/overview')
+  getCyberAvatarOverview() {
+    return this.cyberAvatarAdminService.getOverview();
+  }
+
+  @Get('cyber-avatar/rules')
+  getCyberAvatarRules() {
+    return this.cyberAvatarAdminService.getRules();
+  }
+
+  @Patch('cyber-avatar/rules')
+  setCyberAvatarRules(@Body() body: Record<string, unknown>) {
+    return this.cyberAvatarAdminService.setRules(body);
+  }
+
+  @Get('cyber-avatar/profile')
+  getCyberAvatarProfile() {
+    return this.cyberAvatarAdminService.getProfile();
+  }
+
+  @Get('cyber-avatar/signals')
+  listCyberAvatarSignals(@Query('limit') limit?: string) {
+    return this.cyberAvatarAdminService.listSignals(
+      limit ? Number.parseInt(limit, 10) : undefined,
+    );
+  }
+
+  @Get('cyber-avatar/runs')
+  listCyberAvatarRuns(@Query('limit') limit?: string) {
+    return this.cyberAvatarAdminService.listRuns(
+      limit ? Number.parseInt(limit, 10) : undefined,
+    );
+  }
+
+  @Get('cyber-avatar/runs/:id')
+  getCyberAvatarRunDetail(@Param('id') id: string) {
+    return this.cyberAvatarAdminService.getRunDetail(id);
+  }
+
+  @Post('cyber-avatar/run/incremental')
+  runCyberAvatarIncremental() {
+    return this.cyberAvatarAdminService.runIncremental();
+  }
+
+  @Post('cyber-avatar/run/deep-refresh')
+  runCyberAvatarDeepRefresh() {
+    return this.cyberAvatarAdminService.runDeepRefresh();
+  }
+
+  @Post('cyber-avatar/run/full-rebuild')
+  runCyberAvatarFullRebuild() {
+    return this.cyberAvatarAdminService.runFullRebuild();
+  }
+
+  @Post('cyber-avatar/run/project')
+  runCyberAvatarProjection() {
+    return this.cyberAvatarAdminService.runProjection();
+  }
+
   @Get('reply-logic/overview')
   getReplyLogicOverview() {
     return this.replyLogicAdminService.getOverview();
@@ -471,7 +604,8 @@ export class AdminController {
   @Post('reply-logic/characters/:id/preview')
   previewReplyLogicCharacter(
     @Param('id') id: string,
-    @Body() body: { userMessage?: string | null; actorCharacterId?: string | null },
+    @Body()
+    body: { userMessage?: string | null; actorCharacterId?: string | null },
   ) {
     return this.replyLogicAdminService.previewCharacterReply(
       id,
@@ -509,7 +643,8 @@ export class AdminController {
   @Post('reply-logic/conversations/:id/preview')
   previewReplyLogicConversation(
     @Param('id') id: string,
-    @Body() body: { userMessage?: string | null; actorCharacterId?: string | null },
+    @Body()
+    body: { userMessage?: string | null; actorCharacterId?: string | null },
   ) {
     return this.replyLogicAdminService.previewConversationReply(
       id,

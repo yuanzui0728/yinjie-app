@@ -23,7 +23,7 @@
 
 ## 后端模块（`api/src/modules/`）
 
-`ai` · `action-runtime` · `admin` · `auth` · `characters` · `chat` · `config` · `import` · `moments` · `social` · `moderation` · `feed` · `official-accounts` · `world` · `scheduler` · `events` · `narrative` · `analytics`
+`action-runtime` · `admin` · `ai` · `analytics` · `auth` · `characters` · `chat` · `cloud-runtime` · `config` · `cyber-avatar` · `events` · `feed` · `games` · `moderation` · `moments` · `narrative` · `need-discovery` · `official-accounts` · `real-world-sync` · `scheduler` · `social` · `system` · `world`
 
 ## 主 App 结构（`apps/app/src/`）
 
@@ -97,7 +97,7 @@
 - `friend-moments-page.tsx`：桌面端好友朋友圈独立页，当前由 `desktop/friend-moments/$characterId` 承载，从通讯录 / 资料页 / 聊天信息等入口进入单个好友的朋友圈时间线
 - `chat-room-page` · `group-chat-page` · `character-detail-page` · `friend-requests-page` · `create-group-page`
 
-## 数据库实体（34个，物理表保持兼容）
+## 数据库实体（42个，物理表保持兼容）
 
 **核心**：User（运行时语义为单例 World Owner） · Character · Conversation · Message · SystemConfig
 
@@ -119,7 +119,13 @@
 
 **分析**：AIBehaviorLog · AIUsageLedger
 
+**需求发现**：NeedDiscoveryRun · NeedDiscoveryCandidate
+
+**赛博分身**：CyberAvatarProfile · CyberAvatarSignal · CyberAvatarRun
+
 **动作运行时**：ActionConnector · ActionRun
+
+**现实联动**：CharacterRealWorldSignal · CharacterRealWorldDigest · CharacterRealWorldSyncRun
 
 **后台**：AdminConversationReview
 
@@ -159,6 +165,7 @@
 ## 会话管理结构（2026-04-08）
 
 - `MomentPost` 表现已扩展字段：`contentType`、`mediaPayload`，用于承载朋友圈文本 / 图集 / 视频 / 实况照片元数据，物理表保持兼容扩展
+- `MomentPost` 表现已扩展字段：`generationKind`、`generationMetadata`，用于标记常规 AI 发圈与现实联动发圈及其 digest 来源元数据
 - 朋友圈媒体路由：
   - `POST /api/moments/media`
   - `GET /api/moments/media/:fileName`
@@ -276,6 +283,10 @@
 
 - `dashboard-page.tsx`：实例级概览、Provider、诊断与运维入口
 - `characters-page.tsx`：角色注册表，查看在线状态与活动状态摘要，并支持名人预设分组筛选与批量安装
+- `games-page.tsx`：AI 游戏目录与来源结构页，查看分类、状态、来源与审核摘要
+- `need-discovery-page.tsx`：角色缺口识别与自动加友配置页，查看短期/每日 cadence 规则、候选和运行记录
+- `cyber-avatar-page.tsx`：赛博分身工作台入口页，承接分身画像、信号与运行记录视图
+- `real-world-sync-page.tsx`：真实世界联动页，查看每日外部信号、active digest、scene patch、现实发圈锚点与全局规则
 - `wechat-sync-page.tsx`：微信朋友同步页，接收本地授权导出的联系人资料与聊天摘要，生成角色预览并导入为好友
 - `character-editor-page.tsx`：角色画像编辑页，维护 prompt、traits、memory 与 reasoning
 - `character-factory-page.tsx`：角色工厂页，查看来源、草稿配方、字段来源、发布映射 diff、已发布版本与版本记录
@@ -285,7 +296,7 @@
 - `evals-page.tsx`：生成评估、trace 与实验对比页
 - `setup-page.tsx`：运行时与 Provider 初始化配置页
 - `reply-logic-page.tsx`：AI 回复逻辑总览页，查看实际链路、effective prompt、上下文窗口、记忆与硬编码常量
-- `action-runtime-page.tsx`：真实世界动作运行时控制台，围绕 self 角色查看动作门控、提示模板、mock 连接器与执行轨迹
+- `action-runtime-page.tsx`：真实世界动作运行时控制台，围绕 self 角色查看动作门控、提示模板、连接器配置、自检结果、动作重试与执行轨迹
 
 ## 管理后台回复逻辑路由
 
@@ -300,6 +311,29 @@
 - `POST /api/admin/reply-logic/group-reply-turns/:turnId/retry`
 - `POST /api/admin/reply-logic/conversations/:id/preview`
 
+## 管理后台游戏目录路由
+
+- `GET /api/admin/games`
+
+## 管理后台需求发现路由
+
+- `GET /api/admin/need-discovery/overview`
+- `PATCH /api/admin/need-discovery/config`
+
+## 管理后台赛博分身路由
+
+- `GET /api/admin/cyber-avatar/overview`
+- `GET /api/admin/cyber-avatar/rules`
+- `PATCH /api/admin/cyber-avatar/rules`
+- `GET /api/admin/cyber-avatar/profile`
+- `GET /api/admin/cyber-avatar/signals`
+- `GET /api/admin/cyber-avatar/runs`
+- `GET /api/admin/cyber-avatar/runs/:id`
+- `POST /api/admin/cyber-avatar/run/incremental`
+- `POST /api/admin/cyber-avatar/run/deep-refresh`
+- `POST /api/admin/cyber-avatar/run/full-rebuild`
+- `POST /api/admin/cyber-avatar/run/project`
+
 ## 管理后台动作运行时路由
 
 - `GET /api/admin/action-runtime/overview`
@@ -307,9 +341,18 @@
 - `PATCH /api/admin/action-runtime/rules`
 - `GET /api/admin/action-runtime/connectors`
 - `PATCH /api/admin/action-runtime/connectors/:id`
+- `POST /api/admin/action-runtime/connectors/:id/test`
 - `GET /api/admin/action-runtime/runs`
 - `GET /api/admin/action-runtime/runs/:id`
+- `POST /api/admin/action-runtime/runs/:id/retry`
 - `POST /api/admin/action-runtime/preview`
+
+## 管理后台真实世界联动路由
+
+- `GET /api/admin/real-world-sync/overview`
+- `GET /api/admin/real-world-sync/characters/:id`
+- `PATCH /api/admin/real-world-sync/rules`
+- `POST /api/admin/real-world-sync/run`
 
 ## 管理后台聊天记录路由
 
@@ -395,6 +438,7 @@
 - 世界主人可在 App 内设置自己的 API Key，服务端仅加密存储
 - 移动端底部导航当前对齐微信四项：`消息 / 通讯录 / 发现 / 我`
 - 桌面端左侧导航当前收口为：`消息 / 通讯录 / 收藏 / 朋友圈 / 广场动态 / 视频号 / 搜一搜 / 游戏中心 / 小程序面板`，底部为 `手机 / 更多`
+- 游戏中心前台继续沿用微信式游戏中心的排版与浏览节奏，但目录当前只承载 AI 游戏或 AI 制作的游戏
 - 移动端“发现”聚合朋友圈、摇一摇、场景相遇、广场动态、视频号、游戏中心、小程序等入口；点击入口后进入独立二级页，朋友圈不再占用独立底部 Tab
 - 移动端“公众号”当前收口在“通讯录”固定服务项内，不单独占用底部 Tab，也不放进“发现”
 - 移动端“我”页当前对齐微信式个人主页，资料编辑与 API Key 配置收口到“设置”二级页，不在主页直接裸露

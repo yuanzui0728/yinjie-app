@@ -1,9 +1,10 @@
-import type { Character } from "./characters";
+import type { Character, RealityLinkConfig } from "./characters";
 
 export type CharacterBlueprintSourceType =
   | "default_seed"
   | "preset_catalog"
   | "manual_admin"
+  | "need_generated"
   | "wechat_import"
   | "template_clone"
   | "ai_generated";
@@ -105,6 +106,7 @@ export interface CharacterBlueprintRecipe {
     initialOnline: boolean;
     initialActivity: string | null;
   };
+  realityLink: RealityLinkConfig;
 }
 
 export interface CharacterBlueprint {

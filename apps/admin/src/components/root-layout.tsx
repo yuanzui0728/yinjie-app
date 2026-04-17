@@ -141,9 +141,19 @@ const NAV_ITEMS = [
     hint: "查看角色名册、角色工厂和运行逻辑台。",
   },
   {
+    to: "/games",
+    label: "游戏目录",
+    hint: "查看 AI 游戏中心目录、来源结构和当前审核状态。",
+  },
+  {
     to: "/chat-records",
     label: "聊天记录",
     hint: "回看世界主人与角色的真实单聊样本、搜索命中和会话成本。",
+  },
+  {
+    to: "/need-discovery",
+    label: "需求发现",
+    hint: "配置短期/长期角色生成策略，并查看候选与运行记录。",
   },
   {
     to: "/token-usage",
@@ -154,6 +164,16 @@ const NAV_ITEMS = [
     to: "/action-runtime",
     label: "真实世界动作",
     hint: "查看 self 角色的动作门控、连接器、规则和执行轨迹。",
+  },
+  {
+    to: "/cyber-avatar",
+    label: "赛博分身",
+    hint: "查看行为信号、画像状态、投影提示词与建模运行记录。",
+  },
+  {
+    to: "/real-world-sync",
+    label: "现实联动",
+    hint: "查看角色现实新闻同步、每日 digest、scene patch 和现实发圈锚点。",
   },
   {
     to: "/evals",
@@ -175,7 +195,8 @@ function resolveRouteMeta(pathname: string) {
     return {
       eyebrow: "运行设置",
       title: "运行时与 Provider 初始化",
-      description: "补齐推理 Provider、实例连通性和运行前置条件，确保后台操作与真实生成链路可用。",
+      description:
+        "补齐推理 Provider、实例连通性和运行前置条件，确保后台操作与真实生成链路可用。",
     };
   }
 
@@ -184,6 +205,24 @@ function resolveRouteMeta(pathname: string) {
       eyebrow: "角色中心",
       title: "角色名册与工作入口",
       description: "在一个工作区里完成角色筛选、摘要查看和快捷跳转。",
+    };
+  }
+
+  if (pathname === "/games") {
+    return {
+      eyebrow: "游戏目录",
+      title: "AI 游戏中心目录与来源结构",
+      description:
+        "先承接 AI 游戏中心的目录、来源、运行模式和审核状态，后续再补详情、发布与运营能力。",
+    };
+  }
+
+  if (pathname === "/need-discovery") {
+    return {
+      eyebrow: "需求发现",
+      title: "角色缺口识别与自动加友",
+      description:
+        "配置短周期和每日节奏的提示词、频率、角色生成策略，并查看运行记录与候选结果。",
     };
   }
 
@@ -215,7 +254,8 @@ function resolveRouteMeta(pathname: string) {
     return {
       eyebrow: "聊天记录",
       title: "世界样本与会话档案",
-      description: "集中查看世界主人与各角色的真实单聊历史、搜索命中上下文和会话级 Token 成本。",
+      description:
+        "集中查看世界主人与各角色的真实单聊历史、搜索命中上下文和会话级 Token 成本。",
     };
   }
 
@@ -223,7 +263,8 @@ function resolveRouteMeta(pathname: string) {
     return {
       eyebrow: "Token 用量",
       title: "AI 成本与请求账本",
-      description: "集中查看 Token 消耗、时间趋势、角色分布、预算预警和价格配置。",
+      description:
+        "集中查看 Token 消耗、时间趋势、角色分布、预算预警和价格配置。",
     };
   }
 
@@ -231,7 +272,8 @@ function resolveRouteMeta(pathname: string) {
     return {
       eyebrow: "回复逻辑",
       title: "世界级回复调试台",
-      description: "围绕角色、会话和全局规则排查回复链路，而不是在长页面里找模块。",
+      description:
+        "围绕角色、会话和全局规则排查回复链路，而不是在长页面里找模块。",
     };
   }
 
@@ -239,7 +281,26 @@ function resolveRouteMeta(pathname: string) {
     return {
       eyebrow: "真实世界动作",
       title: "self 角色动作运行时",
-      description: "围绕动作识别、澄清、确认、连接器和执行轨迹查看真实世界动作能力。",
+      description:
+        "围绕动作识别、澄清、确认、连接器和执行轨迹查看真实世界动作能力。",
+    };
+  }
+
+  if (pathname === "/cyber-avatar") {
+    return {
+      eyebrow: "赛博分身",
+      title: "用户行为建模与 Prompt 投影",
+      description:
+        "集中查看赛博分身如何从行为信号收敛成画像，再投影成后续世界内外可消费的提示词。",
+    };
+  }
+
+  if (pathname === "/real-world-sync") {
+    return {
+      eyebrow: "现实联动",
+      title: "角色现实世界同步与日更",
+      description:
+        "集中查看每日外部信号、摘要 digest、scene patch 和现实发圈锚点。",
     };
   }
 
@@ -247,7 +308,8 @@ function resolveRouteMeta(pathname: string) {
     return {
       eyebrow: "评测分析",
       title: "评测运行与 Trace 工作台",
-      description: "集中查看 runs、compare 和 trace，逐步收口成更清晰的多视图结构。",
+      description:
+        "集中查看 runs、compare 和 trace，逐步收口成更清晰的多视图结构。",
     };
   }
 

@@ -9,6 +9,7 @@ export type CharacterSourceType =
   | "default_seed"
   | "preset_catalog"
   | "manual_admin"
+  | "need_generated"
   | "wechat_import";
 export type CharacterDeletionPolicy = "protected" | "archive_allowed";
 export type CharacterPresetGroupKey =
@@ -75,6 +76,52 @@ export interface ScenePrompts {
   proactive?: string; // 主动提醒
 }
 
+export type RealityLinkApplyMode = "disabled" | "shadow" | "live";
+export type RealityLinkSubjectType =
+  | "living_public_figure"
+  | "organization_proxy"
+  | "historical_snapshot"
+  | "fictional_or_private";
+export type RealityMomentPolicy = "disabled" | "optional" | "force_one_daily";
+
+export interface RealityLinkConfig {
+  enabled: boolean;
+  applyMode: RealityLinkApplyMode;
+  subjectType: RealityLinkSubjectType;
+  subjectName: string;
+  aliases: string[];
+  locale: string;
+  queryTemplate: string;
+  sourceAllowlist: string[];
+  sourceBlocklist: string[];
+  recencyHours: number;
+  maxSignalsPerRun: number;
+  minimumConfidence: number;
+  chatWeight: number;
+  contentWeight: number;
+  realityMomentPolicy: RealityMomentPolicy;
+  manualSteeringNotes: string;
+  dailyDigestPrompt: string;
+  scenePatchPrompt: string;
+  realityMomentPrompt: string;
+}
+
+export interface RealWorldRuntimeContext {
+  enabled: boolean;
+  applyMode: RealityLinkApplyMode;
+  subjectType?: RealityLinkSubjectType;
+  subjectName?: string;
+  digestId?: string | null;
+  syncDate?: string | null;
+  dailySummary?: string;
+  behaviorSummary?: string;
+  stanceShiftSummary?: string;
+  globalOverlay?: string;
+  realityMomentBrief?: string | null;
+  sceneOverlays?: ScenePrompts;
+  signalTitles?: string[];
+}
+
 export interface PersonalityProfile {
   characterId: string;
   name: string;
@@ -102,6 +149,7 @@ export interface PersonalityProfile {
   /** @deprecated */
   reasoningConfig?: ReasoningConfig;
   memory?: MemoryLayers;
+  realWorldContext?: RealWorldRuntimeContext;
 }
 
 export interface CharacterAiRelationship {

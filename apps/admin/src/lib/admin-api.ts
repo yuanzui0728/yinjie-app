@@ -1,6 +1,9 @@
 import type {
+  AdminGameCatalogItem,
   ActionConnectorSummary,
+  ActionConnectorTestResult,
   ActionRunDetail,
+  ActionRunRetryResult,
   ActionRunSummary,
   ActionRuntimeOverview,
   ActionRuntimePreviewResult,
@@ -9,7 +12,15 @@ import type {
   CharacterBlueprintRevision,
   CharacterPresetSummary,
   CharacterFactorySnapshot,
+  CyberAvatarOverview,
+  CyberAvatarProfile,
+  CyberAvatarRunDetail,
+  CyberAvatarRunSummary,
+  CyberAvatarRuntimeRules,
+  CyberAvatarSignal,
   InstallCharacterPresetsResult,
+  NeedDiscoveryConfig,
+  NeedDiscoveryOverview,
   ReplyLogicConstantSummary,
   ReplyLogicCharacterSnapshot,
   ReplyLogicConversationSnapshot,
@@ -19,6 +30,9 @@ import type {
   ReplyLogicOverview,
   ReplyLogicPreviewRequest,
   ReplyLogicPreviewResult,
+  RealWorldSyncCharacterDetail,
+  RealWorldSyncOverview,
+  RealWorldSyncRules,
   TokenUsageBudgetSnapshot,
   TokenPricingCatalog,
   TokenUsageBreakdownResponse,
@@ -35,8 +49,9 @@ import type {
 } from "@yinjie/contracts";
 
 const ADMIN_SECRET_KEY = "yinjie_admin_secret";
-const DEV_ADMIN_SECRET =
-  import.meta.env.DEV ? import.meta.env.VITE_ADMIN_SECRET?.trim() ?? "" : "";
+const DEV_ADMIN_SECRET = import.meta.env.DEV
+  ? (import.meta.env.VITE_ADMIN_SECRET?.trim() ?? "")
+  : "";
 
 function getStorage() {
   if (typeof window === "undefined") {
@@ -56,7 +71,11 @@ function resolveAdminApiBase() {
     return configuredBase.replace(/\/+$/, "");
   }
 
-  if (typeof window !== "undefined" && (window.location.protocol === "http:" || window.location.protocol === "https:")) {
+  if (
+    typeof window !== "undefined" &&
+    (window.location.protocol === "http:" ||
+      window.location.protocol === "https:")
+  ) {
     return `${window.location.origin}/api`;
   }
 
@@ -68,7 +87,11 @@ export function getAdminSecret(): string {
   return stored || DEV_ADMIN_SECRET;
 }
 
-async function requestWithSecret(path: string, secret: string, options?: RequestInit) {
+async function requestWithSecret(
+  path: string,
+  secret: string,
+  options?: RequestInit,
+) {
   return fetch(`${resolveAdminApiBase()}/admin${path}`, {
     headers: {
       "Content-Type": "application/json",
@@ -97,7 +120,13 @@ async function adminFetch<T>(path: string, options?: RequestInit): Promise<T> {
   let res = await requestWithSecret(path, secret, options);
   let rawBody = await res.text();
   const isNotConfigured = (body: string) => {
-    try { return ((JSON.parse(body)?.message as string) ?? body).includes("not configured"); } catch { return body.includes("not configured"); }
+    try {
+      return ((JSON.parse(body)?.message as string) ?? body).includes(
+        "not configured",
+      );
+    } catch {
+      return body.includes("not configured");
+    }
   };
 
   if (
@@ -189,7 +218,10 @@ export const adminApi = {
   getCharacters: () => adminFetch<Character[]>("/characters"),
   getConfig: () => adminFetch<Record<string, string>>("/config"),
   setConfig: (key: string, value: string) =>
-    adminFetch<{ success: boolean }>("/config", { method: "PATCH", body: JSON.stringify({ key, value }) }),
+    adminFetch<{ success: boolean }>("/config", {
+      method: "PATCH",
+      body: JSON.stringify({ key, value }),
+    }),
   generateQuickCharacter: (description: string) =>
     adminFetch<Record<string, unknown>>("/characters/generate-quick", {
       method: "POST",
@@ -213,11 +245,14 @@ export const adminApi = {
       { method: "POST" },
     ),
   rollbackWechatSyncImport: (characterId: string) =>
-    adminFetch<WechatSyncRollbackResponse>(`/wechat-sync/history/${characterId}`, {
-      method: "DELETE",
-    }),
-  getFriendCharacterIds: () =>
-    adminFetch<string[]>("/characters/friend-ids"),
+    adminFetch<WechatSyncRollbackResponse>(
+      `/wechat-sync/history/${characterId}`,
+      {
+        method: "DELETE",
+      },
+    ),
+  getFriendCharacterIds: () => adminFetch<string[]>("/characters/friend-ids"),
+  getGamesCatalog: () => adminFetch<AdminGameCatalogItem[]>("/games"),
   listCharacterPresets: () =>
     adminFetch<CharacterPresetSummary[]>("/characters/presets"),
   installCharacterPreset: (presetKey: string) =>
@@ -225,10 +260,13 @@ export const adminApi = {
       method: "POST",
     }),
   installCharacterPresetBatch: (presetKeys: string[]) =>
-    adminFetch<InstallCharacterPresetsResult>("/characters/presets/install-batch", {
-      method: "POST",
-      body: JSON.stringify({ presetKeys }),
-    }),
+    adminFetch<InstallCharacterPresetsResult>(
+      "/characters/presets/install-batch",
+      {
+        method: "POST",
+        body: JSON.stringify({ presetKeys }),
+      },
+    ),
   deleteCharacter: (id: string) =>
     adminFetch<{ success: boolean }>(`/characters/${id}`, { method: "DELETE" }),
   getCharacterFactory: (id: string) =>
@@ -252,18 +290,59 @@ export const adminApi = {
       body: JSON.stringify({ summary: summary?.trim() || null }),
     }),
   listCharacterFactoryRevisions: (id: string) =>
-    adminFetch<CharacterBlueprintRevision[]>(`/characters/${id}/factory/revisions`),
+    adminFetch<CharacterBlueprintRevision[]>(
+      `/characters/${id}/factory/revisions`,
+    ),
   restoreCharacterFactoryRevision: (id: string, revisionId: string) =>
     adminFetch<CharacterFactorySnapshot>(
       `/characters/${id}/factory/revisions/${revisionId}/restore`,
       { method: "POST" },
     ),
-  getReplyLogicOverview: () => adminFetch<ReplyLogicOverview>("/reply-logic/overview"),
-  getReplyLogicRules: () => adminFetch<ReplyLogicConstantSummary>("/reply-logic/rules"),
+  getReplyLogicOverview: () =>
+    adminFetch<ReplyLogicOverview>("/reply-logic/overview"),
+  getReplyLogicRules: () =>
+    adminFetch<ReplyLogicConstantSummary>("/reply-logic/rules"),
   setReplyLogicRules: (payload: ReplyLogicConstantSummary) =>
     adminFetch<ReplyLogicConstantSummary>("/reply-logic/rules", {
       method: "PATCH",
       body: JSON.stringify(payload),
+    }),
+  getCyberAvatarOverview: () =>
+    adminFetch<CyberAvatarOverview>("/cyber-avatar/overview"),
+  getCyberAvatarRules: () =>
+    adminFetch<CyberAvatarRuntimeRules>("/cyber-avatar/rules"),
+  setCyberAvatarRules: (payload: CyberAvatarRuntimeRules) =>
+    adminFetch<CyberAvatarRuntimeRules>("/cyber-avatar/rules", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  getCyberAvatarProfile: () =>
+    adminFetch<CyberAvatarProfile>("/cyber-avatar/profile"),
+  listCyberAvatarSignals: (limit?: number) =>
+    adminFetch<CyberAvatarSignal[]>(
+      `/cyber-avatar/signals${limit ? `?limit=${encodeURIComponent(String(limit))}` : ""}`,
+    ),
+  listCyberAvatarRuns: (limit?: number) =>
+    adminFetch<CyberAvatarRunSummary[]>(
+      `/cyber-avatar/runs${limit ? `?limit=${encodeURIComponent(String(limit))}` : ""}`,
+    ),
+  getCyberAvatarRun: (id: string) =>
+    adminFetch<CyberAvatarRunDetail>(`/cyber-avatar/runs/${id}`),
+  runCyberAvatarIncremental: () =>
+    adminFetch<CyberAvatarRunDetail>("/cyber-avatar/run/incremental", {
+      method: "POST",
+    }),
+  runCyberAvatarDeepRefresh: () =>
+    adminFetch<CyberAvatarRunDetail>("/cyber-avatar/run/deep-refresh", {
+      method: "POST",
+    }),
+  runCyberAvatarFullRebuild: () =>
+    adminFetch<CyberAvatarRunDetail>("/cyber-avatar/run/full-rebuild", {
+      method: "POST",
+    }),
+  runCyberAvatarProjection: () =>
+    adminFetch<CyberAvatarRunDetail>("/cyber-avatar/run/project", {
+      method: "POST",
     }),
   getActionRuntimeOverview: () =>
     adminFetch<ActionRuntimeOverview>("/action-runtime/overview"),
@@ -299,49 +378,117 @@ export const adminApi = {
       method: "POST",
       body: JSON.stringify({ message }),
     }),
+  testActionRuntimeConnector: (
+    id: string,
+    payload?: { sampleMessage?: string | null },
+  ) =>
+    adminFetch<ActionConnectorTestResult>(
+      `/action-runtime/connectors/${id}/test`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload ?? {}),
+      },
+    ),
+  retryActionRuntimeRun: (id: string) =>
+    adminFetch<ActionRunRetryResult>(`/action-runtime/runs/${id}/retry`, {
+      method: "POST",
+    }),
   getReplyLogicCharacterSnapshot: (id: string) =>
     adminFetch<ReplyLogicCharacterSnapshot>(`/reply-logic/characters/${id}`),
   previewReplyLogicCharacter: (id: string, payload: ReplyLogicPreviewRequest) =>
-    adminFetch<ReplyLogicPreviewResult>(`/reply-logic/characters/${id}/preview`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
+    adminFetch<ReplyLogicPreviewResult>(
+      `/reply-logic/characters/${id}/preview`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    ),
   getReplyLogicConversationSnapshot: (id: string) =>
-    adminFetch<ReplyLogicConversationSnapshot>(`/reply-logic/conversations/${id}`),
+    adminFetch<ReplyLogicConversationSnapshot>(
+      `/reply-logic/conversations/${id}`,
+    ),
   retryReplyLogicGroupReplyTask: (taskId: string) =>
-    adminFetch<ReplyLogicGroupReplyTaskRetryResult>(`/reply-logic/group-reply-tasks/${taskId}/retry`, {
-      method: "POST",
-    }),
+    adminFetch<ReplyLogicGroupReplyTaskRetryResult>(
+      `/reply-logic/group-reply-tasks/${taskId}/retry`,
+      {
+        method: "POST",
+      },
+    ),
   retryReplyLogicGroupReplyTurn: (turnId: string) =>
-    adminFetch<ReplyLogicGroupReplyTurnRetryResult>(`/reply-logic/group-reply-turns/${turnId}/retry`, {
-      method: "POST",
-    }),
+    adminFetch<ReplyLogicGroupReplyTurnRetryResult>(
+      `/reply-logic/group-reply-turns/${turnId}/retry`,
+      {
+        method: "POST",
+      },
+    ),
   cleanupReplyLogicGroupReplyTasks: (payload?: {
     olderThanDays?: number | null;
     groupId?: string | null;
     statuses?: string[] | null;
   }) =>
-    adminFetch<ReplyLogicGroupReplyTaskCleanupResult>("/reply-logic/group-reply-tasks/cleanup", {
+    adminFetch<ReplyLogicGroupReplyTaskCleanupResult>(
+      "/reply-logic/group-reply-tasks/cleanup",
+      {
+        method: "POST",
+        body: JSON.stringify(payload ?? {}),
+      },
+    ),
+  previewReplyLogicConversation: (
+    id: string,
+    payload: ReplyLogicPreviewRequest,
+  ) =>
+    adminFetch<ReplyLogicPreviewResult>(
+      `/reply-logic/conversations/${id}/preview`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    ),
+  getRealWorldSyncOverview: () =>
+    adminFetch<RealWorldSyncOverview>("/real-world-sync/overview"),
+  getRealWorldSyncCharacterDetail: (id: string) =>
+    adminFetch<RealWorldSyncCharacterDetail>(
+      `/real-world-sync/characters/${id}`,
+    ),
+  setRealWorldSyncRules: (payload: Partial<RealWorldSyncRules>) =>
+    adminFetch<RealWorldSyncRules>("/real-world-sync/rules", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  runRealWorldSync: (payload?: { characterId?: string | null }) =>
+    adminFetch<{
+      success: boolean;
+      successCount: number;
+      failedCount: number;
+      touchedCharacterIds: string[];
+    }>("/real-world-sync/run", {
       method: "POST",
       body: JSON.stringify(payload ?? {}),
     }),
-  previewReplyLogicConversation: (id: string, payload: ReplyLogicPreviewRequest) =>
-    adminFetch<ReplyLogicPreviewResult>(`/reply-logic/conversations/${id}/preview`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    }),
   getTokenUsageOverview: (query?: TokenUsageQuery) =>
-    adminFetch<TokenUsageOverview>(`/token-usage/overview${buildQueryString(query)}`),
+    adminFetch<TokenUsageOverview>(
+      `/token-usage/overview${buildQueryString(query)}`,
+    ),
   getTokenUsageTrend: (query?: TokenUsageQuery) =>
-    adminFetch<TokenUsageTrendPoint[]>(`/token-usage/trend${buildQueryString(query)}`),
+    adminFetch<TokenUsageTrendPoint[]>(
+      `/token-usage/trend${buildQueryString(query)}`,
+    ),
   getTokenUsageBreakdown: (query?: TokenUsageQuery) =>
-    adminFetch<TokenUsageBreakdownResponse>(`/token-usage/breakdown${buildQueryString(query)}`),
+    adminFetch<TokenUsageBreakdownResponse>(
+      `/token-usage/breakdown${buildQueryString(query)}`,
+    ),
   getTokenUsageRecords: (query?: TokenUsageQuery) =>
-    adminFetch<TokenUsageRecordListResponse>(`/token-usage/records${buildQueryString(query)}`),
+    adminFetch<TokenUsageRecordListResponse>(
+      `/token-usage/records${buildQueryString(query)}`,
+    ),
   getTokenUsageDowngradeInsights: (query?: TokenUsageQuery) =>
-    adminFetch<TokenUsageDowngradeInsights>(`/token-usage/downgrade-insights${buildQueryString(query)}`),
+    adminFetch<TokenUsageDowngradeInsights>(
+      `/token-usage/downgrade-insights${buildQueryString(query)}`,
+    ),
   getTokenUsageDowngradeQuality: (query?: TokenUsageQuery) =>
-    adminFetch<TokenUsageDowngradeQualityInsights>(`/token-usage/downgrade-quality${buildQueryString(query)}`),
+    adminFetch<TokenUsageDowngradeQualityInsights>(
+      `/token-usage/downgrade-quality${buildQueryString(query)}`,
+    ),
   getTokenUsagePricing: () =>
     adminFetch<TokenPricingCatalog>("/token-usage/pricing"),
   setTokenUsagePricing: (payload: TokenPricingCatalog) =>
@@ -353,6 +500,13 @@ export const adminApi = {
     adminFetch<TokenUsageBudgetSnapshot>("/token-usage/budgets"),
   setTokenUsageBudgets: (payload: TokenUsageBudgetSnapshot["config"]) =>
     adminFetch<TokenUsageBudgetSnapshot>("/token-usage/budgets", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+  getNeedDiscoveryOverview: () =>
+    adminFetch<NeedDiscoveryOverview>("/need-discovery/overview"),
+  setNeedDiscoveryConfig: (payload: Partial<NeedDiscoveryConfig>) =>
+    adminFetch<NeedDiscoveryConfig>("/need-discovery/config", {
       method: "PATCH",
       body: JSON.stringify(payload),
     }),

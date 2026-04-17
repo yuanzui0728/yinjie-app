@@ -30,6 +30,9 @@ type AdminWorkbenchLink =
   | "/setup"
   | "/characters"
   | "/action-runtime"
+  | "/cyber-avatar"
+  | "/need-discovery"
+  | "/real-world-sync"
   | "/token-usage"
   | "/evals"
   | "/reply-logic";
@@ -63,9 +66,15 @@ export function AdminPageHero({
     >
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
         <div className="max-w-2xl">
-          <div className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--text-muted)]">{eyebrow}</div>
-          <h2 className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">{title}</h2>
-          <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{description}</p>
+          <div className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--text-muted)]">
+            {eyebrow}
+          </div>
+          <h2 className="mt-2 text-2xl font-semibold text-[color:var(--text-primary)]">
+            {title}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+            {description}
+          </p>
         </div>
         {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
       </div>
@@ -73,7 +82,11 @@ export function AdminPageHero({
       {metrics?.length ? (
         <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {metrics.map((item) => (
-            <MetricCard key={item.label} label={item.label} value={item.value} />
+            <MetricCard
+              key={item.label}
+              label={item.label}
+              value={item.value}
+            />
           ))}
         </div>
       ) : null}
@@ -103,8 +116,12 @@ export function AdminSectionNav({
             <div className="flex items-start gap-3">
               <span className="mt-0.5 h-2 w-2 rounded-full bg-[color:var(--brand-primary)]/70" />
               <div>
-                <div className="font-semibold text-[color:var(--text-primary)]">{item.label}</div>
-                <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">{item.detail}</div>
+                <div className="font-semibold text-[color:var(--text-primary)]">
+                  {item.label}
+                </div>
+                <div className="mt-1 text-xs leading-5 text-[color:var(--text-muted)]">
+                  {item.detail}
+                </div>
               </div>
             </div>
           </button>
@@ -142,7 +159,9 @@ export function AdminInfoRows({
     <Card className="bg-[color:var(--surface-console)]">
       <SectionHeading>{title}</SectionHeading>
       <div className="mt-4 space-y-3 text-sm text-[color:var(--text-secondary)]">
-        {rows.map((row) => <AdminInfoRow key={row.label} label={row.label} value={row.value} />)}
+        {rows.map((row) => (
+          <AdminInfoRow key={row.label} label={row.label} value={row.value} />
+        ))}
       </div>
     </Card>
   );
@@ -165,7 +184,9 @@ export function AdminInfoRow({
       )}
     >
       <AdminMetaText>{label}</AdminMetaText>
-      <span className="text-right text-sm font-medium text-[color:var(--text-primary)]">{value}</span>
+      <span className="text-right text-sm font-medium text-[color:var(--text-primary)]">
+        {value}
+      </span>
     </div>
   );
 }
@@ -199,8 +220,12 @@ export function AdminCallout({
     >
       <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div>
-          <div className="text-sm font-semibold text-[color:var(--text-primary)]">{title}</div>
-          <div className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">{description}</div>
+          <div className="text-sm font-semibold text-[color:var(--text-primary)]">
+            {title}
+          </div>
+          <div className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">
+            {description}
+          </div>
         </div>
         {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
       </div>
@@ -226,9 +251,17 @@ export function AdminEmptyState({
         className,
       )}
     >
-      <div className="text-base font-semibold text-[color:var(--text-primary)]">{title}</div>
-      <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{description}</div>
-      {actions ? <div className="mt-4 flex flex-wrap justify-center gap-3">{actions}</div> : null}
+      <div className="text-base font-semibold text-[color:var(--text-primary)]">
+        {title}
+      </div>
+      <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+        {description}
+      </div>
+      {actions ? (
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
+          {actions}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -272,7 +305,10 @@ export function AdminPanelEmpty({
 }) {
   return (
     <PanelEmpty
-      className={cn("border-[color:var(--border-faint)] bg-[color:var(--surface-soft)]", className)}
+      className={cn(
+        "border-[color:var(--border-faint)] bg-[color:var(--surface-soft)]",
+        className,
+      )}
       message={message}
     />
   );
@@ -291,7 +327,9 @@ export function AdminSubpanel({
 }) {
   return (
     <Card className={cn("bg-[color:var(--surface-card)]", className)}>
-      <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{title}</div>
+      <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+        {title}
+      </div>
       <div className={cn("mt-4", contentClassName)}>{children}</div>
     </Card>
   );
@@ -314,11 +352,15 @@ export function AdminMiniPanel({
     <div
       className={cn(
         "rounded-xl border border-[color:var(--border-faint)] p-3",
-        tone === "soft" ? "bg-[color:var(--surface-soft)]" : "bg-[color:var(--surface-card)]",
+        tone === "soft"
+          ? "bg-[color:var(--surface-soft)]"
+          : "bg-[color:var(--surface-card)]",
         className,
       )}
     >
-      <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{title}</div>
+      <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+        {title}
+      </div>
       <div className={cn("mt-2", contentClassName)}>{children}</div>
     </div>
   );
@@ -342,7 +384,9 @@ export function AdminDetailPanel({
         className,
       )}
     >
-      <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{title}</div>
+      <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+        {title}
+      </div>
       <div className={cn("mt-4", contentClassName)}>{children}</div>
     </div>
   );
@@ -373,13 +417,25 @@ export function AdminRecordCard({
       )}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <div className="text-sm font-medium text-[color:var(--text-primary)]">{title}</div>
+        <div className="text-sm font-medium text-[color:var(--text-primary)]">
+          {title}
+        </div>
         {badges}
       </div>
-      {meta ? <div className="mt-2 text-xs text-[color:var(--text-muted)]">{meta}</div> : null}
-      {description ? <div className="mt-3 text-sm text-[color:var(--text-secondary)]">{description}</div> : null}
+      {meta ? (
+        <div className="mt-2 text-xs text-[color:var(--text-muted)]">
+          {meta}
+        </div>
+      ) : null}
+      {description ? (
+        <div className="mt-3 text-sm text-[color:var(--text-secondary)]">
+          {description}
+        </div>
+      ) : null}
       {details ? <div className="mt-3">{details}</div> : null}
-      {actions ? <div className="mt-4 flex flex-wrap gap-3">{actions}</div> : null}
+      {actions ? (
+        <div className="mt-4 flex flex-wrap gap-3">{actions}</div>
+      ) : null}
     </div>
   );
 }
@@ -392,7 +448,12 @@ export function AdminMetaText({
   className?: string;
 }) {
   return (
-    <div className={cn("text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]", className)}>
+    <div
+      className={cn(
+        "text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]",
+        className,
+      )}
+    >
       {children}
     </div>
   );
@@ -406,7 +467,12 @@ export function AdminEyebrow({
   className?: string;
 }) {
   return (
-    <div className={cn("text-[11px] uppercase tracking-[0.26em] text-[color:var(--text-muted)]", className)}>
+    <div
+      className={cn(
+        "text-[11px] uppercase tracking-[0.26em] text-[color:var(--text-muted)]",
+        className,
+      )}
+    >
       {children}
     </div>
   );
@@ -449,9 +515,13 @@ export function AdminActionGroup({
         className,
       )}
     >
-      <div className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-muted)]">{title}</div>
+      <div className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-muted)]">
+        {title}
+      </div>
       {description ? (
-        <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{description}</div>
+        <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+          {description}
+        </div>
       ) : null}
       <div className="mt-4">{children}</div>
     </div>
@@ -476,8 +546,12 @@ export function AdminDangerZone({
         className,
       )}
     >
-      <div className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-muted)]">{title}</div>
-      <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{description}</div>
+      <div className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-muted)]">
+        {title}
+      </div>
+      <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+        {description}
+      </div>
       <div className="mt-4">{children}</div>
     </div>
   );
@@ -508,8 +582,12 @@ export function AdminActionFeedback({
         className,
       )}
     >
-      <div className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-muted)]">{title}</div>
-      <div className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">{description}</div>
+      <div className="text-xs uppercase tracking-[0.18em] text-[color:var(--text-muted)]">
+        {title}
+      </div>
+      <div className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">
+        {description}
+      </div>
     </div>
   );
 }
@@ -548,10 +626,14 @@ export function AdminStatusCard({
   return (
     <div className="rounded-[20px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4 shadow-[var(--shadow-soft)]">
       <div className="flex items-center justify-between gap-3">
-        <div className="font-semibold text-[color:var(--text-primary)]">{title}</div>
+        <div className="font-semibold text-[color:var(--text-primary)]">
+          {title}
+        </div>
         <StatusPill tone={tone}>{statusLabel}</StatusPill>
       </div>
-      <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{description}</div>
+      <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+        {description}
+      </div>
     </div>
   );
 }
@@ -577,7 +659,9 @@ export function AdminCompactStatusCard({
       )}
     >
       <div className="flex items-center justify-between gap-3">
-        <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--text-muted)]">{label}</div>
+        <div className="text-[11px] uppercase tracking-[0.22em] text-[color:var(--text-muted)]">
+          {label}
+        </div>
         <StatusPill tone={tone}>{value}</StatusPill>
       </div>
     </div>
@@ -598,12 +682,20 @@ export function AdminJumpCard({
   disabled?: boolean;
 }) {
   return (
-    <Link to={to} disabled={disabled} className={disabled ? "pointer-events-none opacity-50" : "block"}>
+    <Link
+      to={to}
+      disabled={disabled}
+      className={disabled ? "pointer-events-none opacity-50" : "block"}
+    >
       <div className="h-full rounded-[20px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4 shadow-[var(--shadow-soft)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-lift)]">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="font-semibold text-[color:var(--text-primary)]">{title}</div>
-            <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{detail}</div>
+            <div className="font-semibold text-[color:var(--text-primary)]">
+              {title}
+            </div>
+            <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+              {detail}
+            </div>
           </div>
           <StatusPill tone={emphasis === "primary" ? "healthy" : "muted"}>
             {emphasis === "primary" ? "优先" : "入口"}
@@ -646,11 +738,19 @@ export function AdminSelectableCard({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate font-semibold text-[color:var(--text-primary)]">{title}</div>
+          <div className="truncate font-semibold text-[color:var(--text-primary)]">
+            {title}
+          </div>
           {subtitle ? (
-            <div className="mt-1 truncate text-sm text-[color:var(--text-secondary)]">{subtitle}</div>
+            <div className="mt-1 truncate text-sm text-[color:var(--text-secondary)]">
+              {subtitle}
+            </div>
           ) : null}
-          {meta ? <div className="mt-2 text-xs leading-5 text-[color:var(--text-muted)]">{meta}</div> : null}
+          {meta ? (
+            <div className="mt-2 text-xs leading-5 text-[color:var(--text-muted)]">
+              {meta}
+            </div>
+          ) : null}
           {active ? (
             <div className="mt-2 text-xs uppercase tracking-[0.16em] text-[color:var(--brand-primary)]">
               {activeLabel}
@@ -672,8 +772,12 @@ export function AdminHintCard({
 }) {
   return (
     <div className="rounded-[20px] border border-[color:var(--border-faint)] bg-[color:var(--surface-card)] p-4 shadow-[var(--shadow-soft)]">
-      <div className="font-semibold text-[color:var(--text-primary)]">{title}</div>
-      <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">{detail}</div>
+      <div className="font-semibold text-[color:var(--text-primary)]">
+        {title}
+      </div>
+      <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+        {detail}
+      </div>
     </div>
   );
 }
@@ -687,7 +791,9 @@ export function AdminFormSection({
 }) {
   return (
     <section className="space-y-4 border-t border-[color:var(--border-faint)] pt-5 first:border-t-0 first:pt-0">
-      <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{title}</div>
+      <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+        {title}
+      </div>
       {children}
     </section>
   );
@@ -709,8 +815,12 @@ export function AdminValueCard({
         className,
       )}
     >
-      <div className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-muted)]">{label}</div>
-      <div className="mt-2 text-sm text-[color:var(--text-secondary)]">{value}</div>
+      <div className="text-[11px] uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+        {label}
+      </div>
+      <div className="mt-2 text-sm text-[color:var(--text-secondary)]">
+        {value}
+      </div>
     </div>
   );
 }
@@ -728,7 +838,11 @@ export function AdminToggle({
 }) {
   return (
     <div className={className}>
-      <ToggleChip label={label} checked={checked} onChange={(event) => onChange(event.target.checked)} />
+      <ToggleChip
+        label={label}
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+      />
     </div>
   );
 }
@@ -849,7 +963,9 @@ export function AdminPromptSectionList({
             className="overflow-hidden rounded-[20px] border border-[color:var(--border-faint)] bg-white/90"
           >
             <div className="flex items-center justify-between gap-3 border-b border-[color:var(--border-faint)] px-4 py-3">
-              <div className="text-sm font-medium text-[color:var(--text-primary)]">{section.label}</div>
+              <div className="text-sm font-medium text-[color:var(--text-primary)]">
+                {section.label}
+              </div>
               <StatusPill tone={section.active ? "healthy" : "muted"}>
                 {section.active ? "生效中" : "未生效"}
               </StatusPill>
@@ -937,7 +1053,10 @@ export function AdminTextArea({
           {defaultPrompt ? (
             <button
               type="button"
-              onClick={(e) => { e.preventDefault(); setShowDefault((v) => !v); }}
+              onClick={(e) => {
+                e.preventDefault();
+                setShowDefault((v) => !v);
+              }}
               className="shrink-0 rounded-md px-2 py-0.5 text-[11px] text-[color:var(--text-muted)] ring-1 ring-[color:var(--border-faint)] transition hover:bg-[color:var(--surface-secondary)] hover:text-[color:var(--text-secondary)]"
             >
               {showDefault ? "收起" : "查看默认"}
@@ -945,7 +1064,9 @@ export function AdminTextArea({
           ) : null}
         </div>
         {description ? (
-          <div className="mb-2 text-xs leading-5 text-[color:var(--text-secondary)]">{description}</div>
+          <div className="mb-2 text-xs leading-5 text-[color:var(--text-secondary)]">
+            {description}
+          </div>
         ) : null}
         {showDefault && defaultPrompt ? (
           <pre className="mb-2 overflow-x-auto whitespace-pre-wrap break-words rounded-[16px] border border-[color:var(--border-faint)] bg-white/80 p-3 text-[11px] leading-[1.7] text-[color:var(--text-secondary)]">
@@ -981,7 +1102,10 @@ export function AdminSelectField({
       <div className="mb-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
         {label}
       </div>
-      <SelectField value={value} onChange={(event) => onChange(event.target.value)}>
+      <SelectField
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
         {options.map((item) => (
           <option key={`${label}-${item.value}`} value={item.value}>
             {item.label}
@@ -1059,12 +1183,7 @@ export function AdminSubTabs({
   className?: string;
 }) {
   return (
-    <div
-      className={[
-        "flex flex-wrap gap-1",
-        className ?? "",
-      ].join(" ")}
-    >
+    <div className={["flex flex-wrap gap-1", className ?? ""].join(" ")}>
       {tabs.map((tab) => (
         <button
           key={tab.key}

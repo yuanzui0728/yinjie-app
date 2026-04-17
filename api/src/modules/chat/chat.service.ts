@@ -4,11 +4,13 @@ import path from 'path';
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, In, MoreThan, Repository } from 'typeorm';
 import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
+import { AiSpeechAssetsService } from '../ai/ai-speech-assets.service';
 import { ReplyLogicRulesService } from '../ai/reply-logic-rules.service';
 import { sanitizeAiText } from '../ai/ai-text-sanitizer';
 import { AiMessagePart, ChatMessage } from '../ai/ai.types';
@@ -16,6 +18,7 @@ import { WorldOwnerService } from '../auth/world-owner.service';
 import { CharactersService } from '../characters/characters.service';
 import { NarrativeService } from '../narrative/narrative.service';
 import { ActionRuntimeService } from '../action-runtime/action-runtime.service';
+import { CyberAvatarService } from '../cyber-avatar/cyber-avatar.service';
 import { ConversationEntity } from './conversation.entity';
 import { GroupEntity } from './group.entity';
 import { GroupMemberEntity } from './group-member.entity';
@@ -105,17 +108,20 @@ type ConversationMessageListQuery = {
 
 @Injectable()
 export class ChatService {
+  private readonly logger = new Logger(ChatService.name);
   private conversationHistory: Map<string, ChatMessage[]> = new Map();
   private readonly defaultStrongReminderHours = 3;
   private readonly maxStrongReminderHours = 24;
 
   constructor(
     private readonly ai: AiOrchestratorService,
+    private readonly speechAssets: AiSpeechAssetsService,
     private readonly characters: CharactersService,
     private readonly narrativeService: NarrativeService,
     private readonly worldOwnerService: WorldOwnerService,
     private readonly replyLogicRules: ReplyLogicRulesService,
     private readonly actionRuntime: ActionRuntimeService,
+    private readonly cyberAvatar: CyberAvatarService,
     private readonly customStickersService: CustomStickersService,
     @InjectRepository(ConversationEntity)
     private convRepo: Repository<ConversationEntity>,
@@ -648,7 +654,10 @@ export class ChatService {
     const owner = await this.worldOwnerService.getOwnerOrThrow();
     const aiKeyOverride =
       (await this.worldOwnerService.getOwnerAiConfig()) ?? undefined;
-    const normalizedInput = await this.normalizeOutgoingMessageInput(input);
+    const normalizedInput = await this.normalizeOutgoingMessageInput(
+      input,
+      convId,
+    );
 
     const userMsgEntity = this.msgRepo.create({
       id: `msg_${Date.now()}`,
@@ -684,6 +693,23 @@ export class ChatService {
     if (!profile) {
       throw new Error(`Profile not found for ${charId}`);
     }
+    void this.cyberAvatar.captureSignal({
+      ownerId: owner.id,
+      signalType: 'direct_message',
+      sourceSurface: 'chat',
+      sourceEntityType: 'conversation_message',
+      sourceEntityId: userMsgEntity.id,
+      dedupeKey: `direct_message:${userMsgEntity.id}`,
+      summaryText: `单聊对 ${entity.title} 发送：${normalizedInput.promptText.slice(0, 120)}`,
+      payload: {
+        conversationId: convId,
+        conversationTitle: entity.title,
+        characterId: charId,
+        messageType: normalizedInput.type,
+        text: normalizedInput.promptText,
+      },
+      occurredAt: userMsgEntity.createdAt ?? new Date(),
+    });
 
     const charEntity = await this.characters.findById(charId);
     const lastMsg = await this.msgRepo.findOne({
@@ -707,7 +733,7 @@ export class ChatService {
       : { handled: false };
 
     const assistantReplyText = actionResult.handled
-      ? actionResult.responseText?.trim() ?? ''
+      ? (actionResult.responseText?.trim() ?? '')
       : (
           await this.ai.generateReply({
             profile,
@@ -740,10 +766,10 @@ export class ChatService {
         type: 'text',
         text: assistantReplyText,
       });
-      await this.msgRepo.save(aiEntity);
+      const savedAiEntity = await this.msgRepo.save(aiEntity);
       await this.touchConversationActivity(
         entity,
-        aiEntity.createdAt ?? new Date(),
+        savedAiEntity.createdAt ?? new Date(),
       );
       if (this.shouldIncludeAssistantMessageInHistory(assistantReplyText)) {
         history.push({
@@ -754,7 +780,7 @@ export class ChatService {
         });
       }
       this.conversationHistory.set(convId, history);
-      results.push(this._entityToMessage(aiEntity));
+      results.push(this._entityToMessage(savedAiEntity));
     }
 
     const runtimeRules = await this.replyLogicRules.getRules();
@@ -765,17 +791,24 @@ export class ChatService {
       const primaryCharId = entity.participants[0];
       const char = await this.characters.findById(primaryCharId);
       if (char) {
-        const newMemory = await this.ai.compressMemory(history, char.profile, {
-          surface: 'app',
-          scene: 'memory_compress',
-          scopeType: 'conversation',
-          scopeId: convId,
-          scopeLabel: entity.title,
-          ownerId: entity.ownerId,
-          characterId: primaryCharId,
-          characterName: char.name,
-          conversationId: convId,
-        });
+        const runtimeProfile =
+          (await this.characters.getRuntimeProfileFromCharacter(char)) ??
+          char.profile;
+        const newMemory = await this.ai.compressMemory(
+          history,
+          runtimeProfile,
+          {
+            surface: 'app',
+            scene: 'memory_compress',
+            scopeType: 'conversation',
+            scopeId: convId,
+            scopeLabel: entity.title,
+            ownerId: entity.ownerId,
+            characterId: primaryCharId,
+            characterName: char.name,
+            conversationId: convId,
+          },
+        );
         if (!char.profile.memory) {
           char.profile.memory = {
             coreMemory: char.profile.memorySummary ?? '',
@@ -791,6 +824,143 @@ export class ChatService {
 
     await this.syncNarrativeArc(entity);
     return results;
+  }
+
+  private shouldCreateVoiceReply(
+    inputType:
+      | 'text'
+      | 'sticker'
+      | 'image'
+      | 'file'
+      | 'voice'
+      | 'contact_card'
+      | 'location_card'
+      | 'note_card',
+  ) {
+    return inputType === 'voice';
+  }
+
+  private async createAssistantReplyMessageEntity(input: {
+    conversationId: string;
+    characterId: string;
+    characterName: string;
+    text: string;
+    replyToInputType:
+      | 'text'
+      | 'sticker'
+      | 'image'
+      | 'file'
+      | 'voice'
+      | 'contact_card'
+      | 'location_card'
+      | 'note_card';
+  }) {
+    const baseMessage = {
+      conversationId: input.conversationId,
+      senderType: 'character' as const,
+      senderId: input.characterId,
+      senderName: input.characterName,
+      type: 'text' as const,
+      text: input.text,
+      attachmentKind: null as string | null,
+      attachmentPayload: null as string | null,
+    };
+
+    if (!this.shouldCreateVoiceReply(input.replyToInputType)) {
+      return baseMessage;
+    }
+
+    try {
+      const synthesized = await this.ai.synthesizeSpeech({
+        text: input.text,
+        conversationId: input.conversationId,
+        characterId: input.characterId,
+        instructions: buildAssistantSpeechInstructions(input.characterName),
+      });
+      const asset = await this.speechAssets.saveGeneratedSpeech(
+        synthesized.buffer,
+        {
+          mimeType: synthesized.mimeType,
+          fileExtension: synthesized.fileExtension,
+          baseName: `chat-reply-${input.characterId}`,
+        },
+      );
+      const attachment: VoiceAttachment = {
+        kind: 'voice',
+        url: asset.audioUrl,
+        mimeType: asset.mimeType,
+        fileName: asset.fileName,
+        size: synthesized.buffer.length,
+        transcriptText: input.text,
+      };
+
+      return {
+        ...baseMessage,
+        type: 'voice' as const,
+        attachmentKind: attachment.kind,
+        attachmentPayload: JSON.stringify(attachment),
+      };
+    } catch (error) {
+      this.logger.warn(
+        'Failed to synthesize assistant voice reply, falling back to text.',
+        {
+          conversationId: input.conversationId,
+          characterId: input.characterId,
+          errorMessage: error instanceof Error ? error.message : String(error),
+        },
+      );
+      return baseMessage;
+    }
+  }
+
+  private async enrichAttachmentForAi(
+    attachment: MessageAttachment,
+    conversationId?: string,
+  ): Promise<MessageAttachment> {
+    if (attachment.kind === 'voice') {
+      if (attachment.transcriptText?.trim()) {
+        return attachment;
+      }
+
+      const transcription = await this.ai.tryTranscribeMediaFromUrl({
+        url: attachment.url,
+        mimeType: attachment.mimeType,
+        fileName: attachment.fileName,
+        conversationId,
+        mode: 'chat_attachment',
+      });
+      return transcription?.text
+        ? {
+            ...attachment,
+            transcriptText: transcription.text,
+          }
+        : attachment;
+    }
+
+    if (
+      attachment.kind === 'file' &&
+      /^(audio|video)\//i.test(attachment.mimeType)
+    ) {
+      if (attachment.transcriptText?.trim()) {
+        return attachment;
+      }
+
+      const transcription = await this.ai.tryTranscribeMediaFromUrl({
+        url: attachment.url,
+        mimeType: attachment.mimeType,
+        fileName: attachment.fileName,
+        conversationId,
+        mode: 'chat_attachment',
+      });
+      return transcription?.text
+        ? {
+            ...attachment,
+            transcriptText: transcription.text,
+          }
+        : attachment;
+    }
+
+    return attachment;
   }
 
   private async syncNarrativeArc(
@@ -856,8 +1026,14 @@ export class ChatService {
 
       rebuiltHistory.push({
         role: message.senderType === 'user' ? 'user' : 'assistant',
-        content: this.buildMessagePromptText(baseText, attachment),
-        parts: this.buildAiParts(baseText, attachment),
+        content:
+          message.senderType === 'user'
+            ? this.buildMessagePromptText(baseText, attachment)
+            : baseText,
+        parts:
+          message.senderType === 'user'
+            ? this.buildAiParts(baseText, attachment)
+            : this.buildTextAiParts(baseText),
         characterId:
           message.senderType === 'character' ? message.senderId : undefined,
       });
@@ -1071,7 +1247,8 @@ export class ChatService {
         | 'file'
         | 'voice'
         | 'contact_card'
-        | 'location_card',
+        | 'location_card'
+        | 'note_card',
       text:
         entity.senderType === 'user'
           ? entity.text
@@ -1204,6 +1381,7 @@ export class ChatService {
 
   private async normalizeOutgoingMessageInput(
     input: SendConversationMessageInput,
+    conversationId?: string,
   ): Promise<{
     type:
       | 'text'
@@ -1253,19 +1431,20 @@ export class ChatService {
       if (!input.attachment || input.attachment.kind !== input.type) {
         throw new NotFoundException('Attachment payload is invalid');
       }
+      const attachment = await this.enrichAttachmentForAi(
+        input.attachment,
+        conversationId,
+      );
 
       const fallbackText =
-        input.text?.trim() || this.getAttachmentFallbackText(input.attachment);
-      const promptText = this.buildMessagePromptText(
-        fallbackText,
-        input.attachment,
-      );
+        input.text?.trim() || this.getAttachmentFallbackText(attachment);
+      const promptText = this.buildMessagePromptText(fallbackText, attachment);
       return {
         type: input.type,
         text: fallbackText,
         promptText,
-        aiParts: this.buildAiParts(fallbackText, input.attachment),
-        attachment: input.attachment,
+        aiParts: this.buildAiParts(fallbackText, attachment),
+        attachment,
       };
     }
 
@@ -1299,6 +1478,7 @@ export class ChatService {
           imageUrl: attachment.url,
           detail: 'auto',
           altText: promptText,
+          mimeType: attachment.mimeType,
         },
       ];
     }
@@ -1385,6 +1565,16 @@ export class ChatService {
     if (attachment.kind === 'file') {
       const sizeText = formatAttachmentSize(attachment.size);
       const captionText = caption ? `，补充说明：${caption}` : '';
+      if (
+        /^(audio|video)\//i.test(attachment.mimeType) &&
+        attachment.transcriptText?.trim()
+      ) {
+        const mediaLabel = attachment.mimeType.startsWith('video/')
+          ? '视频'
+          : '音频';
+        return `发来一个${mediaLabel}文件《${attachment.fileName}》${sizeText ? `，大小：${sizeText}` : ''}${captionText}，转写内容：${attachment.transcriptText.trim()}`.trim();
+      }
+
       return `发来一个文件《${attachment.fileName}》${attachment.mimeType ? `，类型：${attachment.mimeType}` : ''}${sizeText ? `，大小：${sizeText}` : ''}${captionText}`.trim();
     }
 
@@ -1394,7 +1584,11 @@ export class ChatService {
           ? `，时长：${formatAttachmentDuration(attachment.durationMs)}`
           : '';
       const captionText = caption ? `，补充说明：${caption}` : '';
-      return `发来一条语音消息${durationText}${captionText}`.trim();
+      const transcriptText = attachment.transcriptText?.trim();
+      const transcription = transcriptText
+        ? `，转写内容：${transcriptText}`
+        : '';
+      return `发来一条语音消息${durationText}${captionText}${transcription}`.trim();
     }
 
     if (attachment.kind === 'contact_card') {
@@ -1597,4 +1791,9 @@ function normalizeOptionalDimension(value?: number) {
   }
 
   return Math.round(value);
+}
+
+function buildAssistantSpeechInstructions(characterName: string) {
+  const normalizedName = characterName.trim() || '助手';
+  return `请用自然、温和、清晰的口语表达，以 ${normalizedName} 的身份朗读，不要加入舞台说明。`;
 }

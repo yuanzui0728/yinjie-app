@@ -28,6 +28,7 @@ export interface FileAttachment {
   mimeType: string;
   fileName: string;
   size: number;
+  transcriptText?: string;
 }
 
 export interface VoiceAttachment {
@@ -37,6 +38,7 @@ export interface VoiceAttachment {
   fileName: string;
   size: number;
   durationMs?: number;
+  transcriptText?: string;
 }
 
 export interface ContactCardAttachment {

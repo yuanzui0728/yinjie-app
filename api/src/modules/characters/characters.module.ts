@@ -7,14 +7,20 @@ import { CharacterBlueprintEntity } from './character-blueprint.entity';
 import { CharacterBlueprintRevisionEntity } from './character-blueprint-revision.entity';
 import { CharacterBlueprintService } from './character-blueprint.service';
 import { AiModule } from '../ai/ai.module';
+import { FriendshipEntity } from '../social/friendship.entity';
+import { AuthModule } from '../auth/auth.module';
+import { RealWorldSyncModule } from '../real-world-sync/real-world-sync.module';
 
 @Module({
   imports: [
     AiModule,
+    AuthModule,
+    RealWorldSyncModule,
     TypeOrmModule.forFeature([
       CharacterEntity,
       CharacterBlueprintEntity,
       CharacterBlueprintRevisionEntity,
+      FriendshipEntity,
     ]),
   ],
   providers: [CharactersService, CharacterBlueprintService],

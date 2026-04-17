@@ -7,6 +7,8 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { readFile, stat } from 'node:fs/promises';
+import path from 'node:path';
 import { ConfigService } from '@nestjs/config';
 import OpenAI, { toFile } from 'openai';
 import {
@@ -28,17 +30,22 @@ import { SystemConfigService } from '../config/config.service';
 import { WorldService } from '../world/world.service';
 import { ReplyLogicRulesService } from './reply-logic-rules.service';
 import { AiUsageLedgerService } from '../analytics/ai-usage-ledger.service';
+import { resolveReadableChatAttachmentPath } from '../chat/chat-attachment-storage';
+import { resolveReadableMomentMediaPath } from '../moments/moment-media.storage';
 
 const DEFAULT_TRANSCRIPTION_MODEL = 'gpt-4o-mini-transcribe';
 const DEFAULT_TTS_MODEL = 'gpt-4o-mini-tts';
 const DEFAULT_TTS_VOICE = 'alloy';
+const MAX_INLINE_IMAGE_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_AUDIO_MIME_TYPES = new Set([
   'audio/mp4',
+  'audio/x-m4a',
   'audio/mpeg',
   'audio/ogg',
   'audio/wav',
   'audio/webm',
   'video/mp4',
+  'video/quicktime',
   'video/webm',
 ]);
 
@@ -47,6 +54,12 @@ type UploadedAudioFile = {
   mimetype: string;
   originalname?: string;
   size: number;
+};
+
+type LoadedAsset = {
+  buffer: Buffer;
+  mimeType?: string;
+  fileName?: string;
 };
 
 type ResolvedProviderConfig = {
@@ -274,6 +287,171 @@ export class AiOrchestratorService {
     }
   }
 
+  private normalizeMediaMimeType(value?: string | null) {
+    const normalized = value?.trim().toLowerCase();
+    if (!normalized) {
+      return undefined;
+    }
+
+    if (normalized === 'audio/mp3') {
+      return 'audio/mpeg';
+    }
+
+    if (normalized === 'audio/m4a') {
+      return 'audio/x-m4a';
+    }
+
+    return normalized;
+  }
+
+  private inferMimeTypeFromFileName(fileName?: string | null) {
+    const ext = path
+      .extname(fileName ?? '')
+      .trim()
+      .toLowerCase();
+    switch (ext) {
+      case '.jpg':
+      case '.jpeg':
+        return 'image/jpeg';
+      case '.png':
+        return 'image/png';
+      case '.webp':
+        return 'image/webp';
+      case '.gif':
+        return 'image/gif';
+      case '.svg':
+        return 'image/svg+xml';
+      case '.mp3':
+        return 'audio/mpeg';
+      case '.m4a':
+        return 'audio/x-m4a';
+      case '.wav':
+        return 'audio/wav';
+      case '.ogg':
+        return 'audio/ogg';
+      case '.webm':
+        return 'video/webm';
+      case '.mp4':
+        return 'video/mp4';
+      case '.mov':
+        return 'video/quicktime';
+      default:
+        return undefined;
+    }
+  }
+
+  private resolveLocalAssetPath(url: string) {
+    try {
+      const parsed = new URL(url);
+      const normalizedPath = parsed.pathname.replace(/\/+$/, '');
+      const fileName = decodeURIComponent(
+        path.basename(normalizedPath.split('/').pop() ?? ''),
+      );
+
+      if (!fileName) {
+        return null;
+      }
+
+      if (normalizedPath.startsWith('/api/chat/attachments/')) {
+        return resolveReadableChatAttachmentPath(fileName);
+      }
+
+      if (normalizedPath.startsWith('/api/moments/media/')) {
+        return resolveReadableMomentMediaPath(fileName);
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async loadAssetFromUrl(
+    url: string,
+    maxBytes?: number,
+  ): Promise<LoadedAsset | null> {
+    if (!url.trim() || url.startsWith('data:')) {
+      return null;
+    }
+
+    const localPath = this.resolveLocalAssetPath(url);
+    if (localPath) {
+      try {
+        if (maxBytes) {
+          const fileStat = await stat(localPath);
+          if (fileStat.size > maxBytes) {
+            return null;
+          }
+        }
+
+        const buffer = await readFile(localPath);
+        return {
+          buffer,
+          mimeType: this.inferMimeTypeFromFileName(localPath),
+          fileName: path.basename(localPath),
+        };
+      } catch {
+        return null;
+      }
+    }
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        return null;
+      }
+      const contentLength = Number(response.headers.get('content-length') ?? 0);
+      if (
+        maxBytes &&
+        Number.isFinite(contentLength) &&
+        contentLength > maxBytes
+      ) {
+        return null;
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      if (maxBytes && arrayBuffer.byteLength > maxBytes) {
+        return null;
+      }
+      return {
+        buffer: Buffer.from(arrayBuffer),
+        mimeType: this.normalizeMediaMimeType(
+          response.headers.get('content-type'),
+        ),
+        fileName: path.basename(new URL(url).pathname),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private async resolveImageInputUrl(
+    part: Extract<AiMessagePart, { type: 'image' }>,
+    provider: ResolvedProviderConfig,
+  ) {
+    if (this.isReachableImageUrl(part.imageUrl, provider)) {
+      return part.imageUrl;
+    }
+
+    const loadedAsset = await this.loadAssetFromUrl(
+      part.imageUrl,
+      MAX_INLINE_IMAGE_BYTES,
+    );
+    if (!loadedAsset?.buffer.length) {
+      return null;
+    }
+
+    const mimeType =
+      this.normalizeMediaMimeType(part.mimeType) ??
+      this.normalizeMediaMimeType(loadedAsset.mimeType) ??
+      'image/jpeg';
+    if (!mimeType.startsWith('image/')) {
+      return null;
+    }
+
+    return `data:${mimeType};base64,${loadedAsset.buffer.toString('base64')}`;
+  }
+
   private extractErrorMessage(error: unknown) {
     if (error instanceof Error) {
       return error.message;
@@ -374,8 +552,7 @@ export class AiOrchestratorService {
       | undefined,
   ): AiUsageMetrics {
     const promptTokens = usage?.prompt_tokens ?? usage?.input_tokens;
-    const completionTokens =
-      usage?.completion_tokens ?? usage?.output_tokens;
+    const completionTokens = usage?.completion_tokens ?? usage?.output_tokens;
     const totalTokens =
       usage?.total_tokens ??
       ((promptTokens ?? 0) || (completionTokens ?? 0)
@@ -412,7 +589,9 @@ export class AiOrchestratorService {
     };
   }
 
-  private async safeRecordUsage(input: Parameters<AiUsageLedgerService['record']>[0]) {
+  private async safeRecordUsage(
+    input: Parameters<AiUsageLedgerService['record']>[0],
+  ) {
     try {
       await this.usageLedger.record(input);
     } catch (error) {
@@ -510,9 +689,7 @@ export class AiOrchestratorService {
     const decision = await this.usageLedger.getBudgetExecutionDecision({
       characterId: usageContext.characterId,
       characterName:
-        usageContext.characterName ??
-        usageContext.scopeLabel ??
-        undefined,
+        usageContext.characterName ?? usageContext.scopeLabel ?? undefined,
       currentModel: provider.model,
     });
     if (!decision) {
@@ -595,59 +772,102 @@ export class AiOrchestratorService {
       currentUserMessage,
       isGroupChat,
     } = request;
+    const hasImageInput = this.requestContainsImageInput(request);
 
-    if (provider.apiStyle === 'openai-responses') {
-      const response = await client.responses.create({
-        model: provider.model,
-        instructions: systemPrompt,
-        input: [
-          ...conversationHistory.map((message) =>
-            this.buildResponsesMessage(message, provider, isGroupChat),
+    const execute = async (
+      allowImageInput: boolean,
+    ): Promise<GenerateReplyResult> => {
+      if (provider.apiStyle === 'openai-responses') {
+        const historyMessages = await Promise.all(
+          conversationHistory.map((message) =>
+            this.buildResponsesMessage(
+              message,
+              provider,
+              isGroupChat,
+              allowImageInput,
+            ),
           ),
-          this.buildResponsesMessage(currentUserMessage, provider, isGroupChat),
+        );
+        const currentMessage = await this.buildResponsesMessage(
+          currentUserMessage,
+          provider,
+          isGroupChat,
+          allowImageInput,
+        );
+        const response = await client.responses.create({
+          model: provider.model,
+          instructions: systemPrompt,
+          input: [...historyMessages, currentMessage],
+          max_output_tokens: 500,
+          temperature: 0.85,
+        });
+
+        const rawText = response.output_text ?? '（无回复）';
+        const text = sanitizeAiText(rawText) || '（无回复）';
+        const usage = this.normalizeUsageMetrics(response.usage);
+        return {
+          text,
+          tokensUsed: usage.totalTokens ?? 0,
+          usage,
+          model: response.model ?? provider.model,
+        };
+      }
+
+      const historyMessages = await Promise.all(
+        conversationHistory.map((message) =>
+          this.buildChatCompletionMessage(
+            message,
+            provider,
+            isGroupChat,
+            allowImageInput,
+          ),
+        ),
+      );
+      const currentMessage = await this.buildChatCompletionMessage(
+        currentUserMessage,
+        provider,
+        isGroupChat,
+        allowImageInput,
+      );
+      const response = await client.chat.completions.create({
+        model: provider.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...historyMessages,
+          currentMessage,
         ],
-        max_output_tokens: 500,
+        max_tokens: 500,
         temperature: 0.85,
       });
 
-      const rawText = response.output_text ?? '（无回复）';
+      const rawText = response.choices[0]?.message?.content ?? '（无回复）';
       const text = sanitizeAiText(rawText) || '（无回复）';
       const usage = this.normalizeUsageMetrics(response.usage);
+
       return {
         text,
         tokensUsed: usage.totalTokens ?? 0,
         usage,
         model: response.model ?? provider.model,
       };
-    }
-
-    const response = await client.chat.completions.create({
-      model: provider.model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...conversationHistory.map((message) =>
-          this.buildChatCompletionMessage(message, provider, isGroupChat),
-        ),
-        this.buildChatCompletionMessage(
-          currentUserMessage,
-          provider,
-          isGroupChat,
-        ),
-      ],
-      max_tokens: 500,
-      temperature: 0.85,
-    });
-
-    const rawText = response.choices[0]?.message?.content ?? '（无回复）';
-    const text = sanitizeAiText(rawText) || '（无回复）';
-    const usage = this.normalizeUsageMetrics(response.usage);
-
-    return {
-      text,
-      tokensUsed: usage.totalTokens ?? 0,
-      usage,
-      model: response.model ?? provider.model,
     };
+
+    try {
+      return await execute(true);
+    } catch (error) {
+      if (hasImageInput && this.isUnsupportedImageInputError(error)) {
+        this.logger.warn(
+          'Provider rejected image input, retrying with text-only fallback',
+          {
+            model: provider.model,
+            errorMessage: this.extractErrorMessage(error),
+          },
+        );
+        return execute(false);
+      }
+
+      throw error;
+    }
   }
 
   private canRetryWithDefaultProvider(
@@ -670,28 +890,48 @@ export class AiOrchestratorService {
       : message.content;
   }
 
-  private collectUsableImageParts(
+  private async collectUsableImageParts(
     parts: AiMessagePart[] | undefined,
     provider: ResolvedProviderConfig,
   ) {
-    if (!parts?.length || !this.modelSupportsImageInput(provider.model)) {
+    if (!parts?.length) {
       return [];
     }
 
-    return parts.filter(
+    const imageParts = parts.filter(
       (part): part is Extract<AiMessagePart, { type: 'image' }> =>
-        part.type === 'image' &&
-        this.isReachableImageUrl(part.imageUrl, provider),
+        part.type === 'image',
+    );
+    const resolvedParts = await Promise.all(
+      imageParts.map(async (part) => {
+        const inputUrl = await this.resolveImageInputUrl(part, provider);
+        if (!inputUrl) {
+          return null;
+        }
+
+        return {
+          ...part,
+          imageUrl: inputUrl,
+        };
+      }),
+    );
+
+    return resolvedParts.filter(
+      (part): part is Extract<AiMessagePart, { type: 'image' }> =>
+        Boolean(part),
     );
   }
 
-  private buildChatCompletionMessage(
+  private async buildChatCompletionMessage(
     message: ChatMessage,
     provider: ResolvedProviderConfig,
     isGroupChat?: boolean,
-  ): OpenAI.Chat.ChatCompletionMessageParam {
+    allowImageInput = true,
+  ): Promise<OpenAI.Chat.ChatCompletionMessageParam> {
     const textContent = this.buildMessageText(message, isGroupChat);
-    const imageParts = this.collectUsableImageParts(message.parts, provider);
+    const imageParts = allowImageInput
+      ? await this.collectUsableImageParts(message.parts, provider)
+      : [];
     if (!imageParts.length || message.role !== 'user') {
       return {
         role: message.role,
@@ -723,13 +963,16 @@ export class AiOrchestratorService {
     };
   }
 
-  private buildResponsesMessage(
+  private async buildResponsesMessage(
     message: ChatMessage,
     provider: ResolvedProviderConfig,
     isGroupChat?: boolean,
-  ): OpenAI.Responses.EasyInputMessage {
+    allowImageInput = true,
+  ): Promise<OpenAI.Responses.EasyInputMessage> {
     const textContent = this.buildMessageText(message, isGroupChat);
-    const imageParts = this.collectUsableImageParts(message.parts, provider);
+    const imageParts = allowImageInput
+      ? await this.collectUsableImageParts(message.parts, provider)
+      : [];
     if (!imageParts.length) {
       return {
         role: message.role as 'user' | 'assistant' | 'system' | 'developer',
@@ -754,6 +997,29 @@ export class AiOrchestratorService {
       role: message.role as 'user' | 'assistant' | 'system' | 'developer',
       content: contentParts,
     };
+  }
+
+  private requestContainsImageInput(request: PreparedReplyRequest) {
+    return [...request.conversationHistory, request.currentUserMessage].some(
+      (message) => message.parts?.some((part) => part.type === 'image'),
+    );
+  }
+
+  private isUnsupportedImageInputError(error: unknown) {
+    const status = this.extractErrorStatus(error);
+    const message = this.extractErrorMessage(error);
+    if (
+      status !== undefined &&
+      status !== 400 &&
+      status !== 415 &&
+      status !== 422
+    ) {
+      return false;
+    }
+
+    return /image|input_image|image_url|vision|multimodal|does not support images|unsupported image|content part/i.test(
+      message,
+    );
   }
 
   private buildUnavailableReply(
@@ -831,6 +1097,53 @@ export class AiOrchestratorService {
       requestMessages,
       apiAvailable: Boolean(provider.apiKey),
     };
+  }
+
+  async tryTranscribeMediaFromUrl(input: {
+    url: string;
+    mimeType?: string | null;
+    fileName?: string | null;
+    conversationId?: string;
+    mode?: string;
+  }) {
+    const normalizedMimeType =
+      this.normalizeMediaMimeType(input.mimeType) ??
+      this.inferMimeTypeFromFileName(input.fileName);
+    if (
+      !normalizedMimeType ||
+      (!normalizedMimeType.startsWith('audio/') &&
+        !normalizedMimeType.startsWith('video/'))
+    ) {
+      return null;
+    }
+
+    const asset = await this.loadAssetFromUrl(input.url, 10 * 1024 * 1024);
+    if (!asset?.buffer.length) {
+      return null;
+    }
+
+    try {
+      return await this.transcribeAudio(
+        {
+          buffer: asset.buffer,
+          mimetype:
+            this.normalizeMediaMimeType(asset.mimeType) ?? normalizedMimeType,
+          originalname: input.fileName ?? asset.fileName ?? 'media-input',
+          size: asset.buffer.length,
+        },
+        {
+          conversationId: input.conversationId,
+          mode: input.mode,
+        },
+      );
+    } catch (error) {
+      this.logger.warn('media transcription skipped', {
+        url: input.url,
+        mimeType: normalizedMimeType,
+        errorMessage: this.extractErrorMessage(error),
+      });
+      return null;
+    }
   }
 
   private async buildSystemPrompt(
@@ -1041,7 +1354,8 @@ export class AiOrchestratorService {
 
   async generateMoment(options: GenerateMomentOptions): Promise<string> {
     const { profile, currentTime, recentTopics, usageContext } = options;
-    const sceneKey = this.resolveSceneKey(usageContext?.scene) ?? 'moments_post';
+    const sceneKey =
+      this.resolveSceneKey(usageContext?.scene) ?? 'moments_post';
     const prompt = await this.promptBuilder.buildMomentPrompt(
       profile,
       currentTime,
@@ -1172,7 +1486,9 @@ export class AiOrchestratorService {
     }
   }
 
-  async generateQuickCharacter(description: string): Promise<Record<string, unknown>> {
+  async generateQuickCharacter(
+    description: string,
+  ): Promise<Record<string, unknown>> {
     const prompt = `你是一个角色设计师。根据以下描述，生成一个完整的虚拟角色 JSON 草稿，严格输出合法 JSON，不要输出任何其他内容。
 
 描述：${description}
@@ -1250,6 +1566,115 @@ export class AiOrchestratorService {
         error,
       );
       throw error;
+    }
+  }
+
+  async generateJsonObject(options: {
+    prompt: string;
+    usageContext: AiUsageContext;
+    maxTokens?: number;
+    temperature?: number;
+    fallback?: Record<string, unknown>;
+  }): Promise<Record<string, unknown>> {
+    const runtimeProvider = await this.resolveRuntimeProvider();
+    let failureProvider = runtimeProvider;
+
+    try {
+      const budgetedProvider = await this.prepareBudgetAwareProvider(
+        runtimeProvider,
+        'instance_default',
+        options.usageContext,
+      );
+      const provider = budgetedProvider.provider;
+      failureProvider = provider;
+      const client = this.createProviderClient(provider);
+      const response = await client.chat.completions.create({
+        model: provider.model,
+        messages: [{ role: 'user', content: options.prompt }],
+        max_tokens: options.maxTokens ?? 1200,
+        temperature: options.temperature ?? 0.3,
+        response_format: { type: 'json_object' },
+      });
+
+      const usage = this.normalizeUsageMetrics(response.usage);
+      await this.recordSuccessfulUsage(
+        provider,
+        'instance_default',
+        options.usageContext,
+        {
+          usage,
+          model: response.model ?? provider.model,
+        },
+        budgetedProvider.usageAudit,
+      );
+
+      const raw = response.choices[0]?.message?.content ?? '{}';
+      try {
+        return JSON.parse(raw) as Record<string, unknown>;
+      } catch {
+        this.logger.error('Failed to parse JSON task result', raw);
+        return options.fallback ?? {};
+      }
+    } catch (error) {
+      await this.recordFailedUsage(
+        failureProvider,
+        'instance_default',
+        options.usageContext,
+        error,
+      );
+      this.logger.error('generateJsonObject error', error);
+      return options.fallback ?? {};
+    }
+  }
+
+  async generatePlainText(options: {
+    prompt: string;
+    usageContext: AiUsageContext;
+    maxTokens?: number;
+    temperature?: number;
+    fallback?: string;
+  }): Promise<string> {
+    const runtimeProvider = await this.resolveRuntimeProvider();
+    let failureProvider = runtimeProvider;
+
+    try {
+      const budgetedProvider = await this.prepareBudgetAwareProvider(
+        runtimeProvider,
+        'instance_default',
+        options.usageContext,
+      );
+      const provider = budgetedProvider.provider;
+      failureProvider = provider;
+      const client = this.createProviderClient(provider);
+      const response = await client.chat.completions.create({
+        model: provider.model,
+        messages: [{ role: 'user', content: options.prompt }],
+        max_tokens: options.maxTokens ?? 800,
+        temperature: options.temperature ?? 0.4,
+      });
+
+      const usage = this.normalizeUsageMetrics(response.usage);
+      await this.recordSuccessfulUsage(
+        provider,
+        'instance_default',
+        options.usageContext,
+        {
+          usage,
+          model: response.model ?? provider.model,
+        },
+        budgetedProvider.usageAudit,
+      );
+
+      return sanitizeAiText(response.choices[0]?.message?.content ?? '');
+    } catch (error) {
+      await this.recordFailedUsage(
+        failureProvider,
+        'instance_default',
+        options.usageContext,
+        error,
+      );
+      this.logger.error('generatePlainText error', error);
+      return options.fallback ?? '';
     }
   }
 

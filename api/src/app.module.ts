@@ -12,6 +12,7 @@ import { SystemConfigModule } from './modules/config/config.module';
 import { SocialModule } from './modules/social/social.module';
 import { ModerationModule } from './modules/moderation/moderation.module';
 import { FeedModule } from './modules/feed/feed.module';
+import { GamesModule } from './modules/games/games.module';
 import { OfficialAccountsModule } from './modules/official-accounts/official-accounts.module';
 import { WorldModule } from './modules/world/world.module';
 import { SchedulerModule } from './modules/scheduler/scheduler.module';
@@ -20,6 +21,9 @@ import { AdminModule } from './modules/admin/admin.module';
 import { CloudRuntimeModule } from './modules/cloud-runtime/cloud-runtime.module';
 import { SystemModule } from './modules/system/system.module';
 import { ActionRuntimeModule } from './modules/action-runtime/action-runtime.module';
+import { CyberAvatarModule } from './modules/cyber-avatar/cyber-avatar.module';
+import { NeedDiscoveryModule } from './modules/need-discovery/need-discovery.module';
+import { RealWorldSyncModule } from './modules/real-world-sync/real-world-sync.module';
 
 // Entities
 import { CharacterEntity } from './modules/characters/character.entity';
@@ -58,7 +62,19 @@ import { ModerationReportEntity } from './modules/moderation/moderation-report.e
 import { AdminConversationReviewEntity } from './modules/admin/admin-conversation-review.entity';
 import { ActionConnectorEntity } from './modules/action-runtime/action-connector.entity';
 import { ActionRunEntity } from './modules/action-runtime/action-run.entity';
-import { prepareDatabasePath, resolveApiPath, resolveRepoPath } from './database/database-path';
+import { CyberAvatarProfileEntity } from './modules/cyber-avatar/cyber-avatar-profile.entity';
+import { CyberAvatarSignalEntity } from './modules/cyber-avatar/cyber-avatar-signal.entity';
+import { CyberAvatarRunEntity } from './modules/cyber-avatar/cyber-avatar-run.entity';
+import { NeedDiscoveryRunEntity } from './modules/need-discovery/need-discovery-run.entity';
+import { NeedDiscoveryCandidateEntity } from './modules/need-discovery/need-discovery-candidate.entity';
+import { CharacterRealWorldSignalEntity } from './modules/real-world-sync/character-real-world-signal.entity';
+import { CharacterRealWorldDigestEntity } from './modules/real-world-sync/character-real-world-digest.entity';
+import { CharacterRealWorldSyncRunEntity } from './modules/real-world-sync/character-real-world-sync-run.entity';
+import {
+  prepareDatabasePath,
+  resolveApiPath,
+  resolveRepoPath,
+} from './database/database-path';
 
 @Module({
   imports: [
@@ -74,15 +90,50 @@ import { prepareDatabasePath, resolveApiPath, resolveRepoPath } from './database
         type: 'better-sqlite3',
         database: prepareDatabasePath(config.get<string>('DATABASE_PATH')),
         entities: [
-          CharacterEntity, UserEntity, ConversationEntity, MessageEntity,
-          CharacterBlueprintEntity, CharacterBlueprintRevisionEntity,
-          SystemConfigEntity, MomentEntity, MomentPostEntity, MomentCommentEntity,
-          MomentLikeEntity, FriendshipEntity, FriendRequestEntity, AIRelationshipEntity,
-          GroupEntity, GroupMemberEntity, GroupMessageEntity, GroupReplyTaskEntity, ChatCustomStickerEntity,
-          FeedPostEntity, FeedCommentEntity, VideoChannelFollowEntity, WorldContextEntity,
-          NarrativeArcEntity, AIBehaviorLogEntity, AiUsageLedgerEntity, UserFeedInteractionEntity,
-          OfficialAccountEntity, OfficialAccountArticleEntity, OfficialAccountDeliveryEntity, OfficialAccountFollowEntity, OfficialAccountServiceMessageEntity,
-          ModerationReportEntity, AdminConversationReviewEntity, ActionConnectorEntity, ActionRunEntity,
+          CharacterEntity,
+          UserEntity,
+          ConversationEntity,
+          MessageEntity,
+          CharacterBlueprintEntity,
+          CharacterBlueprintRevisionEntity,
+          SystemConfigEntity,
+          MomentEntity,
+          MomentPostEntity,
+          MomentCommentEntity,
+          MomentLikeEntity,
+          FriendshipEntity,
+          FriendRequestEntity,
+          AIRelationshipEntity,
+          GroupEntity,
+          GroupMemberEntity,
+          GroupMessageEntity,
+          GroupReplyTaskEntity,
+          ChatCustomStickerEntity,
+          FeedPostEntity,
+          FeedCommentEntity,
+          VideoChannelFollowEntity,
+          WorldContextEntity,
+          NarrativeArcEntity,
+          AIBehaviorLogEntity,
+          AiUsageLedgerEntity,
+          UserFeedInteractionEntity,
+          OfficialAccountEntity,
+          OfficialAccountArticleEntity,
+          OfficialAccountDeliveryEntity,
+          OfficialAccountFollowEntity,
+          OfficialAccountServiceMessageEntity,
+          ModerationReportEntity,
+          AdminConversationReviewEntity,
+          ActionConnectorEntity,
+          ActionRunEntity,
+          CyberAvatarProfileEntity,
+          CyberAvatarSignalEntity,
+          CyberAvatarRunEntity,
+          NeedDiscoveryRunEntity,
+          NeedDiscoveryCandidateEntity,
+          CharacterRealWorldSignalEntity,
+          CharacterRealWorldDigestEntity,
+          CharacterRealWorldSyncRunEntity,
         ],
         synchronize: true,
       }),
@@ -96,12 +147,16 @@ import { prepareDatabasePath, resolveApiPath, resolveRepoPath } from './database
     SocialModule,
     ModerationModule,
     FeedModule,
+    GamesModule,
     OfficialAccountsModule,
     WorldModule,
     SchedulerModule,
     NarrativeModule,
+    NeedDiscoveryModule,
     AdminModule,
     ActionRuntimeModule,
+    CyberAvatarModule,
+    RealWorldSyncModule,
     CloudRuntimeModule,
     SystemModule,
   ],

@@ -15,6 +15,10 @@ import { ConversationEntity } from '../chat/conversation.entity';
 import { MessageEntity } from '../chat/message.entity';
 import { AIRelationshipEntity } from '../social/ai-relationship.entity';
 import { SchedulerTelemetryService } from './scheduler-telemetry.service';
+import { CharactersModule } from '../characters/characters.module';
+import { NeedDiscoveryModule } from '../need-discovery/need-discovery.module';
+import { EventsModule } from '../events/events.module';
+import { RealWorldSyncModule } from '../real-world-sync/real-world-sync.module';
 
 @Module({
   imports: [
@@ -33,6 +37,10 @@ import { SchedulerTelemetryService } from './scheduler-telemetry.service';
     SocialModule,
     FeedModule,
     ChatModule,
+    CharactersModule,
+    NeedDiscoveryModule,
+    EventsModule,
+    RealWorldSyncModule,
   ],
   providers: [SchedulerService, SchedulerTelemetryService],
   exports: [SchedulerService, SchedulerTelemetryService],

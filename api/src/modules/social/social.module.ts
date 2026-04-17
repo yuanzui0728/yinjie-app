@@ -11,6 +11,8 @@ import { NarrativeModule } from '../narrative/narrative.module';
 import { AuthModule } from '../auth/auth.module';
 import { ChatModule } from '../chat/chat.module';
 import { CharactersModule } from '../characters/characters.module';
+import { EventsModule } from '../events/events.module';
+import { CyberAvatarModule } from '../cyber-avatar/cyber-avatar.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { CharactersModule } from '../characters/characters.module';
     AuthModule,
     ChatModule,
     CharactersModule,
+    EventsModule,
+    CyberAvatarModule,
   ],
   providers: [SocialService],
   controllers: [SocialController],

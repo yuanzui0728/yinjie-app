@@ -33,6 +33,9 @@ import { FriendshipEntity } from '../social/friendship.entity';
 import { SocialModule } from '../social/social.module';
 import { WechatSyncAdminService } from './wechat-sync-admin.service';
 import { ActionRuntimeModule } from '../action-runtime/action-runtime.module';
+import { CyberAvatarModule } from '../cyber-avatar/cyber-avatar.module';
+import { NeedDiscoveryModule } from '../need-discovery/need-discovery.module';
+import { RealWorldSyncModule } from '../real-world-sync/real-world-sync.module';
 
 @Module({
   imports: [
@@ -46,6 +49,9 @@ import { ActionRuntimeModule } from '../action-runtime/action-runtime.module';
     SocialModule,
     FeedModule,
     ActionRuntimeModule,
+    CyberAvatarModule,
+    NeedDiscoveryModule,
+    RealWorldSyncModule,
     TypeOrmModule.forFeature([
       UserEntity,
       CharacterEntity,

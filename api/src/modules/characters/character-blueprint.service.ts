@@ -14,6 +14,7 @@ import type {
 } from './character-blueprint.types';
 import { Repository } from 'typeorm';
 import { DEFAULT_CHARACTER_IDS } from './default-characters';
+import { getBuiltInCharacterBlueprintPatch } from './built-in-character-blueprints';
 import { CharacterBlueprintEntity } from './character-blueprint.entity';
 import { CharacterBlueprintRevisionEntity } from './character-blueprint-revision.entity';
 import { CharacterEntity } from './character.entity';
@@ -488,6 +489,105 @@ function createEmptyScenePrompts(): CharacterBlueprintRecipeValue['prompting']['
   };
 }
 
+function createEmptyProfile(characterId: string): CharacterEntity['profile'] {
+  return {
+    characterId,
+    name: '',
+    relationship: '',
+    expertDomains: [],
+    traits: {
+      speechPatterns: [],
+      catchphrases: [],
+      topicsOfInterest: [],
+      emotionalTone: 'grounded',
+      responseLength: 'medium',
+      emojiUsage: 'occasional',
+    },
+    memorySummary: '',
+    coreLogic: '',
+    scenePrompts: createEmptyScenePrompts(),
+    coreDirective: '',
+    basePrompt: '',
+    systemPrompt: '',
+    identity: {
+      occupation: '',
+      background: '',
+      motivation: '',
+      worldview: '',
+    },
+    behavioralPatterns: {
+      workStyle: '',
+      socialStyle: '',
+      taboos: [],
+      quirks: [],
+    },
+    cognitiveBoundaries: {
+      expertiseDescription: '',
+      knowledgeLimits: '',
+      refusalStyle: '',
+    },
+    reasoningConfig: {
+      enableCoT: true,
+      enableReflection: true,
+      enableRouting: true,
+    },
+    memory: {
+      coreMemory: '',
+      recentSummary: '',
+      forgettingCurve: 70,
+      recentSummaryPrompt: '',
+      coreMemoryPrompt: '',
+    },
+  };
+}
+
+function createEmptyRealityLink(): CharacterBlueprintRecipeValue['realityLink'] {
+  return {
+    enabled: false,
+    applyMode: 'disabled',
+    subjectType: 'fictional_or_private',
+    subjectName: '',
+    aliases: [],
+    locale: 'zh-CN',
+    queryTemplate: '',
+    sourceAllowlist: [],
+    sourceBlocklist: [],
+    recencyHours: 48,
+    maxSignalsPerRun: 5,
+    minimumConfidence: 0.65,
+    chatWeight: 1,
+    contentWeight: 1,
+    realityMomentPolicy: 'disabled',
+    manualSteeringNotes: '',
+    dailyDigestPrompt: '',
+    scenePatchPrompt: '',
+    realityMomentPrompt: '',
+  };
+}
+
+function isRealityLinkEffectivelyEmpty(
+  realityLink?: Partial<CharacterBlueprintRecipeValue['realityLink']> | null,
+) {
+  if (!realityLink) {
+    return true;
+  }
+
+  return (
+    realityLink.enabled !== true &&
+    (!realityLink.subjectName || !realityLink.subjectName.trim()) &&
+    (!realityLink.queryTemplate || !realityLink.queryTemplate.trim()) &&
+    (!realityLink.manualSteeringNotes ||
+      !realityLink.manualSteeringNotes.trim()) &&
+    (!realityLink.dailyDigestPrompt || !realityLink.dailyDigestPrompt.trim()) &&
+    (!realityLink.scenePatchPrompt || !realityLink.scenePatchPrompt.trim()) &&
+    (!realityLink.realityMomentPrompt ||
+      !realityLink.realityMomentPrompt.trim()) &&
+    !(realityLink.aliases?.length) &&
+    !(realityLink.sourceAllowlist?.length) &&
+    !(realityLink.sourceBlocklist?.length)
+  );
+}
+
 function cloneRecipe(
   recipe: CharacterBlueprintRecipeValue,
 ): CharacterBlueprintRecipeValue {
@@ -512,6 +612,13 @@ function cloneRecipe(
       enableCoT: cloned.reasoning?.enableCoT ?? true,
       enableReflection: cloned.reasoning?.enableReflection ?? true,
       enableRouting: cloned.reasoning?.enableRouting ?? true,
+    },
+    realityLink: {
+      ...createEmptyRealityLink(),
+      ...(cloned.realityLink ?? {}),
+      aliases: normalizeStringList(cloned.realityLink?.aliases),
+      sourceAllowlist: normalizeStringList(cloned.realityLink?.sourceAllowlist),
+      sourceBlocklist: normalizeStringList(cloned.realityLink?.sourceBlocklist),
     },
   };
 }
@@ -857,6 +964,97 @@ export class CharacterBlueprintService {
     return this.getFactorySnapshot(characterId);
   }
 
+  async syncPublishedRecipeToRuntime(characterId: string) {
+    const blueprint = await this.ensureBlueprint(characterId);
+    if (!blueprint.publishedRecipe) {
+      return this.getFactorySnapshot(characterId);
+    }
+
+    const character = await this.getCharacterOrThrow(characterId);
+    await this.characterRepo.save(
+      this.applyRecipeToCharacter(
+        character,
+        cloneRecipe(blueprint.publishedRecipe),
+      ),
+    );
+    return this.getFactorySnapshot(characterId);
+  }
+
+  async createCharacterFromRecipe(input: {
+    id?: string;
+    sourceType: CharacterBlueprintSourceTypeValue;
+    sourceKey?: string | null;
+    deletionPolicy?: string;
+    recipe: CharacterBlueprintRecipeValue;
+    dormantRuntime?: boolean;
+  }) {
+    const characterId = input.id?.trim() || `char_${randomUUID()}`;
+    const existing = await this.characterRepo.findOneBy({ id: characterId });
+    if (existing) {
+      throw new BadRequestException(`Character ${characterId} already exists`);
+    }
+
+    const recipe = cloneRecipe(input.recipe);
+    const character = this.applyRecipeToCharacter(
+      this.characterRepo.create({
+        id: characterId,
+        name: recipe.identity.name.trim() || '未命名角色',
+        avatar: recipe.identity.avatar.trim() || '🙂',
+        relationship: recipe.identity.relationship.trim() || '新朋友',
+        relationshipType: recipe.identity.relationshipType.trim() || 'custom',
+        bio: recipe.identity.bio.trim(),
+        isOnline: false,
+        onlineMode: 'auto',
+        sourceType: input.sourceType,
+        sourceKey: input.sourceKey?.trim() || null,
+        deletionPolicy: input.deletionPolicy ?? 'archive_allowed',
+        isTemplate: false,
+        expertDomains: ['general'],
+        profile: createEmptyProfile(characterId),
+        activityFrequency: 'normal',
+        momentsFrequency: 0,
+        feedFrequency: 0,
+        intimacyLevel: 0,
+      }),
+      recipe,
+    );
+
+    character.sourceType = input.sourceType;
+    character.sourceKey = input.sourceKey?.trim() || null;
+    character.deletionPolicy = input.deletionPolicy ?? 'archive_allowed';
+    if (input.dormantRuntime) {
+      character.isOnline = false;
+      character.currentStatus = '等待好友申请通过';
+      character.currentActivity = 'pending_friend_request';
+      character.momentsFrequency = 0;
+      character.feedFrequency = 0;
+    }
+
+    await this.characterRepo.save(character);
+
+    const blueprint = this.blueprintRepo.create({
+      id: `blueprint_${characterId}`,
+      characterId,
+      sourceType: input.sourceType,
+      status: 'published',
+      draftRecipe: cloneRecipe(recipe),
+      publishedRecipe: cloneRecipe(recipe),
+      publishedVersion: 1,
+    });
+    await this.blueprintRepo.save(blueprint);
+    const revision = await this.createRevision(
+      blueprint,
+      recipe,
+      1,
+      'seed_backfill',
+      'Auto-generated from need discovery.',
+    );
+    blueprint.publishedRevisionId = revision.id;
+    await this.blueprintRepo.save(blueprint);
+
+    return character;
+  }
+
   async restoreRevisionToDraft(characterId: string, revisionId: string) {
     const blueprint = await this.ensureBlueprint(characterId);
     const revision = await this.revisionRepo.findOneBy({
@@ -908,6 +1106,8 @@ export class CharacterBlueprintService {
         ? 'default_seed'
         : character.sourceType === 'preset_catalog'
           ? 'preset_catalog'
+          : character.sourceType === 'need_generated'
+            ? 'need_generated'
           : character.sourceType === 'wechat_import'
             ? 'wechat_import'
           : 'manual_admin';
@@ -965,6 +1165,10 @@ export class CharacterBlueprintService {
   private createRecipeFromCharacter(
     character: CharacterEntity,
   ): CharacterBlueprintRecipeValue {
+    const builtInRealityLink =
+      getBuiltInCharacterBlueprintPatch(character.sourceKey)?.realityLink ??
+      null;
+
     return {
       identity: {
         name: character.name ?? '',
@@ -1052,6 +1256,15 @@ export class CharacterBlueprintService {
         initialOnline: character.isOnline ?? false,
         initialActivity: character.currentActivity ?? null,
       },
+      realityLink: builtInRealityLink
+        ? {
+            ...createEmptyRealityLink(),
+            ...builtInRealityLink,
+          }
+        : {
+            ...createEmptyRealityLink(),
+            subjectName: character.name ?? '',
+          },
     };
   }
 
@@ -1062,6 +1275,20 @@ export class CharacterBlueprintService {
     const normalized = cloneRecipe(recipe);
     const currentProfile = character.profile;
     const currentScenePrompts = currentProfile?.scenePrompts;
+    const builtInRealityLink =
+      getBuiltInCharacterBlueprintPatch(character.sourceKey)?.realityLink ??
+      null;
+    const mergedRealityLink = isRealityLinkEffectivelyEmpty(
+      normalized.realityLink,
+    )
+      ? {
+          ...createEmptyRealityLink(),
+          ...(builtInRealityLink ?? {}),
+        }
+      : {
+          ...createEmptyRealityLink(),
+          ...(normalized.realityLink ?? {}),
+        };
 
     return {
       ...normalized,
@@ -1117,6 +1344,20 @@ export class CharacterBlueprintService {
           typeof recipe.memorySeed?.coreMemoryPrompt === 'string'
             ? recipe.memorySeed.coreMemoryPrompt
             : (currentProfile?.memory?.coreMemoryPrompt ?? ''),
+      },
+      realityLink: {
+        ...mergedRealityLink,
+        subjectName:
+          typeof recipe.realityLink?.subjectName === 'string'
+            ? recipe.realityLink.subjectName
+            : character.name,
+        aliases: normalizeStringList(recipe.realityLink?.aliases),
+        sourceAllowlist: normalizeStringList(
+          recipe.realityLink?.sourceAllowlist,
+        ),
+        sourceBlocklist: normalizeStringList(
+          recipe.realityLink?.sourceBlocklist,
+        ),
       },
     };
   }

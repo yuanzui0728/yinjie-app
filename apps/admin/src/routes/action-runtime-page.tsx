@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
+  ActionConnectorSummary,
+  ActionConnectorTestResult,
+  ActionRiskLevel,
   ActionRuntimeOverview,
   ActionRuntimeRules,
 } from "@yinjie/contracts";
@@ -10,11 +13,11 @@ import {
   ErrorBlock,
   LoadingBlock,
   MetricCard,
-  SectionHeading,
   StatusPill,
 } from "@yinjie/ui";
 import {
   AdminActionFeedback,
+  AdminCallout,
   AdminCodeBlock,
   AdminEmptyState,
   AdminInfoRows,
@@ -22,9 +25,39 @@ import {
   AdminRecordCard,
   AdminSectionHeader,
   AdminTextArea,
+  AdminTextField,
+  AdminToggle,
 } from "../components/admin-workbench";
 import { adminApi } from "../lib/admin-api";
 import { resolveAdminCoreApiBaseUrl } from "../lib/core-api-base";
+
+type ConnectorDraft = {
+  displayName: string;
+  endpointConfigText: string;
+  testMessage: string;
+};
+
+const RISK_LEVEL_OPTIONS: Array<{
+  value: ActionRiskLevel;
+  label: string;
+  description: string;
+}> = [
+  {
+    value: "read_only",
+    label: "只读",
+    description: "只整理候选、查询信息，不直接产生副作用。",
+  },
+  {
+    value: "reversible_low_risk",
+    label: "低风险可逆",
+    description: "例如智能家居状态调整，可自动执行但仍需留痕。",
+  },
+  {
+    value: "cost_or_irreversible",
+    label: "付费/不可逆",
+    description: "涉及下单、预订、付款，默认必须确认。",
+  },
+];
 
 export function ActionRuntimePage() {
   const baseUrl = resolveAdminCoreApiBaseUrl();
@@ -32,6 +65,16 @@ export function ActionRuntimePage() {
   const [rulesDraft, setRulesDraft] = useState<ActionRuntimeRules | null>(null);
   const [previewMessage, setPreviewMessage] = useState("");
   const [selectedRunId, setSelectedRunId] = useState("");
+  const [connectorDrafts, setConnectorDrafts] = useState<
+    Record<string, ConnectorDraft>
+  >({});
+  const [connectorDraftErrors, setConnectorDraftErrors] = useState<
+    Record<string, string>
+  >({});
+  const [connectorTestResults, setConnectorTestResults] = useState<
+    Record<string, ActionConnectorTestResult>
+  >({});
+  const [runActionFeedback, setRunActionFeedback] = useState<string | null>(null);
 
   const overviewQuery = useQuery({
     queryKey: ["admin-action-runtime-overview", baseUrl],
@@ -43,6 +86,7 @@ export function ActionRuntimePage() {
       return;
     }
     setRulesDraft(overviewQuery.data.rules);
+    setConnectorDrafts(createConnectorDrafts(overviewQuery.data.connectors));
     if (!selectedRunId && overviewQuery.data.recentRuns[0]) {
       setSelectedRunId(overviewQuery.data.recentRuns[0].id);
     }
@@ -69,7 +113,29 @@ export function ActionRuntimePage() {
     mutationFn: (message: string) => adminApi.previewActionRuntime(message),
   });
 
-  const connectorMutation = useMutation({
+  const saveConnectorMutation = useMutation({
+    mutationFn: (payload: {
+      id: string;
+      displayName: string;
+      endpointConfig: Record<string, unknown> | null;
+    }) =>
+      adminApi.updateActionRuntimeConnector(payload.id, {
+        displayName: payload.displayName,
+        endpointConfig: payload.endpointConfig,
+      }),
+    onSuccess: (connector) => {
+      setConnectorDraftErrors((current) => {
+        const next: Record<string, string> = { ...current };
+        delete next[connector.id];
+        return next;
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-action-runtime-overview", baseUrl],
+      });
+    },
+  });
+
+  const toggleConnectorStatusMutation = useMutation({
     mutationFn: (payload: {
       id: string;
       status: "disabled" | "ready";
@@ -80,6 +146,38 @@ export function ActionRuntimePage() {
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["admin-action-runtime-overview", baseUrl],
+      });
+    },
+  });
+
+  const testConnectorMutation = useMutation({
+    mutationFn: (payload: { id: string; sampleMessage?: string | null }) =>
+      adminApi.testActionRuntimeConnector(payload.id, {
+        sampleMessage: payload.sampleMessage?.trim() || null,
+      }),
+    onSuccess: (result, variables) => {
+      setConnectorTestResults((current) => ({
+        ...current,
+        [variables.id]: result,
+      }));
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-action-runtime-overview", baseUrl],
+      });
+    },
+  });
+
+  const retryRunMutation = useMutation({
+    mutationFn: (id: string) => adminApi.retryActionRuntimeRun(id),
+    onSuccess: (result) => {
+      setRunActionFeedback(
+        `已触发动作重试，当前阶段：${translateRunRetryStep(result.nextStep)}。`,
+      );
+      setSelectedRunId(result.run.id);
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-action-runtime-overview", baseUrl],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["admin-action-runtime-run", baseUrl, result.run.id],
       });
     },
   });
@@ -110,12 +208,100 @@ export function ActionRuntimePage() {
 
   const overview = overviewQuery.data;
 
+  function patchRules(
+    updater: (current: ActionRuntimeRules) => ActionRuntimeRules,
+  ) {
+    setRulesDraft((current) => (current ? updater(current) : current));
+  }
+
+  function setPromptTemplate(
+    key: keyof ActionRuntimeRules["promptTemplates"],
+    value: string,
+  ) {
+    patchRules((current) => ({
+      ...current,
+      promptTemplates: {
+        ...current.promptTemplates,
+        [key]: value,
+      },
+    }));
+  }
+
+  function setPolicyValue<K extends keyof ActionRuntimeRules["policy"]>(
+    key: K,
+    value: ActionRuntimeRules["policy"][K],
+  ) {
+    patchRules((current) => ({
+      ...current,
+      policy: {
+        ...current.policy,
+        [key]: value,
+      },
+    }));
+  }
+
+  function toggleRiskLevel(level: ActionRiskLevel) {
+    patchRules((current) => {
+      const hasLevel = current.policy.autoExecuteRiskLevels.includes(level);
+      return {
+        ...current,
+        policy: {
+          ...current.policy,
+          autoExecuteRiskLevels: hasLevel
+            ? current.policy.autoExecuteRiskLevels.filter((item) => item !== level)
+            : [...current.policy.autoExecuteRiskLevels, level],
+        },
+      };
+    });
+  }
+
+  function updateConnectorDraft(
+    id: string,
+    patch: Partial<ConnectorDraft>,
+  ) {
+    setConnectorDrafts((current) => ({
+      ...current,
+      [id]: {
+        ...(current[id] ?? {
+          displayName: "",
+          endpointConfigText: "",
+          testMessage: "",
+        }),
+        ...patch,
+      },
+    }));
+    setConnectorDraftErrors((current) => {
+      const next: Record<string, string> = { ...current };
+      delete next[id];
+      return next;
+    });
+  }
+
+  function handleSaveConnector(connector: ActionConnectorSummary) {
+    const draft = connectorDrafts[connector.id] ?? createConnectorDraft(connector);
+    const parsed = parseEndpointConfig(draft.endpointConfigText);
+    if (parsed.error) {
+      const errorMessage = parsed.error;
+      setConnectorDraftErrors((current) => ({
+        ...current,
+        [connector.id]: errorMessage,
+      }));
+      return;
+    }
+
+    saveConnectorMutation.mutate({
+      id: connector.id,
+      displayName: draft.displayName.trim() || connector.displayName,
+      endpointConfig: parsed.value,
+    });
+  }
+
   return (
     <div className="space-y-6">
       <AdminPageHero
         eyebrow="Action Runtime"
         title="self 角色真实世界动作台"
-        description="先围绕“我自己”角色打通真实世界动作能力。当前版本先跑 mock 连接器、澄清、确认和执行回执闭环，同时把规则和提示模板收口到后台。"
+        description="这一版把 self 角色的真实世界动作链补到可运维：规则门控、提示模板、连接器配置、连接器自检、动作重试和完整 trace 都能在后台直接查看和调整。"
         metrics={[
           { label: "总动作数", value: overview.counts.totalRuns },
           { label: "待补参数", value: overview.counts.awaitingSlots },
@@ -149,14 +335,24 @@ export function ActionRuntimePage() {
         <AdminActionFeedback
           tone="success"
           title="Action Runtime 规则已保存"
-          description="新的提示模板和门控策略已经写入系统配置。"
+          description="新的门控策略和提示模板已经写入系统配置。"
         />
       ) : null}
       {saveRulesMutation.isError && saveRulesMutation.error instanceof Error ? (
         <ErrorBlock message={saveRulesMutation.error.message} />
       ) : null}
+      {runActionFeedback ? (
+        <AdminActionFeedback
+          tone="info"
+          title="动作重试已提交"
+          description={runActionFeedback}
+        />
+      ) : null}
+      {retryRunMutation.isError && retryRunMutation.error instanceof Error ? (
+        <ErrorBlock message={retryRunMutation.error.message} />
+      ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+      <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="space-y-6">
           <Card className="bg-[color:var(--surface-console)]">
             <AdminSectionHeader
@@ -175,11 +371,13 @@ export function ActionRuntimePage() {
               <MetricCard label="Planner" value={overview.rules.plannerMode} />
               <MetricCard
                 label="自动执行风险等级"
-                value={overview.rules.policy.autoExecuteRiskLevels.join(" / ") || "无"}
+                value={
+                  overview.rules.policy.autoExecuteRiskLevels.join(" / ") || "无"
+                }
               />
               <MetricCard
-                label="确认关键词数"
-                value={overview.rules.policy.confirmationKeywords.length}
+                label="可信自动执行操作"
+                value={overview.rules.policy.trustedOperationKeys.length}
               />
             </div>
             <div className="mt-4">
@@ -195,9 +393,12 @@ export function ActionRuntimePage() {
                     value: overview.rules.policy.selfRoleOnly ? "是" : "否",
                   },
                   {
-                    label: "可信自动执行操作",
-                    value:
-                      overview.rules.policy.trustedOperationKeys.join(" / ") || "无",
+                    label: "确认关键词",
+                    value: overview.rules.policy.confirmationKeywords.join(" / "),
+                  },
+                  {
+                    label: "拒绝关键词",
+                    value: overview.rules.policy.rejectionKeywords.join(" / "),
                   },
                 ]}
               />
@@ -213,22 +414,94 @@ export function ActionRuntimePage() {
                 </StatusPill>
               }
             />
-            <div className="mt-4 grid gap-4">
+            <div className="mt-4 space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <AdminToggle
+                  label="启用动作入口"
+                  checked={rulesDraft.policy.enabled}
+                  onChange={(checked) => setPolicyValue("enabled", checked)}
+                />
+                <AdminToggle
+                  label="仅对 self 角色生效"
+                  checked={rulesDraft.policy.selfRoleOnly}
+                  onChange={(checked) => setPolicyValue("selfRoleOnly", checked)}
+                />
+              </div>
+
+              <div className="grid gap-4 xl:grid-cols-2">
+                <AdminTextArea
+                  label="确认关键词"
+                  value={formatStringList(rulesDraft.policy.confirmationKeywords)}
+                  onChange={(value) =>
+                    setPolicyValue("confirmationKeywords", parseStringList(value))
+                  }
+                  description="每行一个关键词；用户说到这些词时，待确认动作会继续执行。"
+                  textareaClassName="min-h-28"
+                />
+                <AdminTextArea
+                  label="拒绝关键词"
+                  value={formatStringList(rulesDraft.policy.rejectionKeywords)}
+                  onChange={(value) =>
+                    setPolicyValue("rejectionKeywords", parseStringList(value))
+                  }
+                  description="每行一个关键词；命中后，待确认动作会直接取消。"
+                  textareaClassName="min-h-28"
+                />
+              </div>
+
+              <div>
+                <div className="mb-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+                  自动执行风险等级
+                </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  {RISK_LEVEL_OPTIONS.map((option) => {
+                    const active = rulesDraft.policy.autoExecuteRiskLevels.includes(
+                      option.value,
+                    );
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => toggleRiskLevel(option.value)}
+                        className={[
+                          "rounded-[18px] border p-4 text-left transition",
+                          active
+                            ? "border-[color:var(--brand-primary)] bg-white shadow-[var(--shadow-soft)]"
+                            : "border-[color:var(--border-faint)] bg-[color:var(--surface-card)] hover:border-[color:var(--border-subtle)]",
+                        ].join(" ")}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="text-sm font-semibold text-[color:var(--text-primary)]">
+                            {option.label}
+                          </div>
+                          <StatusPill tone={active ? "healthy" : "muted"}>
+                            {active ? "自动执行" : "需额外判断"}
+                          </StatusPill>
+                        </div>
+                        <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
+                          {option.description}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <AdminTextArea
+                label="可信自动执行操作"
+                value={formatStringList(rulesDraft.policy.trustedOperationKeys)}
+                onChange={(value) =>
+                  setPolicyValue("trustedOperationKeys", parseStringList(value))
+                }
+                description="只有同时命中“自动执行风险等级”和这里的 operationKey，动作才会直接执行。"
+                textareaClassName="min-h-28"
+              />
+
               <AdminTextArea
                 label="Planner Prompt"
                 value={rulesDraft.promptTemplates.plannerSystemPrompt}
                 onChange={(value) =>
-                  setRulesDraft((current) =>
-                    current
-                      ? {
-                          ...current,
-                          promptTemplates: {
-                            ...current.promptTemplates,
-                            plannerSystemPrompt: value,
-                          },
-                        }
-                      : current,
-                  )
+                  setPromptTemplate("plannerSystemPrompt", value)
                 }
                 textareaClassName="min-h-36"
               />
@@ -236,68 +509,43 @@ export function ActionRuntimePage() {
                 label="澄清模板"
                 value={rulesDraft.promptTemplates.clarificationTemplate}
                 onChange={(value) =>
-                  setRulesDraft((current) =>
-                    current
-                      ? {
-                          ...current,
-                          promptTemplates: {
-                            ...current.promptTemplates,
-                            clarificationTemplate: value,
-                          },
-                        }
-                      : current,
-                  )
+                  setPromptTemplate("clarificationTemplate", value)
                 }
               />
               <AdminTextArea
                 label="确认模板"
                 value={rulesDraft.promptTemplates.confirmationTemplate}
                 onChange={(value) =>
-                  setRulesDraft((current) =>
-                    current
-                      ? {
-                          ...current,
-                          promptTemplates: {
-                            ...current.promptTemplates,
-                            confirmationTemplate: value,
-                          },
-                        }
-                      : current,
-                  )
+                  setPromptTemplate("confirmationTemplate", value)
                 }
               />
               <div className="grid gap-4 xl:grid-cols-2">
                 <AdminTextArea
                   label="成功模板"
                   value={rulesDraft.promptTemplates.successTemplate}
-                  onChange={(value) =>
-                    setRulesDraft((current) =>
-                      current
-                        ? {
-                            ...current,
-                            promptTemplates: {
-                              ...current.promptTemplates,
-                              successTemplate: value,
-                            },
-                          }
-                        : current,
-                    )
-                  }
+                  onChange={(value) => setPromptTemplate("successTemplate", value)}
                 />
                 <AdminTextArea
                   label="失败模板"
                   value={rulesDraft.promptTemplates.failureTemplate}
+                  onChange={(value) => setPromptTemplate("failureTemplate", value)}
+                />
+              </div>
+              <div className="grid gap-4 xl:grid-cols-2">
+                <AdminTextArea
+                  label="取消模板"
+                  value={rulesDraft.promptTemplates.cancelledTemplate}
                   onChange={(value) =>
-                    setRulesDraft((current) =>
-                      current
-                        ? {
-                            ...current,
-                            promptTemplates: {
-                              ...current.promptTemplates,
-                              failureTemplate: value,
-                            },
-                          }
-                        : current,
+                    setPromptTemplate("cancelledTemplate", value)
+                  }
+                />
+                <AdminTextArea
+                  label="待确认提醒模板"
+                  value={rulesDraft.promptTemplates.pendingConfirmationReminderTemplate}
+                  onChange={(value) =>
+                    setPromptTemplate(
+                      "pendingConfirmationReminderTemplate",
+                      value,
                     )
                   }
                 />
@@ -338,7 +586,9 @@ export function ActionRuntimePage() {
                       {previewMutation.data.reason}
                     </StatusPill>
                   }
-                  description={previewMutation.data.responsePreview ?? "当前消息会继续走普通聊天链路。"}
+                  description={
+                    previewMutation.data.responsePreview ?? "当前消息会继续走普通聊天链路。"
+                  }
                 />
                 {previewMutation.data.plan ? (
                   <AdminCodeBlock value={prettyJson(previewMutation.data.plan)} />
@@ -351,11 +601,22 @@ export function ActionRuntimePage() {
         <div className="space-y-6">
           <Card className="bg-[color:var(--surface-console)]">
             <AdminSectionHeader title="连接器" />
-            <div className="mt-4 space-y-3">
+            <div className="mt-4 space-y-4">
               {overview.connectors.map((connector) => {
-                const isBusy =
-                  connectorMutation.isPending &&
-                  connectorMutation.variables?.id === connector.id;
+                const draft = connectorDrafts[connector.id] ?? createConnectorDraft(connector);
+                const testResult = connectorTestResults[connector.id];
+                const connectorError = connectorDraftErrors[connector.id];
+                const isSaving =
+                  saveConnectorMutation.isPending &&
+                  saveConnectorMutation.variables?.id === connector.id;
+                const isToggling =
+                  toggleConnectorStatusMutation.isPending &&
+                  toggleConnectorStatusMutation.variables?.id === connector.id;
+                const isTesting =
+                  testConnectorMutation.isPending &&
+                  testConnectorMutation.variables?.id === connector.id;
+                const isDirty = isConnectorDirty(connector, draft);
+
                 return (
                   <AdminRecordCard
                     key={connector.id}
@@ -365,38 +626,140 @@ export function ActionRuntimePage() {
                         {connector.status}
                       </StatusPill>
                     }
-                    meta={`${connector.connectorKey} · ${connector.providerType}`}
+                    meta={[
+                      connector.connectorKey,
+                      connector.providerType,
+                      connector.lastHealthCheckAt
+                        ? `最近自检 ${formatDateTime(connector.lastHealthCheckAt)}`
+                        : "尚未自检",
+                    ].join(" · ")}
                     description={connector.capabilities
                       .map((item) => `${item.label}(${item.riskLevel})`)
                       .join(" / ")}
-                    details={<AdminCodeBlock value={prettyJson(connector.endpointConfig ?? {})} />}
+                    details={
+                      <div className="space-y-4">
+                        <AdminTextField
+                          label="显示名称"
+                          value={draft.displayName}
+                          onChange={(value) =>
+                            updateConnectorDraft(connector.id, { displayName: value })
+                          }
+                        />
+                        <AdminTextArea
+                          label="Endpoint Config JSON"
+                          value={draft.endpointConfigText}
+                          onChange={(value) =>
+                            updateConnectorDraft(connector.id, {
+                              endpointConfigText: value,
+                            })
+                          }
+                          placeholder='例如：{"city":"上海"}'
+                          textareaClassName="min-h-32 font-mono text-xs"
+                        />
+                        <AdminTextArea
+                          label="测试消息"
+                          value={draft.testMessage}
+                          onChange={(value) =>
+                            updateConnectorDraft(connector.id, { testMessage: value })
+                          }
+                          placeholder="留空则使用系统默认样例。"
+                          textareaClassName="min-h-24"
+                        />
+                        {connectorError ? <ErrorBlock message={connectorError} /> : null}
+                        {saveConnectorMutation.isError &&
+                        saveConnectorMutation.error instanceof Error &&
+                        saveConnectorMutation.variables?.id === connector.id ? (
+                          <ErrorBlock message={saveConnectorMutation.error.message} />
+                        ) : null}
+                        {toggleConnectorStatusMutation.isError &&
+                        toggleConnectorStatusMutation.error instanceof Error &&
+                        toggleConnectorStatusMutation.variables?.id === connector.id ? (
+                          <ErrorBlock
+                            message={toggleConnectorStatusMutation.error.message}
+                          />
+                        ) : null}
+                        {testConnectorMutation.isError &&
+                        testConnectorMutation.error instanceof Error &&
+                        testConnectorMutation.variables?.id === connector.id ? (
+                          <ErrorBlock message={testConnectorMutation.error.message} />
+                        ) : null}
+                        {connector.lastError ? (
+                          <AdminCallout
+                            tone="warning"
+                            title="最近一次连接器错误"
+                            description={connector.lastError}
+                          />
+                        ) : null}
+                        {testResult ? (
+                          <div className="space-y-3">
+                            <AdminCallout
+                              tone={testResult.ok ? "success" : "warning"}
+                              title={testResult.ok ? "连接器自检通过" : "连接器自检失败"}
+                              description={
+                                testResult.errorMessage ?? testResult.summary
+                              }
+                            />
+                            <AdminCodeBlock
+                              value={prettyJson({
+                                testedAt: testResult.testedAt,
+                                sampleMessage: testResult.sampleMessage,
+                                samplePlan: testResult.samplePlan,
+                                executionPayload: testResult.executionPayload,
+                                resultPayload: testResult.resultPayload,
+                              })}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    }
                     actions={
                       <>
                         <Button
                           variant="secondary"
-                          disabled={isBusy || connector.status === "ready"}
+                          disabled={isSaving || !isDirty}
+                          onClick={() => handleSaveConnector(connector)}
+                        >
+                          {isSaving ? "保存中..." : "保存配置"}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          disabled={isTesting}
                           onClick={() =>
-                            connectorMutation.mutate({
+                            testConnectorMutation.mutate({
+                              id: connector.id,
+                              sampleMessage: draft.testMessage,
+                            })
+                          }
+                        >
+                          {isTesting ? "自检中..." : "测试连接器"}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          disabled={isToggling || connector.status === "ready"}
+                          onClick={() =>
+                            toggleConnectorStatusMutation.mutate({
                               id: connector.id,
                               status: "ready",
                             })
                           }
                         >
-                          {isBusy && connectorMutation.variables?.status === "ready"
+                          {isToggling &&
+                          toggleConnectorStatusMutation.variables?.status === "ready"
                             ? "启用中..."
                             : "启用"}
                         </Button>
                         <Button
                           variant="secondary"
-                          disabled={isBusy || connector.status === "disabled"}
+                          disabled={isToggling || connector.status === "disabled"}
                           onClick={() =>
-                            connectorMutation.mutate({
+                            toggleConnectorStatusMutation.mutate({
                               id: connector.id,
                               status: "disabled",
                             })
                           }
                         >
-                          {isBusy && connectorMutation.variables?.status === "disabled"
+                          {isToggling &&
+                          toggleConnectorStatusMutation.variables?.status === "disabled"
                             ? "停用中..."
                             : "停用"}
                         </Button>
@@ -436,7 +799,7 @@ export function ActionRuntimePage() {
                       {run.connectorKey} · {run.operationKey} · {formatDateTime(run.updatedAt)}
                     </div>
                     <div className="mt-2 text-sm leading-6 text-[color:var(--text-secondary)]">
-                      {run.resultSummary ?? run.userGoal}
+                      {run.resultSummary ?? run.errorMessage ?? run.userGoal}
                     </div>
                   </button>
                 ))}
@@ -451,7 +814,20 @@ export function ActionRuntimePage() {
           </Card>
 
           <Card className="bg-[color:var(--surface-console)]">
-            <AdminSectionHeader title="动作详情" />
+            <AdminSectionHeader
+              title="动作详情"
+              actions={
+                selectedRunId ? (
+                  <Button
+                    variant="secondary"
+                    disabled={retryRunMutation.isPending}
+                    onClick={() => retryRunMutation.mutate(selectedRunId)}
+                  >
+                    {retryRunMutation.isPending ? "重试中..." : "重试动作"}
+                  </Button>
+                ) : undefined
+              }
+            />
             {!selectedRunId ? (
               <AdminEmptyState
                 title="还没有选中动作"
@@ -471,14 +847,43 @@ export function ActionRuntimePage() {
                     { label: "状态", value: runDetailQuery.data.status },
                     { label: "风险等级", value: runDetailQuery.data.riskLevel },
                     {
+                      label: "是否要求确认",
+                      value: runDetailQuery.data.requiresConfirmation ? "是" : "否",
+                    },
+                    {
                       label: "更新时间",
                       value: formatDateTime(runDetailQuery.data.updatedAt),
                     },
                   ]}
                 />
-                <AdminCodeBlock value={prettyJson(runDetailQuery.data.planPayload ?? {})} />
-                <AdminCodeBlock value={prettyJson(runDetailQuery.data.tracePayload ?? {})} />
-                <AdminCodeBlock value={prettyJson(runDetailQuery.data.resultPayload ?? {})} />
+                <LabeledCodeBlock
+                  label="Plan Payload"
+                  value={prettyJson(runDetailQuery.data.planPayload ?? {})}
+                />
+                <LabeledCodeBlock
+                  label="Policy Decision"
+                  value={prettyJson(runDetailQuery.data.policyDecisionPayload ?? {})}
+                />
+                <LabeledCodeBlock
+                  label="Confirmation Payload"
+                  value={prettyJson(runDetailQuery.data.confirmationPayload ?? {})}
+                />
+                <LabeledCodeBlock
+                  label="Execution Payload"
+                  value={prettyJson(runDetailQuery.data.executionPayload ?? {})}
+                />
+                <LabeledCodeBlock
+                  label="Result Payload"
+                  value={prettyJson(runDetailQuery.data.resultPayload ?? {})}
+                />
+                <LabeledCodeBlock
+                  label="Error Payload"
+                  value={prettyJson(runDetailQuery.data.errorPayload ?? {})}
+                />
+                <LabeledCodeBlock
+                  label="Trace Payload"
+                  value={prettyJson(runDetailQuery.data.tracePayload ?? {})}
+                />
               </div>
             ) : (
               <AdminEmptyState
@@ -494,8 +899,104 @@ export function ActionRuntimePage() {
   );
 }
 
+function LabeledCodeBlock({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div>
+      <div className="mb-2 text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+        {label}
+      </div>
+      <AdminCodeBlock value={value} />
+    </div>
+  );
+}
+
+function createConnectorDrafts(connectors: ActionConnectorSummary[]) {
+  return Object.fromEntries(
+    connectors.map((connector) => [connector.id, createConnectorDraft(connector)]),
+  );
+}
+
+function createConnectorDraft(connector: ActionConnectorSummary): ConnectorDraft {
+  return {
+    displayName: connector.displayName,
+    endpointConfigText: formatEndpointConfig(connector.endpointConfig ?? null),
+    testMessage: "",
+  };
+}
+
+function isConnectorDirty(
+  connector: ActionConnectorSummary,
+  draft: ConnectorDraft,
+) {
+  return (
+    draft.displayName.trim() !== connector.displayName ||
+    normalizeConfigText(draft.endpointConfigText) !==
+      normalizeConfigText(formatEndpointConfig(connector.endpointConfig ?? null))
+  );
+}
+
+function formatEndpointConfig(value: Record<string, unknown> | null) {
+  if (!value || !Object.keys(value).length) {
+    return "";
+  }
+  return JSON.stringify(value, null, 2);
+}
+
+function normalizeConfigText(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "";
+  }
+
+  try {
+    return JSON.stringify(JSON.parse(trimmed), null, 2);
+  } catch {
+    return trimmed;
+  }
+}
+
+function parseEndpointConfig(value: string): {
+  value: Record<string, unknown> | null;
+  error?: string;
+} {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return { value: null };
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (parsed === null) {
+      return { value: null };
+    }
+    if (Array.isArray(parsed) || typeof parsed !== "object") {
+      return { value: null, error: "Endpoint Config 需要是 JSON 对象。" };
+    }
+    return { value: parsed as Record<string, unknown> };
+  } catch {
+    return { value: null, error: "Endpoint Config 不是合法 JSON。" };
+  }
+}
+
 function prettyJson(value: unknown) {
   return JSON.stringify(value ?? {}, null, 2);
+}
+
+function formatStringList(items: string[]) {
+  return items.join("\n");
+}
+
+function parseStringList(value: string) {
+  return value
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function formatDateTime(value?: string | null) {
@@ -529,8 +1030,22 @@ function resolveRunTone(status: ActionRuntimeOverview["recentRuns"][number]["sta
   if (status === "succeeded") {
     return "healthy" as const;
   }
-  if (status === "failed" || status === "awaiting_confirmation") {
+  if (
+    status === "failed" ||
+    status === "cancelled" ||
+    status === "awaiting_confirmation"
+  ) {
     return "warning" as const;
   }
   return "muted" as const;
+}
+
+function translateRunRetryStep(step: "awaiting_slots" | "awaiting_confirmation" | "executed") {
+  if (step === "awaiting_slots") {
+    return "待补参数";
+  }
+  if (step === "awaiting_confirmation") {
+    return "待确认";
+  }
+  return "已重新执行";
 }

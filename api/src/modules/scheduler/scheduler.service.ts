@@ -26,6 +26,10 @@ import { DEFAULT_CHARACTER_IDS } from '../characters/default-characters';
 import { SchedulerTelemetryService } from './scheduler-telemetry.service';
 import type { SchedulerJobId } from './scheduler-telemetry.types';
 import { ReplyLogicRulesService } from '../ai/reply-logic-rules.service';
+import { CharactersService } from '../characters/characters.service';
+import { NeedDiscoveryService } from '../need-discovery/need-discovery.service';
+import { AppEvents, EventBusService } from '../events/event-bus.service';
+import { RealWorldSyncService } from '../real-world-sync/real-world-sync.service';
 
 type TrackedJobResult = {
   summary: string;
@@ -68,6 +72,10 @@ export class SchedulerService {
     private readonly chatGateway: ChatGateway,
     private readonly telemetry: SchedulerTelemetryService,
     private readonly replyLogicRules: ReplyLogicRulesService,
+    private readonly charactersService: CharactersService,
+    private readonly needDiscoveryService: NeedDiscoveryService,
+    private readonly eventBus: EventBusService,
+    private readonly realWorldSync: RealWorldSyncService,
   ) {}
 
   @Cron('*/30 * * * *')
@@ -85,6 +93,24 @@ export class SchedulerService {
       'expire_friend_requests',
       () => this.handleExpireFriendRequests(),
       'Failed to expire friend requests',
+    );
+  }
+
+  @Cron('*/10 * * * *')
+  async discoverNeedCharactersShortInterval() {
+    await this.runScheduledJob(
+      'discover_need_characters_short_interval',
+      () => this.handleDiscoverNeedCharactersShortInterval(),
+      'Failed to run short-interval need discovery',
+    );
+  }
+
+  @Cron('*/10 * * * *')
+  async discoverNeedCharactersDaily() {
+    await this.runScheduledJob(
+      'discover_need_characters_daily',
+      () => this.handleDiscoverNeedCharactersDaily(),
+      'Failed to run daily need discovery',
     );
   }
 
@@ -216,6 +242,18 @@ export class SchedulerService {
             this.handleExpireFriendRequests(),
           )
         ).summary;
+      case 'discover_need_characters_short_interval':
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleDiscoverNeedCharactersShortInterval(true),
+          )
+        ).summary;
+      case 'discover_need_characters_daily':
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleDiscoverNeedCharactersDaily(true),
+          )
+        ).summary;
       case 'update_ai_active_status':
         return (
           await this.executeTrackedJob(jobId, () =>
@@ -305,22 +343,47 @@ export class SchedulerService {
   private async handleExpireFriendRequests(): Promise<TrackedJobResult> {
     const runtimeRules = await this.replyLogicRules.getRules();
     const now = new Date();
-    const result = await this.friendRequestRepo.update(
-      { status: 'pending', expiresAt: LessThan(now) },
-      { status: 'expired' },
-    );
+    const expiringRequests = await this.friendRequestRepo.find({
+      where: {
+        status: 'pending',
+        expiresAt: LessThan(now),
+      },
+      order: { expiresAt: 'ASC', createdAt: 'ASC' },
+    });
+    for (const request of expiringRequests) {
+      request.status = 'expired';
+      await this.friendRequestRepo.save(request);
+      this.eventBus.emit(AppEvents.FRIEND_REQUEST_EXPIRED, {
+        requestId: request.id,
+        characterId: request.characterId,
+        ownerId: request.ownerId,
+        expiredAt: now,
+      });
+    }
     this.logger.debug('Expired old friend requests');
     return {
       summary: renderTemplate(
         runtimeRules.schedulerTextTemplates.jobSummaryExpiredFriendRequests,
-        { count: result.affected ?? 0 },
+        { count: expiringRequests.length },
       ),
     };
   }
 
+  private async handleDiscoverNeedCharactersShortInterval(
+    force = false,
+  ): Promise<TrackedJobResult> {
+    return this.needDiscoveryService.runShortIntervalDiscovery({ force });
+  }
+
+  private async handleDiscoverNeedCharactersDaily(
+    force = false,
+  ): Promise<TrackedJobResult> {
+    return this.needDiscoveryService.runDailyDiscovery({ force });
+  }
+
   private async handleUpdateAiActiveStatus(): Promise<TrackedJobResult> {
     const runtimeRules = await this.replyLogicRules.getRules();
-    const chars = await this.characterRepo.find();
+    const chars = await this.charactersService.findAllVisibleToOwner();
     const hour = new Date().getHours();
     let changedCount = 0;
     let manualLockedCount = 0;
@@ -434,10 +497,11 @@ export class SchedulerService {
 
   private async handleCheckMomentSchedule(): Promise<TrackedJobResult> {
     const runtimeRules = await this.replyLogicRules.getRules();
+    await this.realWorldSync.runSync({ force: false });
     const blockedCharacterIds = new Set(
       await this.socialService.getBlockedCharacterIds(),
     );
-    const chars = (await this.characterRepo.find()).filter(
+    const chars = (await this.charactersService.findAllVisibleToOwner()).filter(
       (char) => !blockedCharacterIds.has(char.id),
     );
     if (!chars.length) {
@@ -580,7 +644,7 @@ export class SchedulerService {
     const blockedCharacterIds = new Set(
       await this.socialService.getBlockedCharacterIds(),
     );
-    const chars = (await this.characterRepo.find()).filter(
+    const chars = (await this.charactersService.findAllVisibleToOwner()).filter(
       (char) => char.feedFrequency > 0 && !blockedCharacterIds.has(char.id),
     );
     let generatedCount = 0;
@@ -642,7 +706,7 @@ export class SchedulerService {
 
   private async handleUpdateCharacterStatus(): Promise<TrackedJobResult> {
     const runtimeRules = await this.replyLogicRules.getRules();
-    const chars = await this.characterRepo.find();
+    const chars = await this.charactersService.findAllVisibleToOwner();
     const hour = new Date().getHours();
     let updatedCount = 0;
     let manualLockedCount = 0;
@@ -763,7 +827,7 @@ export class SchedulerService {
       };
     }
 
-    const chars = await this.characterRepo.find();
+    const chars = await this.charactersService.findAllVisibleToOwner();
     let memorySeededCount = 0;
     let sentMessages = 0;
 
@@ -781,8 +845,11 @@ export class SchedulerService {
         const today = now.toLocaleDateString('zh-CN');
         const noActionToken =
           runtimeRules.schedulerTextTemplates.proactiveReminderNoActionToken;
+        const runtimeProfile =
+          (await this.charactersService.getRuntimeProfileFromCharacter(char)) ??
+          char.profile;
         const replyResult = await this.ai.generateReply({
-          profile: char.profile as any,
+          profile: runtimeProfile as any,
           conversationHistory: [],
           userMessage: `今天是${today}，结合你的记忆，请判断是否需要主动向用户发送消息。如果不需要，只回复：${noActionToken}`,
           usageContext: {
@@ -965,8 +1032,11 @@ export class SchedulerService {
 
   private async generateMomentForChar(char: CharacterEntity) {
     try {
+      const runtimeProfile =
+        (await this.charactersService.getRuntimeProfileFromCharacter(char)) ??
+        char.profile;
       const text = await this.ai.generateMoment({
-        profile: char.profile,
+        profile: runtimeProfile,
         currentTime: new Date(),
         usageContext: {
           surface: 'scheduler',
@@ -986,6 +1056,18 @@ export class SchedulerService {
         authorAvatar: char.avatar,
         authorType: 'character',
         text,
+        generationKind: runtimeProfile.realWorldContext?.realityMomentBrief
+          ? 'reality_linked_ai'
+          : 'routine_ai',
+        generationMetadata: runtimeProfile.realWorldContext
+          ? {
+              digestId: runtimeProfile.realWorldContext.digestId ?? null,
+              syncDate: runtimeProfile.realWorldContext.syncDate ?? null,
+              subjectName: runtimeProfile.realWorldContext.subjectName ?? null,
+              realityMomentBrief:
+                runtimeProfile.realWorldContext.realityMomentBrief ?? null,
+            }
+          : null,
       });
       await this.momentPostRepo.save(post);
       await this.feedService.syncMomentPostToFeed(post, {
@@ -1004,7 +1086,7 @@ export class SchedulerService {
 
   private async handleUpdateRecentMemoryDaily(): Promise<TrackedJobResult> {
     const runtimeRules = await this.replyLogicRules.getRules();
-    const chars = await this.characterRepo.find();
+    const chars = await this.charactersService.findAllVisibleToOwner();
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     let updatedCount = 0;
     let skippedCount = 0;
@@ -1052,7 +1134,9 @@ export class SchedulerService {
                 : ('user' as const),
             content: m.text,
           })),
-          char.profile as any,
+          ((await this.charactersService.getRuntimeProfileFromCharacter(
+            char,
+          )) ?? char.profile) as any,
           {
             surface: 'scheduler',
             scene: 'recent_memory_daily',
@@ -1100,7 +1184,7 @@ export class SchedulerService {
 
   private async handleUpdateCoreMemoryWeekly(): Promise<TrackedJobResult> {
     const runtimeRules = await this.replyLogicRules.getRules();
-    const chars = await this.characterRepo.find();
+    const chars = await this.charactersService.findAllVisibleToOwner();
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     let updatedCount = 0;
     let skippedCount = 0;
@@ -1151,7 +1235,9 @@ export class SchedulerService {
 
         const newCoreMemory = await this.ai.extractCoreMemory(
           interactionHistory,
-          char.profile as any,
+          ((await this.charactersService.getRuntimeProfileFromCharacter(
+            char,
+          )) ?? char.profile) as any,
           {
             surface: 'scheduler',
             scene: 'core_memory_weekly',

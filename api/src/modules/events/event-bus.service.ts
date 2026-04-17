@@ -7,6 +7,9 @@ export const AppEvents = {
   USER_POSTED_FEED: 'user.posted_feed',
   USER_LOCATION_UPDATED: 'user.location_updated',
   AI_RELATIONSHIP_TRIGGERED: 'ai.relationship_triggered',
+  FRIEND_REQUEST_ACCEPTED: 'friend_request.accepted',
+  FRIEND_REQUEST_DECLINED: 'friend_request.declined',
+  FRIEND_REQUEST_EXPIRED: 'friend_request.expired',
 } as const;
 
 @Injectable()

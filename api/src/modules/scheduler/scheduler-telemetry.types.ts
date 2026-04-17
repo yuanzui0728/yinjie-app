@@ -16,6 +16,22 @@ export const SCHEDULER_JOB_DEFINITIONS = [
     enabled: true,
   },
   {
+    id: 'discover_need_characters_short_interval',
+    name: '实时需求发现',
+    cadence: '*/10 * * * *',
+    description: '按短间隔轮询交互信号，识别更实时的角色缺口并尝试发起好友申请。',
+    nextRunHint: '每 10 分钟检查一次是否到达实时需求窗口',
+    enabled: true,
+  },
+  {
+    id: 'discover_need_characters_daily',
+    name: '长期需求发现',
+    cadence: '*/10 * * * *',
+    description: '按固定轮询检查每日窗口，识别更长期的角色缺口并尝试发起好友申请。',
+    nextRunHint: '每 10 分钟检查一次是否到达每日需求窗口',
+    enabled: true,
+  },
+  {
     id: 'update_ai_active_status',
     name: '在线状态调度',
     cadence: '*/10 * * * *',

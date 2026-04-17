@@ -4,6 +4,7 @@ export type CharacterBlueprintSourceTypeValue =
   | 'default_seed'
   | 'preset_catalog'
   | 'manual_admin'
+  | 'need_generated'
   | 'wechat_import'
   | 'template_clone'
   | 'ai_generated';
@@ -100,6 +101,31 @@ export interface CharacterBlueprintRecipeValue {
     activityModeDefault: 'auto' | 'manual';
     initialOnline: boolean;
     initialActivity: string | null;
+  };
+  realityLink: {
+    enabled: boolean;
+    applyMode: 'disabled' | 'shadow' | 'live';
+    subjectType:
+      | 'living_public_figure'
+      | 'organization_proxy'
+      | 'historical_snapshot'
+      | 'fictional_or_private';
+    subjectName: string;
+    aliases: string[];
+    locale: string;
+    queryTemplate: string;
+    sourceAllowlist: string[];
+    sourceBlocklist: string[];
+    recencyHours: number;
+    maxSignalsPerRun: number;
+    minimumConfidence: number;
+    chatWeight: number;
+    contentWeight: number;
+    realityMomentPolicy: 'disabled' | 'optional' | 'force_one_daily';
+    manualSteeringNotes: string;
+    dailyDigestPrompt: string;
+    scenePatchPrompt: string;
+    realityMomentPrompt: string;
   };
 }
 

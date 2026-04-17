@@ -103,6 +103,7 @@ export function WechatSyncPage() {
   const [historyStatusFilter, setHistoryStatusFilter] = useState<
     "all" | "active" | "attention" | "removed"
   >("all");
+  const [selectedHistoryCharacterId, setSelectedHistoryCharacterId] = useState<string | null>(null);
   const [rollbackGuideItem, setRollbackGuideItem] = useState<WechatSyncHistoryItem | null>(null);
   const [selectedUsernames, setSelectedUsernames] = useState<string[]>([]);
   const [selectedPreviewUsernames, setSelectedPreviewUsernames] = useState<string[]>([]);
@@ -217,6 +218,16 @@ export function WechatSyncPage() {
       return matchesSearch && matchesStatus;
     });
   }, [deferredHistorySearch, historyItems, historyStatusFilter]);
+  const selectedHistoryItem = useMemo(() => {
+    if (!filteredHistoryItems.length) {
+      return null;
+    }
+    return (
+      filteredHistoryItems.find(
+        (item) => item.character.id === selectedHistoryCharacterId,
+      ) ?? filteredHistoryItems[0]
+    );
+  }, [filteredHistoryItems, selectedHistoryCharacterId]);
 
   const scanMutation = useMutation({
     mutationFn: () => scanWechatConnector(connectorSettings.baseUrl),
@@ -459,6 +470,16 @@ export function WechatSyncPage() {
     setManualBundleJson(
       JSON.stringify([buildRollbackGuideContactBundle(rollbackGuideItem)], null, 2),
     );
+  }
+
+  function regeneratePreviewFromHistoryItem(item: WechatSyncHistoryItem) {
+    const bundle = buildRollbackGuideContactBundle(item);
+    setManualBundleError(null);
+    setManualBundleJson(JSON.stringify([bundle], null, 2));
+    setPreviewItems([]);
+    setSelectedPreviewUsernames([]);
+    setSelectedUsernames([bundle.username]);
+    previewMutation.mutate([bundle]);
   }
 
   return (
@@ -1091,25 +1112,72 @@ export function WechatSyncPage() {
         ) : null}
 
         {filteredHistoryItems.length ? (
-          <div className="mt-4 grid gap-4 xl:grid-cols-2">
-            {filteredHistoryItems.map((item) => (
-              <WechatSyncHistoryCard
-                key={item.character.id}
-                item={item}
-                retryPending={
-                  retryFriendshipMutation.isPending &&
-                  retryFriendshipMutation.variables === item.character.id
-                }
-                rollbackPending={
-                  rollbackMutation.isPending &&
-                  rollbackMutation.variables?.character.id === item.character.id
-                }
-                onRetryFriendship={() =>
-                  retryFriendshipMutation.mutate(item.character.id)
-                }
-                onRollback={() => rollbackMutation.mutate(item)}
-              />
-            ))}
+          <div className="mt-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+            <div className="space-y-4">
+              {filteredHistoryItems.map((item) => (
+                <WechatSyncHistoryCard
+                  key={item.character.id}
+                  item={item}
+                  selected={selectedHistoryItem?.character.id === item.character.id}
+                  retryPending={
+                    retryFriendshipMutation.isPending &&
+                    retryFriendshipMutation.variables === item.character.id
+                  }
+                  rollbackPending={
+                    rollbackMutation.isPending &&
+                    rollbackMutation.variables?.character.id === item.character.id
+                  }
+                  onSelect={() => setSelectedHistoryCharacterId(item.character.id)}
+                  onRegeneratePreview={() => regeneratePreviewFromHistoryItem(item)}
+                  onRetryFriendship={() =>
+                    retryFriendshipMutation.mutate(item.character.id)
+                  }
+                  onRollback={() => rollbackMutation.mutate(item)}
+                />
+              ))}
+            </div>
+            <HistoryDetailPanel
+              item={selectedHistoryItem}
+              previewPending={previewMutation.isPending}
+              retryPending={
+                retryFriendshipMutation.isPending &&
+                retryFriendshipMutation.variables === selectedHistoryItem?.character.id
+              }
+              rollbackPending={
+                rollbackMutation.isPending &&
+                rollbackMutation.variables?.character.id === selectedHistoryItem?.character.id
+              }
+              onRegeneratePreview={
+                selectedHistoryItem
+                  ? () => regeneratePreviewFromHistoryItem(selectedHistoryItem)
+                  : undefined
+              }
+              onRetryFriendship={
+                selectedHistoryItem
+                  ? () => retryFriendshipMutation.mutate(selectedHistoryItem.character.id)
+                  : undefined
+              }
+              onRollback={
+                selectedHistoryItem
+                  ? () => rollbackMutation.mutate(selectedHistoryItem)
+                  : undefined
+              }
+              onLoadTemplateToManualInput={
+                selectedHistoryItem
+                  ? () => {
+                      setRollbackGuideItem(selectedHistoryItem);
+                      setManualBundleError(null);
+                      setManualBundleJson(
+                        JSON.stringify(
+                          [buildRollbackGuideContactBundle(selectedHistoryItem)],
+                          null,
+                          2,
+                        ),
+                      );
+                    }
+                  : undefined
+              }
+            />
           </div>
         ) : null}
       </Card>
@@ -1184,14 +1252,20 @@ function ImportResultPanel({ result }: { result: WechatSyncImportResponse }) {
 
 function WechatSyncHistoryCard({
   item,
+  selected,
   retryPending,
   rollbackPending,
+  onSelect,
+  onRegeneratePreview,
   onRetryFriendship,
   onRollback,
 }: {
   item: WechatSyncHistoryItem;
+  selected: boolean;
   retryPending: boolean;
   rollbackPending: boolean;
+  onSelect: () => void;
+  onRegeneratePreview: () => void;
   onRetryFriendship: () => void;
   onRollback: () => void;
 }) {
@@ -1205,7 +1279,9 @@ function WechatSyncHistoryCard({
         : "muted";
 
   return (
-    <Card className="bg-[color:var(--surface-card)]">
+    <Card
+      className={`bg-[color:var(--surface-card)] ${selected ? "ring-2 ring-sky-200" : ""}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="text-lg font-semibold text-[color:var(--text-primary)]">
@@ -1240,6 +1316,9 @@ function WechatSyncHistoryCard({
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
+        <Button variant={selected ? "primary" : "secondary"} size="sm" onClick={onSelect}>
+          {selected ? "详情已展开" : "查看详情"}
+        </Button>
         <Link
           to="/characters/$characterId"
           params={{ characterId: item.character.id }}
@@ -1248,6 +1327,14 @@ function WechatSyncHistoryCard({
             打开角色工作区
           </Button>
         </Link>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRegeneratePreview}
+          disabled={retryPending || rollbackPending}
+        >
+          重新生成预览
+        </Button>
         <Button
           variant="secondary"
           size="sm"
@@ -1261,6 +1348,143 @@ function WechatSyncHistoryCard({
           size="sm"
           onClick={onRollback}
           disabled={rollbackPending || retryPending}
+        >
+          {rollbackPending ? "回滚中..." : "回滚导入"}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+function HistoryDetailPanel({
+  item,
+  previewPending,
+  retryPending,
+  rollbackPending,
+  onRegeneratePreview,
+  onRetryFriendship,
+  onRollback,
+  onLoadTemplateToManualInput,
+}: {
+  item: WechatSyncHistoryItem | null;
+  previewPending: boolean;
+  retryPending: boolean;
+  rollbackPending: boolean;
+  onRegeneratePreview?: () => void;
+  onRetryFriendship?: () => void;
+  onRollback?: () => void;
+  onLoadTemplateToManualInput?: () => void;
+}) {
+  if (!item) {
+    return (
+      <Card className="bg-[color:var(--surface-card)]">
+        <div className="text-base font-semibold text-[color:var(--text-primary)]">
+          导入详情
+        </div>
+        <div className="mt-3 text-sm leading-6 text-[color:var(--text-secondary)]">
+          当前没有可查看的历史项，先在左侧选择一条已导入记录。
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="bg-[color:var(--surface-card)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-lg font-semibold text-[color:var(--text-primary)]">
+            {item.character.name}
+          </div>
+          <div className="mt-1 text-sm text-[color:var(--text-secondary)]">
+            {item.remarkName || item.character.relationship}
+          </div>
+        </div>
+        <StatusPill
+          tone={
+            isActiveFriendshipStatus(item.friendshipStatus)
+              ? "healthy"
+              : item.friendshipStatus === "removed" || item.friendshipStatus === "blocked"
+                ? "warning"
+                : "muted"
+          }
+        >
+          {formatFriendshipStatus(item.friendshipStatus)}
+        </StatusPill>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <AdminMiniPanel title="导入轨迹">
+          <div className="space-y-2 text-sm text-[color:var(--text-secondary)]">
+            <div>导入时间：{formatDateTime(item.importedAt)}</div>
+            <div>来源键：{item.character.sourceKey || "暂无"}</div>
+            <div>最近互动：{formatDateTime(item.lastInteractedAt)}</div>
+            <div>朋友圈种子：{item.seededMomentCount} 条</div>
+          </div>
+        </AdminMiniPanel>
+        <AdminMiniPanel title="角色摘要">
+          <div className="space-y-2 text-sm text-[color:var(--text-secondary)]">
+            <div>关系：{item.character.relationship || "暂无"}</div>
+            <div>地区：{item.region || "暂无"}</div>
+            <div>
+              领域：
+              {item.character.expertDomains.length
+                ? item.character.expertDomains.join("、")
+                : "暂无"}
+            </div>
+            <div>标签：{item.tags.length ? item.tags.join("、") : "暂无"}</div>
+          </div>
+        </AdminMiniPanel>
+      </div>
+
+      <div className="mt-4 space-y-4">
+        <div>
+          <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+            角色简介
+          </div>
+          <div className="mt-2 rounded-2xl border border-[color:var(--border-faint)] bg-[color:var(--surface-soft)] px-4 py-3 text-sm leading-6 text-[color:var(--text-secondary)]">
+            {item.character.bio || "暂无简介。"}
+          </div>
+        </div>
+        <div>
+          <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+            记忆摘要
+          </div>
+          <div className="mt-2 rounded-2xl border border-[color:var(--border-faint)] bg-[color:var(--surface-soft)] px-4 py-3 text-sm leading-6 text-[color:var(--text-secondary)]">
+            {item.character.profile?.memorySummary || "暂无记忆摘要。"}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={onRegeneratePreview}
+          disabled={previewPending || !onRegeneratePreview}
+        >
+          {previewPending ? "重新生成中..." : "一键重新生成预览"}
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onLoadTemplateToManualInput}
+          disabled={!onLoadTemplateToManualInput}
+        >
+          写回手动导入区
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onRetryFriendship}
+          disabled={retryPending || rollbackPending || !onRetryFriendship}
+        >
+          {retryPending ? "补建中..." : "补建好友关系"}
+        </Button>
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={onRollback}
+          disabled={rollbackPending || retryPending || !onRollback}
         >
           {rollbackPending ? "回滚中..." : "回滚导入"}
         </Button>

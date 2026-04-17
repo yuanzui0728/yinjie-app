@@ -8,7 +8,11 @@ type SidebarLink = {
   to:
     | "/"
     | "/action-runtime"
+    | "/cyber-avatar"
     | "/characters"
+    | "/games"
+    | "/need-discovery"
+    | "/real-world-sync"
     | "/chat-records"
     | "/token-usage"
     | "/evals";
@@ -21,7 +25,11 @@ type SidebarIssue = {
   to:
     | "/"
     | "/action-runtime"
+    | "/cyber-avatar"
     | "/characters"
+    | "/games"
+    | "/need-discovery"
+    | "/real-world-sync"
     | "/chat-records"
     | "/token-usage"
     | "/evals";
@@ -122,8 +130,12 @@ export function AdminSidebar({
       {/* Brand header */}
       <div className="flex items-center justify-between gap-3 px-1">
         <div>
-          <div className="text-[10px] uppercase tracking-[0.3em] text-[color:var(--text-muted)]">隐界</div>
-          <div className="text-base font-semibold leading-tight text-[color:var(--text-primary)]">运营控制台</div>
+          <div className="text-[10px] uppercase tracking-[0.3em] text-[color:var(--text-muted)]">
+            隐界
+          </div>
+          <div className="text-base font-semibold leading-tight text-[color:var(--text-primary)]">
+            运营控制台
+          </div>
         </div>
         {issueCount > 0 ? (
           <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">
@@ -141,7 +153,9 @@ export function AdminSidebar({
         {statusItems.map((item) => (
           <div key={item.label} className="flex items-center gap-1.5">
             <StatusDot tone={item.tone} />
-            <span className="text-xs text-[color:var(--text-muted)]">{item.label}</span>
+            <span className="text-xs text-[color:var(--text-muted)]">
+              {item.label}
+            </span>
           </div>
         ))}
       </div>
@@ -156,8 +170,12 @@ export function AdminSidebar({
                 to={issue.to}
                 className="block rounded-[14px] border border-amber-200/70 bg-white/70 px-3 py-2.5 transition hover:border-amber-300 hover:bg-white"
               >
-                <div className="text-sm font-medium text-[color:var(--text-primary)]">{issue.label}</div>
-                <div className="mt-0.5 text-xs leading-5 text-[color:var(--text-secondary)]">{issue.detail}</div>
+                <div className="text-sm font-medium text-[color:var(--text-primary)]">
+                  {issue.label}
+                </div>
+                <div className="mt-0.5 text-xs leading-5 text-[color:var(--text-secondary)]">
+                  {issue.detail}
+                </div>
               </Link>
             ))}
           </div>
@@ -170,13 +188,17 @@ export function AdminSidebar({
           <AdminEyebrow className="px-1">导航</AdminEyebrow>
           <div className="mt-2 space-y-1">
             {navLinks.map((item) => (
-              <Link key={item.to} to={item.to} className={NAV_LINK} activeProps={{ className: NAV_LINK_ACTIVE }}>
+              <Link
+                key={item.to}
+                to={item.to}
+                className={NAV_LINK}
+                activeProps={{ className: NAV_LINK_ACTIVE }}
+              >
                 {item.label}
               </Link>
             ))}
           </div>
         </section>
-
       </nav>
 
       {/* Secret — compact when configured */}
@@ -192,7 +214,12 @@ export function AdminSidebar({
               className="w-full rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-input)] px-3 py-2 text-sm text-[color:var(--text-primary)] placeholder-[color:var(--text-muted)] outline-none transition focus:border-[color:var(--border-brand)]"
               onKeyDown={(event) => event.key === "Enter" && onSaveSecret()}
             />
-            <Button variant="primary" size="sm" className="w-full justify-center" onClick={onSaveSecret}>
+            <Button
+              variant="primary"
+              size="sm"
+              className="w-full justify-center"
+              onClick={onSaveSecret}
+            >
               保存密钥
             </Button>
           </div>

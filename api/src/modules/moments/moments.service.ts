@@ -10,6 +10,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
+import type { AiMessagePart } from '../ai/ai.types';
 import { CharactersService } from '../characters/characters.service';
 import { MomentEntity } from './moment.entity';
 import { MomentPostEntity } from './moment-post.entity';
@@ -18,6 +19,7 @@ import { MomentLikeEntity } from './moment-like.entity';
 import { WorldOwnerService } from '../auth/world-owner.service';
 import { SocialService } from '../social/social.service';
 import { FeedService } from '../feed/feed.service';
+import { CyberAvatarService } from '../cyber-avatar/cyber-avatar.service';
 import {
   normalizeMomentMediaDisplayName,
   normalizeOptionalPositiveNumber,
@@ -72,6 +74,7 @@ export class MomentsService {
     private readonly worldOwnerService: WorldOwnerService,
     private readonly socialService: SocialService,
     private readonly feedService: FeedService,
+    private readonly cyberAvatar: CyberAvatarService,
     @InjectRepository(MomentEntity)
     private momentRepo: Repository<MomentEntity>,
     @InjectRepository(MomentPostEntity)
@@ -96,6 +99,22 @@ export class MomentsService {
       mediaPayload: this.serializeMomentMedia(normalizedInput.media),
     });
     await this.postRepo.save(post);
+    void this.cyberAvatar.captureSignal({
+      ownerId: owner.id,
+      signalType: 'moment_post',
+      sourceSurface: 'moments',
+      sourceEntityType: 'moment_post',
+      sourceEntityId: post.id,
+      dedupeKey: `moment_post:${post.id}`,
+      summaryText: `发布朋友圈：${(normalizedInput.text || normalizedInput.contentType).slice(0, 120)}`,
+      payload: {
+        text: normalizedInput.text,
+        contentType: normalizedInput.contentType,
+        mediaCount: normalizedInput.media.length,
+        location: normalizedInput.location ?? null,
+      },
+      occurredAt: post.postedAt ?? new Date(),
+    });
     // Schedule AI reactions to user's moment
     void this.scheduleCharacterInteractions(post);
     return this._enrichPost(post);
@@ -230,6 +249,18 @@ export class MomentsService {
         text,
         contentType: 'text',
         mediaPayload: this.serializeMomentMedia([]),
+        generationKind: profile.realWorldContext?.realityMomentBrief
+          ? 'reality_linked_ai'
+          : 'routine_ai',
+        generationMetadata: profile.realWorldContext
+          ? {
+              digestId: profile.realWorldContext.digestId ?? null,
+              syncDate: profile.realWorldContext.syncDate ?? null,
+              subjectName: profile.realWorldContext.subjectName ?? null,
+              realityMomentBrief:
+                profile.realWorldContext.realityMomentBrief ?? null,
+            }
+          : null,
       });
       await this.postRepo.save(post);
       await this.feedService.syncMomentPostToFeed(post, {
@@ -247,7 +278,7 @@ export class MomentsService {
   }
 
   async generateAllMoments(): Promise<Moment[]> {
-    const chars = await this.characters.findAll();
+    const chars = await this.characters.findAllVisibleToOwner();
     const results: Moment[] = [];
     for (const char of chars) {
       const moment = await this.generateMomentForCharacter(char.id);
@@ -337,7 +368,7 @@ export class MomentsService {
       return;
     }
 
-    const allChars = (await this.characters.findAll()).filter(
+    const allChars = (await this.characters.findAllVisibleToOwner()).filter(
       (character) =>
         character.id !== post.authorId && visibleCharacterIds.has(character.id),
     );
@@ -374,10 +405,12 @@ export class MomentsService {
             if (isComment) {
               const profile = await this.characters.getProfile(char.id);
               if (!profile) return;
+              const observation = await this.buildMomentAiObservation(post);
               const reply = await this.ai.generateReply({
                 profile,
                 conversationHistory: [],
-                userMessage: `${post.authorName}发了一条朋友圈：${this.buildMomentPromptSummary(post)}。用一句话自然地评论一下，不超过20字。`,
+                userMessage: `${post.authorName}发了一条朋友圈：${observation.summary}。用一句话自然地评论一下，不超过20字。`,
+                userMessageParts: observation.parts,
                 usageContext: {
                   surface: 'app',
                   scene: 'moment_comment_generate',
@@ -436,11 +469,13 @@ export class MomentsService {
 
           const profile = await this.characters.getProfile(char.id);
           if (!profile) return;
+          const observation = await this.buildMomentAiObservation(post);
 
           const reply = await this.ai.generateReply({
             profile,
             conversationHistory: [],
-            userMessage: `${commenterName}在你的朋友圈评论了："${commentText}"，你的朋友圈内容是：${this.buildMomentPromptSummary(post)}，回复一下，不超过20字。`,
+            userMessage: `${commenterName}在你的朋友圈评论了："${commentText}"，你的朋友圈内容是：${observation.summary}，回复一下，不超过20字。`,
+            userMessageParts: observation.parts,
             usageContext: {
               surface: 'app',
               scene: 'moment_comment_generate',
@@ -470,7 +505,7 @@ export class MomentsService {
     const blockedCharacterIds = new Set(
       await this.socialService.getBlockedCharacterIds(),
     );
-    const characters = await this.characters.findAll();
+    const characters = await this.characters.findAllVisibleToOwner();
     return characters
       .map((character) => character.id)
       .filter((characterId) => !blockedCharacterIds.has(characterId));
@@ -740,6 +775,71 @@ export class MomentsService {
     }
 
     return '一条朋友圈';
+  }
+
+  private async buildMomentAiObservation(post: MomentPostEntity): Promise<{
+    summary: string;
+    parts?: AiMessagePart[];
+  }> {
+    const media = this.parseMomentMediaPayload(post.mediaPayload);
+    const parts: AiMessagePart[] = [];
+    const contentType = this.normalizeMomentContentType(post.contentType);
+    const summary = this.buildMomentPromptSummary(post);
+
+    media
+      .filter((asset): asset is MomentImageAsset => asset.kind === 'image')
+      .slice(0, 4)
+      .forEach((asset, index) => {
+        parts.push({
+          type: 'image',
+          imageUrl: asset.url,
+          mimeType: asset.mimeType,
+          detail: 'auto',
+          altText: `朋友圈配图 ${index + 1}`,
+        });
+      });
+
+    if (contentType === 'video') {
+      const video = media[0] as MomentVideoAsset | undefined;
+      if (video?.posterUrl) {
+        parts.push({
+          type: 'image',
+          imageUrl: video.posterUrl,
+          detail: 'auto',
+          altText: '朋友圈视频封面',
+        });
+      }
+    }
+
+    return {
+      summary:
+        (await this.appendMomentTranscriptSummary(summary, media)) ?? summary,
+      parts: parts.length ? parts : undefined,
+    };
+  }
+
+  private async appendMomentTranscriptSummary(
+    summary: string,
+    media: MomentMediaAsset[],
+  ) {
+    const video = media.find(
+      (asset): asset is MomentVideoAsset => asset.kind === 'video',
+    );
+    if (!video) {
+      return null;
+    }
+
+    const transcription = await this.ai.tryTranscribeMediaFromUrl({
+      url: video.url,
+      mimeType: video.mimeType,
+      fileName: video.fileName,
+      mode: 'moment_media',
+    });
+    if (!transcription?.text) {
+      return null;
+    }
+
+    return `${summary}。视频音轨转写：${transcription.text}`;
   }
 
   private describeMomentMedia(
