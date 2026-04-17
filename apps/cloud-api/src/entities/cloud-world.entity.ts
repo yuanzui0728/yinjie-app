@@ -16,7 +16,7 @@ export class CloudWorldEntity {
   status: string;
 
   @Index({ unique: true })
-  @Column({ nullable: true })
+  @Column({ type: "text", nullable: true })
   slug: string | null;
 
   @Column({ default: "running" })
