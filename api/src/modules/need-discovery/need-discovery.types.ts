@@ -118,7 +118,7 @@ export const DEFAULT_NEED_DISCOVERY_CONFIG: NeedDiscoveryConfig = {
     intervalMinutes: 45,
     lookbackHours: 18,
     skipIfNoNewSignals: true,
-    promptTemplate: `你是隐界的实时需求分析器。请基于最近 {{windowLabel}} 内的交互信号，识别 0-{{maxCandidatesPerRun}} 个更偏“即时、当前、最近就需要”的潜在需求。
+    promptTemplate: `你在替隐界翻最近 {{windowLabel}} 内的交互信号，找出 0-{{maxCandidatesPerRun}} 个更偏“即时、当前、最近就需要”的潜在需求。
 
 你要重点看：
 - 用户最近表达的压力、情绪、困惑、身体不适、决策卡点
@@ -172,7 +172,7 @@ export const DEFAULT_NEED_DISCOVERY_CONFIG: NeedDiscoveryConfig = {
     runAtHour: 9,
     runAtMinute: 0,
     lookbackDays: 14,
-    promptTemplate: `你是隐界的长期需求分析器。请基于最近 {{windowLabel}} 内的交互信号，识别 0-{{maxCandidatesPerRun}} 个更偏“长期、反复出现、值得稳定陪伴或专业支持”的需求。
+    promptTemplate: `你在替隐界回看最近 {{windowLabel}} 内的交互信号，找出 0-{{maxCandidatesPerRun}} 个更偏“长期、反复出现、值得稳定陪伴或专业支持”的需求。
 
 你要重点看：
 - 反复出现的压力源、长期症状、长期学习/职业/关系问题
@@ -228,9 +228,9 @@ export const DEFAULT_NEED_DISCOVERY_CONFIG: NeedDiscoveryConfig = {
     allowMedical: true,
     allowLegal: true,
     allowFinance: true,
-    roleGenerationPrompt: `你是隐界的角色设计师。请根据下面的需求说明，生成一个“会主动发起好友申请、通过后能长期留下来”的新角色草稿。
+    roleGenerationPrompt: `你在替隐界补一个新朋友角色。请根据下面的需求说明，生成一个“会主动发起好友申请、通过后能长期留下来”的新角色草稿。
 
-需求摘要：{{roleBrief}}
+这次要补的人：{{roleBrief}}
 关系定位：{{relationshipLabel}}
 关系类型：{{relationshipType}}
 建议领域：{{expertDomains}}

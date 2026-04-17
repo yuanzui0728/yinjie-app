@@ -302,7 +302,7 @@ export class FollowupRuntimeService {
         return this.finishRun(run, {
           status: 'skipped',
           skipReason: '尚未达到下一次主动跟进扫描窗口。',
-          summary: '未到下次扫描时间，跳过本次主动跟进。',
+          summary: '还没到下次主动跟进时间，这轮先跳过。',
         });
       }
 
@@ -341,7 +341,7 @@ export class FollowupRuntimeService {
         return this.finishRun(run, {
           status: 'skipped',
           skipReason: '今日推荐次数已到上限。',
-          summary: `今日已发出 ${todayRecommendationCount} 条主动跟进推荐。`,
+          summary: `今天已经发出 ${todayRecommendationCount} 条主动跟进推荐，这轮先收住。`,
         });
       }
 
@@ -564,10 +564,13 @@ export class FollowupRuntimeService {
             openLoop.status = 'watching';
             openLoop.recommendedAt = null;
             await this.openLoopRepo.save(openLoop);
-            this.logger.warn('Failed to build followup recommendation payload', {
-              recommendationId: recommendation.id,
-              error: error instanceof Error ? error.message : String(error),
-            });
+            this.logger.warn(
+              'Failed to build followup recommendation payload',
+              {
+                recommendationId: recommendation.id,
+                error: error instanceof Error ? error.message : String(error),
+              },
+            );
             continue;
           }
 
@@ -581,7 +584,9 @@ export class FollowupRuntimeService {
           );
         }
 
-        const deliveredOwnerNotification = Boolean(textMessageId || cardMessageId);
+        const deliveredOwnerNotification = Boolean(
+          textMessageId || cardMessageId,
+        );
         recommendation.messageConversationId = deliveredOwnerNotification
           ? notificationConversationId
           : null;
@@ -636,7 +641,7 @@ export class FollowupRuntimeService {
       return this.finishRun(run, {
         status: 'failed',
         errorMessage: error instanceof Error ? error.message : String(error),
-        summary: '主动跟进执行失败。',
+        summary: '这轮主动跟进跑失败了。',
       });
     }
   }

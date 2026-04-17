@@ -1618,7 +1618,7 @@ export class AiOrchestratorService {
   "emotionalTone": "grounded|warm|energetic|melancholic|playful|serious",
   "responseLength": "short|medium|long",
   "emojiUsage": "none|occasional|frequent",
-  "memorySummary": "初始记忆摘要（一句话）",
+  "memorySummary": "这个人给用户的熟悉感和关系分寸（一句话）",
   "basePrompt": "这个人自己的说话方式和边界（2-4句话，不要写成助理说明书，不要出现括号动作）"
 }`;
 

@@ -256,10 +256,10 @@ export const DEFAULT_FOLLOWUP_RUNTIME_RULES: FollowupRuntimeRulesValue = {
     recentRecommendationPenalty: 0.35,
   },
   promptTemplates: {
-    openLoopExtractionPrompt: `你是隐界里的 open loop 跟进分析器。你的任务是从最近安静下来的聊天里，找出“用户明显还没处理完、值得后续跟进”的事项。
+    openLoopExtractionPrompt: `你在替“我自己”翻最近慢下来的聊天，找出那些“用户明显还没放下、后面值得再接一下”的事项。
 
 输入会给你：
-- 最近安静下来的私聊线程摘要
+- 最近慢下来的私聊线程概况
 - 用户手动设置的消息提醒
 - 当前世界角色常见领域标签
 
@@ -281,7 +281,7 @@ export const DEFAULT_FOLLOWUP_RUNTIME_RULES: FollowupRuntimeRulesValue = {
   "loops": [
     {
       "topicKey": "stable_key_optional",
-      "summary": "一句话概括这个未闭环事项",
+      "summary": "一句话点出这件还没落下的事",
       "sourceThreadId": "direct_xxx",
       "sourceThreadType": "direct",
       "sourceThreadTitle": "线程标题",
@@ -292,7 +292,7 @@ export const DEFAULT_FOLLOWUP_RUNTIME_RULES: FollowupRuntimeRulesValue = {
       "urgencyScore": 0.74,
       "closureScore": 0.22,
       "handoffNeedScore": 0.78,
-      "reasonSummary": "为什么值得跟进，为什么适合交给别人接着聊"
+      "reasonSummary": "为什么还值得往下接，为什么适合换这个人继续聊"
     }
   ]
 }
@@ -357,16 +357,17 @@ export const DEFAULT_FOLLOWUP_RUNTIME_RULES: FollowupRuntimeRulesValue = {
   },
   textTemplates: {
     jobSummarySuccess:
-      '扫描到 {{candidateLoopCount}} 个候选 open loop，命中 {{selectedLoopCount}} 个，发出 {{emittedRecommendationCount}} 条推荐，其中 {{autoStartedFriendRequestCount}} 条已自动发起好友申请。',
-    jobSummarySkippedDisabled: '主动跟进已停用，跳过本次扫描。',
-    jobSummarySkippedNoSignals: '没有命中适合回捞的安静线程或手动提醒。',
+      '这轮一共捞到 {{candidateLoopCount}} 个可继续接的话头，最后挑了 {{selectedLoopCount}} 个，发出 {{emittedRecommendationCount}} 条推荐，其中 {{autoStartedFriendRequestCount}} 条已经先发了好友申请。',
+    jobSummarySkippedDisabled: '主动跟进这会儿关着，这轮先不扫。',
+    jobSummarySkippedNoSignals:
+      '这轮没捞到适合继续接的话题，也没有新的手动提醒。',
     fallbackMessage:
-      '这件事其实还没真正放下。继续往下聊的话，{{targetCharacterName}}会更合适。',
+      '这件事你其实还惦记着。真要继续往下聊，{{targetCharacterName}}会更对路。',
     recommendationBadge: '继续聊',
     friendRequestFallbackGreeting:
-      '你好，我最近一直在想{{loopSummary}}这件事，感觉你会很懂，想先加个好友聊聊。',
+      '最近一直惦记着{{loopSummary}}这件事，感觉你会很懂，想先加你聊聊。',
     friendRequestFallbackMessage:
-      '这件事继续拖着没意义，我已经先把{{targetCharacterName}}加上了，后面可以直接接着聊。',
+      '这事继续搁着也不是办法，我先把{{targetCharacterName}}加上了，后面可以直接接着聊。',
     friendRequestBadge: '已发申请',
   },
 };

@@ -195,7 +195,7 @@ export class NeedDiscoveryService {
         return this.finishRun(run, {
           status: 'skipped',
           skipReason: '当前节奏已在后台停用。',
-          summary: '需求发现已停用，跳过执行。',
+          summary: '需求发现这会儿关着，这轮先不跑。',
         });
       }
 
@@ -206,7 +206,7 @@ export class NeedDiscoveryService {
         return this.finishRun(run, {
           status: 'skipped',
           skipReason: '尚未达到当前节奏的下一次执行窗口。',
-          summary: '未到执行时间，跳过本次需求发现。',
+          summary: '还没到这轮执行时间，先跳过。',
         });
       }
 
@@ -230,7 +230,7 @@ export class NeedDiscoveryService {
         return this.finishRun(run, {
           status: 'skipped',
           skipReason: '没有检测到比上次成功执行更新的交互信号。',
-          summary: '没有新信号，跳过本次实时需求发现。',
+          summary: '没有比上次更新的信号，这轮先不动。',
         });
       }
 
@@ -238,7 +238,7 @@ export class NeedDiscoveryService {
         return this.finishRun(run, {
           status: 'skipped',
           skipReason: '当前窗口没有可分析的交互数据。',
-          summary: '没有可用交互数据，跳过本次需求发现。',
+          summary: '这轮没有够用的交互数据，先跳过。',
         });
       }
 
@@ -249,7 +249,7 @@ export class NeedDiscoveryService {
         return this.finishRun(run, {
           status: 'skipped',
           skipReason: '待处理候选已达到上限。',
-          summary: `当前已有 ${pendingCount} 个待处理候选，跳过新建角色。`,
+          summary: `现在还有 ${pendingCount} 个候选没处理，这轮先不继续生新角色。`,
         });
       }
 
@@ -265,7 +265,7 @@ export class NeedDiscoveryService {
         return this.finishRun(run, {
           status: 'skipped',
           skipReason: '当日生成额度已用完。',
-          summary: `今日已生成 ${todayCreatedCount} 个候选，达到上限后跳过。`,
+          summary: `今天已经新建了 ${todayCreatedCount} 个候选，这轮先收住。`,
         });
       }
 
@@ -289,7 +289,8 @@ export class NeedDiscoveryService {
       if (!selectedNeeds.length) {
         return this.finishRun(run, {
           status: 'success',
-          summary: analysis.summary.trim() || '分析完成，未发现新的角色缺口。',
+          summary:
+            analysis.summary.trim() || '这轮看完了，没发现值得补的新角色位。',
         });
       }
 
@@ -371,14 +372,17 @@ export class NeedDiscoveryService {
         status: 'success',
         summary:
           cadenceConfig.executionMode === 'dry_run'
-            ? `已生成 ${draftCount} 个草稿候选，当前为 Dry Run。`
-            : `已识别 ${draftCount} 个需求候选，创建 ${createdCount} 个角色并发出 ${requestCount} 条好友申请。`,
+            ? `这轮先跑了 ${draftCount} 个草稿候选，当前还是 Dry Run，没有真的往下发。`
+            : `这轮识别出 ${draftCount} 个需求候选，落了 ${createdCount} 个角色，发出 ${requestCount} 条好友申请。`,
       });
     } catch (error) {
       return this.finishRun(run, {
         status: 'failed',
         errorMessage: error instanceof Error ? error.message : String(error),
-        summary: error instanceof Error ? error.message : '需求发现执行失败。',
+        summary:
+          error instanceof Error
+            ? `这轮需求发现没跑完：${error.message}`
+            : '这轮需求发现跑失败了。',
       });
     }
   }
@@ -1142,7 +1146,7 @@ function describeMomentContent(
   }
   if (contentType === 'image_album' || contentType === 'live_photo') {
     try {
-      const parsed = mediaPayload ? JSON.parse(mediaPayload) : [];
+      const parsed: unknown = mediaPayload ? JSON.parse(mediaPayload) : [];
       const count = Array.isArray(parsed) ? parsed.length : 0;
       return `用户发布了 ${count || 1} 张图片的朋友圈`;
     } catch {

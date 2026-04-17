@@ -300,7 +300,7 @@ const CHARACTER_FIELD_MAPPINGS: CharacterFieldMapping[] = [
       character.profile?.scenePrompts?.proactive ?? '',
   },
   {
-    label: '记忆摘要',
+    label: '记忆概况',
     recipeField: 'memorySeed.memorySummary',
     targetField: 'profile.memorySummary',
     readRecipe: (recipe) => recipe.memorySeed.memorySummary,

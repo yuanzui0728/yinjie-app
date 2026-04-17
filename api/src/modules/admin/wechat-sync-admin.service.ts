@@ -1015,7 +1015,7 @@ function buildSnapshotDiffRecords(
       currentSnapshot.draftCharacter.expertDomains.join('、'),
     ),
     createSnapshotDiffRecord(
-      '记忆摘要',
+      '记忆概况',
       previousSnapshot?.draftCharacter.memorySummary ?? '',
       currentSnapshot.draftCharacter.memorySummary,
     ),
@@ -1040,7 +1040,7 @@ function buildSnapshotDiffRecords(
       currentSnapshot.contact.tags.join('、'),
     ),
     createSnapshotDiffRecord(
-      '聊天摘要',
+      '聊天概况',
       previousSnapshot?.contact.chatSummary ?? '',
       currentSnapshot.contact.chatSummary ?? '',
     ),
