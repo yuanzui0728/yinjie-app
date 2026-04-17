@@ -33,6 +33,7 @@ export type ReplyLogicGroupReplySelectionDisposition =
 
 export interface ReplyLogicPromptSection {
   key:
+    | "core_directive"
     | "identity"
     | "personality_and_tone"
     | "behavioral_patterns"
@@ -40,6 +41,7 @@ export interface ReplyLogicPromptSection {
     | "internal_reasoning"
     | "collaboration_routing"
     | "memory"
+    | "real_world_context"
     | "current_context"
     | "group_chat"
     | "rules";

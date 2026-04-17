@@ -45,6 +45,7 @@ export interface ReplyLogicPromptSection {
     | 'internal_reasoning'
     | 'collaboration_routing'
     | 'memory'
+    | 'real_world_context'
     | 'current_context'
     | 'group_chat'
     | 'rules';

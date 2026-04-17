@@ -8,7 +8,10 @@ import { CharacterEntity } from '../characters/character.entity';
 import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
 import { NarrativeService } from '../narrative/narrative.service';
 import { WorldOwnerService } from '../auth/world-owner.service';
-import { DEFAULT_CHARACTER_IDS } from '../characters/default-characters';
+import {
+  DEFAULT_CHARACTER_IDS,
+  SELF_CHARACTER_ID,
+} from '../characters/default-characters';
 import { ChatService } from '../chat/chat.service';
 import { CharactersService } from '../characters/characters.service';
 import { listCelebrityCharacterPresets } from '../characters/celebrity-character-presets';
@@ -316,7 +319,7 @@ export class SocialService {
           this.friendshipRepo.create({
             ownerId: resolvedOwnerId,
             characterId,
-            intimacyLevel: characterId === DEFAULT_CHARACTER_IDS[0] ? 100 : 60,
+            intimacyLevel: characterId === SELF_CHARACTER_ID ? 100 : 60,
             status: 'friend',
           }),
         );

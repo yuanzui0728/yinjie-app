@@ -1,10 +1,16 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { In, LessThanOrEqual, MoreThan, Repository } from 'typeorm';
 import { type AiMessagePart, type ChatMessage } from '../ai/ai.types';
 import { CharacterEntity } from '../characters/character.entity';
+import { CharactersService } from '../characters/characters.service';
 import { SystemConfigService } from '../config/config.service';
 import { ReplyLogicRulesService } from '../ai/reply-logic-rules.service';
 import { ChatGateway } from './chat.gateway';
@@ -56,6 +62,7 @@ export class GroupReplyTaskService {
     private readonly characterRepo: Repository<CharacterEntity>,
     private readonly systemConfig: SystemConfigService,
     private readonly replyLogicRules: ReplyLogicRulesService,
+    private readonly characters: CharactersService,
     private readonly chatGateway: ChatGateway,
     private readonly groupReplyOrchestrator: GroupReplyOrchestratorService,
   ) {}
@@ -225,7 +232,9 @@ export class GroupReplyTaskService {
 
     const now = new Date();
     const skippedTaskIds = tasks
-      .filter((task) => !retryableTasks.some((candidate) => candidate.id === task.id))
+      .filter(
+        (task) => !retryableTasks.some((candidate) => candidate.id === task.id),
+      )
       .map((task) => task.id);
     const retriedTaskIds: string[] = [];
 
@@ -260,9 +269,10 @@ export class GroupReplyTaskService {
       1,
       Math.round(input?.olderThanDays ?? GROUP_REPLY_TASK_RETENTION_DAYS),
     );
-    const statuses = (input?.statuses?.length
-      ? input.statuses
-      : GROUP_REPLY_TASK_TERMINAL_STATUSES
+    const statuses = (
+      input?.statuses?.length
+        ? input.statuses
+        : GROUP_REPLY_TASK_TERMINAL_STATUSES
     ).filter((status): status is GroupReplyTaskStatus =>
       GROUP_REPLY_TASK_TERMINAL_STATUSES.includes(status),
     );
@@ -270,9 +280,7 @@ export class GroupReplyTaskService {
       throw new BadRequestException('Cleanup requires terminal task statuses');
     }
 
-    const cutoff = new Date(
-      Date.now() - olderThanDays * 24 * 60 * 60 * 1000,
-    );
+    const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
     const staleTasks = await this.taskRepo.find({
       where: {
         ...(input?.groupId ? { groupId: input.groupId } : {}),
@@ -360,7 +368,10 @@ export class GroupReplyTaskService {
     try {
       const existingActorReply = await this.findExistingActorReply(task);
       if (existingActorReply) {
-        await this.markTaskSent(task, existingActorReply.createdAt ?? new Date());
+        await this.markTaskSent(
+          task,
+          existingActorReply.createdAt ?? new Date(),
+        );
         return;
       }
 
@@ -377,6 +388,9 @@ export class GroupReplyTaskService {
         await this.markTaskCancelled(task, 'actor_missing');
         return;
       }
+      const runtimeProfile =
+        (await this.characters.getRuntimeProfileFromCharacter(character)) ??
+        character.profile;
 
       const conversationHistory = this.parseHistoryPayload(
         task.conversationHistoryPayload,
@@ -396,7 +410,7 @@ export class GroupReplyTaskService {
       const reply = await this.groupReplyOrchestrator.generateTaskReply({
         actor: {
           character,
-          profile: character.profile,
+          profile: runtimeProfile,
           score: 0,
           randomPassed: true,
           isExplicitTarget: false,

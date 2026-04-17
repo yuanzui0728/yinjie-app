@@ -1,16 +1,39 @@
 // 场景提示词：每个场景独立配置
 export interface ScenePrompts {
-  chat?: string;            // 聊天回复
-  moments_post?: string;    // 发朋友圈
+  chat?: string; // 聊天回复
+  moments_post?: string; // 发朋友圈
   moments_comment?: string; // 朋友圈评论/回复
-  feed_post?: string;       // 发 Feed 贴文
-  channel_post?: string;    // 发视频号内容
-  feed_comment?: string;    // Feed 评论反应
-  greeting?: string;        // 好友请求问候 / 摇一摇
-  proactive?: string;       // 主动提醒
+  feed_post?: string; // 发 Feed 贴文
+  channel_post?: string; // 发视频号内容
+  feed_comment?: string; // Feed 评论反应
+  greeting?: string; // 好友请求问候 / 摇一摇
+  proactive?: string; // 主动提醒
 }
 
 export type SceneKey = keyof ScenePrompts;
+
+export type RealityLinkApplyModeValue = 'disabled' | 'shadow' | 'live';
+export type RealityLinkSubjectTypeValue =
+  | 'living_public_figure'
+  | 'organization_proxy'
+  | 'historical_snapshot'
+  | 'fictional_or_private';
+
+export interface RealWorldRuntimeContextValue {
+  enabled: boolean;
+  applyMode: RealityLinkApplyModeValue;
+  subjectType?: RealityLinkSubjectTypeValue;
+  subjectName?: string;
+  digestId?: string | null;
+  syncDate?: string | null;
+  dailySummary?: string;
+  behaviorSummary?: string;
+  stanceShiftSummary?: string;
+  globalOverlay?: string;
+  realityMomentBrief?: string | null;
+  sceneOverlays?: ScenePrompts;
+  signalTitles?: string[];
+}
 
 // 角色人格画像结构
 export interface PersonalityProfile {
@@ -78,6 +101,7 @@ export interface PersonalityProfile {
     /** 核心记忆提取提示词，留空使用全局默认。变量：{{name}}、{{interactionHistory}} */
     coreMemoryPrompt?: string;
   };
+  realWorldContext?: RealWorldRuntimeContextValue;
 }
 
 export interface ChatMessage {

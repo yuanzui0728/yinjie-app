@@ -256,6 +256,8 @@
   - `GET /api/official-accounts/:id/service-messages`
   - `POST /api/official-accounts/:id/service-messages/read`
   - `POST /api/official-accounts/deliveries/:deliveryId/read`
+- 游戏中心路由：
+  - `GET /api/games/home`
 
 ## 前端状态约束
 

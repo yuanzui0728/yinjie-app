@@ -22,6 +22,7 @@ export interface ChatSystemPromptSection {
     | 'internal_reasoning'
     | 'collaboration_routing'
     | 'memory'
+    | 'real_world_context'
     | 'current_context'
     | 'group_chat'
     | 'rules';
@@ -93,6 +94,14 @@ export class PromptBuilderService {
     const scenePrompt = profile.scenePrompts?.[scene]?.trim();
     if (scenePrompt) {
       parts.push(`<scene_prompt>\n${scenePrompt}\n</scene_prompt>`);
+    }
+
+    const realWorldContextSection = this.buildRealWorldContextSection(
+      profile,
+      scene,
+    );
+    if (realWorldContextSection) {
+      parts.push(realWorldContextSection);
     }
 
     const naturalDialogueGuideline = buildNaturalDialogueGuideline(
@@ -457,6 +466,11 @@ export class PromptBuilderService {
     }
     memorySection += `\n</memory>`;
 
+    const realWorldContextSection = this.buildRealWorldContextSection(
+      profile,
+      'chat',
+    );
+
     let currentContextSection = '';
     if (context) {
       const now = new Date();
@@ -569,6 +583,12 @@ ${templates.behavioralGuideline}
         active: true,
       },
       {
+        key: 'real_world_context',
+        label: 'Real World Context',
+        content: realWorldContextSection,
+        active: Boolean(realWorldContextSection),
+      },
+      {
         key: 'current_context',
         label: 'Current Context',
         content: currentContextSection,
@@ -612,5 +632,61 @@ ${templates.behavioralGuideline}
       return semanticLabels.timeOfDayLabels.dusk;
     }
     return semanticLabels.timeOfDayLabels.evening;
+  }
+
+  private buildRealWorldContextSection(
+    profile: PersonalityProfile,
+    scene?: SceneKey,
+  ) {
+    const realWorldContext = profile.realWorldContext;
+    if (!realWorldContext?.enabled) {
+      return '';
+    }
+
+    const blocks: string[] = [];
+
+    if (realWorldContext.syncDate) {
+      blocks.push(`【同步日期】\n${realWorldContext.syncDate}`);
+    }
+    if (realWorldContext.dailySummary?.trim()) {
+      blocks.push(`【今日现实摘要】\n${realWorldContext.dailySummary.trim()}`);
+    }
+    if (realWorldContext.behaviorSummary?.trim()) {
+      blocks.push(`【行为倾向】\n${realWorldContext.behaviorSummary.trim()}`);
+    }
+    if (realWorldContext.stanceShiftSummary?.trim()) {
+      blocks.push(
+        `【态度偏移】\n${realWorldContext.stanceShiftSummary.trim()}`,
+      );
+    }
+    if (realWorldContext.globalOverlay?.trim()) {
+      blocks.push(`【全局覆盖】\n${realWorldContext.globalOverlay.trim()}`);
+    }
+
+    const sceneOverlay = scene
+      ? realWorldContext.sceneOverlays?.[scene]?.trim()
+      : '';
+    if (sceneOverlay) {
+      blocks.push(`【当前场景补丁】\n${sceneOverlay}`);
+    }
+
+    if (
+      scene === 'moments_post' &&
+      realWorldContext.realityMomentBrief?.trim()
+    ) {
+      blocks.push(
+        `【现实发圈锚点】\n${realWorldContext.realityMomentBrief.trim()}`,
+      );
+    }
+
+    if (realWorldContext.signalTitles?.length) {
+      blocks.push(`【关联信号】\n${realWorldContext.signalTitles.join('；')}`);
+    }
+
+    if (!blocks.length) {
+      return '';
+    }
+
+    return `<real_world_context>\n${blocks.join('\n\n')}\n</real_world_context>`;
   }
 }

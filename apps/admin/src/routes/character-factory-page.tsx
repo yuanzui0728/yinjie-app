@@ -49,12 +49,32 @@ const ACTIVITY_OPTIONS = [
   { value: "sleeping", label: "睡觉中" },
 ];
 
+const REALITY_APPLY_MODE_OPTIONS = [
+  { value: "disabled", label: "关闭" },
+  { value: "shadow", label: "影子模式" },
+  { value: "live", label: "直接生效" },
+];
+
+const REALITY_SUBJECT_TYPE_OPTIONS = [
+  { value: "living_public_figure", label: "在世公众人物" },
+  { value: "organization_proxy", label: "组织代理人格" },
+  { value: "historical_snapshot", label: "历史快照人物" },
+  { value: "fictional_or_private", label: "虚构 / 私人角色" },
+];
+
+const REALITY_MOMENT_POLICY_OPTIONS = [
+  { value: "disabled", label: "不要求现实发圈" },
+  { value: "optional", label: "可选现实发圈" },
+  { value: "force_one_daily", label: "每天至少一条" },
+];
+
 const FACTORY_TABS = [
   { key: "ai", label: "AI 辅助" },
   { key: "identity", label: "身份关系" },
   { key: "expertise", label: "能力边界" },
   { key: "tone", label: "语气与场景提示词" },
   { key: "memory", label: "记忆策略" },
+  { key: "reality", label: "真实世界链接" },
   { key: "publish", label: "推理发布" },
   { key: "versions", label: "版本 Diff" },
 ];
@@ -1010,6 +1030,306 @@ export function CharacterFactoryPage() {
                       lifeStrategy: {
                         ...current.lifeStrategy,
                         triggerScenes: csvToList(value),
+                      },
+                    }))
+                  }
+                />
+              </div>
+            </Card>
+          ) : null}
+
+          {/* Tab: 真实世界链接 */}
+          {activeTab === "reality" ? (
+            <Card className="bg-[color:var(--surface-console)]">
+              <SectionHeading>真实世界链接与每日 Reality Sync</SectionHeading>
+              <div className="mt-4 space-y-4">
+                <InlineNotice tone="muted">
+                  这里控制角色是否每天对接现实世界的新闻和公开动态。系统不会直接覆写角色底稿，而是生成每日
+                  digest 与 scene patch，在运行时叠加成 effective prompt。
+                </InlineNotice>
+                <div className="flex flex-wrap gap-3">
+                  <ToggleChip
+                    label="启用真实世界链接"
+                    checked={draft.realityLink.enabled}
+                    onChange={(event) =>
+                      patchDraft((current) => ({
+                        ...current,
+                        realityLink: {
+                          ...current.realityLink,
+                          enabled: event.currentTarget.checked,
+                          applyMode: event.currentTarget.checked
+                            ? current.realityLink.applyMode === "disabled"
+                              ? "shadow"
+                              : current.realityLink.applyMode
+                            : "disabled",
+                        },
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <SelectFieldBlock
+                    label="应用模式"
+                    value={draft.realityLink.applyMode}
+                    onChange={(value) =>
+                      patchDraft((current) => ({
+                        ...current,
+                        realityLink: {
+                          ...current.realityLink,
+                          applyMode:
+                            value as CharacterBlueprintRecipe["realityLink"]["applyMode"],
+                        },
+                      }))
+                    }
+                    options={REALITY_APPLY_MODE_OPTIONS}
+                  />
+                  <SelectFieldBlock
+                    label="主体类型"
+                    value={draft.realityLink.subjectType}
+                    onChange={(value) =>
+                      patchDraft((current) => ({
+                        ...current,
+                        realityLink: {
+                          ...current.realityLink,
+                          subjectType:
+                            value as CharacterBlueprintRecipe["realityLink"]["subjectType"],
+                        },
+                      }))
+                    }
+                    options={REALITY_SUBJECT_TYPE_OPTIONS}
+                  />
+                  <FieldBlock
+                    label="主体名称"
+                    value={draft.realityLink.subjectName}
+                    onChange={(value) =>
+                      patchDraft((current) => ({
+                        ...current,
+                        realityLink: {
+                          ...current.realityLink,
+                          subjectName: value,
+                        },
+                      }))
+                    }
+                  />
+                  <FieldBlock
+                    label="语言区域"
+                    value={draft.realityLink.locale}
+                    onChange={(value) =>
+                      patchDraft((current) => ({
+                        ...current,
+                        realityLink: {
+                          ...current.realityLink,
+                          locale: value,
+                        },
+                      }))
+                    }
+                  />
+                  <FieldBlock
+                    label="搜索模板"
+                    value={draft.realityLink.queryTemplate}
+                    onChange={(value) =>
+                      patchDraft((current) => ({
+                        ...current,
+                        realityLink: {
+                          ...current.realityLink,
+                          queryTemplate: value,
+                        },
+                      }))
+                    }
+                  />
+                  <SelectFieldBlock
+                    label="现实发圈策略"
+                    value={draft.realityLink.realityMomentPolicy}
+                    onChange={(value) =>
+                      patchDraft((current) => ({
+                        ...current,
+                        realityLink: {
+                          ...current.realityLink,
+                          realityMomentPolicy:
+                            value as CharacterBlueprintRecipe["realityLink"]["realityMomentPolicy"],
+                        },
+                      }))
+                    }
+                    options={REALITY_MOMENT_POLICY_OPTIONS}
+                  />
+                  <FieldBlock
+                    label="回溯小时"
+                    value={draft.realityLink.recencyHours}
+                    type="number"
+                    min={1}
+                    onChange={(value) =>
+                      patchDraft((current) => ({
+                        ...current,
+                        realityLink: {
+                          ...current.realityLink,
+                          recencyHours: parseIntWithFallback(
+                            value,
+                            current.realityLink.recencyHours,
+                          ),
+                        },
+                      }))
+                    }
+                  />
+                  <FieldBlock
+                    label="每轮最多信号"
+                    value={draft.realityLink.maxSignalsPerRun}
+                    type="number"
+                    min={1}
+                    onChange={(value) =>
+                      patchDraft((current) => ({
+                        ...current,
+                        realityLink: {
+                          ...current.realityLink,
+                          maxSignalsPerRun: parseIntWithFallback(
+                            value,
+                            current.realityLink.maxSignalsPerRun,
+                          ),
+                        },
+                      }))
+                    }
+                  />
+                  <FieldBlock
+                    label="最低可信阈值"
+                    value={draft.realityLink.minimumConfidence}
+                    type="number"
+                    min={0}
+                    max={1}
+                    onChange={(value) =>
+                      patchDraft((current) => ({
+                        ...current,
+                        realityLink: {
+                          ...current.realityLink,
+                          minimumConfidence: Number.isFinite(Number(value))
+                            ? Math.max(0, Math.min(1, Number(value)))
+                            : current.realityLink.minimumConfidence,
+                        },
+                      }))
+                    }
+                  />
+                  <FieldBlock
+                    label="聊天权重"
+                    value={draft.realityLink.chatWeight}
+                    type="number"
+                    min={1}
+                    onChange={(value) =>
+                      patchDraft((current) => ({
+                        ...current,
+                        realityLink: {
+                          ...current.realityLink,
+                          chatWeight: parseIntWithFallback(
+                            value,
+                            current.realityLink.chatWeight,
+                          ),
+                        },
+                      }))
+                    }
+                  />
+                  <FieldBlock
+                    label="内容权重"
+                    value={draft.realityLink.contentWeight}
+                    type="number"
+                    min={1}
+                    onChange={(value) =>
+                      patchDraft((current) => ({
+                        ...current,
+                        realityLink: {
+                          ...current.realityLink,
+                          contentWeight: parseIntWithFallback(
+                            value,
+                            current.realityLink.contentWeight,
+                          ),
+                        },
+                      }))
+                    }
+                  />
+                </div>
+                <FieldBlock
+                  label="别名"
+                  value={listToCsv(draft.realityLink.aliases)}
+                  onChange={(value) =>
+                    patchDraft((current) => ({
+                      ...current,
+                      realityLink: {
+                        ...current.realityLink,
+                        aliases: csvToList(value),
+                      },
+                    }))
+                  }
+                />
+                <FieldBlock
+                  label="来源白名单"
+                  value={listToCsv(draft.realityLink.sourceAllowlist)}
+                  onChange={(value) =>
+                    patchDraft((current) => ({
+                      ...current,
+                      realityLink: {
+                        ...current.realityLink,
+                        sourceAllowlist: csvToList(value),
+                      },
+                    }))
+                  }
+                />
+                <FieldBlock
+                  label="来源黑名单"
+                  value={listToCsv(draft.realityLink.sourceBlocklist)}
+                  onChange={(value) =>
+                    patchDraft((current) => ({
+                      ...current,
+                      realityLink: {
+                        ...current.realityLink,
+                        sourceBlocklist: csvToList(value),
+                      },
+                    }))
+                  }
+                />
+                <TextAreaBlock
+                  label="人工 steering 备注"
+                  value={draft.realityLink.manualSteeringNotes}
+                  onChange={(value) =>
+                    patchDraft((current) => ({
+                      ...current,
+                      realityLink: {
+                        ...current.realityLink,
+                        manualSteeringNotes: value,
+                      },
+                    }))
+                  }
+                />
+                <TextAreaBlock
+                  label="角色级日摘要提示词覆盖"
+                  value={draft.realityLink.dailyDigestPrompt}
+                  onChange={(value) =>
+                    patchDraft((current) => ({
+                      ...current,
+                      realityLink: {
+                        ...current.realityLink,
+                        dailyDigestPrompt: value,
+                      },
+                    }))
+                  }
+                />
+                <TextAreaBlock
+                  label="角色级 scene patch 提示词覆盖"
+                  value={draft.realityLink.scenePatchPrompt}
+                  onChange={(value) =>
+                    patchDraft((current) => ({
+                      ...current,
+                      realityLink: {
+                        ...current.realityLink,
+                        scenePatchPrompt: value,
+                      },
+                    }))
+                  }
+                />
+                <TextAreaBlock
+                  label="角色级现实发圈提示词覆盖"
+                  value={draft.realityLink.realityMomentPrompt}
+                  onChange={(value) =>
+                    patchDraft((current) => ({
+                      ...current,
+                      realityLink: {
+                        ...current.realityLink,
+                        realityMomentPrompt: value,
                       },
                     }))
                   }
