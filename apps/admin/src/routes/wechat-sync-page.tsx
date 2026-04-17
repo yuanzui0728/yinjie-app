@@ -931,6 +931,15 @@ export function WechatSyncPage() {
     );
   }
 
+  function importAnnotationTemplates(raw: string) {
+    const result = mergeWechatSyncAnnotationTemplateImportPayload(
+      annotationTemplates,
+      raw,
+    );
+    setAnnotationTemplates(result.templates);
+    return result;
+  }
+
   function updateAnnotationTemplateScope(
     templateId: string,
     scope: WechatSyncAnnotationTemplateScope,
@@ -1985,6 +1994,7 @@ export function WechatSyncPage() {
               onRemoveAnnotationTemplate={removeAnnotationTemplate}
               onResetAnnotationTemplates={resetAnnotationTemplates}
               onToggleAnnotationTemplatePin={toggleAnnotationTemplatePin}
+              onImportAnnotationTemplates={importAnnotationTemplates}
               onUpdateAnnotationTemplateScope={updateAnnotationTemplateScope}
               onApplyRecordAnnotationTemplate={applyAnnotationTemplateToRecord}
               onApplySnapshotAnnotationTemplate={
@@ -2295,6 +2305,7 @@ function HistoryDetailPanel({
   onRemoveAnnotationTemplate,
   onResetAnnotationTemplates,
   onToggleAnnotationTemplatePin,
+  onImportAnnotationTemplates,
   onUpdateAnnotationTemplateScope,
   onApplyRecordAnnotationTemplate,
   onApplySnapshotAnnotationTemplate,
@@ -2352,6 +2363,9 @@ function HistoryDetailPanel({
   onRemoveAnnotationTemplate: (templateId: string) => void;
   onResetAnnotationTemplates: () => void;
   onToggleAnnotationTemplatePin: (templateId: string) => void;
+  onImportAnnotationTemplates: (
+    raw: string,
+  ) => WechatSyncAnnotationTemplateImportResult;
   onUpdateAnnotationTemplateScope: (
     templateId: string,
     scope: WechatSyncAnnotationTemplateScope,
@@ -2596,6 +2610,7 @@ function HistoryDetailPanel({
           onRemoveTemplate={onRemoveAnnotationTemplate}
           onResetTemplates={onResetAnnotationTemplates}
           onToggleTemplatePin={onToggleAnnotationTemplatePin}
+          onImportTemplates={onImportAnnotationTemplates}
           onUpdateTemplateScope={onUpdateAnnotationTemplateScope}
           onOpenRecord={openAnnotatedRecord}
           onOpenSnapshot={openAnnotatedSnapshot}
@@ -2821,6 +2836,7 @@ function ImportAnnotationSummaryPanel({
   onRemoveTemplate,
   onResetTemplates,
   onToggleTemplatePin,
+  onImportTemplates,
   onUpdateTemplateScope,
   onOpenRecord,
   onOpenSnapshot,
@@ -2836,6 +2852,7 @@ function ImportAnnotationSummaryPanel({
   onRemoveTemplate: (templateId: string) => void;
   onResetTemplates: () => void;
   onToggleTemplatePin: (templateId: string) => void;
+  onImportTemplates: (raw: string) => WechatSyncAnnotationTemplateImportResult;
   onUpdateTemplateScope: (
     templateId: string,
     scope: WechatSyncAnnotationTemplateScope,
@@ -2985,6 +3002,7 @@ function ImportAnnotationSummaryPanel({
             onRemoveTemplate={onRemoveTemplate}
             onResetTemplates={onResetTemplates}
             onToggleTemplatePin={onToggleTemplatePin}
+            onImportTemplates={onImportTemplates}
             onUpdateTemplateScope={onUpdateTemplateScope}
           />
           {filteredEntries.map((entry) => (
@@ -3043,6 +3061,7 @@ function AnnotationTemplateManager({
   onRemoveTemplate,
   onResetTemplates,
   onToggleTemplatePin,
+  onImportTemplates,
   onUpdateTemplateScope,
 }: {
   templates: WechatSyncAnnotationTemplate[];
@@ -3054,6 +3073,7 @@ function AnnotationTemplateManager({
   onRemoveTemplate: (templateId: string) => void;
   onResetTemplates: () => void;
   onToggleTemplatePin: (templateId: string) => void;
+  onImportTemplates: (raw: string) => WechatSyncAnnotationTemplateImportResult;
   onUpdateTemplateScope: (
     templateId: string,
     scope: WechatSyncAnnotationTemplateScope,
@@ -3062,6 +3082,7 @@ function AnnotationTemplateManager({
   const [label, setLabel] = useState("");
   const [content, setContent] = useState("");
   const [scope, setScope] = useState<WechatSyncAnnotationTemplateScope>("all");
+  const [importJson, setImportJson] = useState("");
   const [feedback, setFeedback] = useState("");
   const pinnedCount = useMemo(
     () => templates.filter((template) => template.isPinned).length,
@@ -3074,6 +3095,14 @@ function AnnotationTemplateManager({
   const orderedTemplates = useMemo(
     () => sortWechatSyncAnnotationTemplates(templates),
     [templates],
+  );
+  const exportPayload = useMemo(
+    () => buildWechatSyncAnnotationTemplateExportPayload(templates),
+    [templates],
+  );
+  const exportJson = useMemo(
+    () => JSON.stringify(exportPayload, null, 2),
+    [exportPayload],
   );
 
   useEffect(() => {
@@ -3098,13 +3127,31 @@ function AnnotationTemplateManager({
     setFeedback("已新增自定义批注模板。");
   }
 
+  function importTemplates() {
+    if (!importJson.trim()) {
+      setFeedback("导入 JSON 为空，先粘贴模板配置。");
+      return;
+    }
+    try {
+      const result = onImportTemplates(importJson);
+      setFeedback(result.message);
+      if (result.changed) {
+        setImportJson("");
+      }
+    } catch (error) {
+      setFeedback(
+        error instanceof Error ? error.message : "模板导入失败，请检查 JSON。",
+      );
+    }
+  }
+
   return (
     <Card className="bg-[color:var(--surface-card)]">
       {feedback ? (
         <AdminActionFeedback
           className="mb-4"
           tone="success"
-          title="模板已更新"
+          title="模板操作已完成"
           description={feedback}
         />
       ) : null}
@@ -3121,6 +3168,30 @@ function AnnotationTemplateManager({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() =>
+              downloadWechatSyncAnnotationTemplateExport(templates)
+            }
+          >
+            导出当前模板 JSON
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={async () => {
+              const copied = await copyWechatSyncAuditText(
+                exportJson,
+                "复制模板 JSON",
+              );
+              if (copied) {
+                setFeedback("已复制当前模板 JSON。");
+              }
+            }}
+          >
+            复制当前模板 JSON
+          </Button>
           <Button variant="secondary" size="sm" onClick={onResetTemplates}>
             恢复默认模板
           </Button>
@@ -3194,6 +3265,45 @@ function AnnotationTemplateManager({
             >
               清空输入
             </Button>
+          </div>
+          <div className="rounded-2xl border border-[color:var(--border-faint)] bg-[color:var(--surface-soft)] p-4">
+            <div className="space-y-3">
+              <div className="text-sm font-semibold text-[color:var(--text-primary)]">
+                模板导入 / 合并
+              </div>
+              <AdminTextArea
+                label="模板 JSON"
+                value={importJson}
+                onChange={setImportJson}
+                textareaClassName="min-h-32"
+                placeholder="粘贴模板导出的 JSON，或点击“写入当前模板到导入框”后再编辑。"
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setImportJson(exportJson)}
+                >
+                  写入当前模板到导入框
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={importTemplates}
+                  disabled={!importJson.trim()}
+                >
+                  导入并合并
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setImportJson("")}
+                  disabled={!importJson.trim()}
+                >
+                  清空导入框
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -5136,6 +5246,14 @@ type WechatSyncAnnotationTemplate = {
   scope: WechatSyncAnnotationTemplateScope;
 };
 
+type WechatSyncAnnotationTemplateImportResult = {
+  templates: WechatSyncAnnotationTemplate[];
+  changed: boolean;
+  addedCount: number;
+  updatedCount: number;
+  message: string;
+};
+
 type WechatSyncAnnotationsState = {
   records: Record<string, string>;
   snapshots: Record<string, string>;
@@ -5443,6 +5561,165 @@ function formatWechatSyncAnnotationTemplateScopeDescription(
     default:
       return "会同时出现在记录批注和版本批注场景。";
   }
+}
+
+function buildWechatSyncAnnotationTemplateExportPayload(
+  templates: WechatSyncAnnotationTemplate[],
+) {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    templates: templates.map((template) => ({
+      id: template.id,
+      label: template.label,
+      content: template.content,
+      source: template.source,
+      isPinned: template.isPinned,
+      scope: template.scope,
+    })),
+  };
+}
+
+function downloadWechatSyncAnnotationTemplateExport(
+  templates: WechatSyncAnnotationTemplate[],
+) {
+  downloadWechatSyncAuditFile(
+    `wechat-sync-annotation-templates-${new Date().toISOString().slice(0, 10)}.json`,
+    JSON.stringify(
+      buildWechatSyncAnnotationTemplateExportPayload(templates),
+      null,
+      2,
+    ),
+    "application/json",
+  );
+}
+
+function mergeWechatSyncAnnotationTemplateImportPayload(
+  currentTemplates: WechatSyncAnnotationTemplate[],
+  raw: string,
+): WechatSyncAnnotationTemplateImportResult {
+  const importedTemplates = parseWechatSyncAnnotationTemplateImportPayload(raw);
+  if (!importedTemplates.length) {
+    return {
+      templates: currentTemplates,
+      changed: false,
+      addedCount: 0,
+      updatedCount: 0,
+      message: "导入 JSON 里没有可用模板。",
+    };
+  }
+
+  const nextTemplates = [...currentTemplates];
+  let addedCount = 0;
+  let updatedCount = 0;
+
+  for (const importedTemplate of importedTemplates) {
+    const existingIndex = nextTemplates.findIndex((template) =>
+      template.id === importedTemplate.id
+        ? true
+        : template.source === "custom" &&
+          importedTemplate.source === "custom" &&
+          template.label.trim().toLowerCase() ===
+            importedTemplate.label.trim().toLowerCase() &&
+          template.content.trim().toLowerCase() ===
+            importedTemplate.content.trim().toLowerCase(),
+    );
+
+    if (existingIndex >= 0) {
+      const currentTemplate = nextTemplates[existingIndex];
+      const nextTemplate = {
+        ...currentTemplate,
+        label:
+          importedTemplate.source === "custom"
+            ? importedTemplate.label
+            : currentTemplate.label,
+        content:
+          importedTemplate.source === "custom"
+            ? importedTemplate.content
+            : currentTemplate.content,
+        isPinned: importedTemplate.isPinned,
+        scope: importedTemplate.scope,
+      };
+      if (
+        nextTemplate.label !== currentTemplate.label ||
+        nextTemplate.content !== currentTemplate.content ||
+        nextTemplate.isPinned !== currentTemplate.isPinned ||
+        nextTemplate.scope !== currentTemplate.scope
+      ) {
+        nextTemplates[existingIndex] = nextTemplate;
+        updatedCount += 1;
+      }
+      continue;
+    }
+
+    if (importedTemplate.source === "default") {
+      continue;
+    }
+
+    nextTemplates.push(importedTemplate);
+    addedCount += 1;
+  }
+
+  const changed = addedCount > 0 || updatedCount > 0;
+  return {
+    templates: sortWechatSyncAnnotationTemplates(nextTemplates),
+    changed,
+    addedCount,
+    updatedCount,
+    message: changed
+      ? `已导入模板：新增 ${addedCount} 条，更新 ${updatedCount} 条。`
+      : "导入完成，但没有需要变更的模板。",
+  };
+}
+
+function parseWechatSyncAnnotationTemplateImportPayload(raw: string) {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new Error("模板导入 JSON 解析失败，请检查格式。");
+  }
+
+  const record = isRecord(parsed) ? parsed : null;
+  const templateEntries = record ? record.templates : parsed;
+  if (!Array.isArray(templateEntries)) {
+    throw new Error("模板导入 JSON 缺少 templates 数组。");
+  }
+
+  return normalizeWechatSyncAnnotationTemplateImportEntries(templateEntries);
+}
+
+function normalizeWechatSyncAnnotationTemplateImportEntries(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((entry) => {
+      if (!isRecord(entry)) {
+        return null;
+      }
+      const id = readString(entry.id) || createWechatSyncAnnotationTemplateId();
+      const label = readString(entry.label);
+      const content = readString(entry.content);
+      const source =
+        entry.source === "default" || entry.source === "custom"
+          ? entry.source
+          : "custom";
+      const isPinned = Boolean(entry.isPinned);
+      const scope = normalizeWechatSyncAnnotationTemplateScope(entry.scope);
+      if (!label || !content) {
+        return null;
+      }
+      return {
+        id,
+        label,
+        content,
+        source,
+        isPinned,
+        scope,
+      } satisfies WechatSyncAnnotationTemplate;
+    })
+    .filter(Boolean) as WechatSyncAnnotationTemplate[];
 }
 
 function syncWechatSyncViewStateToUrl(state: WechatSyncViewState) {
