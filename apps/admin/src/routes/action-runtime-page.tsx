@@ -211,10 +211,14 @@ export function ActionRuntimePage() {
       id: string;
       query?: string | null;
       limit?: number | null;
+      endpointConfig?: Record<string, unknown> | null;
+      credential?: string | null;
     }) =>
       adminApi.discoverActionRuntimeConnector(payload.id, {
         query: payload.query?.trim() || null,
         limit: payload.limit ?? null,
+        endpointConfig: payload.endpointConfig ?? null,
+        credential: payload.credential ?? null,
       }),
     onSuccess: (result, variables) => {
       setConnectorDiscoveryResults((current) => ({
@@ -400,18 +404,12 @@ export function ActionRuntimePage() {
     }
 
     try {
-      if (isConnectorDirty(connector, draft)) {
-        await saveConnectorMutation.mutateAsync({
-          id: connector.id,
-          displayName: draft.displayName.trim() || connector.displayName,
-          endpointConfig: parsed.value,
-          credential: draft.credential.trim() || null,
-        });
-      }
       await discoverConnectorMutation.mutateAsync({
         id: connector.id,
         query: draft.discoveryQuery,
         limit: 30,
+        endpointConfig: parsed.value,
+        credential: draft.credential.trim() || null,
       });
     } catch {
       return;
@@ -466,8 +464,8 @@ export function ActionRuntimePage() {
       ...current,
       [connector.id]:
         mode === "missing"
-          ? `已补入 ${mergeResult.appliedCount} 条未配置映射，跳过 ${mergeResult.skippedCount} 条已存在项。`
-          : `已写入 ${mergeResult.appliedCount} 条推荐映射，其中覆盖 ${mergeResult.overwrittenCount} 条已存在项。`,
+          ? `已补入 ${mergeResult.appliedCount} 条未配置映射，自动避开 ${mergeResult.disambiguatedCount} 个冲突 key，跳过 ${mergeResult.skippedCount} 条无法处理的项。`
+          : `已写入 ${mergeResult.appliedCount} 条推荐映射，自动避开 ${mergeResult.disambiguatedCount} 个冲突 key，跳过 ${mergeResult.skippedCount} 条无法处理的项。`,
     }));
   }
 
@@ -1524,22 +1522,24 @@ function mergeHomeAssistantTargetSuggestions(input: {
       : {};
   const nextTargets: Record<string, unknown> = { ...existingTargets };
   let appliedCount = 0;
-  let overwrittenCount = 0;
   let skippedCount = 0;
+  let disambiguatedCount = 0;
 
   for (const suggestion of input.suggestions) {
-    const exists = Object.prototype.hasOwnProperty.call(
+    const resolvedKey = resolveTargetSuggestionWriteKey({
       nextTargets,
-      suggestion.key,
-    );
-    if (input.mode === "missing" && exists) {
+      suggestion,
+    });
+    if (!resolvedKey) {
       skippedCount += 1;
       continue;
     }
-    if (exists) {
-      overwrittenCount += 1;
+    if (resolvedKey !== suggestion.key) {
+      disambiguatedCount += 1;
     }
-    nextTargets[suggestion.key] = suggestion.targetConfig;
+    nextTargets[resolvedKey] = {
+      ...suggestion.targetConfig,
+    };
     appliedCount += 1;
   }
 
@@ -1554,9 +1554,111 @@ function mergeHomeAssistantTargetSuggestions(input: {
       deviceTargets: nextTargets,
     },
     appliedCount,
-    overwrittenCount,
     skippedCount,
+    disambiguatedCount,
   };
+}
+
+function resolveTargetSuggestionWriteKey(input: {
+  nextTargets: Record<string, unknown>;
+  suggestion: ActionConnectorDiscoveryResult["items"][number];
+}) {
+  const baseKey = input.suggestion.key.trim();
+  if (!baseKey) {
+    return null;
+  }
+
+  const existing = input.nextTargets[baseKey];
+  if (!existing) {
+    return baseKey;
+  }
+  if (isSameTargetEntity(existing, input.suggestion.targetConfig)) {
+    return baseKey;
+  }
+
+  const room = input.suggestion.suggestedRoom.trim();
+  const genericDevice = input.suggestion.suggestedDevice.trim();
+  const entitySuffix = input.suggestion.entityId.includes(".")
+    ? input.suggestion.entityId.split(".").slice(1).join(".")
+    : input.suggestion.entityId;
+  const candidates = [
+    buildSpecificTargetKeyLabel(
+      input.suggestion.registryDeviceName,
+      room,
+      genericDevice,
+    ),
+    buildSpecificTargetKeyLabel(
+      input.suggestion.friendlyName,
+      room,
+      genericDevice,
+    ),
+    buildSpecificTargetKeyLabel(entitySuffix, room, genericDevice),
+    `${genericDevice}-${entitySuffix}`,
+    input.suggestion.entityId.replace(/\./g, ":"),
+  ]
+    .map((label) => label.trim())
+    .filter(Boolean)
+    .map((label) => (room ? `${room}:${label}` : label));
+
+  for (const candidate of Array.from(new Set(candidates))) {
+    const candidateExisting = input.nextTargets[candidate];
+    if (!candidateExisting || isSameTargetEntity(candidateExisting, input.suggestion.targetConfig)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+function buildSpecificTargetKeyLabel(
+  rawValue: string | null | undefined,
+  room: string,
+  genericDevice: string,
+) {
+  const normalized = (rawValue ?? "")
+    .trim()
+    .replace(/[._]+/g, " ")
+    .replace(/\s+/g, " ");
+  if (!normalized) {
+    return "";
+  }
+
+  let text = normalized;
+  if (room) {
+    text = text.replaceAll(room, " ");
+  }
+  text = text
+    .replace(/\b(light|lamp|switch|fan|climate|cover|media player|humidifier|vacuum)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!text || text === genericDevice) {
+    return "";
+  }
+  if (genericDevice === "灯" && /^(主|副|床头|吊|台|壁|落地|氛围)$/u.test(text)) {
+    return `${text}灯`;
+  }
+  return text;
+}
+
+function isSameTargetEntity(
+  existingTarget: unknown,
+  nextTarget: Record<string, unknown>,
+) {
+  if (
+    !existingTarget ||
+    typeof existingTarget !== "object" ||
+    Array.isArray(existingTarget)
+  ) {
+    return false;
+  }
+  const existingEntityId =
+    typeof (existingTarget as Record<string, unknown>).entityId === "string"
+      ? ((existingTarget as Record<string, unknown>).entityId as string).trim()
+      : "";
+  const nextEntityId =
+    typeof nextTarget.entityId === "string" ? nextTarget.entityId.trim() : "";
+  return Boolean(existingEntityId && nextEntityId && existingEntityId === nextEntityId);
 }
 
 function prettyJson(value: unknown) {

@@ -22,11 +22,24 @@ export class ActionRuntimeAdminController {
   @Post('connectors/:id/discover')
   discoverConnector(
     @Param('id') id: string,
-    @Body() body?: { query?: string | null; limit?: number | null },
+    @Body()
+    body?: {
+      query?: string | null;
+      limit?: number | null;
+      endpointConfig?: Record<string, unknown> | null;
+      credential?: string | null;
+    },
   ) {
     return this.actionRuntimeService.discoverConnector(id, {
       query: body?.query?.trim() || undefined,
       limit: typeof body?.limit === 'number' ? body.limit : undefined,
+      endpointConfig:
+        body?.endpointConfig &&
+        typeof body.endpointConfig === 'object' &&
+        !Array.isArray(body.endpointConfig)
+          ? body.endpointConfig
+          : undefined,
+      credential: body?.credential?.trim() || undefined,
     });
   }
 

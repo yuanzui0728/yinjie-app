@@ -436,6 +436,8 @@ export class ActionRuntimeService {
     payload?: {
       query?: string;
       limit?: number;
+      endpointConfig?: Record<string, unknown>;
+      credential?: string;
     },
   ): Promise<ActionConnectorDiscoveryResultValue> {
     await this.ensureDefaultConnectors();
@@ -1911,12 +1913,22 @@ export class ActionRuntimeService {
     };
   }
 
-  private resolveHomeAssistantConnection(connector: ActionConnectorEntity) {
+  private resolveHomeAssistantConnection(
+    connector: ActionConnectorEntity,
+    overrides?: {
+      endpointConfig?: Record<string, unknown>;
+      credential?: string;
+    },
+  ) {
     const endpointConfig =
-      connector.endpointConfigPayload &&
-      typeof connector.endpointConfigPayload === 'object'
-        ? connector.endpointConfigPayload
-        : null;
+      overrides?.endpointConfig &&
+      typeof overrides.endpointConfig === 'object' &&
+      !Array.isArray(overrides.endpointConfig)
+        ? overrides.endpointConfig
+        : connector.endpointConfigPayload &&
+            typeof connector.endpointConfigPayload === 'object'
+          ? connector.endpointConfigPayload
+          : null;
     const baseUrl =
       typeof endpointConfig?.baseUrl === 'string'
         ? endpointConfig.baseUrl.trim().replace(/\/+$/, '')
@@ -1925,7 +1937,9 @@ export class ActionRuntimeService {
       throw new Error('Home Assistant connector 缺少 baseUrl。');
     }
 
-    const token = decryptUserApiKey(connector.credentialPayloadEncrypted)?.trim();
+    const token =
+      overrides?.credential?.trim() ||
+      decryptUserApiKey(connector.credentialPayloadEncrypted)?.trim();
     if (!token) {
       throw new Error('Home Assistant connector 尚未配置 access token。');
     }
@@ -2099,10 +2113,15 @@ export class ActionRuntimeService {
     payload?: {
       query?: string;
       limit?: number;
+      endpointConfig?: Record<string, unknown>;
+      credential?: string;
     },
   ): Promise<ActionConnectorDiscoveryResultValue> {
     const { baseUrl, token, timeoutMs } =
-      this.resolveHomeAssistantConnection(connector);
+      this.resolveHomeAssistantConnection(connector, {
+        endpointConfig: payload?.endpointConfig,
+        credential: payload?.credential,
+      });
     let registrySnapshot: HomeAssistantRegistrySnapshot | null = null;
     const warnings: string[] = [];
     try {
@@ -2152,7 +2171,7 @@ export class ActionRuntimeService {
       typeof payload?.limit === 'number' && Number.isFinite(payload.limit)
         ? Math.max(1, Math.min(100, Math.round(payload.limit)))
         : 30;
-    const items = parsedBody
+    const rawItems = parsedBody
       .map((item) =>
         this.buildHomeAssistantDiscoveryItem(item, registrySnapshot),
       )
@@ -2194,7 +2213,14 @@ export class ActionRuntimeService {
           return 1;
         }
         return left.friendlyName.localeCompare(right.friendlyName, 'zh-CN');
-      })
+      });
+    const finalized = this.finalizeHomeAssistantDiscoveryItems(rawItems);
+    if (finalized.disambiguatedCount > 0) {
+      warnings.push(
+        `检测到 ${finalized.disambiguatedCount} 个重复映射键，已自动改成更具体的 key，避免导入时互相覆盖。`,
+      );
+    }
+    const items = finalized.items
       .slice(0, limit);
 
     return {
@@ -2338,6 +2364,130 @@ export class ActionRuntimeService {
       return 2;
     }
     return 3;
+  }
+
+  private finalizeHomeAssistantDiscoveryItems(
+    items: Array<
+      NonNullable<ReturnType<typeof this.buildHomeAssistantDiscoveryItem>>
+    >,
+  ) {
+    const usedKeys = new Set<string>();
+    let disambiguatedCount = 0;
+    const nextItems = items.map((item) => {
+      let nextKey = item.key;
+      if (usedKeys.has(nextKey)) {
+        const resolvedKey = this.resolveDisambiguatedHomeAssistantKey(
+          item,
+          usedKeys,
+        );
+        if (resolvedKey !== item.key) {
+          disambiguatedCount += 1;
+        }
+        nextKey = resolvedKey;
+      }
+      usedKeys.add(nextKey);
+      return {
+        ...item,
+        key: nextKey,
+      };
+    });
+
+    return {
+      items: nextItems,
+      disambiguatedCount,
+    };
+  }
+
+  private resolveDisambiguatedHomeAssistantKey(
+    item: NonNullable<ReturnType<typeof this.buildHomeAssistantDiscoveryItem>>,
+    usedKeys: Set<string>,
+  ) {
+    const candidates = this.buildHomeAssistantDiscoveryKeyCandidates(item);
+    for (const candidate of candidates) {
+      if (!candidate || usedKeys.has(candidate)) {
+        continue;
+      }
+      return candidate;
+    }
+    return item.key;
+  }
+
+  private buildHomeAssistantDiscoveryKeyCandidates(
+    item: NonNullable<ReturnType<typeof this.buildHomeAssistantDiscoveryItem>>,
+  ) {
+    const room = item.suggestedRoom.trim();
+    const device = item.suggestedDevice.trim();
+    const entitySuffix = item.entityId.includes('.')
+      ? item.entityId.split('.').slice(1).join('.')
+      : item.entityId;
+    const labelCandidates = [
+      this.extractHomeAssistantSpecificKeyLabel(
+        item.registryDeviceName,
+        room,
+        device,
+      ),
+      this.extractHomeAssistantSpecificKeyLabel(item.friendlyName, room, device),
+      this.extractHomeAssistantSpecificKeyLabel(entitySuffix, room, device),
+      entitySuffix
+        ? `${device}-${entitySuffix
+            .replace(/[_\s]+/g, '-')
+            .replace(/[^a-zA-Z0-9\u4e00-\u9fa5-]/g, '')
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '')}`
+        : '',
+      item.entityId.replace(/\./g, ':'),
+    ]
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    return Array.from(
+      new Set(
+        labelCandidates.map((label) =>
+          room ? `${room}:${label}` : label,
+        ),
+      ),
+    );
+  }
+
+  private extractHomeAssistantSpecificKeyLabel(
+    rawValue: string | null | undefined,
+    room: string,
+    genericDevice: string,
+  ) {
+    const normalized = (rawValue ?? '')
+      .trim()
+      .replace(/[._]+/g, ' ')
+      .replace(/\s+/g, ' ');
+    if (!normalized) {
+      return '';
+    }
+
+    let text = normalized;
+    if (room) {
+      text = text.replace(new RegExp(room, 'gi'), ' ');
+    }
+    for (const [candidateRoom, patterns] of HOME_ASSISTANT_ROOM_PATTERNS) {
+      if (candidateRoom === room) {
+        for (const pattern of patterns) {
+          text = text.replace(pattern, ' ');
+        }
+      }
+    }
+    text = text
+      .replace(/\b(light|lamp|switch|fan|climate|cover|media player|humidifier|vacuum)\b/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!text || text === genericDevice) {
+      return '';
+    }
+    if (
+      genericDevice === '灯' &&
+      /^(主|副|床头|吊|台|壁|落地|氛围)$/u.test(text)
+    ) {
+      return `${text}灯`;
+    }
+    return text;
   }
 
   private async fetchHomeAssistantRegistrySnapshot(

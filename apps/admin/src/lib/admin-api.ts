@@ -435,7 +435,12 @@ export const adminApi = {
     ),
   discoverActionRuntimeConnector: (
     id: string,
-    payload?: { query?: string | null; limit?: number | null },
+    payload?: {
+      query?: string | null;
+      limit?: number | null;
+      endpointConfig?: Record<string, unknown> | null;
+      credential?: string | null;
+    },
   ) =>
     adminFetch<ActionConnectorDiscoveryResult>(
       `/action-runtime/connectors/${id}/discover`,
