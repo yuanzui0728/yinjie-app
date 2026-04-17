@@ -300,9 +300,41 @@ export interface GenerateReplyResult {
   billingSource?: AiUsageBillingSource;
 }
 
+export interface MomentGenerationWorldContext {
+  dateTimeText: string;
+  timeText: string;
+  weather?: string;
+  location?: string;
+  holiday?: string;
+  localTime?: string;
+}
+
+export interface MomentGenerationRelationshipContext {
+  hasRecentConversation: boolean;
+  lastConversationAt?: Date;
+  recentTopics: string[];
+  recentUserIntentSummary?: string;
+  avoidDirectQuote: boolean;
+}
+
+export interface MomentGenerationHints {
+  anchorPriority: Array<
+    'real_world' | 'weather' | 'location' | 'holiday' | 'recent_chat' | 'life'
+  >;
+  mustAvoidGeneric: boolean;
+  preferObservationOverAnnouncement: boolean;
+}
+
+export interface MomentGenerationContext {
+  worldContext?: MomentGenerationWorldContext;
+  relationshipContext?: MomentGenerationRelationshipContext;
+  generationHints?: MomentGenerationHints;
+}
+
 export interface GenerateMomentOptions {
   profile: PersonalityProfile;
   currentTime: Date;
   recentTopics?: string[];
+  generationContext?: MomentGenerationContext;
   usageContext?: AiUsageContext;
 }

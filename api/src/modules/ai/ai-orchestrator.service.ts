@@ -26,6 +26,8 @@ import {
 } from './ai.types';
 import { PromptBuilderService } from './prompt-builder.service';
 import { sanitizeAiText } from './ai-text-sanitizer';
+import { validateGeneratedMomentOutput } from './moment-output-validator';
+import { MomentGenerationContextService } from './moment-generation-context.service';
 import { SystemConfigService } from '../config/config.service';
 import { WorldService } from '../world/world.service';
 import { ReplyLogicRulesService } from './reply-logic-rules.service';
@@ -129,6 +131,7 @@ export class AiOrchestratorService {
     private readonly worldService: WorldService,
     private readonly replyLogicRules: ReplyLogicRulesService,
     private readonly usageLedger: AiUsageLedgerService,
+    private readonly momentGenerationContext: MomentGenerationContextService,
   ) {
     this.client = new OpenAI({
       apiKey: this.config.get<string>('DEEPSEEK_API_KEY'),
@@ -1353,17 +1356,15 @@ export class AiOrchestratorService {
   }
 
   async generateMoment(options: GenerateMomentOptions): Promise<string> {
-    const { profile, currentTime, recentTopics, usageContext } = options;
-    const sceneKey =
-      this.resolveSceneKey(usageContext?.scene) ?? 'moments_post';
-    const prompt = await this.promptBuilder.buildMomentPrompt(
+    const {
       profile,
       currentTime,
       recentTopics,
-      sceneKey,
-    );
-
-    const runtimeProvider = await this.resolveRuntimeProvider();
+      generationContext,
+      usageContext,
+    } = options;
+    const sceneKey =
+      this.resolveSceneKey(usageContext?.scene) ?? 'moments_post';
     const resolvedUsageContext: AiUsageContext = {
       surface: usageContext?.surface ?? 'app',
       scene: usageContext?.scene ?? 'moment_post_generate',
@@ -1376,6 +1377,7 @@ export class AiOrchestratorService {
       conversationId: usageContext?.conversationId,
       groupId: usageContext?.groupId,
     };
+    const runtimeProvider = await this.resolveRuntimeProvider();
     const budgetedProvider = await this.prepareBudgetAwareProvider(
       runtimeProvider,
       'instance_default',
@@ -1385,26 +1387,97 @@ export class AiOrchestratorService {
     const client = this.createProviderClient(provider);
 
     try {
-      const response = await client.chat.completions.create({
-        model: provider.model,
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 150,
-        temperature: 0.95,
-      });
+      if (sceneKey !== 'moments_post') {
+        const prompt = await this.promptBuilder.buildMomentPrompt(
+          profile,
+          currentTime,
+          recentTopics,
+          sceneKey,
+        );
+        const response = await client.chat.completions.create({
+          model: provider.model,
+          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 150,
+          temperature: 0.95,
+        });
 
-      const usage = this.normalizeUsageMetrics(response.usage);
-      await this.recordSuccessfulUsage(
-        provider,
-        'instance_default',
-        resolvedUsageContext,
-        {
-          usage,
-          model: response.model ?? provider.model,
-        },
-        budgetedProvider.usageAudit,
+        const usage = this.normalizeUsageMetrics(response.usage);
+        await this.recordSuccessfulUsage(
+          provider,
+          'instance_default',
+          resolvedUsageContext,
+          {
+            usage,
+            model: response.model ?? provider.model,
+          },
+          budgetedProvider.usageAudit,
+        );
+
+        return sanitizeAiText(response.choices[0]?.message?.content ?? '');
+      }
+
+      const resolvedGenerationContext =
+        generationContext ??
+        (await this.momentGenerationContext.buildContext({
+          currentTime,
+          recentTopics,
+          usageContext: resolvedUsageContext,
+        }));
+      const promptRequest = await this.promptBuilder.buildMomentRequest(
+        profile,
+        currentTime,
+        resolvedGenerationContext,
+        sceneKey,
       );
+      const userPrompts = [
+        promptRequest.userPrompt,
+        promptRequest.retryUserPrompt,
+      ];
 
-      return sanitizeAiText(response.choices[0]?.message?.content ?? '');
+      for (let attempt = 0; attempt < userPrompts.length; attempt += 1) {
+        const response = await client.chat.completions.create({
+          model: provider.model,
+          messages: [
+            { role: 'system', content: promptRequest.systemPrompt },
+            { role: 'user', content: userPrompts[attempt] },
+          ],
+          max_tokens: 180,
+          temperature: attempt === 0 ? 0.9 : 0.75,
+        });
+
+        const usage = this.normalizeUsageMetrics(response.usage);
+        await this.recordSuccessfulUsage(
+          provider,
+          'instance_default',
+          resolvedUsageContext,
+          {
+            usage,
+            model: response.model ?? provider.model,
+          },
+          budgetedProvider.usageAudit,
+        );
+
+        const text = sanitizeAiText(
+          response.choices[0]?.message?.content ?? '',
+        );
+        const validation = validateGeneratedMomentOutput({
+          text,
+          context: resolvedGenerationContext,
+          profile,
+        });
+        if (validation.valid) {
+          return validation.normalizedText;
+        }
+
+        this.logger.warn(
+          `Discarded low-quality moment for ${resolvedUsageContext.characterName ?? profile.name} (attempt ${attempt + 1}): ${validation.reasons.join('；') || '未通过校验'}`,
+        );
+      }
+
+      this.logger.warn(
+        `Skipped moment generation for ${resolvedUsageContext.characterName ?? profile.name} after validation.`,
+      );
+      return '';
     } catch (error) {
       await this.recordFailedUsage(
         provider,

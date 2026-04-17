@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { PersonalityProfile, SceneKey } from './ai.types';
+import {
+  MomentGenerationContext,
+  PersonalityProfile,
+  SceneKey,
+} from './ai.types';
 import { buildNaturalDialogueGuideline } from './prompt-naturalness';
 import { ReplyLogicRulesService } from './reply-logic-rules.service';
 import { WorldService } from '../world/world.service';
@@ -30,6 +34,12 @@ export interface ChatSystemPromptSection {
   label: string;
   content: string;
   active: boolean;
+}
+
+export interface BuiltMomentRequest {
+  systemPrompt: string;
+  userPrompt: string;
+  retryUserPrompt: string;
 }
 
 function renderTemplate(
@@ -205,14 +215,35 @@ export class PromptBuilderService {
     });
   }
 
+  async buildMomentRequest(
+    profile: PersonalityProfile,
+    currentTime: Date,
+    generationContext?: MomentGenerationContext,
+    sceneKey: SceneKey = 'moments_post',
+  ): Promise<BuiltMomentRequest> {
+    const systemPrompt = await this.buildMomentSystemPrompt(
+      profile,
+      currentTime,
+      generationContext,
+      sceneKey,
+    );
+    return {
+      systemPrompt,
+      userPrompt: this.buildMomentTaskPrompt(generationContext, false),
+      retryUserPrompt: this.buildMomentTaskPrompt(generationContext, true),
+    };
+  }
+
   async buildMomentPrompt(
     profile: PersonalityProfile,
     currentTime: Date,
     recentTopics: string[] = [],
     sceneKey: SceneKey = 'moments_post',
   ): Promise<string> {
-    // 新架构：对应场景有提示词时走场景化构建
-    if (profile.coreLogic?.trim() || profile.scenePrompts?.[sceneKey]?.trim()) {
+    if (
+      sceneKey !== 'moments_post' &&
+      (profile.coreLogic?.trim() || profile.scenePrompts?.[sceneKey]?.trim())
+    ) {
       return this.buildSceneSystemPrompt(profile, sceneKey);
     }
 
@@ -617,6 +648,279 @@ ${templates.behavioralGuideline}
       return semanticLabels.timeOfDayLabels.dusk;
     }
     return semanticLabels.timeOfDayLabels.evening;
+  }
+
+  private async buildMomentSystemPrompt(
+    profile: PersonalityProfile,
+    currentTime: Date,
+    generationContext?: MomentGenerationContext,
+    sceneKey: SceneKey = 'moments_post',
+  ) {
+    const runtimeRules = await this.replyLogicRules.getRules();
+    const worldCalendar = await this.worldService.getWorldCalendar(currentTime);
+    const parts: string[] = ['<system_prompt>'];
+    const coreLogic = (profile.coreLogic || profile.coreDirective)?.trim();
+
+    if (coreLogic) {
+      parts.push(`<core_logic>\n${coreLogic}\n</core_logic>`);
+    }
+
+    parts.push(
+      `<identity>\n- 角色：${profile.name}\n- 与用户关系：${profile.relationship}\n- 关注领域：${profile.expertDomains.join('、') || '日常生活'}\n- 情绪基调：${profile.traits.emotionalTone || '自然真实'}\n</identity>`,
+    );
+
+    const scenePrompt = profile.scenePrompts?.[sceneKey]?.trim();
+    if (scenePrompt) {
+      parts.push(`<scene_prompt>\n${scenePrompt}\n</scene_prompt>`);
+    } else {
+      const dayOfWeek =
+        runtimeRules.semanticLabels.weekdayLabels[worldCalendar.weekday] ??
+        runtimeRules.semanticLabels.weekdayLabels[0] ??
+        '周日';
+      const timeOfDay = this.resolveTimeOfDayLabel(
+        worldCalendar.hour,
+        runtimeRules.semanticLabels,
+      );
+      const topicsHint = generationContext?.relationshipContext?.recentTopics
+        ?.length
+        ? `\n最近和用户聊过：${generationContext.relationshipContext.recentTopics.join('、')}。如果自然可以轻微延续，但不要像在公开回复私聊。`
+        : '';
+      parts.push(
+        `<scene_prompt>\n${renderTemplate(
+          runtimeRules.promptTemplates.momentPrompt,
+          {
+            name: profile.name,
+            relationship: profile.relationship,
+            emotionalTone: profile.traits.emotionalTone || '自然真实',
+            dayOfWeek,
+            timeOfDay,
+            clockTime: worldCalendar.timeText,
+            topicsHint,
+          },
+        )}\n</scene_prompt>`,
+      );
+    }
+
+    const realWorldContextSection = this.buildRealWorldContextSection(
+      profile,
+      sceneKey,
+    );
+    if (realWorldContextSection) {
+      parts.push(realWorldContextSection);
+    }
+
+    const worldContextSection =
+      this.buildMomentWorldContextSection(generationContext);
+    if (worldContextSection) {
+      parts.push(worldContextSection);
+    }
+
+    const relationshipContextSection =
+      this.buildMomentRelationshipContextSection(
+        generationContext,
+        currentTime,
+      );
+    if (relationshipContextSection) {
+      parts.push(relationshipContextSection);
+    }
+
+    const naturalDialogueGuideline = buildNaturalDialogueGuideline(
+      profile,
+      sceneKey,
+    );
+    if (naturalDialogueGuideline) {
+      parts.push(
+        `<delivery_guardrails>\n${naturalDialogueGuideline}\n</delivery_guardrails>`,
+      );
+    }
+
+    const coreMemory = profile.memory?.coreMemory?.trim();
+    const recentSummary = (
+      profile.memory?.recentSummary || profile.memorySummary
+    )?.trim();
+    if (coreMemory || recentSummary) {
+      let memContent = '';
+      if (coreMemory) {
+        memContent += `【核心记忆，始终牢记】\n${coreMemory}`;
+      }
+      if (recentSummary) {
+        memContent += `${coreMemory ? '\n' : ''}【近期摘要】\n${recentSummary}`;
+      }
+      parts.push(`<memory>\n${memContent.trim()}\n</memory>`);
+    }
+
+    parts.push(
+      this.buildMomentRulesSection(
+        profile,
+        generationContext,
+        worldCalendar.hour,
+        runtimeRules.semanticLabels,
+      ),
+    );
+    parts.push('</system_prompt>');
+    return parts.filter(Boolean).join('\n\n');
+  }
+
+  private buildMomentTaskPrompt(
+    generationContext?: MomentGenerationContext,
+    strict = false,
+  ) {
+    const anchorPriority = this.formatMomentAnchorPriority(
+      generationContext?.generationHints?.anchorPriority,
+    );
+    const recentTopics =
+      generationContext?.relationshipContext?.recentTopics?.join('、') ?? '';
+    const lines = strict
+      ? [
+          '上一版朋友圈太空、太泛或缺少当下锚点，请重写。',
+          `优先顺序：${anchorPriority}。`,
+          recentTopics
+            ? `可以轻微呼应这些最近对话余温：${recentTopics}。但不要点名用户，不要复述原话。`
+            : '如果没有合适的对话余温，不要硬蹭用户。',
+          '至少写出一个具体细节或判断，不要写正确废话、鸡汤、流水账。',
+          '只输出朋友圈正文，不要解释，不要加前缀。',
+        ]
+      : [
+          '请现在发一条朋友圈。',
+          `优先顺序：${anchorPriority}。`,
+          recentTopics
+            ? `如果自然，可以轻微带到这些最近对话余温：${recentTopics}。但不要像公开回复私聊。`
+            : '如果没有合适的对话余温，就回到角色自己的当下观察，不要硬蹭用户。',
+          '默认只选 1-2 个最自然的锚点，不要把所有线索都堆进去。',
+          '只输出朋友圈正文，不要解释，不要加前缀。',
+        ];
+
+    return lines.filter(Boolean).join('\n');
+  }
+
+  private buildMomentWorldContextSection(
+    generationContext?: MomentGenerationContext,
+  ) {
+    const worldContext = generationContext?.worldContext;
+    if (!worldContext) {
+      return '';
+    }
+
+    const blocks = [`【当前时间】\n${worldContext.dateTimeText}`];
+    if (worldContext.localTime?.trim()) {
+      blocks.push(`【本地时段】\n${worldContext.localTime.trim()}`);
+    }
+    if (worldContext.weather?.trim()) {
+      blocks.push(`【天气】\n${worldContext.weather.trim()}`);
+    }
+    if (worldContext.location?.trim()) {
+      blocks.push(`【地点】\n${worldContext.location.trim()}`);
+    }
+    if (worldContext.holiday?.trim()) {
+      blocks.push(`【节日】\n${worldContext.holiday.trim()}`);
+    }
+
+    return `<world_context>\n${blocks.join('\n\n')}\n</world_context>`;
+  }
+
+  private buildMomentRelationshipContextSection(
+    generationContext: MomentGenerationContext | undefined,
+    currentTime: Date,
+  ) {
+    const relationshipContext = generationContext?.relationshipContext;
+    if (!relationshipContext) {
+      return '';
+    }
+
+    const lines = [
+      `- 最近是否有私聊余温：${relationshipContext.hasRecentConversation ? '有' : '没有'}`,
+    ];
+    if (relationshipContext.lastConversationAt) {
+      lines.push(
+        `- 最近一次互动：${this.describeRelativeTimeGap(currentTime, relationshipContext.lastConversationAt)}`,
+      );
+    }
+    if (relationshipContext.recentTopics.length) {
+      lines.push(
+        `- 最近轻微相关话题：${relationshipContext.recentTopics.join('；')}`,
+      );
+    }
+    if (relationshipContext.recentUserIntentSummary?.trim()) {
+      lines.push(
+        `- 关系提示：${relationshipContext.recentUserIntentSummary.trim()}`,
+      );
+    }
+    if (relationshipContext.avoidDirectQuote) {
+      lines.push('- 不要直接复述用户原话，不要点名用户。');
+    }
+
+    return `<relationship_context>\n${lines.join('\n')}\n</relationship_context>`;
+  }
+
+  private buildMomentRulesSection(
+    profile: PersonalityProfile,
+    generationContext: MomentGenerationContext | undefined,
+    currentHour: number,
+    semanticLabels: ReplyLogicSemanticLabels,
+  ) {
+    const timeOfDay = this.resolveTimeOfDayLabel(currentHour, semanticLabels);
+    const anchorPriority = this.formatMomentAnchorPriority(
+      generationContext?.generationHints?.anchorPriority,
+    );
+
+    return `<moment_rules>\n- 这是一条朋友圈，不是聊天回复，不是公告，也不是公开长文。\n- 必须让人看出这是 ${profile.name} 在${timeOfDay}这个时间点自然会发的内容。\n- 优先从这些锚点里选 1-2 个自然落地：${anchorPriority}。\n- 如果用了最近对话余温，只能弱关联，不能像在公开回私聊。\n- 优先写具体观察、状态、判断或瞬间，不写空泛感慨、鸡汤、正确废话、流水账。\n- 宁可短一点，也不要为了凑字数把信息写空。\n- 最终只输出朋友圈正文，不要任何解释或前缀。\n</moment_rules>`;
+  }
+
+  private formatMomentAnchorPriority(
+    anchorPriority?:
+      | Array<
+          | 'real_world'
+          | 'weather'
+          | 'location'
+          | 'holiday'
+          | 'recent_chat'
+          | 'life'
+        >
+      | undefined,
+  ) {
+    const labels: Record<
+      | 'real_world'
+      | 'weather'
+      | 'location'
+      | 'holiday'
+      | 'recent_chat'
+      | 'life',
+      string
+    > = {
+      real_world: '现实世界锚点',
+      weather: '天气',
+      location: '地点',
+      holiday: '节日',
+      recent_chat: '最近对话余温',
+      life: '角色当下生活观察',
+    };
+    const ordered = anchorPriority?.length
+      ? anchorPriority
+      : ([
+          'real_world',
+          'weather',
+          'location',
+          'recent_chat',
+          'holiday',
+          'life',
+        ] as const);
+    return ordered.map((item) => labels[item]).join(' -> ');
+  }
+
+  private describeRelativeTimeGap(referenceTime: Date, targetTime: Date) {
+    const diffMs = Math.max(0, referenceTime.getTime() - targetTime.getTime());
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    if (diffMinutes < 60) {
+      return `${Math.max(diffMinutes, 1)} 分钟前`;
+    }
+
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) {
+      return `${diffHours} 小时前`;
+    }
+
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays} 天前`;
   }
 
   private buildRealWorldContextSection(
