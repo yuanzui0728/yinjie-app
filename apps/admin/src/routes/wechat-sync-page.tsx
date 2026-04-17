@@ -1820,6 +1820,12 @@ export function WechatSyncPage() {
                       )
                   : undefined
               }
+              onFocusSnapshotVersion={
+                selectedHistoryItem
+                  ? (snapshot) =>
+                      focusSnapshotVersionCard(selectedHistoryItem, snapshot)
+                  : undefined
+              }
               focusedSnapshotKey={
                 selectedHistoryItem?.character.id === selectedHistoryCharacterId
                   ? focusedHistorySnapshotKey
@@ -2107,6 +2113,7 @@ function HistoryDetailPanel({
   snapshotAnnotations,
   onRecordAnnotationChange,
   onSnapshotAnnotationChange,
+  onFocusSnapshotVersion,
   focusedSnapshotKey,
   onRetryFriendship,
   onRollback,
@@ -2151,6 +2158,7 @@ function HistoryDetailPanel({
     snapshot: WechatImportSnapshotLike,
     value: string,
   ) => void;
+  onFocusSnapshotVersion?: (snapshot: WechatImportSnapshotLike) => void;
   focusedSnapshotKey?: string | null;
   onRetryFriendship?: () => void;
   onRollback?: () => void;
@@ -2176,6 +2184,38 @@ function HistoryDetailPanel({
     item.character.profile?.wechatSyncImport?.previousSnapshot ?? null;
   const importSnapshots = getImportSnapshotsFromHistoryItem(item);
   const importChangeHistory = getImportChangeHistoryFromHistoryItem(item);
+  const snapshotSectionRef = useRef<HTMLDivElement | null>(null);
+  const changeHistorySectionRef = useRef<HTMLDivElement | null>(null);
+  const annotationEntries = buildWechatSyncAnnotationSummaryEntries(
+    item.character.id,
+    importChangeHistory,
+    importSnapshots,
+    recordAnnotations,
+    snapshotAnnotations,
+  );
+
+  function scrollHistoryDetailSection(target: HTMLDivElement | null) {
+    target?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
+  function openAnnotatedRecord(record: WechatImportChangeRecordLike) {
+    onAuditExpandedRecordIdChange(record.id);
+    onLinkedAuditVersionChange?.(record.toVersion);
+    window.setTimeout(() => {
+      scrollHistoryDetailSection(changeHistorySectionRef.current);
+    }, 80);
+  }
+
+  function openAnnotatedSnapshot(snapshot: WechatImportSnapshotLike) {
+    onLinkedAuditVersionChange?.(snapshot.version);
+    onFocusSnapshotVersion?.(snapshot);
+    window.setTimeout(() => {
+      scrollHistoryDetailSection(snapshotSectionRef.current);
+    }, 80);
+  }
 
   return (
     <Card className="bg-[color:var(--surface-card)]">
@@ -2246,7 +2286,7 @@ function HistoryDetailPanel({
       </div>
 
       {currentImportSnapshot ? (
-        <div className="mt-4 space-y-4">
+        <div ref={snapshotSectionRef} className="mt-4 space-y-4">
           <AdminCallout
             title={
               previousImportSnapshot
@@ -2339,8 +2379,19 @@ function HistoryDetailPanel({
         </div>
       ) : null}
 
-      {importChangeHistory.length ? (
+      {annotationEntries.length ? (
         <div className="mt-4">
+          <ImportAnnotationSummaryPanel
+            characterName={item.character.name}
+            entries={annotationEntries}
+            onOpenRecord={openAnnotatedRecord}
+            onOpenSnapshot={openAnnotatedSnapshot}
+          />
+        </div>
+      ) : null}
+
+      {importChangeHistory.length ? (
+        <div ref={changeHistorySectionRef} className="mt-4">
           <ImportChangeHistoryList
             characterId={item.character.id}
             key={item.character.id}
@@ -2542,6 +2593,203 @@ function HistoryDiffCard({
           <div className="mt-1 rounded-2xl border border-[color:var(--border-faint)] bg-white/80 px-3 py-2 text-sm leading-6 text-[color:var(--text-secondary)]">
             {diff.nextValue}
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ImportAnnotationSummaryPanel({
+  characterName,
+  entries,
+  onOpenRecord,
+  onOpenSnapshot,
+}: {
+  characterName: string;
+  entries: WechatSyncAnnotationSummaryEntry[];
+  onOpenRecord?: (record: WechatImportChangeRecordLike) => void;
+  onOpenSnapshot?: (snapshot: WechatImportSnapshotLike) => void;
+}) {
+  const [search, setSearch] = useState("");
+  const [kindFilter, setKindFilter] = useState<"all" | "record" | "snapshot">(
+    "all",
+  );
+  const [copyNotice, setCopyNotice] = useState("");
+  const deferredSearch = useDeferredValue(search.trim().toLowerCase());
+  const filteredEntries = useMemo(
+    () =>
+      entries.filter((entry) => {
+        if (kindFilter !== "all" && entry.kind !== kindFilter) {
+          return false;
+        }
+        if (!deferredSearch) {
+          return true;
+        }
+        return buildWechatSyncAnnotationSummaryKeyword(entry).includes(
+          deferredSearch,
+        );
+      }),
+    [deferredSearch, entries, kindFilter],
+  );
+  const recordCount = useMemo(
+    () => entries.filter((entry) => entry.kind === "record").length,
+    [entries],
+  );
+  const snapshotCount = useMemo(
+    () => entries.filter((entry) => entry.kind === "snapshot").length,
+    [entries],
+  );
+
+  useEffect(() => {
+    if (!copyNotice) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setCopyNotice((current) => (current === copyNotice ? "" : current));
+    }, 2600);
+    return () => window.clearTimeout(timeoutId);
+  }, [copyNotice]);
+
+  return (
+    <div>
+      {copyNotice ? (
+        <AdminActionFeedback
+          className="mb-4"
+          tone="success"
+          title="批注汇总已复制"
+          description={copyNotice}
+        />
+      ) : null}
+
+      <div className="rounded-3xl border border-[color:var(--border-faint)] bg-[color:var(--surface-soft)] p-4">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
+              批注汇总
+            </div>
+            <div className="mt-2 text-sm text-[color:var(--text-secondary)]">
+              共 {entries.length} 条，本地记录批注 {recordCount} 条，版本批注{" "}
+              {snapshotCount} 条。
+            </div>
+          </div>
+          <div className="grid gap-3 xl:min-w-[30rem] xl:grid-cols-[1fr_auto]">
+            <AdminTextField
+              label="搜索批注汇总"
+              value={search}
+              onChange={setSearch}
+              placeholder="搜索批注、摘要、版本号或关系"
+            />
+            <div className="flex flex-wrap gap-2 xl:justify-end">
+              <Button
+                variant={kindFilter === "all" ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => setKindFilter("all")}
+              >
+                全部
+              </Button>
+              <Button
+                variant={kindFilter === "record" ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => setKindFilter("record")}
+              >
+                记录批注
+              </Button>
+              <Button
+                variant={kindFilter === "snapshot" ? "primary" : "secondary"}
+                size="sm"
+                onClick={() => setKindFilter("snapshot")}
+              >
+                版本批注
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  downloadWechatSyncAnnotationSummaryMarkdownExport(
+                    characterName,
+                    filteredEntries,
+                  )
+                }
+                disabled={!filteredEntries.length}
+              >
+                导出当前汇总 Markdown
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={async () => {
+                  const copied = await copyWechatSyncAuditText(
+                    buildWechatSyncAnnotationSummaryMarkdownReport(
+                      characterName,
+                      filteredEntries,
+                    ),
+                    "复制批注汇总 Markdown",
+                  );
+                  if (copied) {
+                    setCopyNotice("已复制当前筛选下的批注汇总 Markdown。");
+                  }
+                }}
+                disabled={!filteredEntries.length}
+              >
+                复制当前汇总 Markdown
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {!filteredEntries.length ? (
+          <AdminEmptyState
+            className="mt-4"
+            title="当前筛选没有批注"
+            description="调整搜索词或切换记录/版本批注筛选后，再查看当前角色的本地批注汇总。"
+          />
+        ) : null}
+
+        <div className="mt-4 space-y-3">
+          {filteredEntries.map((entry) => (
+            <Card key={entry.key} className="bg-[color:var(--surface-card)]">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="space-y-2 text-sm text-[color:var(--text-secondary)]">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-base font-semibold text-[color:var(--text-primary)]">
+                      {entry.title}
+                    </span>
+                    <StatusPill
+                      tone={entry.kind === "record" ? "warning" : "healthy"}
+                    >
+                      {entry.kind === "record" ? "记录批注" : "版本批注"}
+                    </StatusPill>
+                  </div>
+                  <div>{entry.subtitle}</div>
+                  <div>{entry.meta}</div>
+                  <div className="rounded-2xl border border-[color:var(--border-faint)] bg-white/80 px-3 py-2 leading-6">
+                    {entry.note}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {entry.kind === "record" ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onOpenRecord?.(entry.record)}
+                      disabled={!onOpenRecord}
+                    >
+                      展开对应记录
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => onOpenSnapshot?.(entry.snapshot)}
+                      disabled={!onOpenSnapshot}
+                    >
+                      定位到版本卡
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </Card>
+          ))}
         </div>
       </div>
     </div>
@@ -4501,6 +4749,26 @@ type WechatSyncAuditExportOptions = {
   snapshotAnnotations?: Record<string, string>;
 };
 
+type WechatSyncAnnotationSummaryEntry =
+  | {
+      key: string;
+      kind: "record";
+      title: string;
+      subtitle: string;
+      meta: string;
+      note: string;
+      record: WechatImportChangeRecordLike;
+    }
+  | {
+      key: string;
+      kind: "snapshot";
+      title: string;
+      subtitle: string;
+      meta: string;
+      note: string;
+      snapshot: WechatImportSnapshotLike;
+    };
+
 function resolveReplaySnapshotForChangeRecord(
   record: WechatImportChangeRecordLike,
   availableSnapshots: WechatImportSnapshotLike[],
@@ -4703,6 +4971,83 @@ function buildWechatSyncChangeMarkdownReport(
   return lines.join("\n");
 }
 
+function buildWechatSyncAnnotationSummaryEntries(
+  characterId: string,
+  records: WechatImportChangeRecordLike[],
+  snapshots: WechatImportSnapshotLike[],
+  recordAnnotations: Record<string, string>,
+  snapshotAnnotations: Record<string, string>,
+) {
+  const recordEntries: Array<
+    WechatSyncAnnotationSummaryEntry & { recordedAtValue: string }
+  > = records
+    .map((record) => {
+      const note = recordAnnotations[record.id] ?? "";
+      if (!hasWechatSyncAnnotation(note)) {
+        return null;
+      }
+      return {
+        key: `record:${record.id}`,
+        kind: "record" as const,
+        title: `v${record.toVersion} · ${
+          record.mode === "snapshot_restore" ? "历史版本恢复" : "预览重新导入"
+        }`,
+        subtitle: `版本轨迹：${buildChangeRecordVersionPath(record)}`,
+        meta: `记录时间：${formatDateTime(record.recordedAt)} · 摘要：${record.summary}`,
+        note,
+        record,
+        recordedAtValue: record.recordedAt,
+      };
+    })
+    .filter(Boolean) as Array<
+    WechatSyncAnnotationSummaryEntry & { recordedAtValue: string }
+  >;
+
+  const snapshotEntries: Array<
+    WechatSyncAnnotationSummaryEntry & { recordedAtValue: string }
+  > = snapshots
+    .map((snapshot) => {
+      const note = resolveWechatSyncSnapshotAnnotation(
+        snapshotAnnotations,
+        snapshot,
+        characterId,
+      );
+      if (!hasWechatSyncAnnotation(note)) {
+        return null;
+      }
+      return {
+        key: `snapshot:${snapshot.version}:${snapshot.importedAt}`,
+        kind: "snapshot" as const,
+        title: `v${snapshot.version} · 版本批注`,
+        subtitle: `关系：${snapshot.draftCharacter.relationship || "暂无"} · 角色名：${
+          snapshot.draftCharacter.name || snapshot.contact.displayName
+        }`,
+        meta: `导入时间：${formatDateTime(snapshot.importedAt)} · 朋友圈种子：${snapshot.seededMomentCount} 条`,
+        note,
+        snapshot,
+        recordedAtValue: snapshot.importedAt,
+      };
+    })
+    .filter(Boolean) as Array<
+    WechatSyncAnnotationSummaryEntry & { recordedAtValue: string }
+  >;
+
+  return [...recordEntries, ...snapshotEntries]
+    .sort(
+      (left, right) =>
+        Date.parse(right.recordedAtValue) - Date.parse(left.recordedAtValue),
+    )
+    .map(({ recordedAtValue: _recordedAtValue, ...entry }) => entry);
+}
+
+function buildWechatSyncAnnotationSummaryKeyword(
+  entry: WechatSyncAnnotationSummaryEntry,
+) {
+  return [entry.title, entry.subtitle, entry.meta, entry.note]
+    .join(" ")
+    .toLowerCase();
+}
+
 function downloadWechatSyncSnapshotNotesMarkdownExport(
   characterName: string,
   snapshots: WechatImportSnapshotLike[],
@@ -4759,6 +5104,52 @@ function buildWechatSyncSnapshotNotesMarkdownReport(
       }`,
       `- 朋友圈种子：${snapshot.seededMomentCount} 条`,
       `- 本地批注：${note || "暂无"}`,
+      "",
+    );
+  });
+
+  return lines.join("\n");
+}
+
+function downloadWechatSyncAnnotationSummaryMarkdownExport(
+  characterName: string,
+  entries: WechatSyncAnnotationSummaryEntry[],
+) {
+  downloadWechatSyncAuditFile(
+    `${sanitizeWechatSyncExportFileName(characterName)}-wechat-sync-annotation-summary-${new Date().toISOString().slice(0, 10)}.md`,
+    buildWechatSyncAnnotationSummaryMarkdownReport(characterName, entries),
+    "text/markdown;charset=utf-8",
+  );
+}
+
+function buildWechatSyncAnnotationSummaryMarkdownReport(
+  characterName: string,
+  entries: WechatSyncAnnotationSummaryEntry[],
+) {
+  const lines = [
+    `# 微信同步批注汇总：${characterName}`,
+    "",
+    `- 导出时间：${formatDateTime(new Date().toISOString())}`,
+    `- 批注数量：${entries.length}`,
+    "",
+  ];
+
+  if (!entries.length) {
+    lines.push("当前没有可导出的本地批注。");
+    return lines.join("\n");
+  }
+
+  entries.forEach((entry, index) => {
+    lines.push(
+      `## ${index + 1}. ${entry.title}`,
+      "",
+      `- 类型：${entry.kind === "record" ? "记录批注" : "版本批注"}`,
+      `- 摘要：${entry.subtitle}`,
+      `- 元信息：${entry.meta}`,
+      "",
+      "### 批注内容",
+      "",
+      entry.note,
       "",
     );
   });
