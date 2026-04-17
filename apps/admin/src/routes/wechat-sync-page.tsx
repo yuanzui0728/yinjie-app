@@ -3117,9 +3117,15 @@ function AnnotationTemplateManager({
 
 function AnnotationTemplateQuickActions({
   templates,
+  title = "常用模板",
+  description = "点击模板会把对应内容追加到当前批注里，重复内容不会重复插入。",
+  feedback,
   onApplyTemplate,
 }: {
   templates: WechatSyncAnnotationTemplate[];
+  title?: string;
+  description?: string;
+  feedback?: string;
   onApplyTemplate?: (template: WechatSyncAnnotationTemplate) => void;
 }) {
   if (!templates.length) {
@@ -3128,8 +3134,15 @@ function AnnotationTemplateQuickActions({
 
   return (
     <div className="space-y-2">
+      {feedback ? (
+        <AdminActionFeedback
+          tone="success"
+          title="模板已套用"
+          description={feedback}
+        />
+      ) : null}
       <div className="text-xs uppercase tracking-[0.16em] text-[color:var(--text-muted)]">
-        常用模板
+        {title}
       </div>
       <div className="flex flex-wrap gap-2">
         {templates.map((template) => (
@@ -3145,7 +3158,7 @@ function AnnotationTemplateQuickActions({
         ))}
       </div>
       <div className="text-xs leading-5 text-[color:var(--text-muted)]">
-        点击模板会把对应内容追加到当前批注里，重复内容不会重复插入。
+        {description}
       </div>
     </div>
   );
@@ -3203,6 +3216,7 @@ function ImportChangeHistoryList({
   const [annotationFilter, setAnnotationFilter] =
     useState<WechatSyncAnnotationFilter>("all");
   const [copyNotice, setCopyNotice] = useState("");
+  const [templateFeedback, setTemplateFeedback] = useState("");
   const deferredSearch = useDeferredValue(search.trim().toLowerCase());
   const annotatedRecordCount = useMemo(
     () =>
@@ -3253,6 +3267,18 @@ function ImportChangeHistoryList({
     }, 2600);
     return () => window.clearTimeout(timeoutId);
   }, [copyNotice]);
+
+  useEffect(() => {
+    if (!templateFeedback) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setTemplateFeedback((current) =>
+        current === templateFeedback ? "" : current,
+      );
+    }, 2600);
+    return () => window.clearTimeout(timeoutId);
+  }, [templateFeedback]);
 
   useEffect(() => {
     if (!focusedRecordId) {
@@ -3452,6 +3478,38 @@ function ImportChangeHistoryList({
             </Button>
           }
         />
+      ) : null}
+
+      {filteredRecords.length ? (
+        <div className="mt-4">
+          <AnnotationTemplateQuickActions
+            templates={annotationTemplates}
+            title="对当前筛选记录批量套用模板"
+            description={`当前命中 ${filteredRecords.length} 条记录。点击模板后会把对应内容追加到所有命中记录的本地批注里。`}
+            feedback={templateFeedback}
+            onApplyTemplate={(template) => {
+              const targetRecords = filteredRecords.filter((record) => {
+                const currentNote = annotations[record.id] ?? "";
+                return (
+                  appendWechatSyncAnnotationTemplate(currentNote, template) !==
+                  currentNote.trim()
+                );
+              });
+              if (!targetRecords.length) {
+                setTemplateFeedback(
+                  `当前筛选记录都已包含模板“${template.label}”。`,
+                );
+                return;
+              }
+              targetRecords.forEach((record) =>
+                onApplyAnnotationTemplate?.(record.id, template),
+              );
+              setTemplateFeedback(
+                `已把模板“${template.label}”追加到 ${targetRecords.length} 条当前筛选记录。`,
+              );
+            }}
+          />
+        </div>
       ) : null}
 
       {!filteredRecords.length ? (
@@ -3753,6 +3811,7 @@ function ImportSnapshotVersionList({
   const [annotationFilter, setAnnotationFilter] =
     useState<WechatSyncAnnotationFilter>("all");
   const [copyNotice, setCopyNotice] = useState("");
+  const [templateFeedback, setTemplateFeedback] = useState("");
 
   useEffect(() => {
     if (!focusedSnapshotKey) {
@@ -3778,8 +3837,21 @@ function ImportSnapshotVersionList({
   }, [copyNotice]);
 
   useEffect(() => {
+    if (!templateFeedback) {
+      return;
+    }
+    const timeoutId = window.setTimeout(() => {
+      setTemplateFeedback((current) =>
+        current === templateFeedback ? "" : current,
+      );
+    }, 2600);
+    return () => window.clearTimeout(timeoutId);
+  }, [templateFeedback]);
+
+  useEffect(() => {
     setAnnotationFilter("all");
     setCopyNotice("");
+    setTemplateFeedback("");
   }, [characterName, title]);
 
   if (!snapshots.length) {
@@ -3940,6 +4012,43 @@ function ImportSnapshotVersionList({
           }
         />
       ) : null}
+
+      {filteredSnapshots.length ? (
+        <div className="mt-4">
+          <AnnotationTemplateQuickActions
+            templates={annotationTemplates}
+            title="对当前筛选版本批量套用模板"
+            description={`当前命中 ${filteredSnapshots.length} 张版本卡。点击模板后会把对应内容追加到所有命中版本的本地批注里。`}
+            feedback={templateFeedback}
+            onApplyTemplate={(template) => {
+              const targetSnapshots = filteredSnapshots.filter((snapshot) => {
+                const currentNote = resolveWechatSyncSnapshotAnnotation(
+                  annotations,
+                  snapshot,
+                  resolvedAnnotationCharacterId,
+                );
+                return (
+                  appendWechatSyncAnnotationTemplate(currentNote, template) !==
+                  currentNote.trim()
+                );
+              });
+              if (!targetSnapshots.length) {
+                setTemplateFeedback(
+                  `当前筛选版本都已包含模板“${template.label}”。`,
+                );
+                return;
+              }
+              targetSnapshots.forEach((snapshot) =>
+                onApplyAnnotationTemplate?.(snapshot, template),
+              );
+              setTemplateFeedback(
+                `已把模板“${template.label}”追加到 ${targetSnapshots.length} 张当前筛选版本卡。`,
+              );
+            }}
+          />
+        </div>
+      ) : null}
+
       {!filteredSnapshots.length ? (
         <AdminEmptyState
           className="mt-4"
