@@ -391,7 +391,9 @@ export class WechatSyncAdminService {
           error instanceof Error ? error.message : String(error)
         }`,
       );
-      warnings.push('AI 画像生成失败，已回退到启发式草稿，请在导入前检查。');
+      warnings.push(
+        'AI 角色草稿生成失败，已回退到启发式版本，导入前再过一眼。',
+      );
       draftCharacter = this.normalizeCharacterDraft({}, contact);
     }
 
@@ -582,15 +584,15 @@ export class WechatSyncAdminService {
       ? `- 微信标签：${contact.tags.join('、')}`
       : '- 微信标签：无';
     const summaryHint = contact.chatSummary?.trim()
-      ? `- 聊天摘要：${contact.chatSummary.trim()}`
-      : '- 聊天摘要：暂无';
+      ? `- 聊天概况：${contact.chatSummary.trim()}`
+      : '- 聊天概况：暂无';
     const momentHint = contact.momentHighlights.length
-      ? `- 朋友圈/近况摘要：${contact.momentHighlights
+      ? `- 近况线索：${contact.momentHighlights
           .slice(0, 3)
           .map((item) => item.text.trim())
           .filter(Boolean)
           .join('；')}`
-      : '- 朋友圈/近况摘要：当前未提供';
+      : '- 近况线索：当前未提供';
     const samples = contact.sampleMessages
       .slice(0, 8)
       .map((item) => {
@@ -625,7 +627,7 @@ export class WechatSyncAdminService {
       '聊天样本：',
       samples || '（暂无聊天样本）',
       '',
-      '要求：角色要保留真实微信熟人的说话味道、互动边界和话题偏好，不要写得像万能助理。',
+      '要求：角色要保留真实微信熟人的说话味道、互动边界和话题偏好，别写得像万能助手、客服模板或分析报告。',
     ].join('\n');
   }
 
@@ -744,13 +746,13 @@ function buildPreviewWarnings(contact: WechatSyncContactBundleValue) {
     warnings.push('这是群聊，不建议按联系人角色导入。');
   }
   if (contact.messageCount < 20) {
-    warnings.push('聊天样本偏少，生成的人设可能比较粗糙。');
+    warnings.push('聊天样本偏少，这个人的说话味道可能抓得不太准。');
   }
   if (!contact.sampleMessages.length) {
-    warnings.push('没有提取到代表性聊天样本，只能依赖联系人基础资料生成。');
+    warnings.push('没拿到代表性的聊天样本，这轮只能更多靠联系人基础资料来补。');
   }
   if (!contact.momentHighlights.length) {
-    warnings.push('当前没有朋友圈/近况摘要，本轮画像主要依赖聊天记录。');
+    warnings.push('当前没有朋友圈或近况线索，这轮角色草稿主要靠聊天记录。');
   }
 
   return warnings;

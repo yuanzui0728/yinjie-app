@@ -142,7 +142,7 @@ export const DEFAULT_NEED_DISCOVERY_CONFIG: NeedDiscoveryConfig = {
 
 只输出 JSON，不要输出其他内容：
 {
-  "summary": "一句话总结当前更实时的需求态势",
+  "summary": "一句话写出当前更紧的需求动向，不要像汇报标题",
   "needs": [
     {
       "needKey": "stable_key_optional",
@@ -196,7 +196,7 @@ export const DEFAULT_NEED_DISCOVERY_CONFIG: NeedDiscoveryConfig = {
 
 只输出 JSON，不要输出其他内容：
 {
-  "summary": "一句话总结用户更长期的结构性需求",
+  "summary": "一句话写出用户更长期的需求走向，不要像分析结论",
   "needs": [
     {
       "needKey": "stable_key_optional",
@@ -263,8 +263,8 @@ export const DEFAULT_NEED_DISCOVERY_CONFIG: NeedDiscoveryConfig = {
   "emotionalTone": "grounded|warm|energetic|melancholic|playful|serious",
   "responseLength": "short|medium|long",
   "emojiUsage": "none|occasional|frequent",
-  "memorySummary": "初始记忆摘要，一句话",
-  "basePrompt": "角色核心扮演提示词，2-4 句话",
+  "memorySummary": "这个人给用户的熟悉感和关系分寸，一句话",
+  "basePrompt": "这个人自己的说话底色和边界，2-4 句话",
   "greeting": "好友申请时发送的一句话"
 }`,
   },
