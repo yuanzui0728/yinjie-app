@@ -9,6 +9,11 @@ import { CharacterBlueprintService } from '../characters/character-blueprint.ser
 import { ReplyLogicAdminService } from './reply-logic-admin.service';
 import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
 import { AiUsageLedgerService } from '../analytics/ai-usage-ledger.service';
+import { WechatSyncAdminService } from './wechat-sync-admin.service';
+import type {
+  WechatSyncImportRequestValue,
+  WechatSyncPreviewRequestValue,
+} from './wechat-sync-admin.types';
 
 @Controller('admin')
 @UseGuards(AdminGuard)
@@ -19,6 +24,7 @@ export class AdminController {
     private readonly characterBlueprintService: CharacterBlueprintService,
     private readonly ai: AiOrchestratorService,
     private readonly usageLedger: AiUsageLedgerService,
+    private readonly wechatSyncAdminService: WechatSyncAdminService,
   ) {}
 
   @Get('stats')
@@ -289,6 +295,16 @@ export class AdminController {
   @Post('characters/generate-quick')
   async generateQuickCharacter(@Body() body: { description: string }) {
     return this.ai.generateQuickCharacter(body.description?.trim() ?? '');
+  }
+
+  @Post('wechat-sync/preview')
+  previewWechatSync(@Body() body: WechatSyncPreviewRequestValue) {
+    return this.wechatSyncAdminService.preview(body);
+  }
+
+  @Post('wechat-sync/import')
+  importWechatSync(@Body() body: WechatSyncImportRequestValue) {
+    return this.wechatSyncAdminService.import(body);
   }
 
   @Post('characters')

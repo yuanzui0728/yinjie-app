@@ -1089,6 +1089,8 @@ function formatCharacterSourceType(sourceType?: Character["sourceType"]) {
       return "默认保底";
     case "preset_catalog":
       return "名人预设";
+    case "wechat_import":
+      return "微信同步";
     case "manual_admin":
       return "后台手工";
     default:

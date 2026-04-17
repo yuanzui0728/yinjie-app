@@ -8,7 +8,8 @@ export type RelationshipType =
 export type CharacterSourceType =
   | "default_seed"
   | "preset_catalog"
-  | "manual_admin";
+  | "manual_admin"
+  | "wechat_import";
 export type CharacterDeletionPolicy = "protected" | "archive_allowed";
 export type CharacterPresetGroupKey =
   | "technology_and_product"

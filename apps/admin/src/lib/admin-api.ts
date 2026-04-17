@@ -22,6 +22,10 @@ import type {
   TokenUsageQuery,
   TokenUsageRecordListResponse,
   TokenUsageTrendPoint,
+  WechatSyncImportRequest,
+  WechatSyncImportResponse,
+  WechatSyncPreviewRequest,
+  WechatSyncPreviewResponse,
 } from "@yinjie/contracts";
 
 const ADMIN_SECRET_KEY = "yinjie_admin_secret";
@@ -157,6 +161,16 @@ export const adminApi = {
     adminFetch<Record<string, unknown>>("/characters/generate-quick", {
       method: "POST",
       body: JSON.stringify({ description }),
+    }),
+  previewWechatSync: (payload: WechatSyncPreviewRequest) =>
+    adminFetch<WechatSyncPreviewResponse>("/wechat-sync/preview", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  importWechatSync: (payload: WechatSyncImportRequest) =>
+    adminFetch<WechatSyncImportResponse>("/wechat-sync/import", {
+      method: "POST",
+      body: JSON.stringify(payload),
     }),
   getFriendCharacterIds: () =>
     adminFetch<string[]>("/characters/friend-ids"),

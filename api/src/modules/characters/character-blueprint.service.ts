@@ -908,6 +908,8 @@ export class CharacterBlueprintService {
         ? 'default_seed'
         : character.sourceType === 'preset_catalog'
           ? 'preset_catalog'
+          : character.sourceType === 'wechat_import'
+            ? 'wechat_import'
           : 'manual_admin';
     const blueprint = this.blueprintRepo.create({
       id: `blueprint_${character.id}`,

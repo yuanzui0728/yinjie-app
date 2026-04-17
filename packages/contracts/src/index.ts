@@ -23,5 +23,6 @@ export * from "./speech";
 export * from "./stickers";
 export * from "./system";
 export * from "./token-usage";
+export * from "./wechat-sync";
 export * from "./world";
 export * from "./ws";

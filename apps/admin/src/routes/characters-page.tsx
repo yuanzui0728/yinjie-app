@@ -140,6 +140,9 @@ export function CharactersPage() {
         <Link to="/characters/$characterId" params={{ characterId: "new" }}>
           <Button variant="primary" size="sm">新建角色</Button>
         </Link>
+        <Link to="/characters/wechat-sync">
+          <Button variant="secondary" size="sm">一键同步微信朋友</Button>
+        </Link>
       </div>
 
       {/* 世界角色列表 */}

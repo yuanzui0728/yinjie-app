@@ -12,6 +12,11 @@ const CharactersPage = lazy(async () => {
   return { default: mod.CharactersPage };
 });
 
+const WechatSyncPage = lazy(async () => {
+  const mod = await import("./routes/wechat-sync-page");
+  return { default: mod.WechatSyncPage };
+});
+
 const CharacterEditorPage = lazy(async () => {
   const mod = await import("./routes/character-editor-page");
   return { default: mod.CharacterEditorPage };
@@ -75,6 +80,12 @@ const charactersRoute = createRoute({
   component: CharactersPage,
 });
 
+const wechatSyncRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/characters/wechat-sync",
+  component: WechatSyncPage,
+});
+
 const characterEditorRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/characters/$characterId",
@@ -121,6 +132,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   setupRoute,
   charactersRoute,
+  wechatSyncRoute,
   characterEditorRoute,
   characterFactoryRoute,
   characterRuntimeRoute,

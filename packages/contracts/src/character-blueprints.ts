@@ -4,6 +4,7 @@ export type CharacterBlueprintSourceType =
   | "default_seed"
   | "preset_catalog"
   | "manual_admin"
+  | "wechat_import"
   | "template_clone"
   | "ai_generated";
 
