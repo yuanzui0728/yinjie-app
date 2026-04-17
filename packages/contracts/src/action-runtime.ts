@@ -12,6 +12,11 @@ export type ActionRunStatus =
   | "failed"
   | "cancelled";
 
+export type ActionRunRetryNextStep =
+  | "awaiting_slots"
+  | "awaiting_confirmation"
+  | "executed";
+
 export type ActionRuntimePlannerMode = "heuristic";
 
 export type ActionConnectorProviderType =
@@ -139,6 +144,24 @@ export interface ActionRuntimePreviewResult {
   reason: string;
   plan?: ActionPlanSummary | null;
   responsePreview?: string | null;
+}
+
+export interface ActionConnectorTestResult {
+  ok: boolean;
+  testedAt: string;
+  sampleMessage: string;
+  summary: string;
+  connector: ActionConnectorSummary;
+  samplePlan?: ActionPlanSummary | null;
+  executionPayload?: Record<string, unknown> | null;
+  resultPayload?: Record<string, unknown> | null;
+  errorMessage?: string | null;
+}
+
+export interface ActionRunRetryResult {
+  nextStep: ActionRunRetryNextStep;
+  responseText: string;
+  run: ActionRunDetail;
 }
 
 export interface UpdateActionConnectorRequest {

@@ -38,7 +38,19 @@ export class ActionRuntimeRulesService {
   async setRules(
     input: Partial<ActionRuntimeRulesValue>,
   ): Promise<ActionRuntimeRulesValue> {
-    const normalized = normalizeActionRuntimeRules(input);
+    const current = await this.getRules();
+    const normalized = normalizeActionRuntimeRules({
+      ...current,
+      ...input,
+      promptTemplates: {
+        ...current.promptTemplates,
+        ...(input.promptTemplates ?? {}),
+      },
+      policy: {
+        ...current.policy,
+        ...(input.policy ?? {}),
+      },
+    });
     await this.systemConfig.setConfig(
       ACTION_RUNTIME_RULES_CONFIG_KEY,
       JSON.stringify(normalized),

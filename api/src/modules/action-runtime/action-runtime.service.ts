@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -11,9 +12,11 @@ import { ActionRunEntity } from './action-run.entity';
 import { ActionRuntimeRulesService } from './action-runtime-rules.service';
 import type {
   ActionConnectorSeedValue,
+  ActionConnectorTestResultValue,
   ActionExecutionResultValue,
   ActionHandlingResultValue,
   ActionPlanValue,
+  ActionRunRetryResultValue,
   ActionRuntimeRulesValue,
 } from './action-runtime.types';
 
@@ -277,6 +280,92 @@ export class ActionRuntimeService {
     return this.serializeConnector(connector);
   }
 
+  async testConnector(
+    id: string,
+    payload?: {
+      sampleMessage?: string;
+    },
+  ): Promise<ActionConnectorTestResultValue> {
+    await this.ensureDefaultConnectors();
+    const connector = await this.connectorRepo.findOneBy({ id });
+    if (!connector) {
+      throw new NotFoundException(`Connector ${id} not found`);
+    }
+
+    const rules = await this.rulesService.getRules();
+    const sampleMessage =
+      payload?.sampleMessage?.trim() || this.buildDefaultConnectorTestMessage(connector);
+    const testedAt = new Date();
+
+    try {
+      const samplePlan = this.buildConnectorTestPlan(
+        connector,
+        sampleMessage,
+        rules,
+      );
+
+      let executionPayload: Record<string, unknown> | null = null;
+      let resultPayload: Record<string, unknown> | null = null;
+      let summary: string;
+      if (connector.providerType === 'mock') {
+        const execution = this.executeMockOperation(samplePlan, connector, true);
+        executionPayload = execution.executionPayload;
+        resultPayload = execution.resultPayload;
+        summary = execution.resultSummary;
+      } else {
+        executionPayload = {
+          providerType: connector.providerType,
+          previewOnly: true,
+          testedAt: testedAt.toISOString(),
+        };
+        resultPayload = {
+          mode: 'connectivity_only',
+        };
+        summary = `${connector.displayName} 已完成一次基础连通性自检。`;
+      }
+
+      connector.lastHealthCheckAt = testedAt;
+      connector.lastError = null;
+      if (connector.status === 'error') {
+        connector.status = 'ready';
+      }
+      await this.connectorRepo.save(connector);
+
+      return {
+        ok: true,
+        testedAt: testedAt.toISOString(),
+        sampleMessage,
+        summary,
+        connector: this.serializeConnector(connector),
+        samplePlan,
+        executionPayload,
+        resultPayload,
+        errorMessage: null,
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : '连接器测试过程中发生未知异常。';
+      connector.lastHealthCheckAt = testedAt;
+      connector.lastError = errorMessage;
+      if (connector.status !== 'disabled') {
+        connector.status = 'error';
+      }
+      await this.connectorRepo.save(connector);
+
+      return {
+        ok: false,
+        testedAt: testedAt.toISOString(),
+        sampleMessage,
+        summary: `${connector.displayName} 自检失败。`,
+        connector: this.serializeConnector(connector),
+        samplePlan: null,
+        executionPayload: null,
+        resultPayload: null,
+        errorMessage,
+      };
+    }
+  }
+
   async listRuns(limit = 20) {
     await this.ensureDefaultConnectors();
     const runs = await this.runRepo.find({
@@ -293,6 +382,96 @@ export class ActionRuntimeService {
       throw new NotFoundException(`Action run ${id} not found`);
     }
     return this.serializeRunDetail(run);
+  }
+
+  async retryRun(id: string): Promise<ActionRunRetryResultValue> {
+    await this.ensureDefaultConnectors();
+    const run = await this.runRepo.findOneBy({ id });
+    if (!run) {
+      throw new NotFoundException(`Action run ${id} not found`);
+    }
+
+    const plan = run.planPayload;
+    if (!plan) {
+      throw new BadRequestException('该动作缺少 plan 快照，当前无法重试。');
+    }
+
+    const rules = await this.rulesService.getRules();
+    const connectors = await this.listReadyConnectorEntities();
+    const refreshedPlan: ActionPlanValue = {
+      ...plan,
+      missingSlots: this.resolveMissingSlots(
+        plan.operationKey,
+        plan.domain,
+        plan.slots,
+      ),
+    };
+
+    run.planPayload = refreshedPlan;
+    run.slotPayload = { ...refreshedPlan.slots };
+    run.missingSlots = [...refreshedPlan.missingSlots];
+    run.resultSummary = null;
+    run.executionPayload = null;
+    run.resultPayload = null;
+    run.errorPayload = null;
+    run.errorMessage = null;
+    run.tracePayload = appendTrace(run.tracePayload, {
+      phase: 'admin_retry_requested',
+      previousStatus: run.status,
+      refreshedMissingSlots: [...refreshedPlan.missingSlots],
+    });
+
+    if (refreshedPlan.missingSlots.length > 0) {
+      run.status = 'awaiting_slots';
+      run.policyDecisionPayload = {
+        reason: 'missing_required_slots',
+        missingSlots: [...refreshedPlan.missingSlots],
+      };
+      await this.runRepo.save(run);
+      return {
+        nextStep: 'awaiting_slots',
+        responseText: this.renderClarification(refreshedPlan, rules),
+        run: this.serializeRunDetail(run),
+      };
+    }
+
+    const confirmationRecorded = Boolean(
+      run.confirmationPayload &&
+        typeof run.confirmationPayload === 'object' &&
+        'confirmedAt' in run.confirmationPayload &&
+        run.confirmationPayload.confirmedAt,
+    );
+    if (this.requiresConfirmation(refreshedPlan, rules) && !confirmationRecorded) {
+      run.status = 'awaiting_confirmation';
+      run.confirmationPayload = {
+        ...(run.confirmationPayload ?? {}),
+        requestedAt: new Date().toISOString(),
+        confirmationKeywords: [...rules.policy.confirmationKeywords],
+      };
+      run.policyDecisionPayload = {
+        reason: 'requires_confirmation',
+        autoExecutable: false,
+      };
+      await this.runRepo.save(run);
+      return {
+        nextStep: 'awaiting_confirmation',
+        responseText: this.renderConfirmation(refreshedPlan, rules),
+        run: this.serializeRunDetail(run),
+      };
+    }
+
+    run.status = 'running';
+    run.policyDecisionPayload = {
+      reason: confirmationRecorded ? 'retry_after_confirmation' : 'retry_execute',
+      autoExecutable: true,
+    };
+    await this.runRepo.save(run);
+    const execution = await this.executeRun(run, rules, connectors);
+    return {
+      nextStep: 'executed',
+      responseText: execution.responseText ?? '',
+      run: this.serializeRunDetail(run),
+    };
   }
 
   async previewMessage(message: string) {
@@ -434,8 +613,14 @@ export class ActionRuntimeService {
       this.matchesKeyword(normalized, rules.policy.confirmationKeywords)
     ) {
       run.status = 'running';
+      run.confirmationPayload = {
+        ...(run.confirmationPayload ?? {}),
+        confirmedAt: new Date().toISOString(),
+        confirmationMessage: normalized,
+      };
       run.tracePayload = appendTrace(run.tracePayload, {
         phase: 'confirmation_received',
+        confirmationMessage: normalized,
       });
       await this.runRepo.save(run);
       return this.executeRun(run, rules, connectors);
@@ -827,6 +1012,100 @@ export class ActionRuntimeService {
       `可用连接器：\n${connectorSummary}`,
       `当前 plannerMode：${rules.plannerMode}`,
     ].join('\n\n');
+  }
+
+  private buildDefaultConnectorTestMessage(connector: ActionConnectorEntity) {
+    switch (connector.connectorKey) {
+      case 'mock-smart-home':
+        return '帮我把客厅空调调到24度';
+      case 'mock-food-delivery':
+        return '帮我点个轻食外卖，送到公司前台';
+      case 'mock-ticketing':
+        return '帮我订明天上海到杭州的高铁票';
+      default:
+        return `测试 ${connector.displayName} 的连接状态`;
+    }
+  }
+
+  private buildConnectorTestPlan(
+    connector: ActionConnectorEntity,
+    sampleMessage: string,
+    rules: ActionRuntimeRulesValue,
+  ): ActionPlanValue {
+    const preview = this.planActionFromMessage(sampleMessage, [connector], rules);
+    if (
+      preview.handled &&
+      preview.plan &&
+      preview.plan.connectorKey === connector.connectorKey &&
+      preview.plan.missingSlots.length === 0
+    ) {
+      return preview.plan;
+    }
+
+    switch (connector.connectorKey) {
+      case 'mock-smart-home':
+        return {
+          connectorKey: connector.connectorKey,
+          operationKey: 'smart_home_control',
+          domain: 'smart_home',
+          title: '客厅空调调到24度',
+          goal: sampleMessage,
+          rationale: '后台连接器自检使用固定智能家居样例。',
+          riskLevel: 'reversible_low_risk',
+          requiresConfirmation: false,
+          slots: {
+            room: '客厅',
+            device: '空调',
+            action: 'set_temperature',
+            temperatureCelsius: 24,
+          },
+          missingSlots: [],
+          matchedKeywords: ['客厅', '空调', '温度'],
+          promptPreview: this.buildPromptPreview(sampleMessage, [connector], rules),
+        };
+      case 'mock-food-delivery':
+        return {
+          connectorKey: connector.connectorKey,
+          operationKey: 'food_delivery_submit',
+          domain: 'food_delivery',
+          title: '外卖下单',
+          goal: sampleMessage,
+          rationale: '后台连接器自检使用固定外卖样例。',
+          riskLevel: 'cost_or_irreversible',
+          requiresConfirmation: true,
+          slots: {
+            preference: '轻食',
+            address: '公司前台',
+            budgetCny: 48,
+          },
+          missingSlots: [],
+          matchedKeywords: ['轻食', '地址'],
+          promptPreview: this.buildPromptPreview(sampleMessage, [connector], rules),
+        };
+      case 'mock-ticketing':
+        return {
+          connectorKey: connector.connectorKey,
+          operationKey: 'ticket_booking_submit',
+          domain: 'ticketing',
+          title: '高铁票预订',
+          goal: sampleMessage,
+          rationale: '后台连接器自检使用固定订票样例。',
+          riskLevel: 'cost_or_irreversible',
+          requiresConfirmation: true,
+          slots: {
+            ticketType: '火车票',
+            route: '上海 -> 杭州',
+            date: '明天',
+          },
+          missingSlots: [],
+          matchedKeywords: ['上海 -> 杭州', '明天'],
+          promptPreview: this.buildPromptPreview(sampleMessage, [connector], rules),
+        };
+      default:
+        throw new BadRequestException(
+          `尚未为 ${connector.connectorKey} 定义测试样例。`,
+        );
+    }
   }
 
   private mergePlanWithMessage(

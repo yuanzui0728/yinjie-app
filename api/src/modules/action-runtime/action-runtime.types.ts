@@ -83,6 +83,29 @@ export type ActionHandlingResultValue = {
   responseText?: string;
 };
 
+export type ActionConnectorTestResultValue = {
+  ok: boolean;
+  testedAt: string;
+  sampleMessage: string;
+  summary: string;
+  connector: Record<string, unknown>;
+  samplePlan?: ActionPlanValue | null;
+  executionPayload?: Record<string, unknown> | null;
+  resultPayload?: Record<string, unknown> | null;
+  errorMessage?: string | null;
+};
+
+export type ActionRunRetryNextStepValue =
+  | 'awaiting_slots'
+  | 'awaiting_confirmation'
+  | 'executed';
+
+export type ActionRunRetryResultValue = {
+  nextStep: ActionRunRetryNextStepValue;
+  responseText: string;
+  run: Record<string, unknown>;
+};
+
 export type ActionConnectorSeedValue = {
   id: string;
   connectorKey: string;
