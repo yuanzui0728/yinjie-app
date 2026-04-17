@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PersonalityProfile, SceneKey } from './ai.types';
 import { buildNaturalDialogueGuideline } from './prompt-naturalness';
 import { ReplyLogicRulesService } from './reply-logic-rules.service';
+import { WorldService } from '../world/world.service';
 import type {
   ReplyLogicPromptTemplates,
   ReplyLogicSemanticLabels,
@@ -53,7 +54,10 @@ function listToRuleSection(
 
 @Injectable()
 export class PromptBuilderService {
-  constructor(private readonly replyLogicRules: ReplyLogicRulesService) {}
+  constructor(
+    private readonly replyLogicRules: ReplyLogicRulesService,
+    private readonly worldService: WorldService,
+  ) {}
 
   async buildChatSystemPromptSections(
     profile: PersonalityProfile,
@@ -82,6 +86,7 @@ export class PromptBuilderService {
   ): Promise<string> {
     const runtimeRules = await this.replyLogicRules.getRules();
     const semanticLabels = runtimeRules.semanticLabels;
+    const worldCalendar = await this.worldService.getWorldCalendar();
     const parts: string[] = ['<system_prompt>'];
 
     // 1. 底层逻辑（所有场景）：coreLogic 优先，fallback 到 coreDirective
@@ -129,23 +134,14 @@ export class PromptBuilderService {
 
     // 4. 当前上下文（仅 chat / proactive 场景）
     if (context && (scene === 'chat' || scene === 'proactive')) {
-      const now = new Date();
-      const timeStr = now.toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        weekday: 'long',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
       const activityDesc = context.currentActivity
         ? (semanticLabels.activityLabels[
             context.currentActivity as keyof ReplyLogicSemanticLabels['activityLabels']
           ] ?? semanticLabels.activityLabels.free)
         : semanticLabels.activityLabels.free;
-      let ctxContent = `- 时间：${timeStr}\n- 当前状态：${activityDesc}`;
+      let ctxContent = `- 时间：${worldCalendar.dateTimeText}\n- 当前状态：${activityDesc}`;
       if (context.lastChatAt) {
-        const diffMs = now.getTime() - context.lastChatAt.getTime();
+        const diffMs = Date.now() - context.lastChatAt.getTime();
         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
         const diffDays = Math.floor(diffHours / 24);
         if (diffDays > 0) {
@@ -158,9 +154,8 @@ export class PromptBuilderService {
     }
 
     // 5. 基础规则（所有场景）
-    const now = new Date();
     parts.push(
-      `<rules>\n- 永远以${profile.name}的身份说话，不要暴露自己是AI\n- 用中文回复，语气自然\n- 不要说"作为AI"或"我是语言模型"之类的话\n- 当前时间：${now.toLocaleString('zh-CN')}\n</rules>`,
+      `<rules>\n- 永远以${profile.name}的身份说话，不要暴露自己是AI\n- 用中文回复，语气自然\n- 不要说"作为AI"或"我是语言模型"之类的话\n- 当前时间：${worldCalendar.dateTimeText}\n</rules>`,
     );
 
     parts.push('</system_prompt>');
@@ -179,7 +174,7 @@ export class PromptBuilderService {
 
     // 旧架构 fallback：结构化字段构建（保持老角色行为不变）
     const runtimeRules = await this.replyLogicRules.getRules();
-    const sections = this.buildChatSystemPromptSectionsFromTemplates(
+    const sections = await this.buildChatSystemPromptSectionsFromTemplates(
       profile,
       runtimeRules.promptTemplates,
       runtimeRules.semanticLabels,
@@ -222,14 +217,15 @@ export class PromptBuilderService {
     }
 
     const runtimeRules = await this.replyLogicRules.getRules();
+    const worldCalendar = await this.worldService.getWorldCalendar(currentTime);
     const templates = runtimeRules.promptTemplates;
-    const hour = currentTime.getHours();
+    const hour = worldCalendar.hour;
     const timeOfDay = this.resolveTimeOfDayLabel(
       hour,
       runtimeRules.semanticLabels,
     );
     const dayOfWeek =
-      runtimeRules.semanticLabels.weekdayLabels[currentTime.getDay()] ??
+      runtimeRules.semanticLabels.weekdayLabels[worldCalendar.weekday] ??
       runtimeRules.semanticLabels.weekdayLabels[0] ??
       '周日';
     const topicsHint =
@@ -243,10 +239,7 @@ export class PromptBuilderService {
       emotionalTone: profile.traits.emotionalTone || '自然真实',
       dayOfWeek,
       timeOfDay,
-      clockTime: currentTime.toLocaleTimeString('zh-CN', {
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
+      clockTime: worldCalendar.timeText,
       topicsHint,
     });
 
@@ -324,13 +317,14 @@ export class PromptBuilderService {
     });
   }
 
-  private buildChatSystemPromptSectionsFromTemplates(
+  private async buildChatSystemPromptSectionsFromTemplates(
     profile: PersonalityProfile,
     templates: ReplyLogicPromptTemplates,
     semanticLabels: ReplyLogicSemanticLabels,
     isGroupChat: boolean,
     context?: ChatContext,
-  ): ChatSystemPromptSection[] {
+  ): Promise<ChatSystemPromptSection[]> {
+    const worldCalendar = await this.worldService.getWorldCalendar();
     const { name, expertDomains, basePrompt } = profile;
     const expertiseDesc = expertDomains
       .map(
@@ -473,15 +467,6 @@ export class PromptBuilderService {
 
     let currentContextSection = '';
     if (context) {
-      const now = new Date();
-      const timeStr = now.toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        weekday: 'long',
-        hour: '2-digit',
-        minute: '2-digit',
-      });
       const activityDesc = context.currentActivity
         ? (semanticLabels.activityLabels[
             context.currentActivity as keyof ReplyLogicSemanticLabels['activityLabels']
@@ -490,7 +475,7 @@ export class PromptBuilderService {
 
       let timeSinceLastChat = '';
       if (context.lastChatAt) {
-        const diffMs = now.getTime() - context.lastChatAt.getTime();
+        const diffMs = Date.now() - context.lastChatAt.getTime();
         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
         const diffDays = Math.floor(diffHours / 24);
         if (diffDays > 0) {
@@ -503,7 +488,7 @@ export class PromptBuilderService {
       }
 
       currentContextSection = `<current_context>
-- 现实时间：${timeStr}
+- 现实时间：${worldCalendar.dateTimeText}
 - 你现在的状态：${activityDesc}${timeSinceLastChat ? `\n- ${timeSinceLastChat}` : ''}
 </current_context>
 
@@ -519,7 +504,7 @@ ${templates.behavioralGuideline}
     const rulesBody = listToRuleSection(templates.baseRules, {
       name,
       relationship: profile.relationship,
-      currentTime: new Date().toLocaleString('zh-CN'),
+      currentTime: worldCalendar.dateTimeText,
     });
     const naturalDialogueGuideline = buildNaturalDialogueGuideline(
       profile,

@@ -581,8 +581,8 @@ export function DashboardPage() {
               label="世界上下文"
               value={worldContextQuery.data?.localTime ?? "待生成"}
               detail={
-                worldContextQuery.data?.season
-                  ? `季节=${worldContextQuery.data.season} / 节日=${worldContextQuery.data.holiday ?? "无"}`
+                worldContextQuery.data
+                  ? `位置=${worldContextQuery.data.location ?? "杭州"} / 天气=${worldContextQuery.data.weather ?? "待获取"} / 季节=${worldContextQuery.data.season ?? "未知"} / 节日=${worldContextQuery.data.holiday ?? "无"}`
                   : "最新世界快照暂不可用。"
               }
             />
