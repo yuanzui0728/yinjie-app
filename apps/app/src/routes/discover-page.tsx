@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   addFeedComment,
   getBlockedCharacters,
   getFeed,
   likeFeedPost,
-  sendFriendRequest,
-  shake,
   triggerSceneFriendRequest,
 } from "@yinjie/contracts";
 import {
@@ -145,6 +143,7 @@ const contentDiscoverEntries: MobileDiscoverEntry[] = [
 
 export function DiscoverPage() {
   const isDesktopLayout = useDesktopLayout();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const ownerId = useWorldOwnerStore((state) => state.id);
   const runtimeConfig = useAppRuntimeConfig();
@@ -152,7 +151,6 @@ export function DiscoverPage() {
   const composeDraft = useMomentComposeDraft();
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
-  const [shakeMessage, setShakeMessage] = useState("");
   const [sceneMessage, setSceneMessage] = useState("");
   const [feedCommentDrafts, setFeedCommentDrafts] = useState<
     Record<string, string>
@@ -181,39 +179,6 @@ export function DiscoverPage() {
       composeDraft.reset();
       setSuccessNotice("广场动态已发布，世界居民公开可见。");
       await queryClient.invalidateQueries({ queryKey: ["app-feed", baseUrl] });
-    },
-  });
-
-  const shakeMutation = useMutation({
-    mutationFn: async () => {
-      const result = await shake(baseUrl);
-      if (!result) {
-        return null;
-      }
-
-      await sendFriendRequest(
-        {
-          characterId: result.character.id,
-          greeting: result.greeting,
-        },
-        baseUrl,
-      );
-
-      return result;
-    },
-    onSuccess: (result) => {
-      if (!result) {
-        setShakeMessage("附近暂时没有新的相遇。");
-        return;
-      }
-
-      setSuccessNotice("新的好友申请已发送。");
-      setShakeMessage(
-        `${result.character.name} 向你发来了好友申请：${result.greeting}`,
-      );
-      void queryClient.invalidateQueries({
-        queryKey: ["app-friend-requests", baseUrl],
-      });
     },
   });
 
@@ -292,7 +257,6 @@ export function DiscoverPage() {
 
   useEffect(() => {
     composeDraft.reset();
-    setShakeMessage("");
     setSceneMessage("");
     setFeedCommentDrafts({});
     setSuccessNotice("");
@@ -416,14 +380,13 @@ export function DiscoverPage() {
 
               <div className="flex items-center gap-3">
                 <Button
-                  onClick={() => shakeMutation.mutate()}
-                  disabled={shakeMutation.isPending}
+                  onClick={() => void navigate({ to: "/discover/encounter" })}
                   variant="primary"
                 >
-                  {shakeMutation.isPending ? "正在寻找..." : "摇一摇"}
+                  摇一摇
                 </Button>
                 <div className="text-xs text-[color:var(--text-muted)]">
-                  随机相遇会从不同场景里发生。
+                  先生成临时候选，你决定要不要把他留下。
                 </div>
               </div>
 
@@ -444,14 +407,8 @@ export function DiscoverPage() {
                 ))}
               </div>
 
-              {shakeMessage ? (
-                <InlineNotice tone="success">{shakeMessage}</InlineNotice>
-              ) : null}
               {sceneMessage ? (
                 <InlineNotice tone="info">{sceneMessage}</InlineNotice>
-              ) : null}
-              {shakeMutation.isError && shakeMutation.error instanceof Error ? (
-                <ErrorBlock message={shakeMutation.error.message} />
               ) : null}
               {sceneMutation.isError && sceneMutation.error instanceof Error ? (
                 <ErrorBlock message={sceneMutation.error.message} />

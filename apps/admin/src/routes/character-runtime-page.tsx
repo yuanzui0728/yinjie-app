@@ -320,6 +320,10 @@ function formatCharacterSourceType(sourceType?: string | null) {
       return "名人预设";
     case "wechat_import":
       return "微信同步";
+    case "shake_generated":
+      return "摇一摇生成";
+    case "ai_generated":
+      return "AI 生成";
     case "manual_admin":
       return "后台手工";
     default:

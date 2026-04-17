@@ -1108,9 +1108,11 @@ export class CharacterBlueprintService {
           ? 'preset_catalog'
           : character.sourceType === 'need_generated'
             ? 'need_generated'
+          : character.sourceType === 'shake_generated'
+            ? 'shake_generated'
           : character.sourceType === 'wechat_import'
             ? 'wechat_import'
-          : 'manual_admin';
+            : 'manual_admin';
     const blueprint = this.blueprintRepo.create({
       id: `blueprint_${character.id}`,
       characterId: character.id,

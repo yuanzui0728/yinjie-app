@@ -1766,6 +1766,8 @@ function formatSourceType(
       return "名人预设角色";
     case "wechat_import":
       return "微信同步角色";
+    case "shake_generated":
+      return "摇一摇生成";
     case "manual_admin":
       return "后台手工角色";
     case "template_clone":

@@ -1,9 +1,13 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/common';
+import { ShakeDiscoveryService } from './shake-discovery.service';
 import { SocialService } from './social.service';
 
 @Controller('social')
 export class SocialController {
-  constructor(private readonly socialService: SocialService) {}
+  constructor(
+    private readonly socialService: SocialService,
+    private readonly shakeDiscoveryService: ShakeDiscoveryService,
+  ) {}
 
   @Get('friend-requests')
   getPendingRequests() {
@@ -57,7 +61,25 @@ export class SocialController {
 
   @Post('shake')
   shake() {
-    return this.socialService.shake();
+    return this.shakeDiscoveryService.createSessionPreview();
+  }
+
+  @Get('shake/active')
+  getActiveShake() {
+    return this.shakeDiscoveryService.getActiveSession();
+  }
+
+  @Post('shake/:id/keep')
+  keepShake(@Param('id') id: string) {
+    return this.shakeDiscoveryService.keepSession(id);
+  }
+
+  @Post('shake/:id/dismiss')
+  dismissShake(
+    @Param('id') id: string,
+    @Body() body: { reason?: string | null },
+  ) {
+    return this.shakeDiscoveryService.dismissSession(id, body.reason);
   }
 
   @Post('friend-requests/send')

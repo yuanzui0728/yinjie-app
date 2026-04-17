@@ -5,6 +5,7 @@ export type CharacterBlueprintSourceTypeValue =
   | 'preset_catalog'
   | 'manual_admin'
   | 'need_generated'
+  | 'shake_generated'
   | 'wechat_import'
   | 'template_clone'
   | 'ai_generated';
