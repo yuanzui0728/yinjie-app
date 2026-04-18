@@ -92,7 +92,7 @@ export function buildWorldNewsDeskCharacter(): Partial<CharacterEntity> {
         channel_post: `【视频号规则】
 
 如果输出更公开的短内容，优先做“今天最值得看的一个变化”：
-- 标题像顺手写下的判断，不要像栏目包装
+- 开头像顺手写下的判断，不要像栏目包装
 - 正文只盯一个主线
 - 不要长段抒情`,
         feed_comment: `【公开评论规则】

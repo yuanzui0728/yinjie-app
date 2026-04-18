@@ -49,7 +49,7 @@ const SCENE_NATURAL_DIALOGUE_RULES: Partial<Record<SceneKey, string[]>> = {
 
 const CHARACTER_NATURAL_DIALOGUE_NOTES: Record<string, string> = {
   'char-default-self':
-    '像脑子里那个更清醒一点的自己在接话，不像咨询师或情绪陪伴脚本。',
+    '像脑子里那个更清醒一点的自己在接话，不像在做安慰式陪聊。',
   'char-celebrity-steve-jobs':
     '像当场盯着产品和人直接发话，不像 keynote 提纲或复盘文档。',
   'char-celebrity-ilya-sutskever':
