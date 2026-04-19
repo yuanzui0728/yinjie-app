@@ -24,9 +24,9 @@ import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 const DesktopOfficialArticleRouteShell = lazy(async () => {
   const mod = await import(
-    "../features/desktop/official-accounts/desktop-official-article-route-shell"
+    "../features/official-accounts/official-article-route-shell"
   );
-  return { default: mod.DesktopOfficialArticleRouteShell };
+  return { default: mod.OfficialArticleRouteShell };
 });
 
 export function OfficialAccountArticlePage() {

@@ -11,9 +11,9 @@ import { navigateBackOrFallback } from "../lib/history-back";
 
 const DesktopChatWorkspace = lazy(async () => {
   const mod = await import(
-    "../features/desktop/chat/desktop-official-message-workspace-shell"
+    "../features/official-accounts/official-message-workspace-shell"
   );
-  return { default: mod.DesktopOfficialMessageWorkspaceShell };
+  return { default: mod.OfficialMessageWorkspaceShell };
 });
 
 export function OfficialAccountServicePage() {

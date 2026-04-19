@@ -16,9 +16,9 @@ import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
 const DesktopContactsRouteRedirectShell = lazy(async () => {
   const mod = await import(
-    "../features/desktop/contacts/desktop-contacts-route-redirect-shell"
+    "../features/contacts/contacts-route-redirect-shell"
   );
-  return { default: mod.DesktopContactsRouteRedirectShell };
+  return { default: mod.ContactsRouteRedirectShell };
 });
 
 export function FriendRequestsPage() {
