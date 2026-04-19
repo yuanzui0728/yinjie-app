@@ -249,12 +249,16 @@ export function DesktopChatWorkspace({
     source: "chat",
   });
 
-  const closeRightPanel = useCallback(() => {
-    setRightPanelMode(null);
+  const resetRightPanelContext = useCallback(() => {
     setHistoryPanelCanReturnToDetails(false);
     setDetailsAnnouncementRequest(null);
     setDetailsMemberSearchRequest(null);
   }, []);
+
+  const closeRightPanel = useCallback(() => {
+    setRightPanelMode(null);
+    resetRightPanelContext();
+  }, [resetRightPanelContext]);
 
   const handleWorkspacePointerDownCapture = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -426,6 +430,7 @@ export function DesktopChatWorkspace({
     standaloneWindow,
     subscriptionInboxActive,
   ]);
+  const activeConversationId = activeConversation?.id ?? null;
 
   useEffect(() => {
     if (
@@ -441,8 +446,7 @@ export function DesktopChatWorkspace({
     }
 
     setRightPanelMode(null);
-    setDetailsAnnouncementRequest(null);
-    setDetailsMemberSearchRequest(null);
+    resetRightPanelContext();
     void navigate({ to: "/tabs/chat", replace: true });
   }, [
     conversationsQuery.isError,
@@ -450,6 +454,7 @@ export function DesktopChatWorkspace({
     messageEntriesQuery.isError,
     messageEntriesQuery.isLoading,
     navigate,
+    resetRightPanelContext,
     selectedServiceAccountId,
     selectedServiceConversationExists,
     subscriptionInboxActive,
@@ -470,14 +475,14 @@ export function DesktopChatWorkspace({
     }
 
     setRightPanelMode(null);
-    setDetailsAnnouncementRequest(null);
-    setDetailsMemberSearchRequest(null);
+    resetRightPanelContext();
     void navigate({ to: "/tabs/chat", replace: true });
   }, [
     conversationsQuery.isError,
     conversationsQuery.isLoading,
     navigate,
     officialAccountsActive,
+    resetRightPanelContext,
     selectedConversationExists,
     selectedConversationId,
     serviceConversationActive,
@@ -493,15 +498,23 @@ export function DesktopChatWorkspace({
       serviceConversationActive
     ) {
       setRightPanelMode(null);
-      setDetailsAnnouncementRequest(null);
-      setDetailsMemberSearchRequest(null);
+      resetRightPanelContext();
     }
   }, [
     activeConversation,
     officialAccountsActive,
+    resetRightPanelContext,
     serviceConversationActive,
     subscriptionInboxActive,
   ]);
+
+  useEffect(() => {
+    if (!activeConversationId) {
+      return;
+    }
+
+    resetRightPanelContext();
+  }, [activeConversationId, resetRightPanelContext]);
 
   useEffect(() => {
     if (!notice) {
@@ -614,46 +627,6 @@ export function DesktopChatWorkspace({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [closeRightPanel, rightPanelMode]);
-
-  useEffect(() => {
-    const hasActiveThread = Boolean(activeConversation);
-    if (
-      !hasActiveThread ||
-      subscriptionInboxActive ||
-      officialAccountsActive ||
-      serviceConversationActive
-    ) {
-      return;
-    }
-
-    const handleKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (
-        !(event.ctrlKey || event.metaKey) ||
-        event.key.toLowerCase() !== "f"
-      ) {
-        return;
-      }
-
-      if (event.altKey) {
-        return;
-      }
-
-      if (isEditableKeyboardTarget(event.target)) {
-        return;
-      }
-
-      event.preventDefault();
-      setRightPanelMode("history");
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    activeConversation,
-    officialAccountsActive,
-    serviceConversationActive,
-    subscriptionInboxActive,
-  ]);
 
   const conversationActionMutation = useMutation({
     mutationFn: async ({
@@ -773,7 +746,8 @@ export function DesktopChatWorkspace({
           activeConversation?.id === conversation.id)
       ) {
         setRightPanelMode(null);
-        void navigate({ to: "/tabs/chat" });
+        resetRightPanelContext();
+        void navigate({ to: "/tabs/chat", replace: true });
       }
     },
     onError: (error) => {
@@ -960,39 +934,32 @@ export function DesktopChatWorkspace({
       setRightPanelMode((current) =>
         current === "history" ? null : "history",
       );
-      setHistoryPanelCanReturnToDetails(false);
+      resetRightPanelContext();
       setHistoryPanelFocusKey(Date.now());
-      setDetailsAnnouncementRequest(null);
-      setDetailsMemberSearchRequest(null);
       return;
     }
 
     setRightPanelMode((current) => (current === "details" ? null : "details"));
-    setHistoryPanelCanReturnToDetails(false);
-    setDetailsAnnouncementRequest(null);
-    setDetailsMemberSearchRequest(null);
+    resetRightPanelContext();
   }
 
   function handleOpenHistoryPanel(source: "header" | "details" = "header") {
     setRightPanelMode("history");
+    resetRightPanelContext();
     setHistoryPanelCanReturnToDetails(source === "details");
     setHistoryPanelFocusKey(Date.now());
-    setDetailsAnnouncementRequest(null);
-    setDetailsMemberSearchRequest(null);
   }
 
   function handleOpenGroupAnnouncementDetails() {
     setRightPanelMode("details");
-    setHistoryPanelCanReturnToDetails(false);
+    resetRightPanelContext();
     setDetailsAnnouncementRequest(Date.now());
-    setDetailsMemberSearchRequest(null);
   }
 
   function handleOpenGroupMemberSearch() {
     setRightPanelMode("details");
-    setHistoryPanelCanReturnToDetails(false);
+    resetRightPanelContext();
     setDetailsMemberSearchRequest(Date.now());
-    setDetailsAnnouncementRequest(null);
   }
 
   function handleSearchFieldKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -1052,12 +1019,14 @@ export function DesktopChatWorkspace({
         return;
       }
 
+      if (isEditableKeyboardTarget(event.target)) {
+        return;
+      }
+
       event.preventDefault();
       setRightPanelMode("history");
-      setHistoryPanelCanReturnToDetails(false);
+      resetRightPanelContext();
       setHistoryPanelFocusKey(Date.now());
-      setDetailsAnnouncementRequest(null);
-      setDetailsMemberSearchRequest(null);
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -1065,6 +1034,7 @@ export function DesktopChatWorkspace({
   }, [
     activeConversation,
     officialAccountsActive,
+    resetRightPanelContext,
     selectedServiceAccountId,
     subscriptionInboxActive,
   ]);
