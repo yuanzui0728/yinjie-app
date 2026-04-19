@@ -77,13 +77,7 @@ import {
   type DesktopMessageForwardPreviewItem,
 } from "../features/desktop/chat/desktop-message-forward-dialog";
 import { DesktopMessageAvatarPopover } from "../features/desktop/chat/desktop-message-avatar-popover";
-import {
-  openDesktopChatImageViewerWindow,
-  type DesktopChatImageViewerSessionItem,
-} from "../features/desktop/chat/desktop-chat-image-viewer-route-state";
-import { buildDesktopNoteWindowRouteHash } from "../features/desktop/chat/desktop-note-window-route-state";
-import { createDesktopNoteDraft } from "../features/desktop/chat/desktop-notes-storage";
-import { buildDesktopAddFriendRouteHash } from "../features/desktop/contacts/desktop-add-friend-route-state";
+import type { DesktopChatImageViewerSessionItem } from "../features/desktop/chat/desktop-chat-image-viewer-route-state";
 import {
   hydrateDesktopFavoritesFromNative,
   mergeDesktopFavoriteRecords,
@@ -214,6 +208,54 @@ type ChatMessageListProps = {
   }) => void;
   onSelectionModeChange?: (active: boolean) => void;
 };
+
+async function openDesktopChatImageViewerWindowOnDemand(input: {
+  imageUrl: string;
+  title: string;
+  meta?: string;
+  returnTo?: string;
+  items?: readonly DesktopChatImageViewerSessionItem[];
+  activeId?: string;
+  autoPrint?: boolean;
+}) {
+  const { openDesktopChatImageViewerWindow } = await import(
+    "../features/desktop/chat/desktop-chat-image-viewer-route-state"
+  );
+  return openDesktopChatImageViewerWindow(input);
+}
+
+async function buildDesktopAddFriendRouteHashOnDemand(input: {
+  keyword: string;
+  characterId?: string;
+  openCompose?: boolean;
+  recommendationId?: string;
+}) {
+  const { buildDesktopAddFriendRouteHash } = await import(
+    "../features/desktop/contacts/desktop-add-friend-route-state"
+  );
+  return buildDesktopAddFriendRouteHash(input);
+}
+
+async function buildDesktopNoteWindowRouteHashOnDemand(input: {
+  noteId: string;
+  returnTo?: string;
+}) {
+  const [{ buildDesktopNoteWindowRouteHash }, { createDesktopNoteDraft }] =
+    await Promise.all([
+      import("../features/desktop/chat/desktop-note-window-route-state"),
+      import("../features/desktop/chat/desktop-notes-storage"),
+    ]);
+  const draft = createDesktopNoteDraft({
+    draftId: input.noteId,
+    noteId: input.noteId,
+  });
+
+  return buildDesktopNoteWindowRouteHash({
+    draftId: draft.draftId,
+    noteId: input.noteId,
+    returnTo: input.returnTo,
+  });
+}
 
 function SelectionModeActionButton({
   icon,
@@ -1303,7 +1345,7 @@ export function ChatMessageList({
       return;
     }
 
-    void openDesktopChatImageViewerWindow({
+    void openDesktopChatImageViewerWindowOnDemand({
       imageUrl: target.url,
       title: target.fileName || target.label || "图片",
       meta: target.meta,
@@ -1481,17 +1523,25 @@ export function ChatMessageList({
           return;
         }
 
-        void navigate({
-          to: "/desktop/add-friend",
-          hash: buildDesktopAddFriendRouteHash({
-            keyword: attachment.name,
-            characterId: attachment.characterId,
-            openCompose:
-              attachment.recommendationMetadata?.relationshipState !==
-              "pending",
-            recommendationId,
-          }),
-        });
+        void buildDesktopAddFriendRouteHashOnDemand({
+          keyword: attachment.name,
+          characterId: attachment.characterId,
+          openCompose:
+            attachment.recommendationMetadata?.relationshipState !== "pending",
+          recommendationId,
+        })
+          .then((desktopHash) => {
+            void navigate({
+              to: "/desktop/add-friend",
+              hash: desktopHash,
+            });
+          })
+          .catch(() => {
+            setActionNotice({
+              message: "打开添加朋友页失败，请稍后重试。",
+              tone: "danger",
+            });
+          });
         return;
       }
 
@@ -1514,21 +1564,25 @@ export function ChatMessageList({
 
     if (attachment.kind === "note_card") {
       if (variant === "desktop") {
-        const draft = createDesktopNoteDraft({
-          draftId: attachment.noteId,
+        void buildDesktopNoteWindowRouteHashOnDemand({
           noteId: attachment.noteId,
-        });
-        void navigate({
-          to: "/tabs/favorites",
-          hash: buildDesktopNoteWindowRouteHash({
-            draftId: draft.draftId,
-            noteId: attachment.noteId,
-            returnTo:
-              typeof window !== "undefined"
-                ? `${window.location.pathname}${window.location.hash}`
-                : "/tabs/favorites",
-          }),
-        });
+          returnTo:
+            typeof window !== "undefined"
+              ? `${window.location.pathname}${window.location.hash}`
+              : "/tabs/favorites",
+        })
+          .then((desktopHash) => {
+            void navigate({
+              to: "/tabs/favorites",
+              hash: desktopHash,
+            });
+          })
+          .catch(() => {
+            setActionNotice({
+              message: "打开笔记失败，请稍后重试。",
+              tone: "danger",
+            });
+          });
         return;
       }
 
@@ -3203,7 +3257,7 @@ export function ChatMessageList({
           onOpenInWindow={
             isDesktop
               ? () => {
-                  void openDesktopChatImageViewerWindow({
+                  void openDesktopChatImageViewerWindowOnDemand({
                     imageUrl: activeImage.url,
                     title: activeImage.fileName || activeImage.label || "图片",
                     meta: activeImage.meta,
@@ -3230,7 +3284,7 @@ export function ChatMessageList({
           onPrint={
             isDesktop
               ? () => {
-                  void openDesktopChatImageViewerWindow({
+                  void openDesktopChatImageViewerWindowOnDemand({
                     imageUrl: activeImage.url,
                     title: activeImage.fileName || activeImage.label || "图片",
                     meta: activeImage.meta,

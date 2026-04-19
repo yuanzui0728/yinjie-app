@@ -35,7 +35,6 @@ import { ChatDetailsSection } from "../features/chat-details/chat-details-sectio
 import { ChatMemberGrid } from "../features/chat-details/chat-member-grid";
 import { ChatSettingRow } from "../features/chat-details/chat-setting-row";
 import { MobileDetailsActionSheet } from "../features/chat-details/mobile-details-action-sheet";
-import { buildDesktopAddFriendRouteHash } from "../features/desktop/contacts/desktop-add-friend-route-state";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { buildCreateGroupRouteHash } from "../lib/create-group-route-state";
 import { navigateBackOrFallback } from "../lib/history-back";
@@ -47,6 +46,18 @@ import {
 import { isNativeMobileShareSurface } from "../runtime/mobile-share-surface";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../store/world-owner-store";
+
+async function buildDesktopAddFriendRouteHashOnDemand(input: {
+  keyword: string;
+  characterId?: string;
+  openCompose?: boolean;
+  recommendationId?: string;
+}) {
+  const { buildDesktopAddFriendRouteHash } = await import(
+    "../features/desktop/contacts/desktop-add-friend-route-state"
+  );
+  return buildDesktopAddFriendRouteHash(input);
+}
 
 export function ChatDetailsPage() {
   const { conversationId } = useParams({
@@ -595,14 +606,22 @@ export function ChatDetailsPage() {
         return;
       }
 
-      void navigate({
-        to: "/desktop/add-friend",
-        hash: buildDesktopAddFriendRouteHash({
-          keyword: targetCharacter?.name ?? conversation?.title ?? "",
-          characterId: targetCharacterId,
-          openCompose: true,
-        }),
-      });
+      void buildDesktopAddFriendRouteHashOnDemand({
+        keyword: targetCharacter?.name ?? conversation?.title ?? "",
+        characterId: targetCharacterId,
+        openCompose: true,
+      })
+        .then((desktopHash) => {
+          void navigate({
+            to: "/desktop/add-friend",
+            hash: desktopHash,
+          });
+        })
+        .catch(() => {
+          void navigate({
+            to: "/desktop/add-friend",
+          });
+        });
       return;
     }
 

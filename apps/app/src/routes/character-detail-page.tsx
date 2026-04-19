@@ -35,8 +35,6 @@ import { DigitalHumanEntryNotice } from "../features/chat/digital-human-entry-no
 import { useDigitalHumanEntryGuard } from "../features/chat/use-digital-human-entry-guard";
 import { MobileDetailsActionSheet } from "../features/chat-details/mobile-details-action-sheet";
 import { ContactDetailPane } from "../features/contacts/contact-detail-pane";
-import { buildDesktopAddFriendRouteHash } from "../features/desktop/contacts/desktop-add-friend-route-state";
-import { buildDesktopFriendMomentsRouteHash } from "../features/desktop/moments/desktop-friend-moments-route-state";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { isPersistedGroupConversation } from "../lib/conversation-route";
 import { formatTimestamp } from "../lib/format";
@@ -50,6 +48,28 @@ type FriendProfileFormState = {
   remarkName: string;
   tags: string;
 };
+
+async function buildDesktopAddFriendRouteHashOnDemand(input: {
+  keyword: string;
+  characterId?: string;
+  openCompose?: boolean;
+  recommendationId?: string;
+}) {
+  const { buildDesktopAddFriendRouteHash } = await import(
+    "../features/desktop/contacts/desktop-add-friend-route-state"
+  );
+  return buildDesktopAddFriendRouteHash(input);
+}
+
+async function buildDesktopFriendMomentsRouteHashOnDemand(input: {
+  momentId?: string;
+  source?: "character-detail";
+}) {
+  const { buildDesktopFriendMomentsRouteHash } = await import(
+    "../features/desktop/moments/desktop-friend-moments-route-state"
+  );
+  return buildDesktopFriendMomentsRouteHash(input);
+}
 
 export function CharacterDetailPage() {
   const { characterId } = useParams({ from: "/character/$characterId" });
@@ -526,15 +546,23 @@ export function CharacterDetailPage() {
     }
 
     if (isDesktopLayout) {
-      void navigate({
-        to: "/desktop/add-friend",
-        hash: buildDesktopAddFriendRouteHash({
-          keyword: character?.name ?? "",
-          characterId,
-          openCompose: true,
-          recommendationId,
-        }),
-      });
+      void buildDesktopAddFriendRouteHashOnDemand({
+        keyword: character?.name ?? "",
+        characterId,
+        openCompose: true,
+        recommendationId,
+      })
+        .then((desktopHash) => {
+          void navigate({
+            to: "/desktop/add-friend",
+            hash: desktopHash,
+          });
+        })
+        .catch(() => {
+          void navigate({
+            to: "/desktop/add-friend",
+          });
+        });
       return;
     }
 
@@ -546,13 +574,22 @@ export function CharacterDetailPage() {
     }
 
     if (isDesktopLayout) {
-      void navigate({
-        to: "/desktop/friend-moments/$characterId",
-        params: { characterId: character.id },
-        hash: buildDesktopFriendMomentsRouteHash({
-          source: "character-detail",
-        }),
-      });
+      void buildDesktopFriendMomentsRouteHashOnDemand({
+        source: "character-detail",
+      })
+        .then((desktopHash) => {
+          void navigate({
+            to: "/desktop/friend-moments/$characterId",
+            params: { characterId: character.id },
+            hash: desktopHash,
+          });
+        })
+        .catch(() => {
+          void navigate({
+            to: "/desktop/friend-moments/$characterId",
+            params: { characterId: character.id },
+          });
+        });
       return;
     }
 
