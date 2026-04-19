@@ -62,12 +62,16 @@ Thumbs.db
 *.swp
 *.swo
 
-# Claude
+# Claude / Codex / AI tools
 .claude/
 .Codex/
 .git-rewrite/
-.cache/tools/
-.cache/android-api/
+
+# Cache & build artifacts
+.cache/
+
+# Runtime data
+runtime-data/
 
 # Expo / React Native (mobile - 不上传)
 mobile/
