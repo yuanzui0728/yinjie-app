@@ -17,7 +17,14 @@ import {
   FileText,
   X,
 } from "lucide-react";
-import { Button, ErrorBlock, InlineNotice, LoadingBlock, TextField, cn } from "@yinjie/ui";
+import {
+  Button,
+  ErrorBlock,
+  InlineNotice,
+  LoadingBlock,
+  TextField,
+  cn,
+} from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
 import { GroupAvatarChip } from "../components/group-avatar-chip";
@@ -96,6 +103,33 @@ export function DesktopChatFilesPage() {
     onAction?: () => void;
   } | null>(null);
   const localMessageActionState = useLocalChatMessageActionState();
+
+  const navigateToAttachmentMessage = (item: AttachmentRow) => {
+    const messageHash = `chat-message-${item.id}`;
+    if (
+      getConversationThreadType({
+        type: item.conversationType,
+        source: item.conversationSource,
+      }) === "group"
+    ) {
+      void navigate({
+        to: "/group/$groupId",
+        params: { groupId: item.conversationId },
+        search: {},
+        hash: messageHash,
+      });
+      return;
+    }
+
+    void navigate({
+      to: "/chat/$conversationId",
+      params: {
+        conversationId: item.conversationId,
+      },
+      search: {},
+      hash: messageHash,
+    });
+  };
 
   useEffect(() => {
     setFavoriteSourceIds(readDesktopFavorites().map((item) => item.sourceId));
@@ -226,7 +260,8 @@ export function DesktopChatFilesPage() {
       "desktop-chat-files",
       baseUrl,
       conversations.map(
-        (item) => `${item.id}:${item.source ?? getConversationThreadType(item)}`,
+        (item) =>
+          `${item.id}:${item.source ?? getConversationThreadType(item)}`,
       ),
     ],
     queryFn: async () => {
@@ -348,19 +383,18 @@ export function DesktopChatFilesPage() {
         message: result.message,
         tone: result.status === "failed" ? "danger" : "success",
         actionLabel: canRevealSavedFile ? "打开位置" : undefined,
-        onAction:
-          savedPath
-            ? () => {
-                void revealSavedFile(savedPath).then((revealed) => {
-                  setActionNotice({
-                    message: revealed
-                      ? "已打开所在位置。"
-                      : "打开所在位置失败，请稍后再试。",
-                    tone: revealed ? "success" : "danger",
-                  });
+        onAction: savedPath
+          ? () => {
+              void revealSavedFile(savedPath).then((revealed) => {
+                setActionNotice({
+                  message: revealed
+                    ? "已打开所在位置。"
+                    : "打开所在位置失败，请稍后再试。",
+                  tone: revealed ? "success" : "danger",
                 });
-              }
-            : undefined,
+              });
+            }
+          : undefined,
       });
     });
   };
@@ -544,10 +578,7 @@ export function DesktopChatFilesPage() {
                   : "全部会话"
               }
             />
-            <InfoCard
-              label="筛选范围"
-              value={resolveFileFilterLabel(filter)}
-            />
+            <InfoCard label="筛选范围" value={resolveFileFilterLabel(filter)} />
             <InfoCard label="当前结果" value={`${attachmentRows.length} 项`} />
           </div>
         }
@@ -612,7 +643,9 @@ export function DesktopChatFilesPage() {
                             <FileText size={18} />
                           </div>
                           <div className="mt-3 line-clamp-2 text-[11px] leading-5 text-[color:var(--text-secondary)]">
-                            {resolveAttachmentExtension(item.attachment.fileName)}
+                            {resolveAttachmentExtension(
+                              item.attachment.fileName,
+                            )}
                           </div>
                         </div>
                       )}
@@ -674,31 +707,7 @@ export function DesktopChatFilesPage() {
                             variant="secondary"
                             size="sm"
                             onClick={() => {
-                              const threadPath = buildAttachmentMessagePath(
-                                item,
-                              );
-                              const hash = threadPath.split("#")[1];
-                              if (
-                                getConversationThreadType({
-                                  type: item.conversationType,
-                                  source: item.conversationSource,
-                                }) === "group"
-                              ) {
-                                void navigate({
-                                  to: "/group/$groupId",
-                                  params: { groupId: item.conversationId },
-                                  hash,
-                                });
-                                return;
-                              }
-
-                              void navigate({
-                                to: "/chat/$conversationId",
-                                params: {
-                                  conversationId: item.conversationId,
-                                },
-                                hash,
-                              });
+                              navigateToAttachmentMessage(item);
                             }}
                             className="h-8 rounded-[10px] border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-3 text-[12px] shadow-none hover:bg-white"
                           >
@@ -754,7 +763,9 @@ export function DesktopChatFilesPage() {
             </div>
           ) : null}
 
-          {!allAttachmentsQuery.isLoading && conversations.length && !attachmentRows.length ? (
+          {!allAttachmentsQuery.isLoading &&
+          conversations.length &&
+          !attachmentRows.length ? (
             <EmptyState
               title="当前筛选下没有附件"
               description={
@@ -855,9 +866,7 @@ function matchesAttachmentFilter(item: AttachmentRow, filter: FileFilter) {
   return item.attachment.kind === filter;
 }
 
-function isImageAttachmentRow(
-  item: AttachmentRow,
-): item is ImageAttachmentRow {
+function isImageAttachmentRow(item: AttachmentRow): item is ImageAttachmentRow {
   return item.attachment.kind === "image";
 }
 

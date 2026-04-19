@@ -39,7 +39,9 @@ export function SearchPage() {
     routeState.category,
   );
   const [history, setHistory] = useState(() => loadSearchHistory());
-  const effectiveSearchText = isDesktopLayout ? committedSearchText : searchText;
+  const effectiveSearchText = isDesktopLayout
+    ? committedSearchText
+    : searchText;
   const {
     error,
     filteredResults,
@@ -174,15 +176,16 @@ export function SearchPage() {
     handleCommitSearch(effectiveSearchText);
     void navigate({
       to: item.to as never,
-      search: item.search as never,
-      hash: item.hash,
+      search: (item.search ?? {}) as never,
+      hash: item.hash ?? undefined,
     });
   }
 
   function handleOpenQuickLink(item: { to: string; search?: string }) {
     void navigate({
       to: item.to as never,
-      search: item.search as never,
+      search: (item.search ?? {}) as never,
+      hash: undefined,
     });
   }
 

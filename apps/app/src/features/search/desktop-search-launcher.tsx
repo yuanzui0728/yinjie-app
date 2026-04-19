@@ -167,19 +167,22 @@ export function useDesktopSearchLauncher({
     enabled: true,
     mode: "dictation",
   });
+  const speechCanCommit = speech.canCommit;
+  const speechCommitToInput = speech.commitToInput;
+  const speechStatus = speech.status;
 
   useEffect(() => {
-    if (speech.status !== "ready" || !speech.canCommit) {
+    if (speechStatus !== "ready" || !speechCanCommit) {
       return;
     }
 
-    onKeywordChange(speech.commitToInput(keyword));
+    onKeywordChange(speechCommitToInput(keyword));
   }, [
     keyword,
     onKeywordChange,
-    speech.canCommit,
-    speech.commitToInput,
-    speech.status,
+    speechCanCommit,
+    speechCommitToInput,
+    speechStatus,
   ]);
 
   useEffect(() => {
@@ -475,78 +478,81 @@ export function DesktopSearchDropdownPanel({
       ) as SearchLauncherConversationMessageRow[];
     },
   });
-  const conversationMessageGroups = useMemo<SearchLauncherConversationGroup[]>(
-    () => {
-      if (!normalizedKeyword) {
-        return [] as SearchLauncherConversationGroup[];
+  const conversationMessageGroups = useMemo<
+    SearchLauncherConversationGroup[]
+  >(() => {
+    if (!normalizedKeyword) {
+      return [] as SearchLauncherConversationGroup[];
+    }
+
+    const groupedMessages = new Map<
+      string,
+      SearchLauncherConversationMessageRow[]
+    >();
+    const nextGroups: SearchLauncherConversationGroup[] = [];
+
+    for (const message of conversationMessageMatchesQuery.data ?? []) {
+      if (
+        shouldHideSearchableChatMessage(
+          message.messageId,
+          localMessageActionState,
+        )
+      ) {
+        continue;
       }
 
-      const groupedMessages = new Map<string, SearchLauncherConversationMessageRow[]>();
-      const nextGroups: SearchLauncherConversationGroup[] = [];
-
-      for (const message of conversationMessageMatchesQuery.data ?? []) {
-        if (
-          shouldHideSearchableChatMessage(
-            message.messageId,
-            localMessageActionState,
-          )
-        ) {
-          continue;
-        }
-
-        const current = groupedMessages.get(message.conversationId);
-        if (current) {
-          current.push(message);
-          continue;
-        }
-
-        groupedMessages.set(message.conversationId, [message]);
+      const current = groupedMessages.get(message.conversationId);
+      if (current) {
+        current.push(message);
+        continue;
       }
 
-      for (const [conversationId, messages] of groupedMessages.entries()) {
-        const header = conversationQuickLinkById.get(conversationId);
-        if (!header) {
-          continue;
-        }
+      groupedMessages.set(message.conversationId, [message]);
+    }
 
-        const sortedMessages = [...messages].sort(
-          (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
-        );
-        const latestTime = Date.parse(sortedMessages[0]?.createdAt ?? "");
-
-        nextGroups.push({
-            header,
-            id: `conversation-group-${conversationId}`,
-            messages: sortedMessages.slice(0, 3).map((message) => ({
-              avatarName: header.avatarName,
-              avatarSrc: header.avatarSrc,
-              badge: header.badge === "群聊" ? "群聊记录" : "单聊记录",
-              description: `${message.senderName}：${buildSearchPreview(
-                message.text,
-                normalizedKeyword,
-              )}`,
-              hash: `chat-message-${message.messageId}`,
-              id: `conversation-message-${message.messageId}`,
-              meta: `聊天记录 · ${formatMessageTimestamp(message.createdAt)}`,
-              title: header.title,
-              to: header.to,
-            })),
-            sortTime: Number.isNaN(latestTime) ? 0 : latestTime,
-            totalHits: messages.length,
-          });
+    for (const [conversationId, messages] of groupedMessages.entries()) {
+      const header = conversationQuickLinkById.get(conversationId);
+      if (!header) {
+        continue;
       }
 
-      return nextGroups
-        .sort((left, right) => right.sortTime - left.sortTime)
-        .slice(0, 4);
-    },
-    [
-      conversationMessageMatchesQuery.data,
-      conversationQuickLinkById,
-      localMessageActionState,
-      normalizedKeyword,
-    ],
-  );
+      const sortedMessages = [...messages].sort(
+        (left, right) =>
+          Date.parse(right.createdAt) - Date.parse(left.createdAt),
+      );
+      const latestTime = Date.parse(sortedMessages[0]?.createdAt ?? "");
+
+      nextGroups.push({
+        header,
+        id: `conversation-group-${conversationId}`,
+        messages: sortedMessages.slice(0, 3).map((message) => ({
+          avatarName: header.avatarName,
+          avatarSrc: header.avatarSrc,
+          badge: header.badge === "群聊" ? "群聊记录" : "单聊记录",
+          description: `${message.senderName}：${buildSearchPreview(
+            message.text,
+            normalizedKeyword,
+          )}`,
+          hash: `chat-message-${message.messageId}`,
+          id: `conversation-message-${message.messageId}`,
+          meta: `聊天记录 · ${formatMessageTimestamp(message.createdAt)}`,
+          title: header.title,
+          to: header.to,
+        })),
+        sortTime: Number.isNaN(latestTime) ? 0 : latestTime,
+        totalHits: messages.length,
+      });
+    }
+
+    return nextGroups
+      .sort((left, right) => right.sortTime - left.sortTime)
+      .slice(0, 4);
+  }, [
+    conversationMessageMatchesQuery.data,
+    conversationQuickLinkById,
+    localMessageActionState,
+    normalizedKeyword,
+  ]);
   const conversationGroupHeaderIds = useMemo(
     () => new Set(conversationMessageGroups.map((item) => item.header.id)),
     [conversationMessageGroups],
@@ -599,7 +605,8 @@ export function DesktopSearchDropdownPanel({
             id: `official-article-${account.recentArticle.id}`,
             title: account.recentArticle.title,
             description:
-              account.recentArticle.summary || `来自 ${account.name} 的最近文章`,
+              account.recentArticle.summary ||
+              `来自 ${account.name} 的最近文章`,
             meta: `公众号文章 · ${account.name}`,
             badge: "公众号文章",
             to: `/official-accounts/articles/${account.recentArticle.id}`,
@@ -671,9 +678,9 @@ export function DesktopSearchDropdownPanel({
     (item: DesktopSearchQuickLink) => {
       onClose?.();
       void navigate({
-        hash: item.hash as never,
+        hash: item.hash ?? undefined,
         to: item.to as never,
-        search: item.search as never,
+        search: (item.search ?? {}) as never,
       });
     },
     [navigate, onClose],
@@ -921,7 +928,9 @@ export function DesktopSearchDropdownPanel({
       }
 
       const worldCharacterSuggestionIds = new Set(
-        worldCharacterMatches.map((item) => `world-character-${item.character.id}`),
+        worldCharacterMatches.map(
+          (item) => `world-character-${item.character.id}`,
+        ),
       );
       if (worldCharacterSuggestionIds.has(activeActionId)) {
         return {
@@ -1066,7 +1075,9 @@ export function DesktopSearchDropdownPanel({
 
         event.preventDefault();
         if (navigationLayer === "input") {
-          activatePanelAction(preferredPanelActionId ?? panelActionItems[0]!.id);
+          activatePanelAction(
+            preferredPanelActionId ?? panelActionItems[0]!.id,
+          );
           return;
         }
 
@@ -1074,7 +1085,9 @@ export function DesktopSearchDropdownPanel({
           panelActionIndex >= 0
             ? (panelActionIndex + 1) % panelActionItems.length
             : 0;
-        activatePanelAction(panelActionItems[nextIndex]?.id ?? panelActionItems[0]!.id);
+        activatePanelAction(
+          panelActionItems[nextIndex]?.id ?? panelActionItems[0]!.id,
+        );
         return;
       }
 
@@ -1124,7 +1137,9 @@ export function DesktopSearchDropdownPanel({
           navigationLayer === "panel" && panelActionIndex >= 0
             ? (panelActionIndex + 1) % panelActionItems.length
             : 0;
-        activatePanelAction(panelActionItems[nextIndex]?.id ?? panelActionItems[0]!.id);
+        activatePanelAction(
+          panelActionItems[nextIndex]?.id ?? panelActionItems[0]!.id,
+        );
         return;
       }
 
@@ -1141,7 +1156,9 @@ export function DesktopSearchDropdownPanel({
             ? (panelActionIndex - 1 + panelActionItems.length) %
               panelActionItems.length
             : panelActionItems.length - 1;
-        activatePanelAction(panelActionItems[nextIndex]?.id ?? panelActionItems[0]!.id);
+        activatePanelAction(
+          panelActionItems[nextIndex]?.id ?? panelActionItems[0]!.id,
+        );
         return;
       }
 
@@ -1153,7 +1170,8 @@ export function DesktopSearchDropdownPanel({
         }
 
         const activeItem =
-          panelActionItems[panelActionIndex >= 0 ? panelActionIndex : 0] ?? null;
+          panelActionItems[panelActionIndex >= 0 ? panelActionIndex : 0] ??
+          null;
         if (activeItem) {
           activeItem.onSelect();
           return;
@@ -1263,7 +1281,8 @@ export function DesktopSearchDropdownPanel({
 
           {!suggestionsLoading && !suggestionsError ? (
             <div className="space-y-3">
-              {conversationMessageGroups.length || conversationOnlyMatches.length ? (
+              {conversationMessageGroups.length ||
+              conversationOnlyMatches.length ? (
                 <SearchLauncherCollectionCard
                   countLabel={`${conversationMessageGroups.length + conversationOnlyMatches.length} 组结果`}
                   highlighted={activeFocusContext.panelId === "chatSuggestions"}
@@ -1505,7 +1524,9 @@ export function DesktopSearchDropdownPanel({
             {recentConversations.length ? (
               <SearchLauncherCollectionCard
                 countLabel={`${recentConversations.length} 个会话`}
-                highlighted={activeFocusContext.panelId === "recentConversations"}
+                highlighted={
+                  activeFocusContext.panelId === "recentConversations"
+                }
                 title="最近聊天"
               >
                 <div className="space-y-2">
@@ -1550,7 +1571,9 @@ export function DesktopSearchDropdownPanel({
             {recentMiniPrograms.length ? (
               <SearchLauncherCollectionCard
                 countLabel={`${recentMiniPrograms.length} 个入口`}
-                highlighted={activeFocusContext.panelId === "recentMiniPrograms"}
+                highlighted={
+                  activeFocusContext.panelId === "recentMiniPrograms"
+                }
                 title="最近使用的小程序"
               >
                 <div className="space-y-1.5">
@@ -1629,7 +1652,8 @@ export function DesktopSearchDropdownPanel({
                   }
                   className={cn(
                     "flex w-full items-center gap-2.5 rounded-[12px] bg-white px-3 py-2.5 text-left text-sm transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
-                    activeActionId === buildSearchLauncherHistoryActionId(item.keyword)
+                    activeActionId ===
+                      buildSearchLauncherHistoryActionId(item.keyword)
                       ? "text-[color:var(--text-primary)] shadow-[0_8px_18px_rgba(15,23,42,0.06)]"
                       : "text-[color:var(--text-secondary)] hover:bg-[rgba(7,193,96,0.04)] hover:text-[color:var(--text-primary)]",
                   )}
@@ -1824,27 +1848,27 @@ function SearchLauncherStatusCard({
       ? "border-[rgba(225,29,72,0.14)] bg-[rgba(225,29,72,0.06)]"
       : status === "empty"
         ? "border-[color:var(--border-faint)] bg-[color:var(--surface-console)]"
-      : status === "recording"
-        ? "border-[rgba(7,193,96,0.18)] bg-[rgba(7,193,96,0.06)]"
-        : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)]";
+        : status === "recording"
+          ? "border-[rgba(7,193,96,0.18)] bg-[rgba(7,193,96,0.06)]"
+          : "border-[color:var(--border-faint)] bg-[color:var(--surface-console)]";
   const badgeClassName =
     status === "error"
       ? "bg-white text-[#be123c]"
       : status === "empty"
         ? "bg-white text-[color:var(--text-muted)]"
-      : status === "recording"
-        ? "bg-white text-[color:var(--brand-primary)]"
-        : "bg-white text-[color:var(--text-muted)]";
+        : status === "recording"
+          ? "bg-white text-[color:var(--brand-primary)]"
+          : "bg-white text-[color:var(--text-muted)]";
   const statusLabel =
     status === "error"
       ? "异常"
       : status === "empty"
         ? "无结果"
-      : status === "recording"
-        ? "录音中"
-        : status === "pending"
-          ? "处理中"
-          : "已完成";
+        : status === "recording"
+          ? "录音中"
+          : status === "pending"
+            ? "处理中"
+            : "已完成";
 
   return (
     <section className={cn("mt-2 rounded-[16px] border p-3.5", toneClassName)}>
@@ -1852,7 +1876,9 @@ function SearchLauncherStatusCard({
         <div className="text-[11px] font-medium text-[color:var(--text-primary)]">
           {title}
         </div>
-        <div className={cn("rounded-full px-2.5 py-1 text-[10px]", badgeClassName)}>
+        <div
+          className={cn("rounded-full px-2.5 py-1 text-[10px]", badgeClassName)}
+        >
           {statusLabel}
         </div>
       </div>
@@ -1866,7 +1892,9 @@ function SearchLauncherStatusCard({
       >
         {description}
       </div>
-      {action ? <div className="mt-3 flex items-center justify-end">{action}</div> : null}
+      {action ? (
+        <div className="mt-3 flex items-center justify-end">{action}</div>
+      ) : null}
     </section>
   );
 }
@@ -1935,7 +1963,9 @@ function SearchLauncherConversationGroupCard({
         onMouseEnter={() => onSelectHeader(group.header)}
         className={cn(
           "flex w-full items-start gap-3 px-3.5 py-3 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
-          headerActive ? "bg-[rgba(7,193,96,0.06)]" : "hover:bg-[rgba(7,193,96,0.04)]",
+          headerActive
+            ? "bg-[rgba(7,193,96,0.06)]"
+            : "hover:bg-[rgba(7,193,96,0.04)]",
         )}
       >
         <AvatarChip
@@ -1977,7 +2007,9 @@ function SearchLauncherConversationGroupCard({
                 onMouseEnter={() => onSelectMessage(item)}
                 className={cn(
                   "flex w-full items-start gap-3 rounded-[12px] px-3 py-2.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
-                  active ? "bg-[rgba(7,193,96,0.06)]" : "bg-white hover:bg-[rgba(7,193,96,0.04)]",
+                  active
+                    ? "bg-[rgba(7,193,96,0.06)]"
+                    : "bg-white hover:bg-[rgba(7,193,96,0.04)]",
                 )}
               >
                 <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[rgba(7,193,96,0.10)] text-[#15803d]">
@@ -2092,7 +2124,9 @@ function SearchLauncherOfficialGroupCard({
         onMouseEnter={() => onSelectHeader(group.header)}
         className={cn(
           "flex w-full items-start gap-3 px-3.5 py-3 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
-          headerActive ? "bg-[rgba(7,193,96,0.06)]" : "hover:bg-[rgba(7,193,96,0.04)]",
+          headerActive
+            ? "bg-[rgba(7,193,96,0.06)]"
+            : "hover:bg-[rgba(7,193,96,0.04)]",
         )}
       >
         <AvatarChip
@@ -2129,7 +2163,9 @@ function SearchLauncherOfficialGroupCard({
             onMouseEnter={() => onSelectArticle(group.article!)}
             className={cn(
               "flex w-full items-start gap-3 rounded-[12px] px-3 py-2.5 text-left transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]",
-              articleActive ? "bg-[rgba(7,193,96,0.06)]" : "bg-white hover:bg-[rgba(7,193,96,0.04)]",
+              articleActive
+                ? "bg-[rgba(7,193,96,0.06)]"
+                : "bg-white hover:bg-[rgba(7,193,96,0.04)]",
             )}
           >
             <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-[rgba(7,193,96,0.10)] text-[#1d6a37]">
@@ -2189,9 +2225,7 @@ function SearchLauncherCharacterRow({
       ? "bg-[rgba(7,193,96,0.08)] text-[color:var(--brand-primary)]"
       : "bg-[rgba(180,132,23,0.10)] text-[#9a6b12]";
   const metaTextClassName =
-    variant === "contact"
-      ? "text-[color:var(--text-muted)]"
-      : "text-[#8a6a24]";
+    variant === "contact" ? "text-[color:var(--text-muted)]" : "text-[#8a6a24]";
   const iconClassName =
     variant === "contact"
       ? "bg-[rgba(7,193,96,0.10)] text-[#15803d]"
@@ -2232,7 +2266,11 @@ function SearchLauncherCharacterRow({
           iconClassName,
         )}
       >
-        {variant === "contact" ? <UsersRound size={15} /> : <Sparkles size={15} />}
+        {variant === "contact" ? (
+          <UsersRound size={15} />
+        ) : (
+          <Sparkles size={15} />
+        )}
       </div>
     </button>
   );
@@ -2312,7 +2350,11 @@ function SearchLauncherFeatureRow({
           iconClassName,
         )}
       >
-        {variant === "favorites" ? <Bookmark size={15} /> : <Blocks size={15} />}
+        {variant === "favorites" ? (
+          <Bookmark size={15} />
+        ) : (
+          <Blocks size={15} />
+        )}
       </div>
     </button>
   );

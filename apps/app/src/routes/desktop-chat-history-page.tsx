@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import {
   clearConversationHistory,
   clearGroupMessages,
@@ -39,6 +40,7 @@ const HISTORY_LOAD_STEP = 80;
 
 export function DesktopChatHistoryPage() {
   const isDesktopLayout = useDesktopLayout();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
@@ -151,6 +153,29 @@ export function DesktopChatHistoryPage() {
   );
   const mayHaveEarlierMessages =
     historyRows.length > 0 && historyRows.length >= historyLimit;
+
+  const navigateToHistoryMessage = (
+    conversation: ConversationListItem,
+    messageId: string,
+  ) => {
+    const messageHash = `chat-message-${messageId}`;
+    if (isPersistedGroupConversation(conversation)) {
+      void navigate({
+        to: "/group/$groupId",
+        params: { groupId: conversation.id },
+        search: {},
+        hash: messageHash,
+      });
+      return;
+    }
+
+    void navigate({
+      to: "/chat/$conversationId",
+      params: { conversationId: conversation.id },
+      search: {},
+      hash: messageHash,
+    });
+  };
 
   useEffect(() => {
     setHistoryLimit(INITIAL_HISTORY_LIMIT);
@@ -378,6 +403,18 @@ export function DesktopChatHistoryPage() {
                   </div>
                   <div className="mt-3 text-sm leading-7 text-[color:var(--text-secondary)]">
                     {item.preview}
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() =>
+                        navigateToHistoryMessage(selectedConversation, item.id)
+                      }
+                      className="h-8 rounded-[10px] border-[color:var(--border-faint)] bg-[color:var(--surface-console)] px-3 text-[12px] shadow-none hover:bg-white"
+                    >
+                      定位到原消息
+                    </Button>
                   </div>
                 </div>
               ))
