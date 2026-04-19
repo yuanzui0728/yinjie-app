@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft, Check, Search, X } from "lucide-react";
@@ -9,7 +9,6 @@ import {
 } from "@yinjie/contracts";
 import { AppPage, Button, InlineNotice, cn } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
-import { DesktopCreateGroupDialog } from "../features/desktop/chat/desktop-create-group-dialog";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import {
   buildContactSections,
@@ -21,6 +20,11 @@ import {
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { parseCreateGroupRouteHash } from "../lib/create-group-route-state";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
+
+const DesktopCreateGroupDialog = lazy(async () => {
+  const mod = await import("../features/desktop/chat/desktop-create-group-dialog");
+  return { default: mod.DesktopCreateGroupDialog };
+});
 
 export function CreateGroupPage() {
   const navigate = useNavigate();
@@ -201,19 +205,21 @@ export function CreateGroupPage() {
   if (isDesktopLayout) {
     return (
       <div className="relative flex h-full min-h-0 bg-[color:var(--bg-app)]">
-        <DesktopCreateGroupDialog
-          open
-          conversationId={routeState.conversationId}
-          seedMemberIds={routeState.seedMemberIds}
-          onClose={handleBack}
-          onCreated={(groupId) => {
-            void navigate({
-              to: "/group/$groupId",
-              params: { groupId },
-              replace: true,
-            });
-          }}
-        />
+        <Suspense fallback={null}>
+          <DesktopCreateGroupDialog
+            open
+            conversationId={routeState.conversationId}
+            seedMemberIds={routeState.seedMemberIds}
+            onClose={handleBack}
+            onCreated={(groupId) => {
+              void navigate({
+                to: "/group/$groupId",
+                params: { groupId },
+                replace: true,
+              });
+            }}
+          />
+        </Suspense>
       </div>
     );
   }

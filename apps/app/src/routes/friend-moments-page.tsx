@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useState,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   useNavigate,
@@ -25,7 +32,6 @@ import {
   buildDesktopFriendMomentsRouteHash,
   parseDesktopFriendMomentsRouteState,
 } from "../features/desktop/moments/desktop-friend-moments-route-state";
-import { DesktopFriendMomentsWorkspace } from "../features/desktop/moments/desktop-friend-moments-workspace";
 import { getFriendDisplayName } from "../features/contacts/contact-utils";
 import { getMomentSummaryText } from "../features/moments/moment-content";
 import {
@@ -37,6 +43,13 @@ import { formatTimestamp } from "../lib/format";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../store/world-owner-store";
+
+const DesktopFriendMomentsWorkspace = lazy(async () => {
+  const mod = await import(
+    "../features/desktop/moments/desktop-friend-moments-workspace"
+  );
+  return { default: mod.DesktopFriendMomentsWorkspace };
+});
 
 export function FriendMomentsPage() {
   const { characterId } = useParams({
@@ -55,6 +68,9 @@ export function FriendMomentsPage() {
   const baseUrl = runtimeConfig.apiBaseUrl;
   const nativeDesktopFavorites = runtimeConfig.appPlatform === "desktop";
   const composeDraft = useMomentComposeDraft();
+  const resetComposeDraft = useEffectEvent(() => {
+    composeDraft.reset();
+  });
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>(
     {},
   );
@@ -168,11 +184,11 @@ export function FriendMomentsPage() {
   );
 
   useEffect(() => {
-    composeDraft.reset();
+    resetComposeDraft();
     setCommentDrafts({});
     setShowCompose(false);
     setNotice("");
-  }, [baseUrl, characterId]);
+  }, [baseUrl, characterId, resetComposeDraft]);
 
   useEffect(() => {
     setFavoriteSourceIds(readDesktopFavorites().map((item) => item.sourceId));
@@ -369,7 +385,8 @@ export function FriendMomentsPage() {
   }
 
   return (
-    <DesktopFriendMomentsWorkspace
+    <Suspense fallback={null}>
+      <DesktopFriendMomentsWorkspace
       character={character}
       commentDrafts={commentDrafts}
       commentErrorMessage={
@@ -486,6 +503,7 @@ export function FriendMomentsPage() {
       onVideoFileSelected={(file) => {
         void handleVideoFileSelected(file);
       }}
-    />
+      />
+    </Suspense>
   );
 }

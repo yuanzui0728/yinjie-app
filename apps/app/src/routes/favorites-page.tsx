@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
@@ -19,7 +19,6 @@ import {
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
 import { DesktopUtilityShell } from "../features/desktop/desktop-utility-shell";
-import { DesktopNotesWorkspace } from "../features/desktop/chat/desktop-notes-workspace";
 import {
   buildDesktopNoteWindowRouteHash,
   parseDesktopNoteEditorRouteHash,
@@ -36,6 +35,11 @@ import {
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { formatTimestamp } from "../lib/format";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
+
+const DesktopNotesWorkspace = lazy(async () => {
+  const mod = await import("../features/desktop/chat/desktop-notes-workspace");
+  return { default: mod.DesktopNotesWorkspace };
+});
 
 const categoryLabels: Array<{
   id: "all" | DesktopFavoriteCategory;
@@ -497,22 +501,24 @@ export function FavoritesPage() {
       }
     >
       {noteEditorRouteState ? (
-        <DesktopNotesWorkspace
-          selectedNoteId={noteEditorRouteState.noteId}
-          draftId={noteEditorRouteState.draftId}
-          returnTo={noteEditorRouteState.returnTo || "/tabs/favorites"}
-          onSavedNote={(noteId, draftId) => {
-            void navigate({
-              to: "/tabs/favorites",
-              hash: buildDesktopNoteWindowRouteHash({
-                draftId,
-                noteId,
-                returnTo: noteEditorRouteState.returnTo,
-              }),
-              replace: true,
-            });
-          }}
-        />
+        <Suspense fallback={null}>
+          <DesktopNotesWorkspace
+            selectedNoteId={noteEditorRouteState.noteId}
+            draftId={noteEditorRouteState.draftId}
+            returnTo={noteEditorRouteState.returnTo || "/tabs/favorites"}
+            onSavedNote={(noteId, draftId) => {
+              void navigate({
+                to: "/tabs/favorites",
+                hash: buildDesktopNoteWindowRouteHash({
+                  draftId,
+                  noteId,
+                  returnTo: noteEditorRouteState.returnTo,
+                }),
+                replace: true,
+              });
+            }}
+          />
+        </Suspense>
       ) : (
         <div className="p-4">
           {notice ? <InlineNotice tone="success">{notice}</InlineNotice> : null}

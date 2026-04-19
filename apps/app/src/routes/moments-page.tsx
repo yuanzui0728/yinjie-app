@@ -1,4 +1,11 @@
-import { useEffect, useState, type ReactNode } from "react";
+import {
+  Suspense,
+  lazy,
+  useEffect,
+  useEffectEvent,
+  useState,
+  type ReactNode,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft, Copy, PenSquare, Share2 } from "lucide-react";
@@ -29,7 +36,6 @@ import {
   buildDesktopMomentsRouteHash,
   parseDesktopMomentsRouteState,
 } from "../features/desktop/moments/desktop-moments-route-state";
-import { DesktopMomentsWorkspace } from "../features/desktop/moments/desktop-moments-workspace";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { consumeMomentPublishFlash } from "../features/moments/moment-publish-flash";
@@ -46,6 +52,11 @@ import {
 import { isNativeMobileShareSurface } from "../runtime/mobile-share-surface";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { useWorldOwnerStore } from "../store/world-owner-store";
+
+const DesktopMomentsWorkspace = lazy(async () => {
+  const mod = await import("../features/desktop/moments/desktop-moments-workspace");
+  return { default: mod.DesktopMomentsWorkspace };
+});
 
 export function MomentsPage() {
   const isDesktopLayout = useDesktopLayout();
@@ -67,6 +78,9 @@ export function MomentsPage() {
     isDesktopLayout,
   });
   const composeDraft = useMomentComposeDraft();
+  const resetComposeDraft = useEffectEvent(() => {
+    composeDraft.reset();
+  });
   const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>(
     {},
   );
@@ -159,7 +173,7 @@ export function MomentsPage() {
   const isDiscoverSubPage = pathname === "/discover/moments";
 
   useEffect(() => {
-    composeDraft.reset();
+    resetComposeDraft();
     setCommentDrafts({});
     setShowCompose(false);
     const flashNotice = consumeMomentPublishFlash();
@@ -170,7 +184,7 @@ export function MomentsPage() {
     }
 
     setNotice("");
-  }, [baseUrl]);
+  }, [baseUrl, resetComposeDraft]);
 
   useEffect(() => {
     setFavoriteSourceIds(readDesktopFavorites().map((item) => item.sourceId));
@@ -366,7 +380,8 @@ export function MomentsPage() {
     }
 
     return (
-      <DesktopMomentsWorkspace
+      <Suspense fallback={null}>
+        <DesktopMomentsWorkspace
         commentDrafts={commentDrafts}
         commentErrorMessage={
           commentMutation.isError && commentMutation.error instanceof Error
@@ -481,7 +496,8 @@ export function MomentsPage() {
         onVideoFileSelected={(file) => {
           void handleVideoFileSelected(file);
         }}
-      />
+        />
+      </Suspense>
     );
   }
 
