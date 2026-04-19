@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFavoriteNote,
@@ -435,12 +442,20 @@ export function DesktopNotesWorkspace({
     document.title = title;
   }, [isDirty, noteTitle]);
 
+  const handleSaveShortcut = useEffectEvent(() => {
+    void handleSave();
+  });
+
+  const handleRequestCloseShortcut = useEffectEvent(() => {
+    requestClose();
+  });
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const withCommand = event.metaKey || event.ctrlKey;
       if (withCommand && event.key.toLowerCase() === "s") {
         event.preventDefault();
-        void handleSave();
+        handleSaveShortcut();
         return;
       }
 
@@ -457,7 +472,7 @@ export function DesktopNotesWorkspace({
 
       if (standaloneWindow && !deleteDialogOpen && !closeDialogOpen) {
         event.preventDefault();
-        requestClose();
+        handleRequestCloseShortcut();
       }
     };
 
@@ -466,7 +481,8 @@ export function DesktopNotesWorkspace({
   }, [
     closeDialogOpen,
     deleteDialogOpen,
-    requestClose,
+    handleRequestCloseShortcut,
+    handleSaveShortcut,
     standaloneWindow,
     tagEditorOpen,
   ]);

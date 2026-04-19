@@ -55,14 +55,21 @@ export function DesktopSubscriptionWorkspace({
     },
   });
 
-  const feedItems = inboxQuery.data?.feedItems ?? [];
+  const feedItems = useMemo(
+    () => inboxQuery.data?.feedItems ?? [],
+    [inboxQuery.data?.feedItems],
+  );
+  const groups = useMemo(
+    () => inboxQuery.data?.groups ?? [],
+    [inboxQuery.data?.groups],
+  );
   const activeDelivery = useMemo(
     () =>
       feedItems.find((delivery) => delivery.articleId === activeArticleId) ?? null,
     [activeArticleId, feedItems],
   );
   const unreadCount = inboxQuery.data?.summary?.unreadCount ?? 0;
-  const groupCount = inboxQuery.data?.groups.length ?? 0;
+  const groupCount = groups.length;
   const lastDeliveredLabel = inboxQuery.data?.summary?.lastDeliveredAt
     ? formatConversationTimestamp(inboxQuery.data.summary.lastDeliveredAt)
     : "暂无更新";

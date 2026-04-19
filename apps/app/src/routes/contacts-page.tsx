@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useDeferredValue,
   useEffect,
   useMemo,
@@ -451,11 +452,11 @@ export function ContactsPage() {
   );
   const desktopDefaultFriendItem = desktopFriendSections[0]?.items[0] ?? null;
 
-  function commitDesktopRouteState(
+  const commitDesktopRouteState = useCallback((
     nextSelection: DesktopSelection,
     nextShowWorldCharacters: boolean,
     replace = false,
-  ) {
+  ) => {
     const nextHash = buildDesktopContactsRouteHash({
       pane: nextSelection?.kind ?? "friend",
       characterId:
@@ -485,7 +486,7 @@ export function ContactsPage() {
       hash: nextHash,
       replace,
     });
-  }
+  }, [hash, navigate]);
 
   useEffect(() => {
     startChatResetRef.current = startChatMutation.reset;
@@ -768,6 +769,7 @@ export function ContactsPage() {
     setDesktopSelection(nextSelection);
     commitDesktopRouteState(nextSelection, showWorldCharacters, true);
   }, [
+    commitDesktopRouteState,
     desktopDefaultFriendItem,
     desktopSelection,
     isDesktopLayout,
@@ -828,8 +830,10 @@ export function ContactsPage() {
     setDesktopSelection(null);
     commitDesktopRouteState(null, showWorldCharacters, true);
   }, [
+    commitDesktopRouteState,
     desktopDefaultFriendItem,
     desktopSelection,
+    filteredFriendItems,
     filteredWorldCharacterItems,
     isDesktopLayout,
     showWorldCharacters,

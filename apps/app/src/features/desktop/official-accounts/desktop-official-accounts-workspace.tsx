@@ -155,6 +155,14 @@ export function DesktopOfficialAccountsWorkspace({
     setDisplayMode("accounts");
   }, [selectedAccountId, selectedMode]);
 
+  useEffect(() => {
+    if (!selectedAccountId || selectedArticleId) {
+      return;
+    }
+
+    setFocusedArticleId(null);
+  }, [selectedAccountId, selectedArticleId]);
+
   function handleDisplayModeChange(mode: DesktopOfficialDisplayMode) {
     setDisplayMode(mode);
     onModeChange?.(mode);
@@ -169,7 +177,10 @@ export function DesktopOfficialAccountsWorkspace({
     queryFn: () => getOfficialAccountSubscriptionInbox(baseUrl),
   });
 
-  const allAccounts = accountsQuery.data ?? [];
+  const allAccounts = useMemo(
+    () => accountsQuery.data ?? [],
+    [accountsQuery.data],
+  );
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
   const filteredAccounts = useMemo(() => {
     return allAccounts.filter((account) => {
@@ -201,11 +212,20 @@ export function DesktopOfficialAccountsWorkspace({
     [allAccounts],
   );
 
+  const subscriptionFeedItems = useMemo(
+    () => subscriptionInboxQuery.data?.feedItems ?? [],
+    [subscriptionInboxQuery.data?.feedItems],
+  );
+  const subscriptionGroups = useMemo(
+    () => subscriptionInboxQuery.data?.groups ?? [],
+    [subscriptionInboxQuery.data?.groups],
+  );
+
   const feedItems = useMemo<DesktopOfficialFeedItem[]>(() => {
     const items: DesktopOfficialFeedItem[] = [];
     const seenArticleIds = new Set<string>();
 
-    for (const delivery of subscriptionInboxQuery.data?.feedItems ?? []) {
+    for (const delivery of subscriptionFeedItems) {
       seenArticleIds.add(delivery.article.id);
       items.push({
         id: delivery.id,
@@ -242,7 +262,7 @@ export function DesktopOfficialAccountsWorkspace({
       ).getTime();
       return rightTimestamp - leftTimestamp;
     });
-  }, [followingAccounts, subscriptionInboxQuery.data?.feedItems]);
+  }, [followingAccounts, subscriptionFeedItems]);
 
   const filteredFeedItems = useMemo(() => {
     if (!normalizedSearchTerm) {
@@ -261,7 +281,7 @@ export function DesktopOfficialAccountsWorkspace({
 
   const frequentAccounts = useMemo(() => {
     const unreadAccountIds = new Set(
-      (subscriptionInboxQuery.data?.groups ?? [])
+      subscriptionGroups
         .filter((group) => group.unreadCount > 0)
         .map((group) => group.account.id),
     );
@@ -291,7 +311,7 @@ export function DesktopOfficialAccountsWorkspace({
   }, [
     followingAccounts,
     normalizedSearchTerm,
-    subscriptionInboxQuery.data?.groups,
+    subscriptionGroups,
   ]);
 
   const pinnedArticleQuery = useQuery({
@@ -348,6 +368,41 @@ export function DesktopOfficialAccountsWorkspace({
   }, [effectiveAccountId]);
 
   const account = accountDetailQuery.data;
+
+  useEffect(() => {
+    if (displayMode !== "accounts" || selectedArticleId || !account) {
+      return;
+    }
+
+    if (!focusedArticleId) {
+      return;
+    }
+
+    if (account.articles.some((article) => article.id === focusedArticleId)) {
+      return;
+    }
+
+    setFocusedArticleId(account.articles[0]?.id ?? null);
+  }, [account, displayMode, focusedArticleId, selectedArticleId]);
+
+  useEffect(() => {
+    if (displayMode !== "feed" || selectedArticleId) {
+      return;
+    }
+
+    if (!focusedArticleId) {
+      return;
+    }
+
+    if (
+      filteredFeedItems.some((item) => item.article.id === focusedArticleId)
+    ) {
+      return;
+    }
+
+    setFocusedArticleId(filteredFeedItems[0]?.article.id ?? null);
+  }, [displayMode, filteredFeedItems, focusedArticleId, selectedArticleId]);
+
   const accountFavoriteSourceId = account ? `official-${account.id}` : null;
   const activeAccountArticleId =
     focusedArticleId ?? selectedArticleId ?? account?.articles[0]?.id ?? null;
@@ -415,6 +470,7 @@ export function DesktopOfficialAccountsWorkspace({
   }
 
   function handleOpenAccount(accountId: string) {
+    setFocusedArticleId(null);
     handleDisplayModeChange("accounts");
 
     if (onOpenAccount) {

@@ -167,20 +167,23 @@ export function useDesktopSearchLauncher({
     enabled: true,
     mode: "dictation",
   });
+  const speechCanCommit = speech.canCommit;
+  const speechCancel = speech.cancel;
+  const speechCommitToInput = speech.commitToInput;
+  const speechDisplayText = speech.displayText;
+  const speechError = speech.error;
+  const speechStart = speech.start;
+  const speechStatus = speech.status;
+  const speechStop = speech.stop;
+  const speechSupported = speech.supported;
 
   useEffect(() => {
-    if (speech.status !== "ready" || !speech.canCommit) {
+    if (speechStatus !== "ready" || !speechCanCommit) {
       return;
     }
 
-    onKeywordChange(speech.commitToInput(keyword));
-  }, [
-    keyword,
-    onKeywordChange,
-    speech.canCommit,
-    speech.commitToInput,
-    speech.status,
-  ]);
+    onKeywordChange(speechCommitToInput(keyword));
+  }, [keyword, onKeywordChange, speechCanCommit, speechCommitToInput, speechStatus]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -271,23 +274,23 @@ export function useDesktopSearchLauncher({
   }
 
   const speechBusy =
-    speech.status === "requesting-permission" || speech.status === "processing";
-  const speechListening = speech.status === "listening";
+    speechStatus === "requesting-permission" || speechStatus === "processing";
+  const speechListening = speechStatus === "listening";
   const speechButtonDisabled = speechBusy && !speechListening;
 
   function handleSpeechButtonClick() {
     setIsOpen(true);
 
     if (speechListening) {
-      speech.stop();
+      speechStop();
       return;
     }
 
-    if (speech.status !== "idle") {
-      speech.cancel();
+    if (speechStatus !== "idle") {
+      speechCancel();
     }
 
-    void speech.start();
+    void speechStart();
   }
 
   return {
@@ -299,11 +302,11 @@ export function useDesktopSearchLauncher({
     openSearch,
     setIsOpen,
     speechButtonDisabled,
-    speechDisplayText: speech.displayText,
-    speechError: speech.error,
+    speechDisplayText,
+    speechError,
     speechListening,
-    speechStatus: speech.status,
-    speechSupported: speech.supported,
+    speechStatus,
+    speechSupported,
   };
 }
 

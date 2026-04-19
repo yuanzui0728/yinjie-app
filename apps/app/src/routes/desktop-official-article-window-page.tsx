@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft, ExternalLink, X } from "lucide-react";
@@ -43,6 +43,7 @@ export function DesktopOfficialArticleWindowPage() {
     readDesktopFavorites().map((item) => item.sourceId),
   );
   const [notice, setNotice] = useState<string | null>(null);
+  const lastMarkedArticleIdRef = useRef<string | null>(null);
 
   const articleQuery = useQuery({
     queryKey: ["app-official-account-article", baseUrl, routeState?.articleId],
@@ -83,12 +84,13 @@ export function DesktopOfficialArticleWindowPage() {
   const fallbackPath = routeState?.returnTo ?? "/tabs/chat";
 
   useEffect(() => {
-    if (!article?.id || markReadMutation.isPending) {
+    if (!article?.id || lastMarkedArticleIdRef.current === article.id) {
       return;
     }
 
+    lastMarkedArticleIdRef.current = article.id;
     markReadMutation.mutate(article.id);
-  }, [article?.id]);
+  }, [article?.id, markReadMutation]);
 
   useEffect(() => {
     if (!notice) {
