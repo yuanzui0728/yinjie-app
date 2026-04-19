@@ -26,7 +26,7 @@ import {
   parseDesktopChatImageViewerRouteHash,
   readDesktopChatImageViewerSession,
   type DesktopChatImageViewerSessionItem,
-} from "../features/desktop/chat/desktop-chat-image-viewer-route-state";
+} from "../features/chat/chat-image-viewer-route-state";
 import {
   parseDesktopChatRouteHash,
 } from "../features/desktop/chat/desktop-chat-route-state";

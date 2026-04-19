@@ -77,7 +77,7 @@ import type {
   DesktopMessageForwardMode,
   DesktopMessageForwardPreviewItem,
 } from "../features/desktop/chat/desktop-message-forward-dialog";
-import type { DesktopChatImageViewerSessionItem } from "../features/desktop/chat/desktop-chat-image-viewer-route-state";
+import type { DesktopChatImageViewerSessionItem } from "../features/chat/chat-image-viewer-route-state";
 import {
   hydrateDesktopFavoritesFromNative,
   mergeDesktopFavoriteRecords,
@@ -233,7 +233,7 @@ async function openDesktopChatImageViewerWindowOnDemand(input: {
   autoPrint?: boolean;
 }) {
   const { openDesktopChatImageViewerWindow } = await import(
-    "../features/desktop/chat/desktop-chat-image-viewer-route-state"
+    "../features/chat/chat-image-viewer-route-state"
   );
   return openDesktopChatImageViewerWindow(input);
 }
