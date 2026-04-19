@@ -55,7 +55,10 @@ export function DesktopSubscriptionWorkspace({
     },
   });
 
-  const feedItems = inboxQuery.data?.feedItems ?? [];
+  const feedItems = useMemo(
+    () => inboxQuery.data?.feedItems ?? [],
+    [inboxQuery.data?.feedItems],
+  );
   const activeDelivery = useMemo(
     () =>
       feedItems.find((delivery) => delivery.articleId === activeArticleId) ?? null,
@@ -142,12 +145,6 @@ export function DesktopSubscriptionWorkspace({
       ]);
     },
   });
-  const hasReaderSurface =
-    Boolean(activeArticleId) ||
-    articleQuery.isLoading ||
-    articleQuery.isError ||
-    markArticleReadMutation.isError;
-
   useEffect(() => {
     if (
       !articleQuery.data?.id ||

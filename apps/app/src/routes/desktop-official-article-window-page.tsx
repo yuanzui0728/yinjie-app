@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft, ExternalLink, X } from "lucide-react";
@@ -40,6 +40,7 @@ export function DesktopOfficialArticleWindowPage() {
     () => parseDesktopOfficialArticleWindowRouteHash(hash),
     [hash],
   );
+  const lastMarkedArticleIdRef = useRef<string | null>(null);
   const [favoriteSourceIds, setFavoriteSourceIds] = useState<string[]>(() =>
     readDesktopFavorites().map((item) => item.sourceId),
   );
@@ -80,24 +81,21 @@ export function DesktopOfficialArticleWindowPage() {
   });
 
   const article = articleQuery.data;
-  const articlePath = article
-    ? buildDesktopOfficialArticleWindowPath({
-        articleId: article.id,
-        accountId: article.account.id,
-        title: article.title,
-        returnTo: routeState?.returnTo,
-      })
-    : null;
   const articleSourceId = article ? `official-article-${article.id}` : null;
   const fallbackPath = routeState?.returnTo ?? "/tabs/chat";
 
   useEffect(() => {
-    if (!article?.id || markReadMutation.isPending) {
+    if (
+      !article?.id ||
+      markReadMutation.isPending ||
+      lastMarkedArticleIdRef.current === article.id
+    ) {
       return;
     }
 
+    lastMarkedArticleIdRef.current = article.id;
     markReadMutation.mutate(article.id);
-  }, [article?.id]);
+  }, [article?.id, markReadMutation]);
 
   useEffect(() => {
     if (!notice) {
