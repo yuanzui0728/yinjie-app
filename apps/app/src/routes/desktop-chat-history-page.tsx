@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   clearConversationHistory,
   clearGroupMessages,
@@ -15,6 +15,10 @@ import { Button, ErrorBlock, InlineNotice, LoadingBlock, cn } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
 import { GroupAvatarChip } from "../components/group-avatar-chip";
+import {
+  buildDesktopChatHistoryRouteHash,
+  parseDesktopChatHistoryRouteState,
+} from "../features/desktop/chat/desktop-chat-history-route-state";
 import {
   filterSearchableChatMessages,
   useLocalChatMessageActionState,
@@ -44,11 +48,13 @@ export function DesktopChatHistoryPage() {
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
+  const hash = useRouterState({ select: (state) => state.location.hash });
+  const routeState = parseDesktopChatHistoryRouteState(hash);
   const localMessageActionState = useLocalChatMessageActionState();
   const { reminders } = useMessageReminders();
   const [selectedConversationId, setSelectedConversationId] = useState<
     string | null
-  >(null);
+  >(routeState.conversationId ?? null);
   const [notice, setNotice] = useState<string | null>(null);
   const [historyLimit, setHistoryLimit] = useState(INITIAL_HISTORY_LIMIT);
 
@@ -63,8 +69,28 @@ export function DesktopChatHistoryPage() {
   );
 
   useEffect(() => {
+    if (routeState.conversationId === selectedConversationId) {
+      return;
+    }
+
+    setSelectedConversationId(routeState.conversationId ?? null);
+  }, [routeState.conversationId, selectedConversationId]);
+
+  useEffect(() => {
     if (!conversations.length) {
-      setSelectedConversationId(null);
+      if (selectedConversationId !== null) {
+        setSelectedConversationId(null);
+      }
+      return;
+    }
+
+    if (
+      routeState.conversationId &&
+      conversations.some((item) => item.id === routeState.conversationId)
+    ) {
+      if (selectedConversationId !== routeState.conversationId) {
+        setSelectedConversationId(routeState.conversationId);
+      }
       return;
     }
 
@@ -76,7 +102,22 @@ export function DesktopChatHistoryPage() {
     }
 
     setSelectedConversationId(conversations[0].id);
-  }, [conversations, selectedConversationId]);
+  }, [conversations, routeState.conversationId, selectedConversationId]);
+
+  useEffect(() => {
+    const nextHash = buildDesktopChatHistoryRouteHash(selectedConversationId);
+    const normalizedHash = hash.startsWith("#") ? hash.slice(1) : hash;
+
+    if (normalizedHash === (nextHash ?? "")) {
+      return;
+    }
+
+    void navigate({
+      to: "/desktop/chat-history",
+      hash: nextHash,
+      replace: true,
+    });
+  }, [hash, navigate, selectedConversationId]);
 
   const selectedConversation =
     conversations.find((item) => item.id === selectedConversationId) ?? null;
@@ -107,7 +148,23 @@ export function DesktopChatHistoryPage() {
       });
     },
     enabled: Boolean(selectedConversation),
-    placeholderData: (previousData) => previousData ?? [],
+    placeholderData: (previousData, previousQuery) => {
+      const previousConversationId = previousQuery?.queryKey[2];
+      const previousConversationType = previousQuery?.queryKey[3];
+      const currentConversationId = selectedConversation?.id;
+      const currentConversationType = selectedConversation
+        ? getConversationThreadType(selectedConversation)
+        : undefined;
+
+      if (
+        previousConversationId !== currentConversationId ||
+        previousConversationType !== currentConversationType
+      ) {
+        return [];
+      }
+
+      return previousData ?? [];
+    },
   });
 
   const clearMutation = useMutation({
