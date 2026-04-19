@@ -8,12 +8,12 @@ import {
 } from "@yinjie/contracts";
 import { Button, InlineNotice, cn } from "@yinjie/ui";
 import { OfficialArticleViewer } from "../components/official-article-viewer";
-import { buildOfficialArticleFavoriteRecord } from "../features/desktop/favorites/official-account-favorite-records";
+import { buildOfficialArticleFavoriteRecord } from "../features/favorites/official-account-favorite-records";
 import {
   readDesktopFavorites,
   removeDesktopFavorite,
   upsertDesktopFavorite,
-} from "../features/desktop/favorites/desktop-favorites-storage";
+} from "../features/favorites/favorites-storage";
 import {
   buildDesktopOfficialArticleWindowPath,
   buildDesktopOfficialArticleWindowRouteHash,

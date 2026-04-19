@@ -52,7 +52,7 @@ import { TabPageTopBar } from "../components/tab-page-top-bar";
 import {
   removeDesktopFavorite,
   upsertDesktopFavorite,
-} from "../features/desktop/favorites/desktop-favorites-storage";
+} from "../features/favorites/favorites-storage";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { formatTimestamp } from "../lib/format";
 import { navigateBackOrFallback } from "../lib/history-back";

@@ -30,7 +30,7 @@ import {
   mergeDesktopFavoriteRecords,
   readDesktopFavorites,
   type DesktopFavoriteRecord,
-} from "../features/desktop/favorites/desktop-favorites-storage";
+} from "../features/favorites/favorites-storage";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import { AvatarChip } from "./avatar-chip";
 

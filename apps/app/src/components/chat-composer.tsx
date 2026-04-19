@@ -50,7 +50,7 @@ import {
   mergeDesktopFavoriteRecords,
   readDesktopFavorites,
   type DesktopFavoriteRecord,
-} from "../features/desktop/favorites/desktop-favorites-storage";
+} from "../features/favorites/favorites-storage";
 import {
   hydrateRecentStickersFromNative,
   loadRecentStickers,

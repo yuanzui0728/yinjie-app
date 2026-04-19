@@ -43,7 +43,7 @@ import {
   readDesktopFavorites,
   removeDesktopFavorite,
   upsertDesktopFavorite,
-} from "../features/desktop/favorites/desktop-favorites-storage";
+} from "../features/favorites/favorites-storage";
 import {
   filterSearchableChatMessages,
   useLocalChatMessageActionState,

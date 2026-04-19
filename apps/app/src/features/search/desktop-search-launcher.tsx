@@ -65,9 +65,9 @@ import {
 import { buildSearchPreview, renderHighlightedText } from "./search-utils";
 import type { SearchHistoryItem } from "./search-types";
 import {
-  type DesktopSearchQuickLink,
-  useDesktopSearchQuickLinks,
-} from "./desktop-search-quick-links";
+  type SearchQuickLink as DesktopSearchQuickLink,
+  useSearchQuickLinks,
+} from "./search-quick-links";
 
 type UseDesktopSearchLauncherOptions = {
   keyword: string;
@@ -331,7 +331,7 @@ export function DesktopSearchDropdownPanel({
     miniProgramMatches,
     recentFavorites,
     recentMiniPrograms,
-  } = useDesktopSearchQuickLinks(trimmedKeyword);
+  } = useSearchQuickLinks(trimmedKeyword);
 
   const friendsQuery = useQuery({
     queryKey: ["app-friends", baseUrl],

@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { AvatarChip } from "../../components/avatar-chip";
 import { cn } from "@yinjie/ui";
-import { type DesktopSearchQuickLink } from "./desktop-search-quick-links";
+import { type SearchQuickLink as DesktopSearchQuickLink } from "./search-quick-links";
 import { renderHighlightedText } from "./search-utils";
 import {
   searchCategoryLabels,

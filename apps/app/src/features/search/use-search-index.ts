@@ -38,7 +38,7 @@ import {
   type SearchOfficialAccountGroup,
   type SearchResultItem,
 } from "./search-types";
-import { useDesktopSearchQuickLinks } from "./desktop-search-quick-links";
+import { useSearchQuickLinks } from "./search-quick-links";
 import {
   buildSearchMatchCounts,
   buildSearchPreview,
@@ -74,7 +74,7 @@ export function useSearchIndex(
     miniProgramSearchResults,
     recentFavorites,
     recentMiniPrograms,
-  } = useDesktopSearchQuickLinks(deferredSearchText, isDesktopLayout);
+  } = useSearchQuickLinks(deferredSearchText, isDesktopLayout);
 
   const conversationsQuery = useQuery({
     queryKey: ["app-conversations", baseUrl],
