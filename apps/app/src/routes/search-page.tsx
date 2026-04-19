@@ -11,6 +11,7 @@ import {
   buildSearchRouteHash,
   parseSearchRouteState,
 } from "../features/search/search-route-state";
+import { resolveSearchNavigationTarget } from "../features/search/search-navigation";
 import { MobileSearchWorkspace } from "../features/search/mobile-search-workspace";
 import type {
   SearchCategory,
@@ -198,19 +199,25 @@ export function SearchPage() {
   }
 
   function handleOpenResult(item: SearchResultItem) {
+    const navigationTarget = resolveSearchNavigationTarget(item);
     handleCommitSearch(effectiveSearchText);
     void navigate({
-      to: item.to as never,
-      search: (item.search ?? {}) as never,
-      hash: item.hash ?? undefined,
+      to: navigationTarget.to as never,
+      search: navigationTarget.search as never,
+      hash: navigationTarget.hash,
     });
   }
 
-  function handleOpenQuickLink(item: { to: string; search?: string }) {
+  function handleOpenQuickLink(item: {
+    to: string;
+    search?: string;
+    hash?: string;
+  }) {
+    const navigationTarget = resolveSearchNavigationTarget(item);
     void navigate({
-      to: item.to as never,
-      search: (item.search ?? {}) as never,
-      hash: undefined,
+      to: navigationTarget.to as never,
+      search: navigationTarget.search as never,
+      hash: navigationTarget.hash,
     });
   }
 

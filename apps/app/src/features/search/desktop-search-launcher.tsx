@@ -56,6 +56,7 @@ import {
   buildSearchRouteHash,
   type SearchRouteSource,
 } from "./search-route-state";
+import { resolveSearchNavigationTarget } from "./search-navigation";
 import { buildDesktopAddFriendRouteHash } from "../desktop/contacts/desktop-add-friend-route-state";
 import {
   hydrateSearchHistoryFromNative,
@@ -677,11 +678,12 @@ export function DesktopSearchDropdownPanel({
 
   const handleOpenQuickLink = useCallback(
     (item: DesktopSearchQuickLink) => {
+      const navigationTarget = resolveSearchNavigationTarget(item);
       onClose?.();
       void navigate({
-        hash: item.hash ?? undefined,
-        to: item.to as never,
-        search: (item.search ?? {}) as never,
+        hash: navigationTarget.hash,
+        to: navigationTarget.to as never,
+        search: navigationTarget.search as never,
       });
     },
     [navigate, onClose],
