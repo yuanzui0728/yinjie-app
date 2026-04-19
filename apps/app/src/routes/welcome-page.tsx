@@ -1,4 +1,11 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -312,11 +319,11 @@ export function WelcomePage() {
   const currentCloudSession = cloudAccessSessionQuery.data ?? null;
   const cloudWorldPending = Boolean(currentCloudSession && WAITING_CLOUD_SESSION_STATUSES.has(currentCloudSession.status));
 
-  async function connectToResolvedCloudWorld(
+  const connectToResolvedCloudWorld = useCallback(async (
     accessToken: string,
     verifiedPhone: string,
     session: WorldAccessSessionSummary,
-  ) {
+  ) => {
     if (!session.resolvedApiBaseUrl) {
       setEntryError(translateWorldAccessText(session.failureReason) ?? "世界已解析完成，但没有可用的 API 地址。");
       return;
@@ -354,7 +361,7 @@ export function WelcomePage() {
     } finally {
       setOwnerSyncing(false);
     }
-  }
+  }, [hydrateOwner, navigate, normalizedCloudApiBaseUrl]);
 
   useEffect(() => {
     if (!currentCloudSession || !cloudAccessToken || currentCloudSession.status !== "ready" || !currentCloudSession.resolvedApiBaseUrl) {
@@ -376,7 +383,14 @@ export function WelcomePage() {
         cloudConnectKeyRef.current = null;
       }
     });
-  }, [cloudAccessToken, connectedAccessSessionId, currentCloudSession, phone, runtimeConfig.cloudPhone]);
+  }, [
+    cloudAccessToken,
+    connectToResolvedCloudWorld,
+    connectedAccessSessionId,
+    currentCloudSession,
+    phone,
+    runtimeConfig.cloudPhone,
+  ]);
 
   const sendCodeMutation = useMutation({
     mutationFn: () =>

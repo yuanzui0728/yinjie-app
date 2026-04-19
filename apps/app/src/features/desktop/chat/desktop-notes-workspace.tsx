@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createFavoriteNote,
@@ -436,42 +443,6 @@ export function DesktopNotesWorkspace({
   }, [isDirty, noteTitle]);
 
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const withCommand = event.metaKey || event.ctrlKey;
-      if (withCommand && event.key.toLowerCase() === "s") {
-        event.preventDefault();
-        void handleSave();
-        return;
-      }
-
-      if (event.key !== "Escape") {
-        return;
-      }
-
-      if (tagEditorOpen) {
-        event.preventDefault();
-        setTagEditorOpen(false);
-        setTagInput("");
-        return;
-      }
-
-      if (standaloneWindow && !deleteDialogOpen && !closeDialogOpen) {
-        event.preventDefault();
-        requestClose();
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [
-    closeDialogOpen,
-    deleteDialogOpen,
-    requestClose,
-    standaloneWindow,
-    tagEditorOpen,
-  ]);
-
-  useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
       if (!isDirty) {
         return;
@@ -698,16 +669,16 @@ export function DesktopNotesWorkspace({
     }));
   }
 
-  async function handleSave() {
+  const handleSave = useCallback(async () => {
     try {
       const savedNote = await saveMutation.mutateAsync();
       return savedNote;
     } catch {
       return null;
     }
-  }
+  }, [saveMutation]);
 
-  async function handleClose() {
+  const handleClose = useCallback(async () => {
     if (standaloneWindow) {
       const closed = await closeCurrentDesktopWindow();
       if (closed) {
@@ -721,7 +692,7 @@ export function DesktopNotesWorkspace({
     }
 
     void navigate({ to: returnTo || "/tabs/favorites" });
-  }
+  }, [navigate, returnTo, standaloneWindow]);
 
   async function handleSaveAndClose() {
     const savedNote = await handleSave();
@@ -742,14 +713,51 @@ export function DesktopNotesWorkspace({
     await handleClose();
   }
 
-  function requestClose() {
+  const requestClose = useCallback(() => {
     if (isDirty) {
       setCloseDialogOpen(true);
       return;
     }
 
     void handleClose();
-  }
+  }, [handleClose, isDirty]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const withCommand = event.metaKey || event.ctrlKey;
+      if (withCommand && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        void handleSave();
+        return;
+      }
+
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      if (tagEditorOpen) {
+        event.preventDefault();
+        setTagEditorOpen(false);
+        setTagInput("");
+        return;
+      }
+
+      if (standaloneWindow && !deleteDialogOpen && !closeDialogOpen) {
+        event.preventDefault();
+        requestClose();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    closeDialogOpen,
+    deleteDialogOpen,
+    handleSave,
+    requestClose,
+    standaloneWindow,
+    tagEditorOpen,
+  ]);
 
   async function requestSend() {
     const hasSendableContent =

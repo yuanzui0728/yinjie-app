@@ -169,7 +169,10 @@ export function DesktopOfficialAccountsWorkspace({
     queryFn: () => getOfficialAccountSubscriptionInbox(baseUrl),
   });
 
-  const allAccounts = accountsQuery.data ?? [];
+  const allAccounts = useMemo(
+    () => accountsQuery.data ?? [],
+    [accountsQuery.data],
+  );
   const normalizedSearchTerm = searchTerm.trim().toLowerCase();
   const filteredAccounts = useMemo(() => {
     return allAccounts.filter((account) => {

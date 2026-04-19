@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   deleteCustomSticker,
@@ -403,12 +403,9 @@ export function StickerPanel({
   }, [
     activeSectionId,
     catalog.builtinPacks,
-    catalog.customStickers,
     customStickers,
     featuredStickers,
-    recentStickerEntries,
     recentStickers,
-    searchKeyword,
     searchSections,
     searching,
   ]);
@@ -1029,14 +1026,14 @@ export function StickerPanel({
     }, 140);
     deleteTransitionTimerRefs.current.set(stickerKey, timer);
   };
-  const clearSearch = () => {
+  const clearSearch = useCallback(() => {
     setKeyword("");
     setSearchKeyword("");
     window.setTimeout(() => {
       searchInputRef.current?.focus();
     }, 0);
-  };
-  const clearSearchAndResumeManage = () => {
+  }, []);
+  const clearSearchAndResumeManage = useCallback(() => {
     setKeyword("");
     setSearchKeyword("");
     setManageSearchPauseHintVisible(false);
@@ -1044,7 +1041,7 @@ export function StickerPanel({
     setPendingManageFocusKey(pausedManageFocusKey);
     setPausedManageFocusKey(null);
     setPausedManageFocusLabel(null);
-  };
+  }, [pausedManageFocusKey]);
   const clearSearchAndOpenUpload = () => {
     setKeyword("");
     setSearchKeyword("");
@@ -1132,6 +1129,9 @@ export function StickerPanel({
   }, [activeSectionId, trimmedKeyword.length]);
 
   useEffect(() => {
+    const deleteTransitionTimers = deleteTransitionTimerRefs.current;
+    const collapsingStickerKeys = collapsingStickerKeysRef.current;
+
     return () => {
       if (deleteFeedbackFlashTimerRef.current !== null) {
         window.clearTimeout(deleteFeedbackFlashTimerRef.current);
@@ -1142,11 +1142,9 @@ export function StickerPanel({
       if (manageFocusFlashTimerRef.current !== null) {
         window.clearTimeout(manageFocusFlashTimerRef.current);
       }
-      deleteTransitionTimerRefs.current.forEach((timer) =>
-        window.clearTimeout(timer),
-      );
-      deleteTransitionTimerRefs.current.clear();
-      collapsingStickerKeysRef.current.clear();
+      deleteTransitionTimers.forEach((timer) => window.clearTimeout(timer));
+      deleteTransitionTimers.clear();
+      collapsingStickerKeys.clear();
     };
   }, []);
 
@@ -1516,6 +1514,8 @@ export function StickerPanel({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     activeSectionId,
+    clearSearch,
+    clearSearchAndResumeManage,
     customManageMode,
     isMobile,
     onClose,
