@@ -248,6 +248,23 @@ export function DesktopChatWorkspace({
     onKeywordChange: setSearchTerm,
     source: "chat",
   });
+  const navigateToChatWorkspace = useCallback(
+    ({
+      hash,
+      replace,
+    }: {
+      hash?: string;
+      replace?: boolean;
+    } = {}) => {
+      void navigate({
+        to: "/tabs/chat",
+        search: {},
+        hash,
+        replace,
+      });
+    },
+    [navigate],
+  );
 
   const closeRightPanel = useCallback(() => {
     setRightPanelMode(null);
@@ -440,16 +457,15 @@ export function DesktopChatWorkspace({
       return;
     }
 
-    setRightPanelMode(null);
-    setDetailsAnnouncementRequest(null);
-    setDetailsMemberSearchRequest(null);
-    void navigate({ to: "/tabs/chat", replace: true });
+    closeRightPanel();
+    navigateToChatWorkspace({ replace: true });
   }, [
+    closeRightPanel,
     conversationsQuery.isError,
     conversationsQuery.isLoading,
     messageEntriesQuery.isError,
     messageEntriesQuery.isLoading,
-    navigate,
+    navigateToChatWorkspace,
     selectedServiceAccountId,
     selectedServiceConversationExists,
     subscriptionInboxActive,
@@ -469,14 +485,13 @@ export function DesktopChatWorkspace({
       return;
     }
 
-    setRightPanelMode(null);
-    setDetailsAnnouncementRequest(null);
-    setDetailsMemberSearchRequest(null);
-    void navigate({ to: "/tabs/chat", replace: true });
+    closeRightPanel();
+    navigateToChatWorkspace({ replace: true });
   }, [
+    closeRightPanel,
     conversationsQuery.isError,
     conversationsQuery.isLoading,
-    navigate,
+    navigateToChatWorkspace,
     officialAccountsActive,
     selectedConversationExists,
     selectedConversationId,
@@ -772,8 +787,8 @@ export function DesktopChatWorkspace({
         (selectedConversationId === conversation.id ||
           activeConversation?.id === conversation.id)
       ) {
-        setRightPanelMode(null);
-        void navigate({ to: "/tabs/chat" });
+        closeRightPanel();
+        navigateToChatWorkspace({ replace: true });
       }
     },
     onError: (error) => {
@@ -1469,8 +1484,7 @@ export function DesktopChatWorkspace({
             selectedArticleId={selectedOfficialArticleId}
             selectedMode={selectedOfficialDisplayMode}
             onOpenAccount={(accountId) => {
-              void navigate({
-                to: "/tabs/chat",
+              navigateToChatWorkspace({
                 hash: buildDesktopChatRouteHash({
                   officialView: "official-accounts",
                   officialMode: "accounts",
@@ -1480,8 +1494,7 @@ export function DesktopChatWorkspace({
               });
             }}
             onOpenArticle={(articleId, accountId) => {
-              void navigate({
-                to: "/tabs/chat",
+              navigateToChatWorkspace({
                 hash: buildDesktopChatRouteHash({
                   officialView: "official-accounts",
                   officialMode: "accounts",
@@ -1492,8 +1505,7 @@ export function DesktopChatWorkspace({
               });
             }}
             onModeChange={(officialMode) => {
-              void navigate({
-                to: "/tabs/chat",
+              navigateToChatWorkspace({
                 hash: buildDesktopChatRouteHash({
                   officialView: "official-accounts",
                   officialMode,
@@ -1504,8 +1516,7 @@ export function DesktopChatWorkspace({
               });
             }}
             onOpenServiceMessages={(accountId, articleId) => {
-              void navigate({
-                to: "/tabs/chat",
+              navigateToChatWorkspace({
                 hash: buildDesktopChatRouteHash({
                   officialView: "service-account",
                   accountId,
@@ -1515,8 +1526,7 @@ export function DesktopChatWorkspace({
               });
             }}
             onOpenSubscriptionInbox={(articleId) => {
-              void navigate({
-                to: "/tabs/chat",
+              navigateToChatWorkspace({
                 hash: buildDesktopChatRouteHash({
                   officialView: "subscription-inbox",
                   articleId: articleId ?? undefined,
@@ -1529,8 +1539,7 @@ export function DesktopChatWorkspace({
           <DesktopSubscriptionWorkspace
             selectedArticleId={selectedOfficialArticleId}
             onOpenArticle={(articleId) => {
-              void navigate({
-                to: "/tabs/chat",
+              navigateToChatWorkspace({
                 hash: buildDesktopChatRouteHash({
                   officialView: "subscription-inbox",
                   articleId,
@@ -1539,8 +1548,7 @@ export function DesktopChatWorkspace({
               });
             }}
             onOpenAccount={(accountId, articleId) => {
-              void navigate({
-                to: "/tabs/chat",
+              navigateToChatWorkspace({
                 hash: buildDesktopChatRouteHash({
                   officialView: "official-accounts",
                   officialMode: "accounts",
@@ -1557,8 +1565,7 @@ export function DesktopChatWorkspace({
             variant="desktop"
             selectedArticleId={selectedOfficialArticleId}
             onCloseArticle={(accountId) => {
-              void navigate({
-                to: "/tabs/chat",
+              navigateToChatWorkspace({
                 hash: buildDesktopChatRouteHash({
                   officialView: "service-account",
                   accountId,
@@ -1567,8 +1574,7 @@ export function DesktopChatWorkspace({
               });
             }}
             onOpenArticle={(articleId, accountId) => {
-              void navigate({
-                to: "/tabs/chat",
+              navigateToChatWorkspace({
                 hash: buildDesktopChatRouteHash({
                   officialView: "service-account",
                   accountId,
@@ -1578,8 +1584,7 @@ export function DesktopChatWorkspace({
               });
             }}
             onOpenAccount={(accountId, articleId) => {
-              void navigate({
-                to: "/tabs/chat",
+              navigateToChatWorkspace({
                 hash: buildDesktopChatRouteHash({
                   officialView: "official-accounts",
                   officialMode: "accounts",
@@ -1716,6 +1721,7 @@ export function DesktopChatWorkspace({
                   void navigate({
                     to: "/group/$groupId",
                     params: { groupId: activeConversation.id },
+                    search: {},
                     hash: `chat-message-${messageId}`,
                   });
                   return;
@@ -1724,6 +1730,7 @@ export function DesktopChatWorkspace({
                 void navigate({
                   to: "/chat/$conversationId",
                   params: { conversationId: activeConversation.id },
+                  search: {},
                   hash: `chat-message-${messageId}`,
                 });
               }}
@@ -1844,8 +1851,7 @@ export function DesktopChatWorkspace({
                     icon: <BookOpenText size={15} />,
                     onClick: () => {
                       setOfficialMessageContextMenu(null);
-                      void navigate({
-                        to: "/tabs/chat",
+                      navigateToChatWorkspace({
                         hash: buildDesktopChatRouteHash({
                           officialView: "subscription-inbox",
                           articleId:
@@ -1871,8 +1877,7 @@ export function DesktopChatWorkspace({
                         subscriptionInboxActive &&
                         selectedOfficialArticleId
                       ) {
-                        void navigate({
-                          to: "/tabs/chat",
+                        navigateToChatWorkspace({
                           hash: buildDesktopChatRouteHash({
                             officialView: "official-accounts",
                             officialMode: "accounts",
@@ -1882,8 +1887,7 @@ export function DesktopChatWorkspace({
                         return;
                       }
 
-                      void navigate({
-                        to: "/tabs/chat",
+                      navigateToChatWorkspace({
                         hash: buildDesktopChatRouteHash({
                           officialView: "official-accounts",
                           officialMode: "feed",
@@ -1913,8 +1917,7 @@ export function DesktopChatWorkspace({
                     icon: <BookOpenText size={15} />,
                     onClick: () => {
                       setOfficialMessageContextMenu(null);
-                      void navigate({
-                        to: "/tabs/chat",
+                      navigateToChatWorkspace({
                         hash: buildDesktopChatRouteHash({
                           officialView: "service-account",
                           accountId:
@@ -1936,8 +1939,7 @@ export function DesktopChatWorkspace({
                     dividerBefore: true,
                     onClick: () => {
                       setOfficialMessageContextMenu(null);
-                      void navigate({
-                        to: "/tabs/chat",
+                      navigateToChatWorkspace({
                         hash: buildDesktopChatRouteHash({
                           officialView: "official-accounts",
                           officialMode: "accounts",
@@ -2087,6 +2089,7 @@ function DesktopMessageEntryCard({
 
           void navigate({
             to: "/tabs/chat",
+            search: {},
             hash: buildDesktopChatRouteHash({
               officialView: "official-accounts",
               officialMode:
@@ -2112,6 +2115,7 @@ function DesktopMessageEntryCard({
         onClick={() => {
           void navigate({
             to: "/tabs/chat",
+            search: {},
             hash: buildDesktopChatRouteHash({
               officialView: "subscription-inbox",
               articleId:
@@ -2141,6 +2145,7 @@ function DesktopMessageEntryCard({
         onClick={() => {
           void navigate({
             to: "/tabs/chat",
+            search: {},
             hash: buildDesktopChatRouteHash({
               officialView: "service-account",
               accountId: entry.conversation.accountId,
@@ -2399,6 +2404,8 @@ function ConversationCardLink({
       <Link
         to="/group/$groupId"
         params={{ groupId: conversation.id }}
+        search={{}}
+        hash={undefined}
         className={className}
         onContextMenu={(event) => onContextMenu(event, conversation)}
       >
@@ -2411,6 +2418,8 @@ function ConversationCardLink({
     <Link
       to="/chat/$conversationId"
       params={{ conversationId: conversation.id }}
+      search={{}}
+      hash={undefined}
       className={className}
       onContextMenu={(event) => onContextMenu(event, conversation)}
     >

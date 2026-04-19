@@ -164,6 +164,17 @@ function DirectChatDetailsPanel({
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
+  const navigateToChatWorkspace = useCallback(
+    (replace = false) => {
+      void navigate({
+        to: "/tabs/chat",
+        search: {},
+        hash: undefined,
+        replace,
+      });
+    },
+    [navigate],
+  );
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] =
     useState<DirectDetailsConfirmAction | null>(null);
@@ -256,7 +267,9 @@ function DirectChatDetailsPanel({
   const backgroundLabel = getChatBackgroundLabel(
     backgroundQuery.data?.effectiveBackground ?? null,
   );
-  const tagValue = friendship?.tags?.length ? friendship.tags.join("、") : "未设置";
+  const tagValue = friendship?.tags?.length
+    ? friendship.tags.join("、")
+    : "未设置";
 
   useEffect(() => {
     setProfileForm({
@@ -335,7 +348,7 @@ function DirectChatDetailsPanel({
       await queryClient.invalidateQueries({
         queryKey: ["app-conversations", baseUrl],
       });
-      void navigate({ to: "/tabs/chat" });
+      navigateToChatWorkspace(true);
     },
   });
 
@@ -387,7 +400,7 @@ function DirectChatDetailsPanel({
           queryKey: ["app-conversations", baseUrl],
         }),
       ]);
-      void navigate({ to: "/tabs/chat" });
+      navigateToChatWorkspace(true);
     },
   });
   const handleAddToContacts = () => {
@@ -649,7 +662,11 @@ function DirectChatDetailsPanel({
             />
             <DesktopContactProfileActionRow
               label="共同群聊"
-              value={commonGroups.length ? `${commonGroups.length} 个共同群聊` : "暂时没有共同群聊"}
+              value={
+                commonGroups.length
+                  ? `${commonGroups.length} 个共同群聊`
+                  : "暂时没有共同群聊"
+              }
               onClick={() => {
                 if (!commonGroups[0]) {
                   return;
@@ -685,7 +702,10 @@ function DirectChatDetailsPanel({
               label="个性签名"
               value={signature}
               multiline
-              muted={!targetCharacter?.currentStatus?.trim() && !targetCharacter?.bio?.trim()}
+              muted={
+                !targetCharacter?.currentStatus?.trim() &&
+                !targetCharacter?.bio?.trim()
+              }
             />
           </DesktopContactProfileSection>
 
@@ -764,7 +784,9 @@ function DirectChatDetailsPanel({
             </DesktopContactProfileSection>
           ) : null}
 
-          <DesktopContactProfileSection title={isFriend ? "联系人管理" : "聊天管理"}>
+          <DesktopContactProfileSection
+            title={isFriend ? "联系人管理" : "聊天管理"}
+          >
             {isFriend ? (
               <DesktopContactProfileActionRow
                 label="加入黑名单"
@@ -882,6 +904,17 @@ function GroupChatDetailsPanel({
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
+  const navigateToChatWorkspace = useCallback(
+    (replace = false) => {
+      void navigate({
+        to: "/tabs/chat",
+        search: {},
+        hash: undefined,
+        replace,
+      });
+    },
+    [navigate],
+  );
   const backgroundQuery = useGroupBackground(conversation.id);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmAction, setConfirmAction] =
@@ -1152,7 +1185,7 @@ function GroupChatDetailsPanel({
           queryKey: ["app-conversations", baseUrl],
         }),
       ]);
-      void navigate({ to: "/tabs/chat" });
+      navigateToChatWorkspace(true);
     },
   });
 
@@ -1166,7 +1199,9 @@ function GroupChatDetailsPanel({
   const friendMap = useMemo<Map<string, FriendListItem>>(
     () =>
       new Map(
-        (friendsQuery.data ?? []).map((item) => [item.character.id, item] as const),
+        (friendsQuery.data ?? []).map(
+          (item) => [item.character.id, item] as const,
+        ),
       ),
     [friendsQuery.data],
   );
@@ -1949,7 +1984,7 @@ function DesktopGroupMemberBrowserDialog({
 
       const displayName = resolveDisplayName
         ? resolveDisplayName(member)
-        : member.memberName ?? member.memberId;
+        : (member.memberName ?? member.memberId);
       const rawName = member.memberName ?? member.memberId;
       const roleLabel =
         member.role === "owner"
@@ -2194,7 +2229,7 @@ function DesktopGroupMemberBrowserDialog({
               {filteredMembers.map((member) => {
                 const displayName = resolveDisplayName
                   ? resolveDisplayName(member)
-                  : member.memberName ?? member.memberId;
+                  : (member.memberName ?? member.memberId);
                 const rawName = member.memberName?.trim() || member.memberId;
                 const roleLabel =
                   member.role === "owner"
