@@ -1,6 +1,9 @@
 import {
+  Suspense,
+  useCallback,
   useDeferredValue,
   useEffect,
+  lazy,
   useMemo,
   useRef,
   useState,
@@ -12,12 +15,9 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   BookText,
   BookUser,
-  LoaderCircle,
-  Mic,
   Plus,
   QrCode,
   Search,
-  Square,
   Star,
   UserPlus,
   Users,
@@ -43,9 +43,7 @@ import {
 import {
   AppPage,
   Button,
-  ErrorBlock,
   InlineNotice,
-  LoadingBlock,
   cn,
 } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
@@ -57,10 +55,6 @@ import {
   ContactShortcutList,
   type ContactShortcutListItem,
 } from "../features/contacts/contact-shortcut-list";
-import { DesktopContactsWorkspace } from "../features/desktop/contacts/desktop-contacts-workspace";
-import { DesktopContactsFriendRequestsPane } from "../features/desktop/contacts/desktop-contacts-friend-requests-pane";
-import { DesktopContactsGroupsPane } from "../features/desktop/contacts/desktop-contacts-groups-pane";
-import { DesktopOfficialAccountsWorkspace } from "../features/desktop/official-accounts/desktop-official-accounts-workspace";
 import {
   buildDesktopContactsRouteHash,
   parseDesktopContactsRouteState,
@@ -73,7 +67,6 @@ import {
   matchesCharacterSearch,
   matchesFriendSearch,
   type FriendDirectoryItem,
-  type WorldCharacterDirectoryItem,
 } from "../features/contacts/contact-utils";
 import {
   DesktopSearchDropdownPanel,
@@ -85,6 +78,23 @@ import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { isPersistedGroupConversation } from "../lib/conversation-route";
 import { buildCreateGroupRouteHash } from "../lib/create-group-route-state";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
+
+const DesktopContactsWorkspace = lazy(async () => {
+  const mod = await import("../features/desktop/contacts/desktop-contacts-workspace");
+  return { default: mod.DesktopContactsWorkspace };
+});
+const DesktopContactsFriendRequestsPane = lazy(async () => {
+  const mod = await import("../features/desktop/contacts/desktop-contacts-friend-requests-pane");
+  return { default: mod.DesktopContactsFriendRequestsPane };
+});
+const DesktopContactsGroupsPane = lazy(async () => {
+  const mod = await import("../features/desktop/contacts/desktop-contacts-groups-pane");
+  return { default: mod.DesktopContactsGroupsPane };
+});
+const DesktopOfficialAccountsWorkspace = lazy(async () => {
+  const mod = await import("../features/desktop/official-accounts/desktop-official-accounts-workspace");
+  return { default: mod.DesktopOfficialAccountsWorkspace };
+});
 
 type ShortcutRoute =
   | "/contacts/groups"
@@ -457,11 +467,11 @@ export function ContactsPage() {
   );
   const desktopDefaultFriendItem = desktopFriendSections[0]?.items[0] ?? null;
 
-  function commitDesktopRouteState(
+  const commitDesktopRouteState = useCallback((
     nextSelection: DesktopSelection,
     nextShowWorldCharacters: boolean,
     replace = false,
-  ) {
+  ) => {
     const nextHash = buildDesktopContactsRouteHash({
       pane: nextSelection?.kind ?? "friend",
       characterId:
@@ -491,7 +501,7 @@ export function ContactsPage() {
       hash: nextHash,
       replace,
     });
-  }
+  }, [hash, navigate]);
 
   useEffect(() => {
     startChatResetRef.current = startChatMutation.reset;
@@ -774,6 +784,7 @@ export function ContactsPage() {
     setDesktopSelection(nextSelection);
     commitDesktopRouteState(nextSelection, showWorldCharacters, true);
   }, [
+    commitDesktopRouteState,
     desktopDefaultFriendItem,
     desktopSelection,
     isDesktopLayout,
@@ -834,8 +845,10 @@ export function ContactsPage() {
     setDesktopSelection(null);
     commitDesktopRouteState(null, showWorldCharacters, true);
   }, [
+    commitDesktopRouteState,
     desktopDefaultFriendItem,
     desktopSelection,
+    filteredFriendItems,
     filteredWorldCharacterItems,
     isDesktopLayout,
     showWorldCharacters,
@@ -1770,59 +1783,6 @@ function FriendListRow({
   );
 }
 
-function WorldCharacterRow({
-  item,
-  index,
-  desktop = false,
-  active = false,
-  onClick,
-}: {
-  item: WorldCharacterDirectoryItem;
-  index: number;
-  desktop?: boolean;
-  active?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex w-full items-center gap-3 bg-[color:var(--bg-canvas-elevated)] text-left transition-colors",
-        desktop
-          ? "px-4 py-3.5 hover:bg-[color:var(--surface-console)]"
-          : "px-4 py-2.5 hover:bg-[color:var(--surface-card-hover)]",
-        index > 0 ? "border-t border-[color:var(--border-faint)]" : undefined,
-        active
-          ? "border border-[rgba(7,193,96,0.14)] bg-[rgba(240,247,243,0.94)] shadow-[0_8px_22px_rgba(15,23,42,0.03)]"
-          : undefined,
-      )}
-    >
-      <AvatarChip
-        name={item.character.name}
-        src={item.character.avatar}
-        size="wechat"
-      />
-      <div className="min-w-0 flex-1">
-        <div
-          className={cn(
-            "truncate text-[color:var(--text-primary)]",
-            desktop ? "text-[16px]" : "text-[14px]",
-          )}
-        >
-          {item.character.name}
-        </div>
-        {desktop ? (
-          <div className="mt-0.5 truncate text-xs text-[color:var(--text-muted)]">
-            {item.character.relationship ||
-              item.character.currentStatus?.trim() ||
-              "查看角色资料"}
-          </div>
-        ) : null}
-      </div>
-    </button>
-  );
-}
 
 function SectionHeader({
   title,

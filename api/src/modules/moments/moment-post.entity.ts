@@ -29,6 +29,12 @@ export class MomentPostEntity {
   @Column('text', { nullable: true })
   mediaPayload?: string;
 
+  @Column({ default: 'routine_ai' })
+  generationKind: string;
+
+  @Column('simple-json', { nullable: true })
+  generationMetadata?: Record<string, unknown> | null;
+
   @Column({ default: 0 })
   likeCount: number;
 

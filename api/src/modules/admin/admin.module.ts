@@ -26,8 +26,17 @@ import { AdminConversationReviewEntity } from './admin-conversation-review.entit
 import { SchedulerModule } from '../scheduler/scheduler.module';
 import { MomentPostEntity } from '../moments/moment-post.entity';
 import { FeedPostEntity } from '../feed/feed-post.entity';
+import { FeedModule } from '../feed/feed.module';
 import { AiUsageLedgerEntity } from '../analytics/ai-usage-ledger.entity';
+import { FriendRequestEntity } from '../social/friend-request.entity';
 import { FriendshipEntity } from '../social/friendship.entity';
+import { SocialModule } from '../social/social.module';
+import { WechatSyncAdminService } from './wechat-sync-admin.service';
+import { ActionRuntimeModule } from '../action-runtime/action-runtime.module';
+import { CyberAvatarModule } from '../cyber-avatar/cyber-avatar.module';
+import { NeedDiscoveryModule } from '../need-discovery/need-discovery.module';
+import { RealWorldSyncModule } from '../real-world-sync/real-world-sync.module';
+import { FollowupRuntimeModule } from '../followup-runtime/followup-runtime.module';
 
 @Module({
   imports: [
@@ -38,6 +47,13 @@ import { FriendshipEntity } from '../social/friendship.entity';
     WorldModule,
     SystemConfigModule,
     SchedulerModule,
+    SocialModule,
+    FeedModule,
+    ActionRuntimeModule,
+    CyberAvatarModule,
+    NeedDiscoveryModule,
+    RealWorldSyncModule,
+    FollowupRuntimeModule,
     TypeOrmModule.forFeature([
       UserEntity,
       CharacterEntity,
@@ -53,6 +69,7 @@ import { FriendshipEntity } from '../social/friendship.entity';
       FeedPostEntity,
       AiUsageLedgerEntity,
       AdminConversationReviewEntity,
+      FriendRequestEntity,
       FriendshipEntity,
     ]),
   ],
@@ -60,6 +77,7 @@ import { FriendshipEntity } from '../social/friendship.entity';
     AdminService,
     ReplyLogicAdminService,
     ChatRecordsAdminService,
+    WechatSyncAdminService,
     AdminGuard,
   ],
   controllers: [AdminController, ChatRecordsAdminController],

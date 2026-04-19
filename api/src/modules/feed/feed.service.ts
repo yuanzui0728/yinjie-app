@@ -11,17 +11,27 @@ import { FeedCommentEntity } from './feed-comment.entity';
 import { UserFeedInteractionEntity } from '../analytics/user-feed-interaction.entity';
 import { VideoChannelFollowEntity } from './video-channel-follow.entity';
 import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
+import type { AiMessagePart } from '../ai/ai.types';
 import { CharactersService } from '../characters/characters.service';
 import { WorldOwnerService } from '../auth/world-owner.service';
 import { SocialService } from '../social/social.service';
+import { CyberAvatarService } from '../cyber-avatar/cyber-avatar.service';
 import type {
+  MomentImageAsset,
   MomentMediaAsset,
   MomentVideoAsset,
 } from '../moments/moment-media.types';
+import { MomentPostEntity } from '../moments/moment-post.entity';
 
 type FeedSurface = 'feed' | 'channels';
 type FeedChannelHomeSection = 'recommended' | 'friends' | 'following' | 'live';
 type FeedMediaType = 'text' | 'image' | 'video';
+type FeedSourceKind =
+  | 'seed'
+  | 'ai_generated'
+  | 'owner_upload'
+  | 'character_generated'
+  | 'live_clip';
 type FeedOwnerState = {
   hasLiked: boolean;
   hasFavorited: boolean;
@@ -117,6 +127,7 @@ export class FeedService {
     private readonly characters: CharactersService,
     private readonly worldOwnerService: WorldOwnerService,
     private readonly socialService: SocialService,
+    private readonly cyberAvatar: CyberAvatarService,
   ) {}
 
   async getFeed(
@@ -133,7 +144,7 @@ export class FeedService {
     const visiblePosts =
       surface === 'channels'
         ? await this.getVisibleChannelPosts(owner.id, 'recommended')
-        : await this.getVisibleFeedPosts(surface);
+        : await this.getVisibleFeedPosts(surface, owner.id);
     const pagedPosts = paginate(visiblePosts, page, limit);
     const [commentsPreviewMap, ownerStateMap] = await Promise.all([
       this.buildCommentsPreviewMap(
@@ -343,12 +354,7 @@ export class FeedService {
     viewCount?: number;
     watchCount?: number;
     completeCount?: number;
-    sourceKind?:
-      | 'seed'
-      | 'ai_generated'
-      | 'owner_upload'
-      | 'character_generated'
-      | 'live_clip';
+    sourceKind?: FeedSourceKind;
     recommendationScore?: number;
     statsPayload?: Record<string, unknown> | null;
     surface?: FeedSurface;
@@ -379,7 +385,62 @@ export class FeedService {
       statsPayload: input.statsPayload ?? null,
       surface: input.surface ?? 'feed',
     });
-    return this.postRepo.save(post);
+    const saved = await this.postRepo.save(post);
+    if (saved.authorType === 'user') {
+      void this.cyberAvatar.captureSignal({
+        ownerId: saved.authorId,
+        signalType: saved.surface === 'channels' ? 'channel_post' : 'feed_post',
+        sourceSurface: saved.surface === 'channels' ? 'channels' : 'feed',
+        sourceEntityType: 'feed_post',
+        sourceEntityId: saved.id,
+        dedupeKey: `feed_post:${saved.id}`,
+        summaryText: `发布${saved.surface === 'channels' ? '视频号' : '动态'}：${(saved.title || saved.text || saved.mediaType).slice(0, 120)}`,
+        payload: {
+          text: saved.text,
+          title: saved.title ?? null,
+          mediaType: saved.mediaType,
+          surface: saved.surface,
+          topicTags: saved.topicTags ?? [],
+        },
+        occurredAt: saved.createdAt ?? new Date(),
+      });
+    }
+    return saved;
+  }
+
+  async syncMomentPostToFeed(
+    post: MomentPostEntity,
+    options?: {
+      sourceKind?: FeedSourceKind;
+      recommendationScore?: number;
+    },
+  ): Promise<FeedPostEntity | null> {
+    if (post.authorType !== 'character') {
+      return null;
+    }
+
+    const existing = await this.findFeedPostSyncedFromMoment(post.id);
+    if (existing) {
+      return existing;
+    }
+
+    return this.createPost({
+      authorAvatar: post.authorAvatar,
+      authorId: post.authorId,
+      authorName: post.authorName,
+      authorType: 'character',
+      text: post.text ?? '',
+      media: this.parseFeedMediaPayload(post.mediaPayload),
+      sourceKind: options?.sourceKind ?? 'character_generated',
+      recommendationScore: options?.recommendationScore ?? 0,
+      statsPayload: {
+        momentPostId: post.id,
+        momentContentType: post.contentType ?? 'text',
+        momentLocation: post.location ?? null,
+        syncedFrom: 'moments',
+      },
+      surface: 'feed',
+    });
   }
 
   async addOwnerComment(
@@ -424,6 +485,24 @@ export class FeedService {
     });
     const saved = await this.commentRepo.save(comment);
     await this.postRepo.increment({ id: input.postId }, 'commentCount', 1);
+    if (input.authorType === 'user') {
+      void this.cyberAvatar.captureSignal({
+        ownerId: input.authorId,
+        signalType: 'feed_interaction',
+        sourceSurface: 'feed',
+        sourceEntityType: 'feed_comment',
+        sourceEntityId: saved.id,
+        dedupeKey: `feed_comment:${saved.id}`,
+        summaryText: `评论动态：${input.text.trim().slice(0, 120)}`,
+        payload: {
+          postId: input.postId,
+          text: input.text.trim(),
+          parentCommentId: input.parentCommentId ?? null,
+          replyToCommentId: input.replyToCommentId ?? null,
+        },
+        occurredAt: saved.createdAt ?? new Date(),
+      });
+    }
     return saved;
   }
 
@@ -499,6 +578,21 @@ export class FeedService {
       payload: channel ? { channel } : null,
     });
     await this.interactionRepo.save(interaction);
+    void this.cyberAvatar.captureSignal({
+      ownerId: owner.id,
+      signalType: 'feed_interaction',
+      sourceSurface: 'feed',
+      sourceEntityType: 'feed_interaction',
+      sourceEntityId: interaction.id,
+      dedupeKey: `feed_interaction:${interaction.id}`,
+      summaryText: `分享动态到 ${channel ?? 'unknown'}`,
+      payload: {
+        postId,
+        type: 'share',
+        channel: channel ?? 'unknown',
+      },
+      occurredAt: interaction.createdAt ?? new Date(),
+    });
     await this.postRepo.increment({ id: postId }, 'shareCount', 1);
   }
 
@@ -524,7 +618,7 @@ export class FeedService {
     };
 
     if (!existing) {
-      await this.interactionRepo.save(
+      const savedInteraction = await this.interactionRepo.save(
         this.interactionRepo.create({
           ownerId: owner.id,
           postId,
@@ -532,6 +626,21 @@ export class FeedService {
           payload: nextPayload,
         }),
       );
+      void this.cyberAvatar.captureSignal({
+        ownerId: owner.id,
+        signalType: 'feed_interaction',
+        sourceSurface: 'feed',
+        sourceEntityType: 'feed_interaction',
+        sourceEntityId: savedInteraction.id,
+        dedupeKey: `feed_interaction:${savedInteraction.id}`,
+        summaryText: `浏览动态`,
+        payload: {
+          postId,
+          type: 'view',
+          ...nextPayload,
+        },
+        occurredAt: savedInteraction.createdAt ?? new Date(),
+      });
       await this.postRepo.increment({ id: postId }, 'viewCount', 1);
       if (
         typeof nextPayload.progressSeconds === 'number' &&
@@ -676,7 +785,7 @@ export class FeedService {
     characterId?: string,
     options?: { skipAi?: boolean },
   ): Promise<FeedPostEntity | null> {
-    const candidates = await this.characters.findAll();
+    const candidates = await this.characters.findAllVisibleToOwner();
     const eligibleCharacters = candidates.filter((character) =>
       characterId ? character.id === characterId : character.feedFrequency > 0,
     );
@@ -790,7 +899,7 @@ export class FeedService {
     const blockedCharacterIds = new Set(
       await this.socialService.getBlockedCharacterIds(),
     );
-    const chars = (await this.characters.findAll()).filter(
+    const chars = (await this.characters.findAllVisibleToOwner()).filter(
       (char) => !blockedCharacterIds.has(char.id),
     );
     const selected = chars.filter(() => Math.random() < 0.3).slice(0, 2);
@@ -798,10 +907,12 @@ export class FeedService {
       const profile = await this.characters.getProfile(char.id);
       if (!profile) continue;
       try {
+        const observation = await this.buildFeedAiObservation(post);
         const reply = await this.ai.generateReply({
           profile,
           conversationHistory: [],
-          userMessage: `你在${post.surface === 'channels' ? '视频号' : '广场动态'}里看到一条内容："${post.text}"，用一句话自然地评论，不超过25字。`,
+          userMessage: `你在${post.surface === 'channels' ? '视频号' : '广场动态'}里看到一条内容：${observation.summary}，用一句话自然地评论，不超过25字。`,
+          userMessageParts: observation.parts,
           usageContext: {
             surface: 'app',
             scene: 'feed_comment_generate',
@@ -835,7 +946,7 @@ export class FeedService {
       return;
     }
 
-    const authors = (await this.characters.findAll()).slice(
+    const authors = (await this.characters.findAllVisibleToOwner()).slice(
       0,
       CHANNEL_DEMO_POSTS.length,
     );
@@ -1124,14 +1235,20 @@ export class FeedService {
     };
   }
 
-  private async getVisibleFeedPosts(surface: FeedSurface) {
-    return this.postRepo.find({
+  private async getVisibleFeedPosts(surface: FeedSurface, ownerId: string) {
+    const posts = await this.postRepo.find({
       where: { surface, publishStatus: 'published' },
       order:
         surface === 'channels'
           ? { recommendationScore: 'DESC', createdAt: 'DESC' }
           : { createdAt: 'DESC' },
     });
+    const visibleCharacterIds = await this.getVisibleCharacterIdSet(ownerId);
+    return posts.filter(
+      (post) =>
+        post.authorType !== 'character' ||
+        visibleCharacterIds.has(post.authorId),
+    );
   }
 
   private async getVisibleChannelPosts(
@@ -1145,7 +1262,7 @@ export class FeedService {
       followedAuthorIds,
       friendIds,
     ] = await Promise.all([
-      this.getVisibleFeedPosts('channels'),
+      this.getVisibleFeedPosts('channels', ownerId),
       this.socialService
         .getBlockedCharacterIds(ownerId)
         .then((ids) => new Set(ids)),
@@ -1184,6 +1301,11 @@ export class FeedService {
       }
       return true;
     });
+  }
+
+  private async getVisibleCharacterIdSet(ownerId: string) {
+    const characters = await this.characters.findAllVisibleToOwner(ownerId);
+    return new Set(characters.map((item) => item.id));
   }
 
   private async resolveChannelAuthor(authorId: string) {
@@ -1437,6 +1559,82 @@ export class FeedService {
     });
   }
 
+  private async buildFeedAiObservation(post: FeedPostEntity): Promise<{
+    summary: string;
+    parts?: AiMessagePart[];
+  }> {
+    const media = this.resolveFeedPostMedia(post);
+    const parts: AiMessagePart[] = [];
+    const mediaType = this.inferFeedMediaType(
+      media,
+      post.mediaType as FeedMediaType,
+    );
+    const baseSummary = `标题：${post.title?.trim() || '未命名'}；正文：${post.text?.trim() || '无正文'}；媒体：${this.describeFeedMediaForAi(media, mediaType)}`;
+
+    media
+      .filter((asset): asset is MomentImageAsset => asset.kind === 'image')
+      .slice(0, 4)
+      .forEach((asset, index) => {
+        parts.push({
+          type: 'image',
+          imageUrl: asset.url,
+          mimeType: asset.mimeType,
+          detail: 'auto',
+          altText: `${post.surface === 'channels' ? '视频号' : '广场动态'}配图 ${index + 1}`,
+        });
+      });
+
+    const primaryMedia = media[0];
+    if (primaryMedia?.kind === 'video' && primaryMedia.posterUrl) {
+      parts.push({
+        type: 'image',
+        imageUrl: primaryMedia.posterUrl,
+        detail: 'auto',
+        altText: `${post.surface === 'channels' ? '视频号' : '广场动态'}视频封面`,
+      });
+    }
+
+    const transcription =
+      primaryMedia?.kind === 'video'
+        ? await this.ai.tryTranscribeMediaFromUrl({
+            url: primaryMedia.url,
+            mimeType: primaryMedia.mimeType,
+            fileName: primaryMedia.fileName,
+            mode: 'feed_media',
+          })
+        : null;
+
+    return {
+      summary: transcription?.text
+        ? `${baseSummary}；视频音轨转写：${transcription.text}`
+        : baseSummary,
+      parts: parts.length ? parts : undefined,
+    };
+  }
+
+  private describeFeedMediaForAi(
+    media: MomentMediaAsset[],
+    mediaType: FeedMediaType,
+  ) {
+    if (!media.length) {
+      return '无媒体';
+    }
+
+    if (mediaType === 'video') {
+      const video = media[0] as MomentVideoAsset | undefined;
+      if (!video) {
+        return '1 条视频';
+      }
+
+      return video.durationMs
+        ? `1 条时长约 ${Math.round(video.durationMs / 1000)} 秒的视频`
+        : '1 条视频';
+    }
+
+    const imageCount = media.filter((asset) => asset.kind === 'image').length;
+    return `${imageCount} 张图片`;
+  }
+
   private serializePost(post: FeedPostEntity, ownerState?: FeedOwnerState) {
     const media = this.resolveFeedPostMedia(post);
     const primaryMedia = media[0];
@@ -1547,6 +1745,20 @@ export class FeedService {
         payload: input.payload ?? null,
       }),
     );
+    void this.cyberAvatar.captureSignal({
+      ownerId: input.ownerId,
+      signalType: 'feed_interaction',
+      sourceSurface: 'feed',
+      sourceEntityType: 'feed_interaction',
+      sourceEntityId: `${input.postId}:${input.type}`,
+      dedupeKey: `feed_interaction:${input.ownerId}:${input.postId}:${input.type}`,
+      summaryText: `对动态执行 ${input.type}`,
+      payload: {
+        postId: input.postId,
+        type: input.type,
+        payload: input.payload ?? null,
+      },
+    });
 
     if (input.incrementColumn) {
       await this.postRepo.increment(
@@ -1563,6 +1775,17 @@ export class FeedService {
       throw new NotFoundException('Feed post not found');
     }
     return post;
+  }
+
+  private async findFeedPostSyncedFromMoment(momentPostId: string) {
+    return this.postRepo
+      .createQueryBuilder('post')
+      .where('post.surface = :surface', { surface: 'feed' })
+      .andWhere('post.statsPayload LIKE :marker', {
+        marker: `%\"momentPostId\":\"${momentPostId}\"%`,
+      })
+      .orderBy('post.createdAt', 'DESC')
+      .getOne();
   }
 
   private async decrementPostCounter(postId: string, key: 'favoriteCount') {

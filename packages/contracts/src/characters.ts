@@ -8,7 +8,11 @@ export type RelationshipType =
 export type CharacterSourceType =
   | "default_seed"
   | "preset_catalog"
-  | "manual_admin";
+  | "manual_admin"
+  | "need_generated"
+  | "shake_generated"
+  | "ai_generated"
+  | "wechat_import";
 export type CharacterDeletionPolicy = "protected" | "archive_allowed";
 export type CharacterPresetGroupKey =
   | "technology_and_product"
@@ -74,6 +78,141 @@ export interface ScenePrompts {
   proactive?: string; // 主动提醒
 }
 
+export type RealityLinkApplyMode = "disabled" | "shadow" | "live";
+export type RealityLinkSubjectType =
+  | "living_public_figure"
+  | "organization_proxy"
+  | "historical_snapshot"
+  | "fictional_or_private";
+export type RealityMomentPolicy = "disabled" | "optional" | "force_one_daily";
+
+export interface RealityLinkConfig {
+  enabled: boolean;
+  applyMode: RealityLinkApplyMode;
+  subjectType: RealityLinkSubjectType;
+  subjectName: string;
+  aliases: string[];
+  locale: string;
+  queryTemplate: string;
+  sourceAllowlist: string[];
+  sourceBlocklist: string[];
+  recencyHours: number;
+  maxSignalsPerRun: number;
+  minimumConfidence: number;
+  chatWeight: number;
+  contentWeight: number;
+  realityMomentPolicy: RealityMomentPolicy;
+  manualSteeringNotes: string;
+  dailyDigestPrompt: string;
+  scenePatchPrompt: string;
+  realityMomentPrompt: string;
+}
+
+export interface RealWorldRuntimeContext {
+  enabled: boolean;
+  applyMode: RealityLinkApplyMode;
+  subjectType?: RealityLinkSubjectType;
+  subjectName?: string;
+  digestId?: string | null;
+  syncDate?: string | null;
+  dailySummary?: string;
+  behaviorSummary?: string;
+  stanceShiftSummary?: string;
+  globalOverlay?: string;
+  realityMomentBrief?: string | null;
+  sceneOverlays?: ScenePrompts;
+  signalTitles?: string[];
+}
+
+export type WechatSyncImportMessageDirection =
+  | "owner"
+  | "contact"
+  | "group_member"
+  | "system"
+  | "unknown";
+
+export interface WechatSyncImportMessageSample {
+  timestamp: string;
+  text: string;
+  sender?: string | null;
+  typeLabel?: string | null;
+  direction?: WechatSyncImportMessageDirection;
+}
+
+export interface WechatSyncImportMomentHighlight {
+  postedAt?: string | null;
+  text: string;
+  location?: string | null;
+  mediaHint?: string | null;
+}
+
+export interface WechatSyncImportContactSnapshot {
+  username: string;
+  displayName: string;
+  nickname?: string | null;
+  remarkName?: string | null;
+  region?: string | null;
+  source?: string | null;
+  tags: string[];
+  isGroup: boolean;
+  messageCount: number;
+  ownerMessageCount: number;
+  contactMessageCount: number;
+  latestMessageAt?: string | null;
+  chatSummary?: string | null;
+  topicKeywords: string[];
+  sampleMessages: WechatSyncImportMessageSample[];
+  momentHighlights: WechatSyncImportMomentHighlight[];
+}
+
+export interface WechatSyncImportDraftSnapshot {
+  name: string;
+  relationship: string;
+  bio: string;
+  expertDomains: string[];
+  memorySummary: string;
+}
+
+export interface WechatSyncImportSnapshot {
+  version: number;
+  importedAt: string;
+  status: "created" | "updated";
+  autoAddFriend: boolean;
+  seedMoments: boolean;
+  seededMomentCount: number;
+  contact: WechatSyncImportContactSnapshot;
+  draftCharacter: WechatSyncImportDraftSnapshot;
+}
+
+export type WechatSyncImportMode = "preview_import" | "snapshot_restore";
+
+export interface WechatSyncImportChangeDiff {
+  label: string;
+  previousValue: string;
+  nextValue: string;
+  changed: boolean;
+}
+
+export interface WechatSyncImportChangeRecord {
+  id: string;
+  recordedAt: string;
+  mode: WechatSyncImportMode;
+  previousVersion?: number | null;
+  restoredFromVersion?: number | null;
+  toVersion: number;
+  summary: string;
+  changedFields: string[];
+  diffs?: WechatSyncImportChangeDiff[];
+  resultSnapshot?: WechatSyncImportSnapshot | null;
+}
+
+export interface WechatSyncImportMetadata {
+  currentSnapshot?: WechatSyncImportSnapshot | null;
+  previousSnapshot?: WechatSyncImportSnapshot | null;
+  snapshotHistory?: WechatSyncImportSnapshot[];
+  changeHistory?: WechatSyncImportChangeRecord[];
+}
+
 export interface PersonalityProfile {
   characterId: string;
   name: string;
@@ -101,6 +240,8 @@ export interface PersonalityProfile {
   /** @deprecated */
   reasoningConfig?: ReasoningConfig;
   memory?: MemoryLayers;
+  realWorldContext?: RealWorldRuntimeContext;
+  wechatSyncImport?: WechatSyncImportMetadata;
 }
 
 export interface CharacterAiRelationship {

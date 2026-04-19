@@ -28,6 +28,9 @@ import { VideoChannelFollowEntity } from '../feed/video-channel-follow.entity';
 import { UserFeedInteractionEntity } from '../analytics/user-feed-interaction.entity';
 import { AIBehaviorLogEntity } from '../analytics/ai-behavior-log.entity';
 import { ModerationReportEntity } from '../moderation/moderation-report.entity';
+import { WorldOwnerService } from '../auth/world-owner.service';
+import { NeedDiscoveryCandidateEntity } from '../need-discovery/need-discovery-candidate.entity';
+import { RealWorldRuntimeProfileService } from '../real-world-sync/real-world-runtime-profile.service';
 import { DEFAULT_CHARACTER_IDS } from './default-characters';
 import {
   getCelebrityCharacterPreset,
@@ -43,7 +46,11 @@ export class CharactersService {
   constructor(
     @InjectRepository(CharacterEntity)
     private repo: Repository<CharacterEntity>,
+    @InjectRepository(FriendshipEntity)
+    private readonly friendshipRepo: Repository<FriendshipEntity>,
+    private readonly worldOwnerService: WorldOwnerService,
     private readonly dataSource: DataSource,
+    private readonly realWorldRuntimeProfile: RealWorldRuntimeProfileService,
   ) {}
 
   findAll(): Promise<CharacterEntity[]> {
@@ -54,6 +61,29 @@ export class CharactersService {
     return this.repo.findOneBy({ id });
   }
 
+  async findAllVisibleToOwner(ownerId?: string): Promise<CharacterEntity[]> {
+    const characters = await this.findAll();
+    return this.filterNeedGeneratedVisibility(characters, ownerId);
+  }
+
+  async isVisibleToOwner(
+    characterId: string,
+    ownerId?: string,
+  ): Promise<boolean> {
+    const character = await this.findById(characterId);
+    if (!character) {
+      return false;
+    }
+
+    if (character.sourceType !== 'need_generated') {
+      return true;
+    }
+
+    const activeFriendCharacterIds =
+      await this.getActiveFriendCharacterIdSet(ownerId);
+    return activeFriendCharacterIds.has(characterId);
+  }
+
   async findByDomains(domains: string[]): Promise<CharacterEntity[]> {
     const all = await this.findAll();
     return all.filter((c) => c.expertDomains.some((d) => domains.includes(d)));
@@ -61,7 +91,15 @@ export class CharactersService {
 
   async getProfile(id: string): Promise<PersonalityProfile | undefined> {
     const char = await this.repo.findOneBy({ id });
-    return char?.profile;
+    return this.getRuntimeProfileFromCharacter(char);
+  }
+
+  async getRuntimeProfileFromCharacter(
+    character: Pick<CharacterEntity, 'id' | 'profile'> | null | undefined,
+  ): Promise<PersonalityProfile | undefined> {
+    return this.realWorldRuntimeProfile.buildRuntimeProfileFromCharacter(
+      character,
+    );
   }
 
   async upsert(character: CharacterEntity): Promise<void> {
@@ -240,6 +278,9 @@ export class CharactersService {
       const moderationReportRepo = manager.getRepository(
         ModerationReportEntity,
       );
+      const needDiscoveryCandidateRepo = manager.getRepository(
+        NeedDiscoveryCandidateEntity,
+      );
       const characterRepo = manager.getRepository(CharacterEntity);
 
       const directConversations = (await conversationRepo.find()).filter(
@@ -317,7 +358,53 @@ export class CharactersService {
         .delete()
         .where('characterIdA = :id OR characterIdB = :id', { id })
         .execute();
+      await needDiscoveryCandidateRepo
+        .createQueryBuilder()
+        .update()
+        .set({
+          status: 'deleted',
+          deletedAt: new Date(),
+        })
+        .where('characterId = :id', { id })
+        .andWhere('status NOT IN (:...lockedStatuses)', {
+          lockedStatuses: ['declined', 'expired', 'deleted'],
+        })
+        .execute();
       await characterRepo.delete(id);
     });
+  }
+
+  private async filterNeedGeneratedVisibility(
+    characters: CharacterEntity[],
+    ownerId?: string,
+  ) {
+    const hasNeedGenerated = characters.some(
+      (character) => character.sourceType === 'need_generated',
+    );
+    if (!hasNeedGenerated) {
+      return characters;
+    }
+
+    const activeFriendCharacterIds =
+      await this.getActiveFriendCharacterIdSet(ownerId);
+    return characters.filter(
+      (character) =>
+        character.sourceType !== 'need_generated' ||
+        activeFriendCharacterIds.has(character.id),
+    );
+  }
+
+  private async getActiveFriendCharacterIdSet(ownerId?: string) {
+    const resolvedOwnerId =
+      ownerId ?? (await this.worldOwnerService.getOwnerOrThrow()).id;
+    const friendships = await this.friendshipRepo.find({
+      select: ['characterId'],
+      where: [
+        { ownerId: resolvedOwnerId, status: 'friend' },
+        { ownerId: resolvedOwnerId, status: 'close' },
+        { ownerId: resolvedOwnerId, status: 'best' },
+      ],
+    });
+    return new Set(friendships.map((item) => item.characterId));
   }
 }

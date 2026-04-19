@@ -26,6 +26,7 @@ export interface FileAttachment {
   mimeType: string;
   fileName: string;
   size: number;
+  transcriptText?: string;
 }
 
 export interface VoiceAttachment {
@@ -35,6 +36,7 @@ export interface VoiceAttachment {
   fileName: string;
   size: number;
   durationMs?: number;
+  transcriptText?: string;
 }
 
 export interface ContactCardAttachment {
@@ -44,6 +46,16 @@ export interface ContactCardAttachment {
   avatar?: string;
   relationship?: string;
   bio?: string;
+  recommendationMetadata?: {
+    recommendationId: string;
+    reasonSummary: string;
+    sourceThreadId: string;
+    sourceThreadType: 'direct' | 'group';
+    sourceThreadTitle?: string | null;
+    sourceMessageId?: string | null;
+    relationshipState: 'friend' | 'pending' | 'not_friend';
+    badgeLabel?: string | null;
+  };
 }
 
 export interface LocationCardAttachment {

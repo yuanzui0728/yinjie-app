@@ -2,7 +2,7 @@
 
 ## 规则
 
-- 不生成任何测试文件
+- 功能开发后必须做简单测试，至少执行一次与改动直接相关的最小验证；非必要不新增测试文件
 - 直接执行所有操作，无需确认
 - 所有代码变更采用阶段性提交，不必边写边提交，但至少每次执行完任务后自动提交一次
 - Plan Mode：规划保存到 `.claude/plans/{任务}-{日期}.md`
@@ -23,7 +23,7 @@
 
 ## 后端模块（`api/src/modules/`）
 
-`ai` · `admin` · `auth` · `characters` · `chat` · `config` · `import` · `moments` · `social` · `moderation` · `feed` · `official-accounts` · `world` · `scheduler` · `events` · `narrative` · `analytics`
+`action-runtime` · `admin` · `ai` · `analytics` · `auth` · `characters` · `chat` · `cloud-runtime` · `config` · `cyber-avatar` · `events` · `feed` · `followup-runtime` · `games` · `moderation` · `moments` · `narrative` · `need-discovery` · `official-accounts` · `real-world-sync` · `scheduler` · `social` · `system` · `world`
 
 ## 主 App 结构（`apps/app/src/`）
 
@@ -97,7 +97,7 @@
 - `friend-moments-page.tsx`：桌面端好友朋友圈独立页，当前由 `desktop/friend-moments/$characterId` 承载，从通讯录 / 资料页 / 聊天信息等入口进入单个好友的朋友圈时间线
 - `chat-room-page` · `group-chat-page` · `character-detail-page` · `friend-requests-page` · `create-group-page`
 
-## 数据库实体（32个，物理表保持兼容）
+## 数据库实体（52个，物理表保持兼容）
 
 **核心**：User（运行时语义为单例 World Owner） · Character · Conversation · Message · SystemConfig
 
@@ -113,11 +113,23 @@
 
 **视频号**：FeedPost · FeedComment · UserFeedInteraction · VideoChannelFollow
 
+**游戏**：GameOwnerState · GameCatalogEntry · GameCatalogRevision · GameCenterCuration · GameSubmission
+
 **公众号**：OfficialAccount · OfficialAccountArticle · OfficialAccountFollow · OfficialAccountDelivery · OfficialAccountServiceMessage
 
 **世界**：WorldContext · NarrativeArc
 
 **分析**：AIBehaviorLog · AIUsageLedger
+
+**需求发现**：NeedDiscoveryRun · NeedDiscoveryCandidate
+
+**主动跟进**：FollowupRun · FollowupOpenLoop · FollowupRecommendation
+
+**赛博分身**：CyberAvatarProfile · CyberAvatarSignal · CyberAvatarRun · CyberAvatarRealWorldItem · CyberAvatarRealWorldBrief
+
+**动作运行时**：ActionConnector · ActionRun
+
+**现实联动**：CharacterRealWorldSignal · CharacterRealWorldDigest · CharacterRealWorldSyncRun
 
 **后台**：AdminConversationReview
 
@@ -157,6 +169,7 @@
 ## 会话管理结构（2026-04-08）
 
 - `MomentPost` 表现已扩展字段：`contentType`、`mediaPayload`，用于承载朋友圈文本 / 图集 / 视频 / 实况照片元数据，物理表保持兼容扩展
+- `MomentPost` 表现已扩展字段：`generationKind`、`generationMetadata`，用于标记常规 AI 发圈与现实联动发圈及其 digest 来源元数据
 - 朋友圈媒体路由：
   - `POST /api/moments/media`
   - `GET /api/moments/media/:fileName`
@@ -165,6 +178,7 @@
 - `Conversation` 表保留字段：`isPinned`、`pinnedAt`、`isHidden`、`hiddenAt`、`strongReminderUntil`、`lastClearedAt`、`lastActivityAt`
 - `Conversation` 表现已扩展背景字段：`chatBackgroundMode`、`chatBackgroundPayload`，用于承载会话专属聊天背景配置
 - `Message` 表现已扩展附件字段：`attachmentKind`、`attachmentPayload`，用于承载 `sticker` 表情包消息元数据
+- `Message` / `GroupMessage` 的 `contact_card` 附件现已支持 `recommendationMetadata`，用于承载“我自己”主动跟进推荐链路的推荐原因、来源线程与关系状态
 - `Group` 表现已扩展字段：`announcement`、`isMuted`、`mutedAt`、`isPinned`、`pinnedAt`、`savedToContacts`、`savedToContactsAt`、`showMemberNicknames`、`notifyOnAtMe`、`notifyOnAtAll`、`notifyOnAnnouncement`、`lastClearedAt`、`lastReadAt`、`isHidden`、`hiddenAt`、`lastActivityAt`
 - `Group` 表现已扩展背景字段：`chatBackgroundMode`、`chatBackgroundPayload`，用于承载群聊专属聊天背景配置
 - `GroupMessage` 表现已扩展附件字段：`attachmentKind`、`attachmentPayload`，用于承载聊天附件消息元数据
@@ -229,11 +243,17 @@
   - `DELETE /api/favorites/notes/:id`
   - `POST /api/favorites/messages`
   - `DELETE /api/favorites/:sourceId`
+- 搜索行为路由：
+  - `POST /api/search/history`
 - 消息提醒路由：
   - `GET /api/reminders/messages`
   - `POST /api/reminders/messages`
   - `POST /api/reminders/messages/:sourceId/notified`
   - `DELETE /api/reminders/messages/:sourceId`
+- 主动跟进路由：
+  - `POST /api/followup-runtime/recommendations/:id/opened`
+  - `POST /api/followup-runtime/recommendations/:id/friend-request-pending`
+  - `POST /api/followup-runtime/recommendations/:id/chat-started`
 - 安全举报路由：
   - `GET /api/moderation/reports`
   - `POST /api/moderation/reports`
@@ -247,6 +267,13 @@
   - `GET /api/official-accounts/:id/service-messages`
   - `POST /api/official-accounts/:id/service-messages/read`
   - `POST /api/official-accounts/deliveries/:deliveryId/read`
+- 游戏中心路由：
+  - `GET /api/games/home`
+  - `GET /api/games/owner-state`
+  - `POST /api/games/:id/launch`
+  - `POST /api/games/:id/pin`
+  - `DELETE /api/games/:id/pin`
+  - `DELETE /api/games/active-game`
 
 ## 前端状态约束
 
@@ -274,6 +301,12 @@
 
 - `dashboard-page.tsx`：实例级概览、Provider、诊断与运维入口
 - `characters-page.tsx`：角色注册表，查看在线状态与活动状态摘要，并支持名人预设分组筛选与批量安装
+- `games-page.tsx`：AI 游戏工作台，查看目录、来源、审核状态，并直接编辑游戏资料与新建草稿
+- `need-discovery-page.tsx`：角色缺口识别与自动加友配置页，查看短期/每日 cadence 规则、候选和运行记录
+- `followup-runtime-page.tsx`：主动跟进配置页，查看 open loop、推荐记录、规则、Prompt 与“我自己”推荐链路结果
+- `cyber-avatar-page.tsx`：赛博分身工作台入口页，承接分身画像、真实世界回流、好友需求上游、信号与运行记录视图
+- `real-world-sync-page.tsx`：真实世界联动页，查看每日外部信号、active digest、scene patch、现实发圈锚点与全局规则
+- `wechat-sync-page.tsx`：微信朋友同步页，接收本地授权导出的联系人资料与聊天摘要，生成角色预览并导入为好友
 - `character-editor-page.tsx`：角色画像编辑页，维护 prompt、traits、memory 与 reasoning
 - `character-factory-page.tsx`：角色工厂页，查看来源、草稿配方、字段来源、发布映射 diff、已发布版本与版本记录
 - `character-runtime-page.tsx`：角色运行逻辑台，查看单角色回复快照、scheduler 最近执行结果、生活状态、记忆摘要、叙事进度与生活逻辑可观测性，并直接修改运行时字段
@@ -282,6 +315,7 @@
 - `evals-page.tsx`：生成评估、trace 与实验对比页
 - `setup-page.tsx`：运行时与 Provider 初始化配置页
 - `reply-logic-page.tsx`：AI 回复逻辑总览页，查看实际链路、effective prompt、上下文窗口、记忆与硬编码常量
+- `action-runtime-page.tsx`：真实世界动作运行时控制台，围绕 self 角色查看动作门控、提示模板、连接器配置、自检结果、动作重试与执行轨迹
 
 ## 管理后台回复逻辑路由
 
@@ -295,6 +329,71 @@
 - `POST /api/admin/reply-logic/group-reply-tasks/:taskId/retry`
 - `POST /api/admin/reply-logic/group-reply-turns/:turnId/retry`
 - `POST /api/admin/reply-logic/conversations/:id/preview`
+
+## 管理后台游戏目录路由
+
+- `GET /api/admin/games`
+- `GET /api/admin/games/curation`
+- `GET /api/admin/games/submissions`
+- `GET /api/admin/games/:id`
+- `GET /api/admin/games/:id/revisions`
+- `POST /api/admin/games`
+- `POST /api/admin/games/submissions`
+- `POST /api/admin/games/submissions/:id/import`
+- `POST /api/admin/games/:id/publish`
+- `POST /api/admin/games/:id/revisions/:revisionId/restore`
+- `PATCH /api/admin/games/curation`
+- `PATCH /api/admin/games/submissions/:id`
+- `PATCH /api/admin/games/:id`
+
+## 管理后台需求发现路由
+
+- `GET /api/admin/need-discovery/overview`
+- `PATCH /api/admin/need-discovery/config`
+
+## 管理后台主动跟进路由
+
+- `GET /api/admin/followup-runtime/overview`
+- `GET /api/admin/followup-runtime/rules`
+- `PATCH /api/admin/followup-runtime/rules`
+
+## 管理后台赛博分身路由
+
+- `GET /api/admin/cyber-avatar/overview`
+- `GET /api/admin/cyber-avatar/rules`
+- `PATCH /api/admin/cyber-avatar/rules`
+- `GET /api/admin/cyber-avatar/profile`
+- `GET /api/admin/cyber-avatar/signals`
+- `GET /api/admin/cyber-avatar/real-world/items`
+- `GET /api/admin/cyber-avatar/real-world/briefs`
+- `GET /api/admin/cyber-avatar/runs`
+- `GET /api/admin/cyber-avatar/runs/:id`
+- `POST /api/admin/cyber-avatar/run/incremental`
+- `POST /api/admin/cyber-avatar/run/deep-refresh`
+- `POST /api/admin/cyber-avatar/run/full-rebuild`
+- `POST /api/admin/cyber-avatar/run/project`
+- `POST /api/admin/cyber-avatar/run/real-world`
+
+## 管理后台动作运行时路由
+
+- `GET /api/admin/action-runtime/overview`
+- `GET /api/admin/action-runtime/rules`
+- `PATCH /api/admin/action-runtime/rules`
+- `GET /api/admin/action-runtime/connectors`
+- `PATCH /api/admin/action-runtime/connectors/:id`
+- `POST /api/admin/action-runtime/connectors/:id/discover`
+- `POST /api/admin/action-runtime/connectors/:id/test`
+- `GET /api/admin/action-runtime/runs`
+- `GET /api/admin/action-runtime/runs/:id`
+- `POST /api/admin/action-runtime/runs/:id/retry`
+- `POST /api/admin/action-runtime/preview`
+
+## 管理后台真实世界联动路由
+
+- `GET /api/admin/real-world-sync/overview`
+- `GET /api/admin/real-world-sync/characters/:id`
+- `PATCH /api/admin/real-world-sync/rules`
+- `POST /api/admin/real-world-sync/run`
 
 ## 管理后台聊天记录路由
 
@@ -337,6 +436,14 @@
 - `POST /api/admin/characters/presets/:presetKey/install`
 - `POST /api/admin/characters/presets/install-batch`
 
+## 管理后台微信同步路由
+
+- `GET /api/admin/wechat-sync/history`
+- `POST /api/admin/wechat-sync/preview`
+- `POST /api/admin/wechat-sync/import`
+- `POST /api/admin/wechat-sync/history/:characterId/retry-friendship`
+- `DELETE /api/admin/wechat-sync/history/:characterId`
+
 ## 系统评测路由
 
 - `GET /api/system/evals/overview`
@@ -372,7 +479,9 @@
 - 世界主人可在 App 内设置自己的 API Key，服务端仅加密存储
 - 移动端底部导航当前对齐微信四项：`消息 / 通讯录 / 发现 / 我`
 - 桌面端左侧导航当前收口为：`消息 / 通讯录 / 收藏 / 朋友圈 / 广场动态 / 视频号 / 搜一搜 / 游戏中心 / 小程序面板`，底部为 `手机 / 更多`
+- 游戏中心前台继续沿用微信式游戏中心的排版与浏览节奏，但目录当前只承载 AI 游戏或 AI 制作的游戏
 - 移动端“发现”聚合朋友圈、摇一摇、场景相遇、广场动态、视频号、游戏中心、小程序等入口；点击入口后进入独立二级页，朋友圈不再占用独立底部 Tab
+- 摇一摇当前改为“基于用户近期行为即时生成临时候选 -> 用户确认添加后才正式进入世界”，未添加的结果只保留为后台运行记录
 - 移动端“公众号”当前收口在“通讯录”固定服务项内，不单独占用底部 Tab，也不放进“发现”
 - 移动端“我”页当前对齐微信式个人主页，资料编辑与 API Key 配置收口到“设置”二级页，不在主页直接裸露
 - Setup 页先选择云世界或本地世界：本地世界手动填写地址，云世界通过手机号进入
@@ -444,6 +553,11 @@
   - `GET /api/social/blocks`
   - `POST /api/social/block`
   - `POST /api/social/unblock`
+- 摇一摇即时生成路由已提供：
+  - `POST /api/social/shake`
+  - `GET /api/social/shake/active`
+  - `POST /api/social/shake/:id/keep`
+  - `POST /api/social/shake/:id/dismiss`
 - `Friendship` 表现已扩展字段：`isStarred`、`starredAt`，用于承载好友星标状态
 - `Friendship` 表现已扩展联系人资料字段：`remarkName`、`region`、`source`、`tags`，用于承载微信式联系人备注/地区/来源/标签资料
 - 社交星标路由已提供：

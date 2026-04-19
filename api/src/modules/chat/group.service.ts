@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FindOptionsWhere, In, MoreThan, Repository } from 'typeorm';
+import { AiOrchestratorService } from '../ai/ai-orchestrator.service';
 import { ConversationEntity } from './conversation.entity';
 import { GroupEntity } from './group.entity';
 import { GroupMemberEntity } from './group-member.entity';
@@ -44,6 +45,7 @@ import {
 import { type GroupUserMessageContext } from './group-reply.types';
 import { GroupReplyPlannerService } from './group-reply-planner.service';
 import { GroupReplyTaskService } from './group-reply-task.service';
+import { CyberAvatarService } from '../cyber-avatar/cyber-avatar.service';
 
 export interface CreateGroupDto {
   name: string;
@@ -128,6 +130,7 @@ export class GroupService {
   private readonly logger = new Logger(GroupService.name);
 
   constructor(
+    private readonly ai: AiOrchestratorService,
     @InjectRepository(ConversationEntity)
     private conversationRepo: Repository<ConversationEntity>,
     @InjectRepository(MessageEntity)
@@ -143,6 +146,7 @@ export class GroupService {
     private readonly replyLogicRules: ReplyLogicRulesService,
     private readonly chatGateway: ChatGateway,
     private readonly customStickersService: CustomStickersService,
+    private readonly cyberAvatar: CyberAvatarService,
     private readonly groupReplyPlanner: GroupReplyPlannerService,
     private readonly groupReplyTaskService: GroupReplyTaskService,
   ) {}
@@ -609,7 +613,10 @@ export class GroupService {
     senderAvatar?: string,
   ): Promise<GroupMessage> {
     const group = await this.requireAccessibleGroup(groupId);
-    const normalizedInput = await this.normalizeOutgoingMessageInput(input);
+    const normalizedInput = await this.normalizeOutgoingMessageInput(
+      input,
+      groupId,
+    );
     const message = this.messageRepo.create({
       groupId,
       senderId,
@@ -630,6 +637,24 @@ export class GroupService {
       message.createdAt ?? new Date(),
       senderType === 'user',
     );
+    if (senderType === 'user') {
+      void this.cyberAvatar.captureSignal({
+        ownerId: senderId,
+        signalType: 'group_message',
+        sourceSurface: 'group',
+        sourceEntityType: 'group_message',
+        sourceEntityId: message.id,
+        dedupeKey: `group_message:${message.id}`,
+        summaryText: `群聊 ${group.name} 发言：${normalizedInput.promptText.slice(0, 120)}`,
+        payload: {
+          groupId,
+          groupName: group.name,
+          messageType: normalizedInput.type,
+          text: normalizedInput.promptText,
+        },
+        occurredAt: message.createdAt ?? new Date(),
+      });
+    }
     const nextMessage = this.toGroupMessage(message);
     this.chatGateway.emitThreadMessage(groupId, nextMessage);
     return nextMessage;
@@ -717,6 +742,7 @@ export class GroupService {
 
   private async normalizeOutgoingMessageInput(
     input: SendGroupMessageInput,
+    groupId?: string,
   ): Promise<{
     type:
       | 'text'
@@ -768,19 +794,21 @@ export class GroupService {
         throw new Error('Attachment payload is invalid');
       }
 
-      const fallbackText =
-        input.text?.trim() || this.getAttachmentFallbackText(input.attachment);
-      const promptText = this.buildMessagePromptText(
-        fallbackText,
+      const attachment = await this.enrichAttachmentForAi(
         input.attachment,
+        groupId,
       );
+
+      const fallbackText =
+        input.text?.trim() || this.getAttachmentFallbackText(attachment);
+      const promptText = this.buildMessagePromptText(fallbackText, attachment);
 
       return {
         type: input.type,
         text: fallbackText,
         promptText,
-        aiParts: this.buildAiParts(fallbackText, input.attachment),
-        attachment: input.attachment,
+        aiParts: this.buildAiParts(fallbackText, attachment),
+        attachment,
       };
     }
 
@@ -795,6 +823,56 @@ export class GroupService {
       promptText: this.buildMessagePromptText(text),
       aiParts: this.buildAiParts(text),
     };
+  }
+
+  private async enrichAttachmentForAi(
+    attachment: MessageAttachment,
+    groupId?: string,
+  ): Promise<MessageAttachment> {
+    if (attachment.kind === 'voice') {
+      if (attachment.transcriptText?.trim()) {
+        return attachment;
+      }
+
+      const transcription = await this.ai.tryTranscribeMediaFromUrl({
+        url: attachment.url,
+        mimeType: attachment.mimeType,
+        fileName: attachment.fileName,
+        conversationId: groupId,
+        mode: 'group_attachment',
+      });
+      return transcription?.text
+        ? {
+            ...attachment,
+            transcriptText: transcription.text,
+          }
+        : attachment;
+    }
+
+    if (
+      attachment.kind === 'file' &&
+      /^(audio|video)\//i.test(attachment.mimeType)
+    ) {
+      if (attachment.transcriptText?.trim()) {
+        return attachment;
+      }
+
+      const transcription = await this.ai.tryTranscribeMediaFromUrl({
+        url: attachment.url,
+        mimeType: attachment.mimeType,
+        fileName: attachment.fileName,
+        conversationId: groupId,
+        mode: 'group_attachment',
+      });
+      return transcription?.text
+        ? {
+            ...attachment,
+            transcriptText: transcription.text,
+          }
+        : attachment;
+    }
+
+    return attachment;
   }
 
   private buildAiHistoryMessage(message: GroupMessageEntity): ChatMessage {
@@ -853,6 +931,7 @@ export class GroupService {
           imageUrl: attachment.url,
           detail: 'auto',
           altText: promptText,
+          mimeType: attachment.mimeType,
         },
       ];
     }
@@ -950,15 +1029,28 @@ export class GroupService {
     } else if (attachment.kind === 'file') {
       const sizeText = formatGroupAttachmentSize(attachment.size);
       const captionText = caption ? `，补充说明：${caption}` : '';
-      attachmentSummary =
-        `发来一个文件《${attachment.fileName}》${attachment.mimeType ? `，类型：${attachment.mimeType}` : ''}${sizeText ? `，大小：${sizeText}` : ''}${captionText}`.trim();
+      if (
+        /^(audio|video)\//i.test(attachment.mimeType) &&
+        attachment.transcriptText?.trim()
+      ) {
+        const mediaLabel = attachment.mimeType.startsWith('video/')
+          ? '视频'
+          : '音频';
+        attachmentSummary =
+          `发来一个${mediaLabel}文件《${attachment.fileName}》${sizeText ? `，大小：${sizeText}` : ''}${captionText}，转写内容：${attachment.transcriptText.trim()}`.trim();
+      } else {
+        attachmentSummary =
+          `发来一个文件《${attachment.fileName}》${attachment.mimeType ? `，类型：${attachment.mimeType}` : ''}${sizeText ? `，大小：${sizeText}` : ''}${captionText}`.trim();
+      }
     } else if (attachment.kind === 'voice') {
       const durationText =
         attachment.durationMs && attachment.durationMs > 0
           ? `，时长：${formatGroupAttachmentDuration(attachment.durationMs)}`
           : '';
       const captionText = caption ? `，补充说明：${caption}` : '';
-      attachmentSummary = `发来一条语音消息${durationText}${captionText}`.trim();
+      const transcriptText = attachment.transcriptText?.trim();
+      attachmentSummary =
+        `发来一条语音消息${durationText}${captionText}${transcriptText ? `，转写内容：${transcriptText}` : ''}`.trim();
     } else if (attachment.kind === 'contact_card') {
       attachmentSummary =
         `分享了一张名片：${attachment.name}${attachment.relationship ? `，关系：${attachment.relationship}` : ''}${attachment.bio ? `，简介：${attachment.bio}` : ''}`.trim();

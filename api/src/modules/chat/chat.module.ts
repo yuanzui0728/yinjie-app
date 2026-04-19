@@ -23,6 +23,8 @@ import { MockDigitalHumanProviderAdapter } from './digital-human-provider';
 import { FavoritesService } from './favorites.service';
 import { GroupService } from './group.service';
 import { MessageRemindersService } from './message-reminders.service';
+import { SearchActivityController } from './search-activity.controller';
+import { SearchActivityService } from './search-activity.service';
 import { VoiceCallsService } from './voice-calls.service';
 import { GroupReplyPlannerService } from './group-reply-planner.service';
 import { GroupReplyOrchestratorService } from './group-reply-orchestrator.service';
@@ -32,6 +34,8 @@ import { AuthModule } from '../auth/auth.module';
 import { CharactersModule } from '../characters/characters.module';
 import { NarrativeModule } from '../narrative/narrative.module';
 import { SystemConfigModule } from '../config/config.module';
+import { ActionRuntimeModule } from '../action-runtime/action-runtime.module';
+import { CyberAvatarModule } from '../cyber-avatar/cyber-avatar.module';
 import { ConversationEntity } from './conversation.entity';
 import { MessageEntity } from './message.entity';
 import { GroupEntity } from './group.entity';
@@ -49,6 +53,8 @@ import { CharacterEntity } from '../characters/character.entity';
     CharactersModule,
     NarrativeModule,
     SystemConfigModule,
+    ActionRuntimeModule,
+    CyberAvatarModule,
     TypeOrmModule.forFeature([
       ConversationEntity,
       MessageEntity,
@@ -69,6 +75,7 @@ import { CharacterEntity } from '../characters/character.entity';
     GroupReplyOrchestratorService,
     GroupReplyTaskService,
     FavoritesService,
+    SearchActivityService,
     MessageRemindersService,
     DigitalHumanCallsService,
     MockDigitalHumanProviderAdapter,
@@ -82,6 +89,7 @@ import { CharacterEntity } from '../characters/character.entity';
     VoiceCallsController,
     DigitalHumanCallsController,
     FavoritesController,
+    SearchActivityController,
     MessageRemindersController,
     ConversationBackgroundController,
     GroupBackgroundController,
@@ -94,6 +102,9 @@ import { CharacterEntity } from '../characters/character.entity';
     GroupService,
     ChatGateway,
     GroupReplyTaskService,
+    FavoritesService,
+    SearchActivityService,
+    MessageRemindersService,
   ],
 })
 export class ChatModule {}

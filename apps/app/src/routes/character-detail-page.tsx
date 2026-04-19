@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { useNavigate, useParams, useRouterState } from "@tanstack/react-router";
 import { ArrowLeft, ChevronRight, Star } from "lucide-react";
 import {
   blockCharacter,
@@ -11,6 +11,8 @@ import {
   getFriendRequests,
   getFriends,
   getOrCreateConversation,
+  markFollowupRecommendationChatStarted,
+  markFollowupRecommendationFriendRequestPending,
   sendFriendRequest,
   setConversationMuted,
   setConversationPinned,
@@ -38,6 +40,7 @@ import { buildDesktopFriendMomentsRouteHash } from "../features/desktop/moments/
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { isPersistedGroupConversation } from "../lib/conversation-route";
 import { formatTimestamp } from "../lib/format";
+import { navigateBackOrFallback } from "../lib/history-back";
 import { shareWithNativeShell } from "../runtime/mobile-bridge";
 import { isNativeMobileShareSurface } from "../runtime/mobile-share-surface";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
@@ -51,6 +54,7 @@ type FriendProfileFormState = {
 export function CharacterDetailPage() {
   const { characterId } = useParams({ from: "/character/$characterId" });
   const navigate = useNavigate();
+  const hash = useRouterState({ select: (state) => state.location.hash });
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
   const isDesktopLayout = useDesktopLayout();
@@ -75,6 +79,10 @@ export function CharacterDetailPage() {
     remarkName: "",
     tags: "",
   });
+  const recommendationId = useMemo(
+    () => parseRecommendationRouteHash(hash),
+    [hash],
+  );
 
   const characterQuery = useQuery({
     queryKey: ["app-character", baseUrl, characterId],
@@ -186,11 +194,17 @@ export function CharacterDetailPage() {
 
       return getOrCreateConversation({ characterId: character.id }, baseUrl);
     },
-    onSuccess: (conversation) => {
+    onSuccess: async (conversation) => {
       if (!conversation) {
         return;
       }
 
+      if (recommendationId) {
+        await markFollowupRecommendationChatStarted(
+          recommendationId,
+          baseUrl,
+        ).catch(() => undefined);
+      }
       void navigate({
         to: "/chat/$conversationId",
         params: { conversationId: conversation.id },
@@ -228,19 +242,28 @@ export function CharacterDetailPage() {
     },
   });
   const sendFriendRequestMutation = useMutation({
-    mutationFn: () =>
-      sendFriendRequest(
+    mutationFn: async () => {
+      const request = await sendFriendRequest(
         {
           characterId,
           greeting: `${ownerName} 想把你加到通讯录里。`,
-          autoAccept: true,
+          autoAccept: recommendationId ? false : true,
         },
         baseUrl,
-      ),
+      );
+      if (recommendationId) {
+        await markFollowupRecommendationFriendRequestPending(
+          recommendationId,
+          { friendRequestId: request.id },
+          baseUrl,
+        ).catch(() => undefined);
+      }
+      return request;
+    },
     onSuccess: async () => {
       setNotice({
         tone: "success",
-        message: "已添加到通讯录。",
+        message: recommendationId ? "好友申请已发送。" : "已添加到通讯录。",
       });
       await Promise.all([
         queryClient.invalidateQueries({
@@ -375,12 +398,9 @@ export function CharacterDetailPage() {
   });
 
   const handleBack = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      window.history.back();
-      return;
-    }
-
-    void navigate({ to: "/tabs/contacts" });
+    navigateBackOrFallback(() => {
+      void navigate({ to: "/tabs/contacts" });
+    });
   };
 
   const handleSaveProfile = async () => {
@@ -512,6 +532,7 @@ export function CharacterDetailPage() {
           keyword: character?.name ?? "",
           characterId,
           openCompose: true,
+          recommendationId,
         }),
       });
       return;
@@ -1271,7 +1292,8 @@ export function CharacterDetailPage() {
                   value={
                     isFriend
                       ? formatTimestamp(
-                          friendship?.lastInteractedAt ?? character.lastActiveAt,
+                          friendship?.lastInteractedAt ??
+                            character.lastActiveAt,
                         )
                       : formatTimestamp(character.lastActiveAt)
                   }
@@ -1491,6 +1513,16 @@ export function CharacterDetailPage() {
       ) : null}
     </AppPage>
   );
+}
+
+function parseRecommendationRouteHash(hash: string) {
+  const normalizedHash = hash.startsWith("#") ? hash.slice(1) : hash;
+  if (!normalizedHash) {
+    return undefined;
+  }
+
+  const params = new URLSearchParams(normalizedHash);
+  return params.get("recommendationId")?.trim() || undefined;
 }
 
 function MobileCharacterStatusCard({

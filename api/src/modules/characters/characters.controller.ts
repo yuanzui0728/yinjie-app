@@ -17,7 +17,13 @@ export class CharactersController {
 
   @Get()
   findAll() {
-    return this.charactersService.findAll();
+    return this.charactersService.findAllVisibleToOwner();
+  }
+
+  /** 返回硬编码预设目录（不查 DB），供前台发现页使用 */
+  @Get('preset-catalog')
+  listPresetCatalog() {
+    return this.charactersService.listPresetCatalog();
   }
 
   /** 返回硬编码预设目录（不查 DB），供前台发现页使用 */

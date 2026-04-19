@@ -1,16 +1,128 @@
 // 场景提示词：每个场景独立配置
 export interface ScenePrompts {
-  chat?: string;            // 聊天回复
-  moments_post?: string;    // 发朋友圈
+  chat?: string; // 聊天回复
+  moments_post?: string; // 发朋友圈
   moments_comment?: string; // 朋友圈评论/回复
-  feed_post?: string;       // 发 Feed 贴文
-  channel_post?: string;    // 发视频号内容
-  feed_comment?: string;    // Feed 评论反应
-  greeting?: string;        // 好友请求问候 / 摇一摇
-  proactive?: string;       // 主动提醒
+  feed_post?: string; // 发 Feed 贴文
+  channel_post?: string; // 发视频号内容
+  feed_comment?: string; // Feed 评论反应
+  greeting?: string; // 好友请求问候 / 摇一摇
+  proactive?: string; // 主动提醒
 }
 
 export type SceneKey = keyof ScenePrompts;
+
+export type RealityLinkApplyModeValue = 'disabled' | 'shadow' | 'live';
+export type RealityLinkSubjectTypeValue =
+  | 'living_public_figure'
+  | 'organization_proxy'
+  | 'historical_snapshot'
+  | 'fictional_or_private';
+
+export interface RealWorldRuntimeContextValue {
+  enabled: boolean;
+  applyMode: RealityLinkApplyModeValue;
+  subjectType?: RealityLinkSubjectTypeValue;
+  subjectName?: string;
+  digestId?: string | null;
+  syncDate?: string | null;
+  dailySummary?: string;
+  behaviorSummary?: string;
+  stanceShiftSummary?: string;
+  globalOverlay?: string;
+  realityMomentBrief?: string | null;
+  sceneOverlays?: ScenePrompts;
+  signalTitles?: string[];
+}
+
+export type WechatSyncImportMessageDirectionValue =
+  | 'owner'
+  | 'contact'
+  | 'group_member'
+  | 'system'
+  | 'unknown';
+
+export interface WechatSyncImportMessageSampleValue {
+  timestamp: string;
+  text: string;
+  sender?: string | null;
+  typeLabel?: string | null;
+  direction?: WechatSyncImportMessageDirectionValue;
+}
+
+export interface WechatSyncImportMomentHighlightValue {
+  postedAt?: string | null;
+  text: string;
+  location?: string | null;
+  mediaHint?: string | null;
+}
+
+export interface WechatSyncImportContactSnapshotValue {
+  username: string;
+  displayName: string;
+  nickname?: string | null;
+  remarkName?: string | null;
+  region?: string | null;
+  source?: string | null;
+  tags: string[];
+  isGroup: boolean;
+  messageCount: number;
+  ownerMessageCount: number;
+  contactMessageCount: number;
+  latestMessageAt?: string | null;
+  chatSummary?: string | null;
+  topicKeywords: string[];
+  sampleMessages: WechatSyncImportMessageSampleValue[];
+  momentHighlights: WechatSyncImportMomentHighlightValue[];
+}
+
+export interface WechatSyncImportDraftSnapshotValue {
+  name: string;
+  relationship: string;
+  bio: string;
+  expertDomains: string[];
+  memorySummary: string;
+}
+
+export interface WechatSyncImportSnapshotValue {
+  version: number;
+  importedAt: string;
+  status: 'created' | 'updated';
+  autoAddFriend: boolean;
+  seedMoments: boolean;
+  seededMomentCount: number;
+  contact: WechatSyncImportContactSnapshotValue;
+  draftCharacter: WechatSyncImportDraftSnapshotValue;
+}
+
+export type WechatSyncImportModeValue = 'preview_import' | 'snapshot_restore';
+
+export interface WechatSyncImportChangeDiffValue {
+  label: string;
+  previousValue: string;
+  nextValue: string;
+  changed: boolean;
+}
+
+export interface WechatSyncImportChangeRecordValue {
+  id: string;
+  recordedAt: string;
+  mode: WechatSyncImportModeValue;
+  previousVersion?: number | null;
+  restoredFromVersion?: number | null;
+  toVersion: number;
+  summary: string;
+  changedFields: string[];
+  diffs?: WechatSyncImportChangeDiffValue[];
+  resultSnapshot?: WechatSyncImportSnapshotValue | null;
+}
+
+export interface WechatSyncImportMetadataValue {
+  currentSnapshot?: WechatSyncImportSnapshotValue | null;
+  previousSnapshot?: WechatSyncImportSnapshotValue | null;
+  snapshotHistory?: WechatSyncImportSnapshotValue[];
+  changeHistory?: WechatSyncImportChangeRecordValue[];
+}
 
 // 角色人格画像结构
 export interface PersonalityProfile {
@@ -73,11 +185,13 @@ export interface PersonalityProfile {
     coreMemory: string;
     recentSummary: string;
     forgettingCurve: number;
-    /** 近期摘要提取提示词，留空使用全局默认。变量：{{name}}、{{chatHistory}} */
+    /** 近期记忆提示词，留空使用全局默认。变量：{{name}}、{{chatHistory}} */
     recentSummaryPrompt?: string;
-    /** 核心记忆提取提示词，留空使用全局默认。变量：{{name}}、{{interactionHistory}} */
+    /** 长期记忆提示词，留空使用全局默认。变量：{{name}}、{{interactionHistory}} */
     coreMemoryPrompt?: string;
   };
+  realWorldContext?: RealWorldRuntimeContextValue;
+  wechatSyncImport?: WechatSyncImportMetadataValue;
 }
 
 export interface ChatMessage {
@@ -97,6 +211,7 @@ export type AiMessagePart =
       imageUrl: string;
       detail?: 'auto' | 'low' | 'high';
       altText?: string;
+      mimeType?: string;
     }
   | {
       type: 'file';
@@ -194,9 +309,41 @@ export interface GenerateReplyResult {
   billingSource?: AiUsageBillingSource;
 }
 
+export interface MomentGenerationWorldContext {
+  dateTimeText: string;
+  timeText: string;
+  weather?: string;
+  location?: string;
+  holiday?: string;
+  localTime?: string;
+}
+
+export interface MomentGenerationRelationshipContext {
+  hasRecentConversation: boolean;
+  lastConversationAt?: Date;
+  recentTopics: string[];
+  recentUserIntentSummary?: string;
+  avoidDirectQuote: boolean;
+}
+
+export interface MomentGenerationHints {
+  anchorPriority: Array<
+    'real_world' | 'weather' | 'location' | 'holiday' | 'recent_chat' | 'life'
+  >;
+  mustAvoidGeneric: boolean;
+  preferObservationOverAnnouncement: boolean;
+}
+
+export interface MomentGenerationContext {
+  worldContext?: MomentGenerationWorldContext;
+  relationshipContext?: MomentGenerationRelationshipContext;
+  generationHints?: MomentGenerationHints;
+}
+
 export interface GenerateMomentOptions {
   profile: PersonalityProfile;
   currentTime: Date;
   recentTopics?: string[];
+  generationContext?: MomentGenerationContext;
   usageContext?: AiUsageContext;
 }

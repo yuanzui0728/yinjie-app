@@ -1,7 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, LessThan, MoreThanOrEqual, MoreThan, Repository } from 'typeorm';
+import {
+  Between,
+  LessThan,
+  MoreThanOrEqual,
+  MoreThan,
+  Repository,
+} from 'typeorm';
 import { CharacterEntity } from '../characters/character.entity';
 import { FriendRequestEntity } from '../social/friend-request.entity';
 import { MomentPostEntity } from '../moments/moment-post.entity';
@@ -16,13 +22,35 @@ import { SocialService } from '../social/social.service';
 import { FeedService } from '../feed/feed.service';
 import { ChatGateway } from '../chat/chat.gateway';
 import { AIRelationshipEntity } from '../social/ai-relationship.entity';
-import { DEFAULT_CHARACTER_IDS } from '../characters/default-characters';
+import { SELF_CHARACTER_ID } from '../characters/default-characters';
 import { SchedulerTelemetryService } from './scheduler-telemetry.service';
 import type { SchedulerJobId } from './scheduler-telemetry.types';
 import { ReplyLogicRulesService } from '../ai/reply-logic-rules.service';
+import { CharactersService } from '../characters/characters.service';
+import { NeedDiscoveryService } from '../need-discovery/need-discovery.service';
+import { AppEvents, EventBusService } from '../events/event-bus.service';
+import { RealWorldSyncService } from '../real-world-sync/real-world-sync.service';
+import { FollowupRuntimeService } from '../followup-runtime/followup-runtime.service';
+import {
+  WORLD_NEWS_BULLETIN_GENERATION_KIND,
+  WORLD_NEWS_DESK_CHARACTER_ID,
+} from '../characters/world-news-desk-character';
 
 type TrackedJobResult = {
   summary: string;
+};
+
+type NewsBulletinSlot = {
+  key: 'morning' | 'noon' | 'evening';
+  label: '早报' | '午报' | '晚报';
+};
+
+type PublishWorldNewsBulletinResult = {
+  success: boolean;
+  created: boolean;
+  slot: NewsBulletinSlot | null;
+  summary: string;
+  postId?: string | null;
 };
 
 function renderTemplate(
@@ -62,6 +90,11 @@ export class SchedulerService {
     private readonly chatGateway: ChatGateway,
     private readonly telemetry: SchedulerTelemetryService,
     private readonly replyLogicRules: ReplyLogicRulesService,
+    private readonly charactersService: CharactersService,
+    private readonly needDiscoveryService: NeedDiscoveryService,
+    private readonly eventBus: EventBusService,
+    private readonly realWorldSync: RealWorldSyncService,
+    private readonly followupRuntimeService: FollowupRuntimeService,
   ) {}
 
   @Cron('*/30 * * * *')
@@ -83,6 +116,24 @@ export class SchedulerService {
   }
 
   @Cron('*/10 * * * *')
+  async discoverNeedCharactersShortInterval() {
+    await this.runScheduledJob(
+      'discover_need_characters_short_interval',
+      () => this.handleDiscoverNeedCharactersShortInterval(),
+      'Failed to run short-interval need discovery',
+    );
+  }
+
+  @Cron('*/10 * * * *')
+  async discoverNeedCharactersDaily() {
+    await this.runScheduledJob(
+      'discover_need_characters_daily',
+      () => this.handleDiscoverNeedCharactersDaily(),
+      'Failed to run daily need discovery',
+    );
+  }
+
+  @Cron('*/10 * * * *')
   async updateAiActiveStatus() {
     await this.runScheduledJob(
       'update_ai_active_status',
@@ -98,6 +149,131 @@ export class SchedulerService {
       () => this.handleCheckMomentSchedule(),
       'Failed to check moment schedule',
     );
+  }
+
+  @Cron('*/10 * * * *')
+  async triggerFollowupRecommendations() {
+    await this.runScheduledJob(
+      'trigger_followup_recommendations',
+      () => this.handleTriggerFollowupRecommendations(),
+      'Failed to trigger followup recommendations',
+    );
+  }
+
+  @Cron('*/10 * * * *')
+  async checkRealWorldNewsBulletins() {
+    await this.runScheduledJob(
+      'check_real_world_news_bulletins',
+      () => this.handleCheckRealWorldNewsBulletins(),
+      'Failed to check real-world news bulletins',
+    );
+  }
+
+  async publishWorldNewsDeskBulletin(input?: {
+    slot?: NewsBulletinSlot['key'];
+  }): Promise<PublishWorldNewsBulletinResult> {
+    const slot = input?.slot
+      ? this.resolveNewsBulletinSlotByKey(input.slot)
+      : this.resolveNewsBulletinSlot(new Date());
+    if (!slot) {
+      return {
+        success: false,
+        created: false,
+        slot: null,
+        summary: '当前不在界闻早报、午报或晚报窗口，且未指定补发时段。',
+      };
+    }
+
+    const newsDesk = await this.characterRepo.findOneBy({
+      id: WORLD_NEWS_DESK_CHARACTER_ID,
+    });
+    if (!newsDesk) {
+      return {
+        success: false,
+        created: false,
+        slot,
+        summary: '界闻角色尚未落库，无法补发新闻简报。',
+      };
+    }
+
+    const blockedCharacterIds = new Set(
+      await this.socialService.getBlockedCharacterIds(),
+    );
+    if (blockedCharacterIds.has(newsDesk.id)) {
+      return {
+        success: false,
+        created: false,
+        slot,
+        summary: '界闻当前处于屏蔽状态，跳过新闻简报补发。',
+      };
+    }
+
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const existingPosts = await this.momentPostRepo.find({
+      where: {
+        authorId: newsDesk.id,
+        generationKind: WORLD_NEWS_BULLETIN_GENERATION_KIND,
+        postedAt: Between(start, new Date()),
+      },
+      order: { postedAt: 'DESC' },
+    });
+    if (
+      existingPosts.some((post) => post.generationMetadata?.slot === slot.key)
+    ) {
+      return {
+        success: true,
+        created: false,
+        slot,
+        summary: `界闻今天的${slot.label}已存在，跳过重复补发。`,
+      };
+    }
+
+    const syncResult = await this.realWorldSync.runSync({
+      characterId: newsDesk.id,
+      force: true,
+    });
+    if (!syncResult.success && syncResult.successCount === 0) {
+      return {
+        success: false,
+        created: false,
+        slot,
+        summary: `界闻在${slot.label}前的新闻同步失败，未生成简报。`,
+      };
+    }
+
+    const digestSnapshot = await this.realWorldSync.getActiveDigestSnapshot(
+      newsDesk.id,
+    );
+    const post = await this.generateMomentForChar(newsDesk, {
+      currentTime: this.resolveBulletinReferenceTime(slot.key),
+      generationKind: WORLD_NEWS_BULLETIN_GENERATION_KIND,
+      generationMetadata: {
+        slot: slot.key,
+        slotLabel: slot.label,
+        digestId: digestSnapshot?.digestId ?? null,
+        syncDate: digestSnapshot?.syncDate ?? null,
+        signalIds: digestSnapshot?.signalIds ?? [],
+        signalTitles: digestSnapshot?.signalTitles ?? [],
+        sourceNames: digestSnapshot?.sourceNames ?? [],
+      },
+    });
+    if (!post) {
+      return {
+        success: false,
+        created: false,
+        slot,
+        summary: `界闻已完成${slot.label}同步，但朋友圈生成失败。`,
+      };
+    }
+
+    return {
+      success: true,
+      created: true,
+      slot,
+      postId: post.id,
+      summary: `界闻已发布今天的${slot.label}。`,
+    };
   }
 
   @Cron('0 10,14,19 * * *')
@@ -199,49 +375,95 @@ export class SchedulerService {
   private async executeManualJob(jobId: SchedulerJobId) {
     switch (jobId) {
       case 'world_context_snapshot':
-        return (await this.executeTrackedJob(jobId, () =>
-          this.handleUpdateWorldContext(),
-        )).summary;
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleUpdateWorldContext(),
+          )
+        ).summary;
       case 'expire_friend_requests':
-        return (await this.executeTrackedJob(jobId, () =>
-          this.handleExpireFriendRequests(),
-        )).summary;
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleExpireFriendRequests(),
+          )
+        ).summary;
+      case 'discover_need_characters_short_interval':
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleDiscoverNeedCharactersShortInterval(true),
+          )
+        ).summary;
+      case 'discover_need_characters_daily':
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleDiscoverNeedCharactersDaily(true),
+          )
+        ).summary;
       case 'update_ai_active_status':
-        return (await this.executeTrackedJob(jobId, () =>
-          this.handleUpdateAiActiveStatus(),
-        )).summary;
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleUpdateAiActiveStatus(),
+          )
+        ).summary;
       case 'check_moment_schedule':
-        return (await this.executeTrackedJob(jobId, () =>
-          this.handleCheckMomentSchedule(),
-        )).summary;
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleCheckMomentSchedule(),
+          )
+        ).summary;
+      case 'trigger_followup_recommendations':
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleTriggerFollowupRecommendations(true),
+          )
+        ).summary;
+      case 'check_real_world_news_bulletins':
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleCheckRealWorldNewsBulletins(),
+          )
+        ).summary;
       case 'trigger_scene_friend_requests':
-        return (await this.executeTrackedJob(jobId, () =>
-          this.handleTriggerSceneFriendRequests(),
-        )).summary;
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleTriggerSceneFriendRequests(),
+          )
+        ).summary;
       case 'process_pending_feed_reactions':
-        return (await this.executeTrackedJob(jobId, () =>
-          this.handleProcessPendingFeedReactions(),
-        )).summary;
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleProcessPendingFeedReactions(),
+          )
+        ).summary;
       case 'check_channels_schedule':
-        return (await this.executeTrackedJob(jobId, () =>
-          this.handleCheckChannelsSchedule(),
-        )).summary;
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleCheckChannelsSchedule(),
+          )
+        ).summary;
       case 'update_character_status':
-        return (await this.executeTrackedJob(jobId, () =>
-          this.handleUpdateCharacterStatus(),
-        )).summary;
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleUpdateCharacterStatus(),
+          )
+        ).summary;
       case 'trigger_memory_proactive_messages':
-        return (await this.executeTrackedJob(jobId, () =>
-          this.handleTriggerMemoryProactiveMessages(),
-        )).summary;
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleTriggerMemoryProactiveMessages(),
+          )
+        ).summary;
       case 'update_recent_memory_daily':
-        return (await this.executeTrackedJob(jobId, () =>
-          this.handleUpdateRecentMemoryDaily(),
-        )).summary;
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleUpdateRecentMemoryDaily(),
+          )
+        ).summary;
       case 'update_core_memory_weekly':
-        return (await this.executeTrackedJob(jobId, () =>
-          this.handleUpdateCoreMemoryWeekly(),
-        )).summary;
+        return (
+          await this.executeTrackedJob(jobId, () =>
+            this.handleUpdateCoreMemoryWeekly(),
+          )
+        ).summary;
       default:
         throw new Error('Unknown scheduler job');
     }
@@ -277,32 +499,53 @@ export class SchedulerService {
   private async handleExpireFriendRequests(): Promise<TrackedJobResult> {
     const runtimeRules = await this.replyLogicRules.getRules();
     const now = new Date();
-    const result = await this.friendRequestRepo.update(
-      { status: 'pending', expiresAt: LessThan(now) },
-      { status: 'expired' },
-    );
+    const expiringRequests = await this.friendRequestRepo.find({
+      where: {
+        status: 'pending',
+        expiresAt: LessThan(now),
+      },
+      order: { expiresAt: 'ASC', createdAt: 'ASC' },
+    });
+    for (const request of expiringRequests) {
+      request.status = 'expired';
+      await this.friendRequestRepo.save(request);
+      this.eventBus.emit(AppEvents.FRIEND_REQUEST_EXPIRED, {
+        requestId: request.id,
+        characterId: request.characterId,
+        ownerId: request.ownerId,
+        expiredAt: now,
+      });
+    }
     this.logger.debug('Expired old friend requests');
     return {
       summary: renderTemplate(
         runtimeRules.schedulerTextTemplates.jobSummaryExpiredFriendRequests,
-        { count: result.affected ?? 0 },
+        { count: expiringRequests.length },
       ),
     };
   }
 
+  private async handleDiscoverNeedCharactersShortInterval(
+    force = false,
+  ): Promise<TrackedJobResult> {
+    return this.needDiscoveryService.runShortIntervalDiscovery({ force });
+  }
+
+  private async handleDiscoverNeedCharactersDaily(
+    force = false,
+  ): Promise<TrackedJobResult> {
+    return this.needDiscoveryService.runDailyDiscovery({ force });
+  }
+
   private async handleUpdateAiActiveStatus(): Promise<TrackedJobResult> {
     const runtimeRules = await this.replyLogicRules.getRules();
-    const chars = await this.characterRepo.find();
+    const chars = await this.charactersService.findAllVisibleToOwner();
     const hour = new Date().getHours();
     let changedCount = 0;
     let manualLockedCount = 0;
 
     for (const char of chars) {
-      if (
-        DEFAULT_CHARACTER_IDS.includes(
-          char.id as (typeof DEFAULT_CHARACTER_IDS)[number],
-        )
-      ) {
+      if (char.id === SELF_CHARACTER_ID) {
         const nextOnline = runtimeRules.defaultCharacterRules.isOnline;
         const nextActivity = runtimeRules.defaultCharacterRules.activity;
         const onlineChanged = char.isOnline !== nextOnline;
@@ -317,9 +560,12 @@ export class SchedulerService {
               characterId: char.id,
               characterName: char.name,
               kind: 'online_status_changed',
-              title: runtimeRules.schedulerTextTemplates.eventTitleOnlineStatusChanged,
+              title:
+                runtimeRules.schedulerTextTemplates
+                  .eventTitleOnlineStatusChanged,
               summary: renderTemplate(
-                runtimeRules.schedulerTextTemplates.eventSummaryDefaultOnlineKept,
+                runtimeRules.schedulerTextTemplates
+                  .eventSummaryDefaultOnlineKept,
                 { onlineState: nextOnline ? '在线' : '离线' },
               ),
               jobId: 'update_ai_active_status',
@@ -334,9 +580,11 @@ export class SchedulerService {
               characterId: char.id,
               characterName: char.name,
               kind: 'activity_changed',
-              title: runtimeRules.schedulerTextTemplates.eventTitleActivityChanged,
+              title:
+                runtimeRules.schedulerTextTemplates.eventTitleActivityChanged,
               summary: renderTemplate(
-                runtimeRules.schedulerTextTemplates.eventSummaryDefaultActivityReset,
+                runtimeRules.schedulerTextTemplates
+                  .eventSummaryDefaultActivityReset,
                 { activity: activityLabel },
               ),
               jobId: 'update_ai_active_status',
@@ -363,11 +611,14 @@ export class SchedulerService {
           characterId: char.id,
           characterName: char.name,
           kind: 'online_status_changed',
-          title: runtimeRules.schedulerTextTemplates.eventTitleOnlineStatusChanged,
+          title:
+            runtimeRules.schedulerTextTemplates.eventTitleOnlineStatusChanged,
           summary: renderTemplate(
             shouldBeOnline
-              ? runtimeRules.schedulerTextTemplates.eventSummaryOnlineWindowEntered
-              : runtimeRules.schedulerTextTemplates.eventSummaryOnlineWindowExited,
+              ? runtimeRules.schedulerTextTemplates
+                  .eventSummaryOnlineWindowEntered
+              : runtimeRules.schedulerTextTemplates
+                  .eventSummaryOnlineWindowExited,
             {
               startHour: start,
               endHour: end,
@@ -398,16 +649,18 @@ export class SchedulerService {
 
   private async handleCheckMomentSchedule(): Promise<TrackedJobResult> {
     const runtimeRules = await this.replyLogicRules.getRules();
+    await this.realWorldSync.runSync({ force: false });
     const blockedCharacterIds = new Set(
       await this.socialService.getBlockedCharacterIds(),
     );
-    const chars = (await this.characterRepo.find()).filter(
+    const chars = (await this.charactersService.findAllVisibleToOwner()).filter(
       (char) => !blockedCharacterIds.has(char.id),
     );
     if (!chars.length) {
       return {
         summary: renderTemplate(
-          runtimeRules.schedulerTextTemplates.jobSummaryNoFriendCharactersForMoments,
+          runtimeRules.schedulerTextTemplates
+            .jobSummaryNoFriendCharactersForMoments,
           {},
         ),
       };
@@ -466,6 +719,25 @@ export class SchedulerService {
           generatedCount,
         },
       ),
+    };
+  }
+
+  private async handleTriggerFollowupRecommendations(
+    force = false,
+  ): Promise<TrackedJobResult> {
+    return this.followupRuntimeService.runSchedulerScan({ force });
+  }
+
+  private async handleCheckRealWorldNewsBulletins(): Promise<TrackedJobResult> {
+    const result = await this.publishWorldNewsDeskBulletin();
+    if (!result.slot) {
+      return {
+        summary: result.summary,
+      };
+    }
+
+    return {
+      summary: result.summary,
     };
   }
 
@@ -528,7 +800,8 @@ export class SchedulerService {
 
     return {
       summary: renderTemplate(
-        runtimeRules.schedulerTextTemplates.jobSummaryProcessPendingFeedReactions,
+        runtimeRules.schedulerTextTemplates
+          .jobSummaryProcessPendingFeedReactions,
         { processedCount },
       ),
     };
@@ -542,7 +815,7 @@ export class SchedulerService {
     const blockedCharacterIds = new Set(
       await this.socialService.getBlockedCharacterIds(),
     );
-    const chars = (await this.characterRepo.find()).filter(
+    const chars = (await this.charactersService.findAllVisibleToOwner()).filter(
       (char) => char.feedFrequency > 0 && !blockedCharacterIds.has(char.id),
     );
     let generatedCount = 0;
@@ -583,7 +856,9 @@ export class SchedulerService {
           ),
           jobId: 'check_channels_schedule',
         });
-        this.logger.debug(`Generated channels post ${post.id} for ${char.name}`);
+        this.logger.debug(
+          `Generated channels post ${post.id} for ${char.name}`,
+        );
       }
     }
 
@@ -602,7 +877,7 @@ export class SchedulerService {
 
   private async handleUpdateCharacterStatus(): Promise<TrackedJobResult> {
     const runtimeRules = await this.replyLogicRules.getRules();
-    const chars = await this.characterRepo.find();
+    const chars = await this.charactersService.findAllVisibleToOwner();
     const hour = new Date().getHours();
     let updatedCount = 0;
     let manualLockedCount = 0;
@@ -624,11 +899,7 @@ export class SchedulerService {
     const activities = runtimeRules.activityRandomPool;
 
     for (const char of chars) {
-      if (
-        DEFAULT_CHARACTER_IDS.includes(
-          char.id as (typeof DEFAULT_CHARACTER_IDS)[number],
-        )
-      ) {
+      if (char.id === SELF_CHARACTER_ID) {
         const defaultActivity = runtimeRules.defaultCharacterRules.activity;
         const defaultOnline = runtimeRules.defaultCharacterRules.isOnline;
         const activityChanged = char.currentActivity !== defaultActivity;
@@ -648,9 +919,11 @@ export class SchedulerService {
               characterId: char.id,
               characterName: char.name,
               kind: 'activity_changed',
-              title: runtimeRules.schedulerTextTemplates.eventTitleActivityChanged,
+              title:
+                runtimeRules.schedulerTextTemplates.eventTitleActivityChanged,
               summary: renderTemplate(
-                runtimeRules.schedulerTextTemplates.eventSummaryDefaultActivityReset,
+                runtimeRules.schedulerTextTemplates
+                  .eventSummaryDefaultActivityReset,
                 { activity: activityLabel },
               ),
               jobId: 'update_character_status',
@@ -711,7 +984,8 @@ export class SchedulerService {
     if (now.getHours() !== runtimeRules.proactiveReminderHour) {
       return {
         summary: renderTemplate(
-          runtimeRules.schedulerTextTemplates.jobSummaryProactiveReminderSkipped,
+          runtimeRules.schedulerTextTemplates
+            .jobSummaryProactiveReminderSkipped,
           {
             currentHour: now.getHours(),
             targetHour: runtimeRules.proactiveReminderHour,
@@ -720,7 +994,7 @@ export class SchedulerService {
       };
     }
 
-    const chars = await this.characterRepo.find();
+    const chars = await this.charactersService.findAllVisibleToOwner();
     let memorySeededCount = 0;
     let sentMessages = 0;
 
@@ -738,8 +1012,11 @@ export class SchedulerService {
         const today = now.toLocaleDateString('zh-CN');
         const noActionToken =
           runtimeRules.schedulerTextTemplates.proactiveReminderNoActionToken;
+        const runtimeProfile =
+          (await this.charactersService.getRuntimeProfileFromCharacter(char)) ??
+          char.profile;
         const replyResult = await this.ai.generateReply({
-          profile: char.profile as any,
+          profile: runtimeProfile as any,
           conversationHistory: [],
           userMessage: `今天是${today}，结合你的记忆，请判断是否需要主动向用户发送消息。如果不需要，只回复：${noActionToken}`,
           usageContext: {
@@ -779,7 +1056,8 @@ export class SchedulerService {
             characterId: char.id,
             characterName: char.name,
             kind: 'proactive_message',
-            title: runtimeRules.schedulerTextTemplates.eventTitleProactiveMessage,
+            title:
+              runtimeRules.schedulerTextTemplates.eventTitleProactiveMessage,
             summary: renderTemplate(
               runtimeRules.schedulerTextTemplates.eventSummaryProactiveMessage,
               { sentCount: sentForCharacter },
@@ -798,7 +1076,8 @@ export class SchedulerService {
 
     return {
       summary: renderTemplate(
-        runtimeRules.schedulerTextTemplates.jobSummaryTriggerMemoryProactiveMessages,
+        runtimeRules.schedulerTextTemplates
+          .jobSummaryTriggerMemoryProactiveMessages,
         {
           memorySeededCount,
           sentMessages,
@@ -844,7 +1123,12 @@ export class SchedulerService {
           );
           await this.aiRelationshipRepo.save(existing);
           updates += 1;
-          this.recordRelationshipEvent(left, right, existing.strength, runtimeRules);
+          this.recordRelationshipEvent(
+            left,
+            right,
+            existing.strength,
+            runtimeRules,
+          );
           continue;
         }
 
@@ -913,11 +1197,65 @@ export class SchedulerService {
     });
   }
 
-  private async generateMomentForChar(char: CharacterEntity) {
+  private resolveNewsBulletinSlot(date: Date): NewsBulletinSlot | null {
+    const minutes = date.getHours() * 60 + date.getMinutes();
+    if (minutes >= 7 * 60 + 30 && minutes <= 9 * 60 + 30) {
+      return { key: 'morning', label: '早报' };
+    }
+    if (minutes >= 11 * 60 + 30 && minutes <= 13 * 60 + 30) {
+      return { key: 'noon', label: '午报' };
+    }
+    if (minutes >= 18 * 60 + 30 && minutes <= 21 * 60) {
+      return { key: 'evening', label: '晚报' };
+    }
+    return null;
+  }
+
+  private resolveNewsBulletinSlotByKey(
+    key: NewsBulletinSlot['key'],
+  ): NewsBulletinSlot | null {
+    if (key === 'morning') {
+      return { key, label: '早报' };
+    }
+    if (key === 'noon') {
+      return { key, label: '午报' };
+    }
+    if (key === 'evening') {
+      return { key, label: '晚报' };
+    }
+    return null;
+  }
+
+  private resolveBulletinReferenceTime(key: NewsBulletinSlot['key']) {
+    const value = new Date();
+    if (key === 'morning') {
+      value.setHours(8, 0, 0, 0);
+      return value;
+    }
+    if (key === 'noon') {
+      value.setHours(12, 0, 0, 0);
+      return value;
+    }
+    value.setHours(19, 0, 0, 0);
+    return value;
+  }
+
+  private async generateMomentForChar(
+    char: CharacterEntity,
+    options?: {
+      currentTime?: Date;
+      generationKind?: string;
+      generationMetadata?: Record<string, unknown> | null;
+    },
+  ) {
     try {
+      const runtimeProfile =
+        (await this.charactersService.getRuntimeProfileFromCharacter(char)) ??
+        char.profile;
+      const currentTime = options?.currentTime ?? new Date();
       const text = await this.ai.generateMoment({
-        profile: char.profile,
-        currentTime: new Date(),
+        profile: runtimeProfile,
+        currentTime,
         usageContext: {
           surface: 'scheduler',
           scene: 'moment_post_generate',
@@ -936,8 +1274,28 @@ export class SchedulerService {
         authorAvatar: char.avatar,
         authorType: 'character',
         text,
+        generationKind:
+          options?.generationKind ??
+          (runtimeProfile.realWorldContext?.realityMomentBrief
+            ? 'reality_linked_ai'
+            : 'routine_ai'),
+        generationMetadata:
+          options?.generationMetadata ??
+          (runtimeProfile.realWorldContext
+            ? {
+                digestId: runtimeProfile.realWorldContext.digestId ?? null,
+                syncDate: runtimeProfile.realWorldContext.syncDate ?? null,
+                subjectName:
+                  runtimeProfile.realWorldContext.subjectName ?? null,
+                realityMomentBrief:
+                  runtimeProfile.realWorldContext.realityMomentBrief ?? null,
+              }
+            : null),
       });
       await this.momentPostRepo.save(post);
+      await this.feedService.syncMomentPostToFeed(post, {
+        sourceKind: 'character_generated',
+      });
       this.logger.debug(`Auto-posted moment for ${char.name}`);
       return post;
     } catch (error) {
@@ -951,7 +1309,7 @@ export class SchedulerService {
 
   private async handleUpdateRecentMemoryDaily(): Promise<TrackedJobResult> {
     const runtimeRules = await this.replyLogicRules.getRules();
-    const chars = await this.characterRepo.find();
+    const chars = await this.charactersService.findAllVisibleToOwner();
     const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     let updatedCount = 0;
     let skippedCount = 0;
@@ -993,10 +1351,15 @@ export class SchedulerService {
 
         const newSummary = await this.ai.compressMemory(
           recentMessages.map((m) => ({
-            role: m.senderType === 'character' ? ('assistant' as const) : ('user' as const),
+            role:
+              m.senderType === 'character'
+                ? ('assistant' as const)
+                : ('user' as const),
             content: m.text,
           })),
-          char.profile as any,
+          ((await this.charactersService.getRuntimeProfileFromCharacter(
+            char,
+          )) ?? char.profile) as any,
           {
             surface: 'scheduler',
             scene: 'recent_memory_daily',
@@ -1044,7 +1407,7 @@ export class SchedulerService {
 
   private async handleUpdateCoreMemoryWeekly(): Promise<TrackedJobResult> {
     const runtimeRules = await this.replyLogicRules.getRules();
-    const chars = await this.characterRepo.find();
+    const chars = await this.charactersService.findAllVisibleToOwner();
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     let updatedCount = 0;
     let skippedCount = 0;
@@ -1095,7 +1458,9 @@ export class SchedulerService {
 
         const newCoreMemory = await this.ai.extractCoreMemory(
           interactionHistory,
-          char.profile as any,
+          ((await this.charactersService.getRuntimeProfileFromCharacter(
+            char,
+          )) ?? char.profile) as any,
           {
             surface: 'scheduler',
             scene: 'core_memory_weekly',

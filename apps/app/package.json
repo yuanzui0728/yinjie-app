@@ -11,7 +11,9 @@
     "dev:status": "node ../../scripts/dev-services.mjs status app",
     "build": "tsc -p tsconfig.app.json && vite build",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "lint:mobile-web": "eslint src/components/mobile-shell.tsx src/features/shell/use-desktop-layout.ts src/features/shell/mobile-web-route-persistence.ts src/routes/chat-list-page.tsx src/routes/contacts-page.tsx src/routes/discover-page.tsx src/routes/search-page.tsx src/routes/chat-room-page.tsx src/routes/group-chat-page.tsx src/routes/profile-page.tsx src/routes/mobile-moments-publish-page.tsx src/routes/mobile-friend-moments-page.tsx",
+    "audit:mobile-web": "pnpm typecheck && pnpm lint:mobile-web && pnpm build"
   },
   "dependencies": {
     "@capacitor/core": "^7.1.1",

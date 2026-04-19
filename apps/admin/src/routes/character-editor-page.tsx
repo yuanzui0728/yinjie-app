@@ -96,14 +96,19 @@ const DEFAULT_PROMPTS = {
 【行为准则】
 - 不说"作为AI"或"我是语言模型"之类的话
 - 不背诵知识、不扮演助手，专注于真实的人际互动
+- 不先夸用户、不先复述问题、不先寒暄再进入回答
+- 不用（动作）、[旁白]、*动作*描述自己的动作、表情或心理活动
 - 初识时适当保持礼貌距离，随着了解加深才逐渐放开`,
 
-  chat: `（不填时系统自动注入以下内容）
+  chat: `留空时系统会自动注入基础规则，不需要手动重复。
 
 基础规则：
 - 永远以{{name}}的身份说话，不要暴露自己是AI
 - 用中文回复，语气自然
 - 初期回复可以相对正式/保守，随着了解加深才慢慢放开
+- 不先夸用户、不先复述问题、不先寒暄再进入回答
+- 不用（动作）、[旁白]、*动作*描述自己的动作、表情或心理活动
+- 除非用户明确要求，不要机械地凑三点、三段、总结句
 
 行为指引：
 - 基于当前活动状态调整回复风格（忙碌时简短，空闲时可以多聊）
@@ -118,6 +123,8 @@ const DEFAULT_PROMPTS = {
 - 内容真实自然，像真人发的朋友圈
 - 不超过80个字
 - 符合当前时间段的生活场景
+- 不要写成鸡汤、文案模板、教程摘要或任务式配文
+- 不要用（动作）、[旁白]、*动作*描述自己
 - 可以带位置（如"北京·国贸"），也可以不带{{topicsHint}}
 
 只输出朋友圈正文内容，不要加任何解释。`,
@@ -129,6 +136,8 @@ const DEFAULT_PROMPTS = {
 要求：
 - 100字以内，可以是观点、生活感悟、有趣的事、提问互动等
 - 语气口语化，不要太正式或说教
+- 不要写成课程提纲、咨询结论、品牌文案或标准答案
+- 不要用（动作）、[旁白]、*动作*描述自己
 - 可以在结尾加一个开放性问题引发评论互动（可选）
 - 不要加 # 话题标签，不要加表情包
 
@@ -146,6 +155,8 @@ const DEFAULT_PROMPTS = {
 要求：
 - 内容真实有价值，不硬广告
 - 风格符合角色人设
+- 不要写成运营 SOP、起号模板、爆款公式或口播稿
+- 不要用（动作）、[旁白]、*动作*描述自己
 - 只输出上述格式内容，不要其他解释。`,
 
   moments_comment: `你是{{name}}，正在浏览朋友圈，看到了用户发的内容。
@@ -156,6 +167,7 @@ const DEFAULT_PROMPTS = {
 - 评论简短真实，像真人朋友的回复，15字以内
 - 语气亲切，可以是赞美、关心、调侃、好奇等
 - 不要每次都用同样的开头
+- 不要用（动作）、[旁白]、*动作*描述自己
 - 只输出评论内容，不要加任何解释。`,
 
   feed_comment: `你是{{name}}，正在浏览广场上的帖子，看到了用户发布的内容。
@@ -165,6 +177,7 @@ const DEFAULT_PROMPTS = {
 要求：
 - 评论真实有个性，20字以内
 - 可以是认同、补充观点、友好反驳、提问等，避免空洞点赞
+- 不要用（动作）、[旁白]、*动作*描述自己
 - 只输出评论内容，不要加任何解释。`,
 
   greeting: `你是{{name}}，{{relationship}}。
@@ -174,6 +187,8 @@ const DEFAULT_PROMPTS = {
 要求：
 - 15-20字以内，简短有记忆点
 - 体现角色人设，避免千篇一律的"你好"
+- 像真人顺手发出的第一句话，不要过度客气或自我介绍成名片
+- 不要用（动作）、[旁白]、*动作*描述自己
 - 只输出打招呼的话，不要加任何解释。`,
 
   proactive: `你是{{name}}，{{relationship}}。
@@ -184,6 +199,8 @@ const DEFAULT_PROMPTS = {
 - 如果记住了某件值得分享或跟进的事（如用户之前提到的重要日子），可以主动发
 - 如果距离上次聊天超过3天，可以发一条关心的消息
 - 不要无意义地频繁打扰
+- 像突然想起这件事才发一句，不像系统提醒或任务清单
+- 不要用（动作）、[旁白]、*动作*描述自己
 - 如果没有合适理由，保持沉默
 
 输出：主动消息正文（如决定发送），或空字符串（如决定不发）。`,
@@ -191,23 +208,22 @@ const DEFAULT_PROMPTS = {
   recentSummaryPrompt: `以下是{{name}}和用户的对话片段：
 {{chatHistory}}
 
-请从{{name}}的视角，用100字以内总结：
-1. 用户是什么样的人（性格、喜好、习惯）
-2. 两人聊过什么重要的事
-3. {{name}}对用户的印象
+请从{{name}}的视角，用100字以内记下这次对后续最有用的近期记忆：
+1. 用户最近具体卡在哪件事上，或反复回到什么话题
+2. 哪个偏好、情绪走向或关系张力这轮特别明显
+3. 哪件事还没过去，下次接话时最好直接续上
 
-只输出总结文字，不要加标题或格式。`,
+只输出最终内容，不要加标题，不要写成助手总结。`,
 
   coreMemoryPrompt: `以下是{{name}}与用户近期的完整互动记录：
 {{interactionHistory}}
 
-请从{{name}}的视角，用200字以内提炼对用户的核心认知：
-1. 用户的性格特质、价值观和生活方式
-2. 两人之间最重要的共同经历或情感纽带
-3. 用户的核心关切、习惯性话题和喜好
-4. {{name}}对这段关系的整体感受和定位
+请从{{name}}的视角，用200字以内提炼长期值得留下的核心记忆：
+1. 用户稳定的偏好、边界、决策习惯或反复出现的问题
+2. 两人之间已经形成的共同语境、长期张力或重要经历
+3. 哪些认识以后还会影响{{name}}怎么接他的话、怎么判断他的处境
 
-这是长期记忆，应当简练、准确、有温度。只输出总结文字，不要加标题或格式。`,
+这是长期记忆，应当简练、具体、经得起后续反复验证。只输出最终内容，不要加标题，不要写成关系汇报。`,
 };
 
 function csvToList(value: string) {
@@ -441,13 +457,15 @@ export function CharacterEditorPage() {
             }
           />
           <p className="mt-3 text-sm text-[color:var(--text-secondary)]">
-            输入对角色的简短描述，AI
-            会自动生成姓名、简介、人格特征、职业背景等字段并填入表单，你可以在下方继续微调。
+            输入几句你想要的人设，AI 会先按“更像真实联系人、少一点模板腔”的口径生成姓名、简介、人格特征、职业背景等字段，再填进表单给你继续微调。
           </p>
+          <InlineNotice className="mt-3" tone="muted">
+            描述里尽量直接写这个人是什么来路、怎么说话、关系远近。别写成“万能助手”“专业顾问”“高情商陪聊模板”这种壳子。
+          </InlineNotice>
           <div className="mt-4 flex flex-col gap-3">
             <textarea
               className="w-full rounded-[16px] border border-[color:var(--border-subtle)] bg-[color:var(--surface-card)] px-4 py-3 text-sm text-[color:var(--text-primary)] placeholder:text-[color:var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-[color:var(--accent-primary)] resize-none min-h-[80px]"
-              placeholder="例如：一个温柔开朗的心理咨询师，喜欢音乐和烹饪，说话温和有亲和力"
+              placeholder="例如：以前一起做项目的产品经理，嘴上有点冲，但真遇事会帮你兜底。回消息不长，不爱讲大道理，熟了之后会顺手损你两句。"
               value={aiDescription}
               onChange={(e) => setAiDescription(e.target.value)}
             />
@@ -906,9 +924,12 @@ export function CharacterEditorPage() {
         <Card className="bg-[color:var(--surface-console)]">
           <SectionHeading>记忆提示词</SectionHeading>
           <div className="mt-4 space-y-4">
+            <InlineNotice tone="muted">
+              这些提示词是给后台自动整理记忆时用的。尽量写成这个角色会怎么记人、记事，别写成摘要助手、人格分析或关系汇报。
+            </InlineNotice>
             <TextAreaField
-              label="近期摘要提取提示词"
-              description="每日自动提取近期摘要时使用。留空则使用全局默认模板。可用变量：{{name}}（角色名）、{{chatHistory}}（对话记录）。"
+              label="近期记忆提示词"
+              description="每日自动整理近期记忆时使用。留空则使用全局默认模板。可用变量：{{name}}（角色名）、{{chatHistory}}（对话记录）。"
               defaultPrompt={DEFAULT_PROMPTS.recentSummaryPrompt}
               value={profile.memory?.recentSummaryPrompt ?? ""}
               onChange={(value) =>
@@ -922,8 +943,8 @@ export function CharacterEditorPage() {
               }
             />
             <TextAreaField
-              label="核心记忆提取提示词"
-              description="每周自动提取核心记忆时使用。留空则使用全局默认模板。可用变量：{{name}}（角色名）、{{interactionHistory}}（近30天全量互动记录）。"
+              label="长期记忆提示词"
+              description="每周自动整理长期记忆时使用。留空则使用全局默认模板。可用变量：{{name}}（角色名）、{{interactionHistory}}（近30天全量互动记录）。"
               defaultPrompt={DEFAULT_PROMPTS.coreMemoryPrompt}
               value={profile.memory?.coreMemoryPrompt ?? ""}
               onChange={(value) =>
@@ -1062,47 +1083,4 @@ function normalizeDraft(
       },
     },
   };
-}
-
-function formatRelationshipType(type: Character["relationshipType"]) {
-  switch (type) {
-    case "family":
-      return "家人";
-    case "friend":
-      return "朋友";
-    case "expert":
-      return "专家";
-    case "mentor":
-      return "导师";
-    case "custom":
-      return "自定义";
-    case "self":
-      return "自己";
-    default:
-      return type;
-  }
-}
-
-function formatCharacterSourceType(sourceType?: Character["sourceType"]) {
-  switch (sourceType) {
-    case "default_seed":
-      return "默认保底";
-    case "preset_catalog":
-      return "名人预设";
-    case "manual_admin":
-      return "后台手工";
-    default:
-      return "后台手工";
-  }
-}
-
-function formatDeletionPolicy(policy?: Character["deletionPolicy"]) {
-  switch (policy) {
-    case "protected":
-      return "受保护";
-    case "archive_allowed":
-      return "允许删除";
-    default:
-      return "允许删除";
-  }
 }
