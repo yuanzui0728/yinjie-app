@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useState } from "react";
+import { Suspense, lazy, useEffect, useEffectEvent, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { ArrowLeft, ChevronRight, Copy, Share2 } from "lucide-react";
@@ -25,7 +25,6 @@ import {
   removeDesktopFavorite,
   upsertDesktopFavorite,
 } from "../features/favorites/favorites-storage";
-import { buildDesktopContactsRouteHash } from "../features/desktop/contacts/desktop-contacts-route-state";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { navigateBackOrFallback } from "../lib/history-back";
 import {
@@ -34,28 +33,26 @@ import {
 import { isNativeMobileShareSurface } from "../runtime/mobile-share-surface";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
+const DesktopContactsRouteRedirectShell = lazy(async () => {
+  const mod = await import(
+    "../features/desktop/contacts/desktop-contacts-route-redirect-shell"
+  );
+  return { default: mod.DesktopContactsRouteRedirectShell };
+});
+
 export function OfficialAccountDetailPage() {
   const { accountId } = useParams({ from: "/official-accounts/$accountId" });
   const isDesktopLayout = useDesktopLayout();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isDesktopLayout) {
-      return;
-    }
-
-    void navigate({
-      to: "/tabs/contacts",
-      hash: buildDesktopContactsRouteHash({
-        pane: "official-accounts",
-        accountId,
-      }),
-      replace: true,
-    });
-  }, [accountId, isDesktopLayout, navigate]);
 
   if (isDesktopLayout) {
-    return null;
+    return (
+      <Suspense fallback={null}>
+        <DesktopContactsRouteRedirectShell
+          pane="official-accounts"
+          accountId={accountId}
+        />
+      </Suspense>
+    );
   }
 
   return <MobileOfficialAccountDetailPage accountId={accountId} />;

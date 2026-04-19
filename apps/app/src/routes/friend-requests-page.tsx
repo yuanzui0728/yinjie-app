@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, BookUser } from "lucide-react";
@@ -10,13 +10,32 @@ import {
 import { AppPage, Button, InlineNotice, cn } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
-import { buildDesktopContactsRouteHash } from "../features/desktop/contacts/desktop-contacts-route-state";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { navigateBackOrFallback } from "../lib/history-back";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
+const DesktopContactsRouteRedirectShell = lazy(async () => {
+  const mod = await import(
+    "../features/desktop/contacts/desktop-contacts-route-redirect-shell"
+  );
+  return { default: mod.DesktopContactsRouteRedirectShell };
+});
+
 export function FriendRequestsPage() {
   const isDesktopLayout = useDesktopLayout();
+  
+  if (isDesktopLayout) {
+    return (
+      <Suspense fallback={null}>
+        <DesktopContactsRouteRedirectShell pane="new-friends" />
+      </Suspense>
+    );
+  }
+
+  return <MobileFriendRequestsPage />;
+}
+
+function MobileFriendRequestsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const runtimeConfig = useAppRuntimeConfig();
@@ -72,22 +91,6 @@ export function FriendRequestsPage() {
     const timer = window.setTimeout(() => setSuccessNotice(""), 2400);
     return () => window.clearTimeout(timer);
   }, [successNotice]);
-
-  useEffect(() => {
-    if (!isDesktopLayout) {
-      return;
-    }
-
-    void navigate({
-      to: "/tabs/contacts",
-      hash: buildDesktopContactsRouteHash({ pane: "new-friends" }),
-      replace: true,
-    });
-  }, [isDesktopLayout, navigate]);
-
-  if (isDesktopLayout) {
-    return null;
-  }
 
   return (
     <AppPage className="space-y-0 bg-[#f5f5f5] px-0 py-0">

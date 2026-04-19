@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { ArrowLeft, Copy, Share2 } from "lucide-react";
@@ -15,8 +15,6 @@ import {
   removeDesktopFavorite,
   upsertDesktopFavorite,
 } from "../features/favorites/favorites-storage";
-import { buildDesktopContactsRouteHash } from "../features/desktop/contacts/desktop-contacts-route-state";
-import { buildDesktopOfficialArticleWindowRouteHash } from "../features/desktop/official-accounts/desktop-official-article-window-route-state";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { formatConversationTimestamp } from "../lib/format";
 import { navigateBackOrFallback } from "../lib/history-back";
@@ -24,40 +22,25 @@ import { shareWithNativeShell } from "../runtime/mobile-bridge";
 import { isNativeMobileShareSurface } from "../runtime/mobile-share-surface";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
+const DesktopOfficialArticleRouteShell = lazy(async () => {
+  const mod = await import(
+    "../features/desktop/official-accounts/desktop-official-article-route-shell"
+  );
+  return { default: mod.DesktopOfficialArticleRouteShell };
+});
+
 export function OfficialAccountArticlePage() {
   const { articleId } = useParams({
     from: "/official-accounts/articles/$articleId",
   });
   const isDesktopLayout = useDesktopLayout();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isDesktopLayout) {
-      return;
-    }
-
-    void navigate({
-      to: "/desktop/official-article-window",
-      hash: buildDesktopOfficialArticleWindowRouteHash({
-        articleId,
-        returnTo: `/tabs/contacts${
-          buildDesktopContactsRouteHash({
-            pane: "official-accounts",
-            articleId,
-          })
-            ? `#${buildDesktopContactsRouteHash({
-                pane: "official-accounts",
-                articleId,
-              })}`
-            : ""
-        }`,
-      }),
-      replace: true,
-    });
-  }, [articleId, isDesktopLayout, navigate]);
 
   if (isDesktopLayout) {
-    return null;
+    return (
+      <Suspense fallback={null}>
+        <DesktopOfficialArticleRouteShell articleId={articleId} />
+      </Suspense>
+    );
   }
 
   return <MobileOfficialAccountArticlePage articleId={articleId} />;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, MessageSquarePlus, Search } from "lucide-react";
@@ -6,31 +6,28 @@ import { getGroups, type Group } from "@yinjie/contracts";
 import { AppPage, Button, cn } from "@yinjie/ui";
 import { GroupAvatarChip } from "../components/group-avatar-chip";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
-import { buildDesktopContactsRouteHash } from "../features/desktop/contacts/desktop-contacts-route-state";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { buildCreateGroupRouteHash } from "../lib/create-group-route-state";
 import { formatConversationTimestamp } from "../lib/format";
 import { navigateBackOrFallback } from "../lib/history-back";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 
+const DesktopContactsRouteRedirectShell = lazy(async () => {
+  const mod = await import(
+    "../features/desktop/contacts/desktop-contacts-route-redirect-shell"
+  );
+  return { default: mod.DesktopContactsRouteRedirectShell };
+});
+
 export function GroupContactsPage() {
   const isDesktopLayout = useDesktopLayout();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isDesktopLayout) {
-      return;
-    }
-
-    void navigate({
-      to: "/tabs/contacts",
-      hash: buildDesktopContactsRouteHash({ pane: "groups" }),
-      replace: true,
-    });
-  }, [isDesktopLayout, navigate]);
 
   if (isDesktopLayout) {
-    return null;
+    return (
+      <Suspense fallback={null}>
+        <DesktopContactsRouteRedirectShell pane="groups" />
+      </Suspense>
+    );
   }
 
   return <MobileGroupContactsPage />;
