@@ -19,7 +19,7 @@ import {
   cn,
 } from "@yinjie/ui";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
-import { DesktopUtilityShell } from "../features/desktop/desktop-utility-shell";
+import { DesktopUtilityShell } from "../features/shell/desktop-utility-shell";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { useAppRuntimeConfig } from "../runtime/runtime-config-store";
 import {

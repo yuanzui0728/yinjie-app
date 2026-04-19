@@ -18,12 +18,12 @@ import {
 } from "@yinjie/ui";
 import { AvatarChip } from "../components/avatar-chip";
 import { EmptyState } from "../components/empty-state";
-import { DesktopUtilityShell } from "../features/desktop/desktop-utility-shell";
+import { DesktopUtilityShell } from "../features/shell/desktop-utility-shell";
 import {
   buildDesktopNoteWindowRouteHash,
   parseDesktopNoteEditorRouteHash,
-} from "../features/desktop/chat/desktop-note-window-route-state";
-import { createDesktopNoteDraft } from "../features/desktop/chat/desktop-notes-storage";
+} from "../features/favorites/note-window-route-state";
+import { createDesktopNoteDraft } from "../features/favorites/note-drafts-storage";
 import {
   hydrateDesktopFavoritesFromNative,
   mergeDesktopFavoriteRecords,

@@ -37,8 +37,8 @@ import {
   writeLiveDraft,
   type LiveDraft,
   type LiveSessionRecord,
-} from "../features/desktop/channels/live-companion-storage";
-import { DesktopUtilityShell } from "../features/desktop/desktop-utility-shell";
+} from "../features/channels/live-companion-storage";
+import { DesktopUtilityShell } from "../features/shell/desktop-utility-shell";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import {
   pushMobileHandoffRecord,
