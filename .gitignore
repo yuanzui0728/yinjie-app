@@ -75,9 +75,6 @@ Thumbs.db
 # Runtime data
 runtime-data/
 
-# Expo / React Native (mobile - 不上传)
-mobile/
-
 # 产品文档（不上传）
 隐界 — 产品总结.md
 技术规划.md
