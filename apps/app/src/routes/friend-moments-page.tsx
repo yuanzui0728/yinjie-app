@@ -31,7 +31,7 @@ import {
   buildDesktopFriendMomentsPath,
   buildDesktopFriendMomentsRouteHash,
   parseDesktopFriendMomentsRouteState,
-} from "../features/desktop/moments/desktop-friend-moments-route-state";
+} from "../features/moments/friend-moments-route-state";
 import { getFriendDisplayName } from "../features/contacts/contact-utils";
 import { getMomentSummaryText } from "../features/moments/moment-content";
 import {

@@ -57,7 +57,7 @@ import {
 import {
   buildDesktopContactsRouteHash,
   parseDesktopContactsRouteState,
-} from "../features/desktop/contacts/desktop-contacts-route-state";
+} from "../features/contacts/contacts-route-state";
 import {
   buildContactSections,
   buildDesktopFriendSections,
@@ -67,7 +67,7 @@ import {
   matchesFriendSearch,
   type FriendDirectoryItem,
 } from "../features/contacts/contact-utils";
-import { buildDesktopFriendMomentsRouteHash } from "../features/desktop/moments/desktop-friend-moments-route-state";
+import { buildDesktopFriendMomentsRouteHash } from "../features/moments/friend-moments-route-state";
 import { buildSearchRouteHash } from "../features/search/search-route-state";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { isPersistedGroupConversation } from "../lib/conversation-route";

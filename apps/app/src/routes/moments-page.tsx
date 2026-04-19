@@ -31,11 +31,11 @@ import {
 } from "../features/favorites/favorites-storage";
 import {
   buildDesktopFriendMomentsRouteHash,
-} from "../features/desktop/moments/desktop-friend-moments-route-state";
+} from "../features/moments/friend-moments-route-state";
 import {
   buildDesktopMomentsRouteHash,
   parseDesktopMomentsRouteState,
-} from "../features/desktop/moments/desktop-moments-route-state";
+} from "../features/moments/moments-route-state";
 import { TabPageTopBar } from "../components/tab-page-top-bar";
 import { useDesktopLayout } from "../features/shell/use-desktop-layout";
 import { consumeMomentPublishFlash } from "../features/moments/moment-publish-flash";
