@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
@@ -149,6 +149,9 @@ export function DiscoverPage() {
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
   const composeDraft = useMomentComposeDraft();
+  const resetComposeDraft = useEffectEvent(() => {
+    composeDraft.reset();
+  });
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
   const [sceneMessage, setSceneMessage] = useState("");
@@ -256,11 +259,11 @@ export function DiscoverPage() {
     : null;
 
   useEffect(() => {
-    composeDraft.reset();
+    resetComposeDraft();
     setSceneMessage("");
     setFeedCommentDrafts({});
     setSuccessNotice("");
-  }, [baseUrl]);
+  }, [baseUrl, resetComposeDraft]);
 
   useEffect(() => {
     if (!successNotice) {

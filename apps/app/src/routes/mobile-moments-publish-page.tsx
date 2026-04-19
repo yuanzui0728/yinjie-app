@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ImagePlus, Video } from "lucide-react";
@@ -21,6 +21,9 @@ export function MobileMomentsPublishPage() {
   const runtimeConfig = useAppRuntimeConfig();
   const baseUrl = runtimeConfig.apiBaseUrl;
   const composeDraft = useMomentComposeDraft();
+  const resetComposeDraft = useEffectEvent(() => {
+    composeDraft.reset();
+  });
   const imageInputRef = useRef<HTMLInputElement | null>(null);
   const videoInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -46,8 +49,8 @@ export function MobileMomentsPublishPage() {
   });
 
   useEffect(() => {
-    composeDraft.reset();
-  }, [baseUrl]);
+    resetComposeDraft();
+  }, [baseUrl, resetComposeDraft]);
 
   useEffect(() => {
     if (!isDesktopLayout) {
